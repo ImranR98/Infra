@@ -1,0 +1,78 @@
+globalArguments:
+  - "--global.sendanonymoususage=false"
+  - "--global.checknewversion=false"
+
+additionalArguments:
+  - "--serversTransport.insecureSkipVerify=true"
+
+deployment:
+  enabled: true
+  replicas: 2
+  annotations: {}
+  podAnnotations: {}
+  additionalContainers: []
+  initContainers: []
+
+logs:
+  general:
+    format:
+    level: DEBUG
+  access:
+    enabled: true
+    format: 'json'
+    # addInternals:
+    fields:
+      general:
+        defaultmode: keep
+      headers:
+        defaultmode: keep
+
+ports:
+  web:
+    nodePort: 30080
+    redirectTo:
+      port: websecure
+      priority: 10
+    # forwardedHeaders:
+    #   trustedIPs: ['10.244.0.1']
+    #   insecure: false
+    proxyProtocol:
+      trustedIPs: ['10.244.0.1']
+      insecure: false
+  websecure:
+    nodePort: 30443
+    http3:
+      enabled: true
+    advertisedPort: 4443
+    tls:
+      enabled: true
+    # forwardedHeaders:
+    #   trustedIPs: ['10.244.0.1']
+    #   insecure: false
+    proxyProtocol:
+      trustedIPs: ['10.244.0.1']
+      insecure: false
+
+ingressRoute:
+  dashboard:
+    enabled: false
+
+providers:
+  kubernetesCRD:
+    enabled: true
+    ingressClass: traefik-external
+    allowExternalNameServices: true
+  kubernetesIngress:
+    enabled: true
+    allowExternalNameServices: true
+    publishedService:
+      enabled: false
+
+rbac:
+  enabled: true
+
+service:
+  enabled: true
+  type: NodePort
+  annotations: {}
+  labels: {}
