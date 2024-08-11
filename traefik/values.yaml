@@ -33,11 +33,8 @@ ports:
     redirectTo:
       port: websecure
       priority: 10
-    # forwardedHeaders:
-    #   trustedIPs: ['10.244.0.1']
-    #   insecure: false
     proxyProtocol:
-      trustedIPs: ['10.244.0.1']
+      trustedIPs: ['10.244.0.1'] # Assuming cluster CIDR is 10.244.0.0/16 and Traefik is accessed via FRP
       insecure: false
   websecure:
     nodePort: 30443
@@ -46,9 +43,6 @@ ports:
     advertisedPort: 4443
     tls:
       enabled: true
-    # forwardedHeaders:
-    #   trustedIPs: ['10.244.0.1']
-    #   insecure: false
     proxyProtocol:
       trustedIPs: ['10.244.0.1']
       insecure: false

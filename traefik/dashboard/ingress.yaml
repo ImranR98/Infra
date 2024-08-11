@@ -18,5 +18,5 @@ spec:
       services:
         - name: api@internal
           kind: TraefikService
-  # tls:
-  #   secretName: example-org-tls
+  tls:
+    secretName: example-org-tls
