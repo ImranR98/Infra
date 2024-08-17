@@ -3,15 +3,21 @@
 # Ensure K8s and Helm are already set up
 # Ensure frpc is already set up
 
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
+
 init() {
     kubectl create namespace production
+    kubectl label nodes "$(hostname | tr "[:upper:]" "[:lower:]")" main-storage=true # Assume the control plane node is also the main-storage node
+    mkdir -p "$HERE"/state
 }
 
 installAuthelia() {
     helm repo add authelia https://charts.authelia.com
     helm repo update
-    kubectl create -n authelia secret generic authelia-users --from-file=authelia/users-database.yaml
+    kubectl create -n production secret generic authelia-users --from-file=authelia/users-database.yaml
     AUTHELIA_VERSION="$(curl https://charts.authelia.com/ | grep '\--version' | awk '{print $NF}')"
+    mkdir -p "$HERE"/state/authelia
+    kubectl apply -f authelia/pv.yaml
     helm install authelia authelia/authelia --version "$AUTHELIA_VERSION" --values authelia/values.yaml --namespace production
     kubectl apply -f authelia/middleware.yaml
     kubectl apply -f authelia/ingress.yaml
