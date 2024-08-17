@@ -2,7 +2,7 @@ apiVersion: traefik.io/v1alpha1
 kind: IngressRoute
 metadata:
   name: traefik-dashboard
-  namespace: traefik
+  namespace: production
   annotations:
     kubernetes.io/ingress.class: traefik-external
 spec:
@@ -13,8 +13,8 @@ spec:
     - match: Host(`traefik.staging.example.org`)
       kind: Rule
       middlewares:
-        - name: traefik-dashboard-basicauth
-          namespace: traefik
+        - name: forwardauth-authelia
+          namespace: production
       services:
         - name: api@internal
           kind: TraefikService
