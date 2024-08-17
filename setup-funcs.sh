@@ -11,6 +11,13 @@ init() {
     mkdir -p "$HERE"/state
 }
 
+installTraefik() {
+    helm repo add traefik https://helm.traefik.io/traefik
+    helm repo update
+    helm install --namespace=production traefik traefik/traefik --values=traefik/values.yaml
+    kubectl apply -f traefik/dashboard/ingress.yaml
+}
+
 installAuthelia() {
     helm repo add authelia https://charts.authelia.com
     helm repo update
@@ -21,13 +28,6 @@ installAuthelia() {
     helm install authelia authelia/authelia --version "$AUTHELIA_VERSION" --values authelia/values.yaml --namespace production
     kubectl apply -f authelia/middleware.yaml
     kubectl apply -f authelia/ingress.yaml
-}
-
-installTraefik() {
-    helm repo add traefik https://helm.traefik.io/traefik
-    helm repo update
-    helm install --namespace=production traefik traefik/traefik --values=traefik/values.yaml
-    kubectl apply -f traefik/ingress.yaml
 }
 
 installCertManager() {
