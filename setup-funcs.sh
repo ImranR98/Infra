@@ -37,7 +37,7 @@ installCertManager() {
     helm install cert-manager jetstack/cert-manager --values=cert-manager/values.yaml --version "$CERT_MANAGER_VERSION" --set crds.enabled=true --namespace=production
     kubectl apply -f cert-manager/issuers/secret-cf-token.yaml
     kubectl apply -f cert-manager/issuers/
-    kubectl apply -f cert-manager/certificates/staging/
+    # kubectl apply -f cert-manager/certificates/staging/
     kubectl apply -f cert-manager/certificates/production/
 }
 
