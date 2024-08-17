@@ -34,7 +34,7 @@ installCertManager() {
     helm repo add jetstack https://charts.jetstack.io
     helm repo update
     CERT_MANAGER_VERSION="$(curl -s https://api.github.com/repos/cert-manager/cert-manager/releases/latest | grep -oE 'tag_name": .+' | awk -F '"' '{print $3}')"
-    helm install cert-manager jetstack/cert-manager --production cert-manager --values=cert-manager/values.yaml --version "$CERT_MANAGER_VERSION" --set crds.enabled=true --namespace=production
+    helm install cert-manager jetstack/cert-manager --values=cert-manager/values.yaml --version "$CERT_MANAGER_VERSION" --set crds.enabled=true --namespace=production
     kubectl apply -f cert-manager/issuers/secret-cf-token.yaml
     kubectl apply -f cert-manager/issuers/
     kubectl apply -f cert-manager/certificates/staging/
