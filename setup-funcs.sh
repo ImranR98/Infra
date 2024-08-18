@@ -16,6 +16,7 @@ installTraefik() {
     helm repo add traefik https://helm.traefik.io/traefik
     helm repo update
     helm install --namespace=production traefik traefik/traefik --values=traefik/values.yaml
+    kubectl apply -f traefik/middlewares.yaml
     kubectl apply -f traefik/dashboard/ingress.yaml
 }
 

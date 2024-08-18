@@ -13,7 +13,7 @@ spec:
     - match: Host(`traefik.staging.example.org`)
       kind: Rule
       middlewares:
-        - name: forwardauth-authelia
+        - name: forwardauth-geoblock
           namespace: production
       services:
         - name: api@internal

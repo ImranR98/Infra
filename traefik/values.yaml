@@ -4,7 +4,8 @@ globalArguments:
 
 additionalArguments:
   - "--serversTransport.insecureSkipVerify=true"
-
+  - "--experimental.plugins.geoblock.modulename=github.com/PascalMinder/geoblock"
+  - "--experimental.plugins.geoblock.version=v0.2.8"
 deployment:
   enabled: true
   replicas: 2
@@ -12,20 +13,18 @@ deployment:
   podAnnotations: {}
   additionalContainers: []
   initContainers: []
+  additionalVolumes:
+    - name: plugins
+additionalVolumeMounts:
+  - name: plugins
+    mountPath: /plugins-storage
 
 logs:
   general:
     format:
-    level: DEBUG
+    level: INFO
   access:
     enabled: true
-    format: 'json'
-    # addInternals:
-    fields:
-      general:
-        defaultmode: keep
-      headers:
-        defaultmode: keep
 
 ports:
   web:
@@ -34,7 +33,7 @@ ports:
       port: websecure
       priority: 10
     proxyProtocol:
-      trustedIPs: ['10.244.0.1'] # Assuming cluster CIDR is 10.244.0.0/16 and Traefik is accessed via FRP
+      trustedIPs: ["10.244.0.1"] # Assuming cluster CIDR is 10.244.0.0/16 and Traefik is accessed via FRP
       insecure: false
   websecure:
     nodePort: 30443
@@ -44,8 +43,10 @@ ports:
     tls:
       enabled: true
     proxyProtocol:
-      trustedIPs: ['10.244.0.1']
+      trustedIPs: ["10.244.0.1"]
       insecure: false
+    middlewares:
+      - production-forwardauth-authelia@kubernetescrd
 
 ingressRoute:
   dashboard:
@@ -62,6 +63,10 @@ providers:
     allowExternalNameServices: true
     publishedService:
       enabled: false
+  file:
+    enabled: false
+    watch: false
+    content: |
 
 rbac:
   enabled: true
