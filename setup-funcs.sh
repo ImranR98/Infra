@@ -9,6 +9,7 @@ init() {
     kubectl create namespace production
     kubectl label nodes "$(hostname | tr "[:upper:]" "[:lower:]")" main-storage=true # Assume the control plane node is also the main-storage node
     mkdir -p "$HERE"/state
+    kubectl apply -f state-nfs.yaml
 }
 
 installTraefik() {

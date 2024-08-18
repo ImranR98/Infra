@@ -1,0 +1,121 @@
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: state-nfs-pv
+  namespace: production
+spec:
+  capacity:
+    storage: 16Gi
+  volumeMode: Filesystem
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  local:
+    path: /home/imranr/k8s/state
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - key: main-storage
+              operator: In
+              values:
+                - "true"
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: state-nfs-pvc
+  namespace: production
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 16Gi
+  volumeName: state-nfs-pv
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: state-nfs-cm
+  namespace: production
+data:
+  etab: |
+    /state/authelia/session 10.244.0.0/16(rw,sync,wdelay,hide,nocrossmnt,insecure,root_squash,no_all_squash,no_subtree_check,secure_locks,acl,no_pnfs,fsid=0,anonuid=65534,anongid=65534,sec=sys)
+    /state/authelia/storage 10.244.0.0/16(rw,sync,wdelay,hide,nocrossmnt,insecure,root_squash,no_all_squash,no_subtree_check,secure_locks,acl,no_pnfs,fsid=0,anonuid=65534,anongid=65534,sec=sys)
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: state-nfs
+  namespace: production
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: state-nfs
+  template:
+    metadata:
+      labels:
+        app: state-nfs
+    spec:
+      initContainers:
+        - name: nfs-modules
+          image: busybox:1.36.1-uclibc@sha256:97e3873d1f61ba651b632e4755fc52e1d90c9f6e4f01d9b720f37af5efed17e5
+          args:
+            - "modprobe"
+            - "nfs"
+            - "nfsd"
+          securityContext:
+            privileged: true
+            capabilities:
+              add:
+                - "SYS_MODULE"
+          volumeMounts:
+            - mountPath: /lib/modules
+              name: modules
+              readOnly: true
+      containers:
+        - name: nfs-server
+          image: ghcr.io/trexx/docker-nfs-server:latest
+          ports:
+            - name: nfsv4
+              containerPort: 2049
+              hostPort: 2049
+              protocol: TCP
+          securityContext:
+            privileged: true
+            capabilities:
+              add:
+                - "SYS_ADMIN"
+          volumeMounts:
+            - mountPath: /state
+              name: state-nfs-data
+              readOnly: false
+            - name: nfs-exports
+              mountPath: /var/lib/nfs/etab
+              subPath: etab
+              readOnly: true
+      volumes:
+        - name: modules
+          hostPath:
+            path: /lib/modules
+        - name: nfs-exports
+          configMap:
+            name: state-nfs-cm
+        - name: state-nfs-data
+          persistentVolumeClaim:
+            claimName: state-nfs-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: state-nfs-service
+  namespace: production
+spec:
+  type: ClusterIP
+  ports:
+    - port: 2049
+  selector:
+    app: state-nfs
