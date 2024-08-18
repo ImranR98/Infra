@@ -25,7 +25,6 @@ installAuthelia() {
     kubectl create -n production secret generic authelia-users --from-file=authelia/users-database.yaml
     AUTHELIA_VERSION="$(curl https://charts.authelia.com/ | grep '\--version' | awk '{print $NF}')"
     mkdir -p "$HERE"/state/authelia
-    kubectl apply -f authelia/pv.yaml
     helm install authelia authelia/authelia --version "$AUTHELIA_VERSION" --values authelia/values.yaml --namespace production
     kubectl apply -f authelia/middleware.yaml
     kubectl apply -f authelia/ingress.yaml
