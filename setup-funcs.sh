@@ -1,11 +1,94 @@
 #!/bin/bash
 
-# Ensure K8s and Helm are already set up
-# Then run these in order
+# Run these functions in the order they are written
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 CURRENT_DIR="$(pwd)"
 trap "cd "$CURRENT_DIR"" EXIT
+
+installK8S() {
+    # Adapted from https://docs.fedoraproject.org/en-US/quick-docs/using-kubernetes/#sect-fedora40-and-newer
+
+    # sudo kubeadm reset # Delete existing cluster
+
+    NODE_TYPE="$1"
+    if [ "$NODE_TYPE" != 'master' ] && [ "$NODE_TYPE" != 'worker' ]; then
+        echo "Node type not specified! Must be 'master' or 'worker'." >&2
+        exit 1
+    fi
+
+    # Disable swap
+    sudo systemctl stop swap-create@zram0 || :
+    sudo dnf remove -y zram-generator-defaults
+    sudo swapoff -a
+
+    # Add firewall exceptions
+    sudo firewall-cmd --permanent --add-port=10250/tcp
+    sudo firewall-cmd --permanent --add-port=10255/tcp
+    sudo firewall-cmd --permanent --add-port=8472/udp
+    sudo firewall-cmd --permanent --add-port=30000-32767/tcp
+    sudo firewall-cmd --add-masquerade --permanent
+    if [ "$NODE_TYPE" = 'master' ]; then
+        sudo firewall-cmd --permanent --add-port=6443/tcp
+        sudo firewall-cmd --permanent --add-port=2379-2380/tcp
+        sudo firewall-cmd --permanent --add-port=10250/tcp
+        sudo firewall-cmd --permanent --add-port=10251/tcp
+        sudo firewall-cmd --permanent --add-port=10252/tcp
+        sudo firewall-cmd --permanent --add-port=10255/tcp
+        sudo firewall-cmd --permanent --add-port=8472/udp
+        sudo firewall-cmd --add-masquerade --permanent
+        sudo firewall-cmd --permanent --add-port=30000-32767/tcp
+        sudo firewall-cmd --permanent --add-port=10250/tcp
+        sudo firewall-cmd --permanent --add-port=10255/tcp
+        sudo firewall-cmd --permanent --add-port=8472/udp
+        sudo firewall-cmd --permanent --add-port=30000-32767/tcp
+        sudo firewall-cmd --add-masquerade --permanent
+        sudo firewall-cmd --permanent --zone=public --add-service=http
+        sudo firewall-cmd --permanent --zone=public --add-service=https
+    fi
+
+    # More networking changes
+    sudo dnf install -y iptables iproute-tc
+    sudo cat <<EOF | sudo tee /etc/modules-load.d/k8s.conf
+overlay
+br_netfilter
+EOF
+    sudo modprobe overlay
+    sudo modprobe br_netfilter
+    sudo cat <<EOF | sudo tee /etc/sysctl.d/k8s.conf
+net.bridge.bridge-nf-call-iptables  = 1
+net.bridge.bridge-nf-call-ip6tables = 1
+net.ipv4.ip_forward                 = 1
+EOF
+    sudo sysctl --system
+    sysctl net.bridge.bridge-nf-call-iptables net.bridge.bridge-nf-call-ip6tables net.ipv4.ip_forward
+
+    # Install and enable K8S (no harm in having kubeadm even on workers, will not be used)
+    sudo dnf install -y kubernetes kubernetes-kubeadm kubernetes-client cri-o containernetworking-plugins
+    sudo systemctl enable --now crio
+    sudo systemctl enable --now kubelet
+
+    # Setup the cluster
+    if [ "$NODE_TYPE" = 'master' ]; then
+        # Init. cluster
+        sudo kubeadm config images pull
+        sudo kubeadm init --pod-network-cidr=10.244.0.0/16
+        # Use user-specific config, leaving original unchanged
+        mkdir -p $HOME/.kube
+        sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+        sudo chown $(id -u):$(id -g) $HOME/.kube/config
+        # Allow the master to also be a worker
+        kubectl taint nodes --all node-role.kubernetes.io/control-plane-
+        # Add overlay networking (Flannel)
+        kubectl apply -f https://github.com/flannel-io/flannel/releases/latest/download/kube-flannel.yml
+        # Check that all basic K8S components are running
+        sleep 10
+        kubectl get pods --all-namespaces
+        sudo dnf install -y helm
+    else
+        echo "You still need to join the cluster manually."
+    fi
+}
 
 installFRPC() {
     awk -v here="$HERE" '{gsub("path_to_here", here); print}' "$HERE"/docker-compose/frpc.service | sudo tee /etc/systemd/system/frpc.service
