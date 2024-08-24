@@ -4,6 +4,8 @@
 # Then run these in order
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
+CURRENT_DIR="$(pwd)"
+trap "cd "$CURRENT_DIR"" EXIT
 
 installFRPC() {
     awk -v here="$HERE" '{gsub("path_to_here", here); print}' "$HERE"/docker-compose/frpc.service | sudo tee /etc/systemd/system/frpc.service
@@ -17,21 +19,56 @@ prepK8s() {
     kubectl apply -f "$HERE"/state-nfs.yaml
 }
 
-installCrowdsec() {
-    helm repo add crowdsec https://crowdsecurity.github.io/helm-charts
-    helm repo update
-    mkdir -p "$HERE"/state/crowdsec/db
-    kubectl apply -f "$HERE"/crowdsec/db.yaml
-    helm install --namespace production crowdsec crowdsec/crowdsec --values "$HERE"/crowdsec/values.yaml
-    # kubectl -n production exec -it crowdsec-lapi-<pod-id> -- cscli decisions list
-}
-
 installTraefik() {
     helm repo add traefik https://helm.traefik.io/traefik
     helm repo update
     helm install --namespace production traefik traefik/traefik --values "$HERE"/traefik/values.yaml
     kubectl apply -f "$HERE"/traefik/middlewares.yaml
     kubectl apply -f "$HERE"/traefik/dashboard/ingress.yaml
+}
+
+installCrowdsec() {
+    helm repo add crowdsec https://crowdsecurity.github.io/helm-charts
+    helm repo update
+    mkdir -p "$HERE"/state/crowdsec/db
+    mkdir -p "$HERE"/state/crowdsec/dashboard-data
+    mkdir -p "$HERE"/state/crowdsec/dashboard-db
+    DB_EXISTS="$(ls "$HERE"/state/crowdsec/dashboard-db)"
+    kubectl apply -f "$HERE"/crowdsec/db.yaml
+    helm install --namespace production crowdsec crowdsec/crowdsec --values "$HERE"/crowdsec/values.yaml
+    kubectl apply -f "$HERE"/crowdsec/ingress.yaml
+    # if [ -z "$DB_EXISTS" ]; then # Bootstrap dashboard DB from https://crowdsec-statics-assets.s3-eu-west-1.amazonaws.com/metabase_sqlite.zip
+    #     sleep 20
+    #     TEMP_DIR="$(mktemp -d)"
+    #     cd "$TEMP_DIR"
+
+    #     wget https://crowdsec-statics-assets.s3-eu-west-1.amazonaws.com/metabase_sqlite.zip
+    #     unzip metabase_sqlite.zip
+    #     wget https://downloads.metabase.com/v0.50.21/metabase.jar
+    #     wget https://repo1.maven.org/maven2/com/h2database/h2/1.4.200/h2-1.4.200.jar
+    #     wget https://repo1.maven.org/maven2/com/h2database/h2/2.3.232/h2-2.3.232.jar
+    #     sudo dnf install java-21-openjdk-headless
+
+    #     java -cp h2-1.4.200.jar org.h2.tools.Script -url jdbc:h2:$TEMP_DIR/metabase.db/metabase.db.mv.db -script backup.zip -options compression zip
+    #     java -cp h2-2.3.232.jar org.h2.tools.RunScript -url jdbc:h2:$TEMP_DIR/newdb.db -script backup.zip -options compression zip FROM_1X
+
+    #     awk 'NR==1,/ClusterIP/{sub(/ClusterIP/, "NodePort")} 1' "$HERE"/crowdsec/dashboard.yaml >temp.yaml
+    #     sleep 10
+    #     kubectl apply -f temp.yaml
+    #     sleep 10
+    #     DB_PORT="$(kubectl -n production get svc crowdsec-dashboard-db -o jsonpath='{.spec.ports[0].nodePort}')"
+    #     DB_NAME="$(cat "$HERE"/crowdsec/dashboard.yaml | grep POSTGRES_DB | awk -F: '{print $NF}' | xargs)"
+    #     DB_USER="$(cat "$HERE"/crowdsec/dashboard.yaml | grep POSTGRES_USER | awk -F: '{print $NF}' | xargs)"
+    #     DB_PASS="$(cat "$HERE"/crowdsec/dashboard.yaml | grep POSTGRES_PASSWORD | awk -F: '{print $NF}' | xargs)"
+    #     export MB_DB_TYPE=postgres
+    #     export MB_DB_CONNECTION_URI="jdbc:postgresql://localhost:$DB_PORT/$DB_NAME?user=$DB_USER&password=$DB_PASS"
+    #     java -jar metabase.jar load-from-h2 "$TEMP_DIR"/newdb.db # do not include .mv.db
+
+    #     kubectl apply -f "$HERE"/crowdsec/dashboard.yaml
+
+    #     cd "$CURRENT_DIR"
+    #     rm -r "$TEMP_DIR"
+    # fi # Doesn't fucking work
 }
 
 installAuthelia() {
@@ -58,10 +95,10 @@ installCertManager() {
 
 prepForLogtfy() {
     docker pull imranrdev/logtfy
-    docker run --rm imranrdev/logtfy k8s > "$HERE"/docker-compose/prepLogtfy.sh
-    docker run --rm imranrdev/logtfy role > "$HERE"/docker-compose/role.yaml
+    docker run --rm imranrdev/logtfy k8s >"$HERE"/docker-compose/prepLogtfy.sh
+    docker run --rm imranrdev/logtfy role >"$HERE"/docker-compose/role.yaml
     bash "$HERE"/docker-compose/prepLogtfy.sh production
-    echo "KUBE_API_SERVER=$(kubectl config view --minify -o jsonpath='{.clusters[0].cluster.server}')" > "$HERE"/docker-compose/.env
+    echo "KUBE_API_SERVER=$(kubectl config view --minify -o jsonpath='{.clusters[0].cluster.server}')" >"$HERE"/docker-compose/.env
 }
 
 installDockerCompose() {
@@ -72,3 +109,4 @@ installDockerCompose() {
 # Useful commands:
 # helm upgrade -f service/values.yaml service service/service --namespace production
 # kubectl run curlpod --image=alpine --restart=Never --rm -it -- /bin/sh # Then apk add --no-cache curl
+# kubectl exec -it <pod-name> --stdin --tty -- bash
