@@ -6,6 +6,8 @@ additionalArguments:
   - "--serversTransport.insecureSkipVerify=true"
   - "--experimental.plugins.geoblock.modulename=github.com/PascalMinder/geoblock"
   - "--experimental.plugins.geoblock.version=v0.2.8"
+  - "--experimental.plugins.crowdsec-bouncer-traefik-plugin.modulename=github.com/maxlerebourg/crowdsec-bouncer-traefik-plugin"
+  - "--experimental.plugins.crowdsec-bouncer-traefik-plugin.version=v1.3.3"
 deployment:
   enabled: true
   replicas: 2
@@ -46,6 +48,7 @@ ports:
       trustedIPs: ["10.244.0.1"]
       insecure: false
     middlewares:
+      - production-crowdsec-bouncer@kubernetescrd
       - production-forwardauth-authelia@kubernetescrd
 
 ingressRoute:
