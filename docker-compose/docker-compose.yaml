@@ -1,0 +1,16 @@
+services:
+  logtfy:
+    image: imranrdev/logtfy:latest
+    container_name: logtfy
+    hostname: PCXs
+    restart: unless-stopped
+    volumes:
+      - ./token:/logtfy/k8s/token
+      - ./ca.crt:/logtfy/k8s/ca.crt
+      - ./logtfy.json:/logtfy/config.json
+      - /var/log/journal:/var/log/journal:ro
+      - logtfy_tmp:/tmp/logtfy
+    env_file: ".env"
+
+volumes:
+    logtfy_tmp: {}

@@ -1,11 +1,16 @@
 #!/bin/bash
 
 # Ensure K8s and Helm are already set up
-# Ensure frpc is already set up
+# Then run these in order
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 
-init() {
+installFRPC() {
+    awk -v here="$HERE" '{gsub("path_to_here", here); print}' "$HERE"/docker-compose/frpc.service | sudo tee /etc/systemd/system/frpc.service
+    sudo systemctl enable --now frpc.service
+}
+
+prepK8s() {
     kubectl create namespace production
     kubectl label nodes "$(hostname | tr "[:upper:]" "[:lower:]")" main-storage=true # Assume the control plane node is also the main-storage node
     mkdir -p "$HERE"/state
@@ -49,6 +54,19 @@ installCertManager() {
     kubectl apply -f "$HERE"/cert-manager/issuers/secret-cf-token.yaml
     kubectl apply -f "$HERE"/cert-manager/issuers/
     kubectl apply -f "$HERE"/cert-manager/certificates/production/
+}
+
+prepForLogtfy() {
+    docker pull imranrdev/logtfy
+    docker run --rm imranrdev/logtfy k8s > "$HERE"/docker-compose/prepLogtfy.sh
+    docker run --rm imranrdev/logtfy role > "$HERE"/docker-compose/role.yaml
+    bash "$HERE"/docker-compose/prepLogtfy.sh production
+    echo "KUBE_API_SERVER=$(kubectl config view --minify -o jsonpath='{.clusters[0].cluster.server}')" > "$HERE"/docker-compose/.env
+}
+
+installDockerCompose() {
+    awk -v here="$HERE/docker-compose" '{gsub("path_to_here", here); print}' "$HERE"/docker-compose/docker-compose.service | sudo tee /etc/systemd/system/docker-compose.service
+    sudo systemctl enable --now docker-compose.service
 }
 
 # Useful commands:

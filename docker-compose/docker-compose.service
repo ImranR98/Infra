@@ -1,0 +1,13 @@
+[Unit]
+Description=Docker Compose Start
+StartLimitIntervalSec=0
+
+[Service]
+User=1000
+Type=idle
+ExecStart=/usr/bin/docker compose -f path_to_here/docker-compose.yaml up
+Restart=always
+RestartSec=30
+
+[Install]
+WantedBy=multi-user.target
