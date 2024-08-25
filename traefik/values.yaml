@@ -10,7 +10,7 @@ additionalArguments:
   - "--experimental.plugins.crowdsec-bouncer-traefik-plugin.version=v1.3.3"
 deployment:
   enabled: true
-  replicas: 2
+  replicas: 1
   annotations: {}
   podAnnotations: {}
   additionalContainers: []
@@ -24,7 +24,7 @@ additionalVolumeMounts:
 logs:
   general:
     format:
-    level: INFO
+    level: DEBUG
   access:
     enabled: true
 
@@ -35,7 +35,7 @@ ports:
       port: websecure
       priority: 10
     proxyProtocol:
-      trustedIPs: ["10.244.0.1"] # Assuming cluster CIDR is 10.244.0.0/16 and Traefik is accessed via FRP
+      trustedIPs: ["10.244.0.0/16"] # Assuming cluster CIDR is 10.244.0.0/16 and Traefik is accessed via FRP
       insecure: false
   websecure:
     nodePort: 30443
@@ -45,7 +45,7 @@ ports:
     tls:
       enabled: true
     proxyProtocol:
-      trustedIPs: ["10.244.0.1"]
+      trustedIPs: ["10.244.0.0/16"]
       insecure: false
     middlewares:
       - production-crowdsec-bouncer@kubernetescrd

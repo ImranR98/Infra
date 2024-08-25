@@ -81,7 +81,6 @@ spec:
           ports:
             - name: nfsv4
               containerPort: 2049
-              hostPort: 2049
               protocol: TCP
           securityContext:
             privileged: true
