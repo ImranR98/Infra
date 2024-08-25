@@ -123,10 +123,9 @@ installAuthelia() {
     helm repo add authelia https://charts.authelia.com
     helm repo update
     kubectl create -n production secret generic authelia-users --from-file="$HERE"/authelia/users-database.yaml
-    AUTHELIA_VERSION="$(curl https://charts.authelia.com/ | grep '\--version' | awk '{print $NF}')"
     mkdir -p "$HERE"/state/authelia/session
     mkdir -p "$HERE"/state/authelia/storage
-    helm install authelia authelia/authelia --version "$AUTHELIA_VERSION" --values "$HERE"/authelia/values.yaml --namespace production
+    helm install authelia authelia/authelia --values "$HERE"/authelia/values.yaml --namespace production
     kubectl apply -f "$HERE"/authelia/middleware.yaml
     kubectl apply -f "$HERE"/authelia/ingress.yaml
 }
@@ -134,8 +133,7 @@ installAuthelia() {
 installCertManager() {
     helm repo add jetstack https://charts.jetstack.io
     helm repo update
-    CERT_MANAGER_VERSION="$(curl -s https://api.github.com/repos/cert-manager/cert-manager/releases/latest | grep -oE 'tag_name": .+' | awk -F '"' '{print $3}')"
-    helm install cert-manager jetstack/cert-manager --values "$HERE"/cert-manager/values.yaml --version "$CERT_MANAGER_VERSION" --set crds.enabled=true --namespace production
+    helm install cert-manager jetstack/cert-manager --values "$HERE"/cert-manager/values.yaml --set crds.enabled=true --namespace production
     kubectl apply -f "$HERE"/cert-manager/issuers/secret-cf-token.yaml
     kubectl apply -f "$HERE"/cert-manager/issuers/
     kubectl apply -f "$HERE"/cert-manager/certificates/production/
