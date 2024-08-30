@@ -64,7 +64,7 @@ EOF
     sudo sysctl --system
     sysctl net.bridge.bridge-nf-call-iptables net.bridge.bridge-nf-call-ip6tables net.ipv4.ip_forward
 
-    # Install and enable K8S (no harm in having kubeadm even on workers, will not be used)
+    # Install and enable K8s
     sudo dnf install -y kubernetes kubernetes-kubeadm kubernetes-client cri-o containernetworking-plugins
     sudo systemctl enable --now crio
     sudo systemctl enable --now kubelet
@@ -92,7 +92,7 @@ EOF
         kubectl apply -f "$TEMP_YAML"
         rm "$TEMP_YAML"
         kubectl create -f https://raw.githubusercontent.com/projectcalico/calico/v3.28.1/manifests/custom-resources.yaml
-        # Check that all basic K8S components are running
+        # Check that all basic K8s components are running
         sleep 10
         kubectl get pods --all-namespaces
         sudo dnf install -y helm
@@ -127,7 +127,7 @@ installCrowdsec() {
     kubectl apply -f "$HERE"/crowdsec/db.yaml
     kubectl apply -f "$HERE"/crowdsec/nfs.yaml
     helm install --namespace production crowdsec crowdsec/crowdsec --values "$HERE"/crowdsec/values.yaml
-    kubectl apply -f "$HERE"/crowdsec/ingress.yaml
+    # kubectl apply -f "$HERE"/crowdsec/dashboard.yaml # Not working
 }
 
 installAuthelia() {
