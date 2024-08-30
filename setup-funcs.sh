@@ -86,6 +86,10 @@ unmanaged-devices=interface-name:cali*;interface-name:tunl*;interface-name:vxlan
 EOF
         sudo systemctl restart NetworkManager
         kubectl create -f https://raw.githubusercontent.com/projectcalico/calico/v3.28.1/manifests/tigera-operator.yaml
+        TEMP_YAML="$(mktemp)"
+        wget -qO- https://raw.githubusercontent.com/projectcalico/calico/v3.28.1/manifests/custom-resources.yaml | sed 's/192.168/10.244/g' > "$TEMP_YAML"
+        kubectl apply -f "$TEMP_YAML"
+        rm "$TEMP_YAML"
         kubectl create -f https://raw.githubusercontent.com/projectcalico/calico/v3.28.1/manifests/custom-resources.yaml
         # Check that all basic K8S components are running
         sleep 10
