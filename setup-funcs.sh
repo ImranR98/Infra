@@ -8,6 +8,7 @@ trap "cd "$CURRENT_DIR"" EXIT
 
 installK8s() {
     # Adapted from https://docs.fedoraproject.org/en-US/quick-docs/using-kubernetes/#sect-fedora40-and-newer
+    # And https://docs.tigera.io/calico/latest/getting-started/kubernetes/quickstart
 
     # sudo kubeadm --cri-socket unix:///var/run/crio/crio.sock reset # Delete existing cluster
 
