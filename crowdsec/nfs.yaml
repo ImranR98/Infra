@@ -157,8 +157,20 @@ spec:
       app: crowdsec-nfs
   policyTypes:
   - Egress
+  - Ingress
   egress:
   - to:
     - podSelector:
         matchLabels:
-          app.kubernetes.io/instance: crowdsec
+          app: crowdsec-db
+    - podSelector:
+        matchLabels:
+          app: crowdsec-dashboard-db
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          app: crowdsec-db
+    - podSelector:
+        matchLabels:
+          app: crowdsec-dashboard-db

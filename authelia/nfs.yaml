@@ -157,8 +157,14 @@ spec:
       app: authelia-nfs
   policyTypes:
   - Egress
+  - Ingress
   egress:
   - to:
+    - podSelector:
+        matchLabels:
+          app.kubernetes.io/instance: authelia
+  ingress:
+  - from:
     - podSelector:
         matchLabels:
           app.kubernetes.io/instance: authelia
