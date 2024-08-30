@@ -80,7 +80,8 @@ EOF
         # Allow the master to also be a worker
         kubectl taint nodes --all node-role.kubernetes.io/control-plane-
         # Add overlay networking (Flannel)
-        kubectl apply -f https://github.com/flannel-io/flannel/releases/latest/download/kube-flannel.yml
+        kubectl create -f https://raw.githubusercontent.com/projectcalico/calico/v3.28.1/manifests/tigera-operator.yaml
+        kubectl create -f https://raw.githubusercontent.com/projectcalico/calico/v3.28.1/manifests/custom-resources.yaml
         # Check that all basic K8S components are running
         sleep 10
         kubectl get pods --all-namespaces
@@ -99,7 +100,6 @@ prepK8s() {
     kubectl create namespace production
     kubectl label nodes "$(hostname | tr "[:upper:]" "[:lower:]")" main-storage=true # Assume the control plane node is also the main-storage node
     mkdir -p "$HERE"/state
-    kubectl apply -f "$HERE"/state-nfs.yaml
 }
 
 installTraefik() {
@@ -115,6 +115,7 @@ installCrowdsec() {
     helm repo update
     mkdir -p "$HERE"/state/crowdsec/db
     kubectl apply -f "$HERE"/crowdsec/db.yaml
+    kubectl apply -f "$HERE"/crowdsec/nfs.yaml
     helm install --namespace production crowdsec crowdsec/crowdsec --values "$HERE"/crowdsec/values.yaml
     kubectl apply -f "$HERE"/crowdsec/ingress.yaml
 }
@@ -125,6 +126,7 @@ installAuthelia() {
     kubectl create -n production secret generic authelia-users --from-file="$HERE"/authelia/users-database.yaml
     mkdir -p "$HERE"/state/authelia/session
     mkdir -p "$HERE"/state/authelia/storage
+    kubectl apply -f "$HERE"/authelia/nfs.yaml
     helm install authelia authelia/authelia --values "$HERE"/authelia/values.yaml --namespace production
     kubectl apply -f "$HERE"/authelia/middleware.yaml
     kubectl apply -f "$HERE"/authelia/ingress.yaml
@@ -156,3 +158,4 @@ installDockerCompose() {
 # helm upgrade -f service/values.yaml service service/service --namespace production
 # kubectl run curlpod --image=alpine --restart=Never --rm -it -- /bin/sh # Then apk add --no-cache curl
 # kubectl exec -it <pod-name> --stdin --tty -- bash
+# sudo kubeadm --cri-socket unix:///var/run/crio/crio.sock reset && sudo rm -r /etc/cni/net.d
