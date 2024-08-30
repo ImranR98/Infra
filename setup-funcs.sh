@@ -29,6 +29,17 @@ installK8s() {
     sudo firewall-cmd --permanent --add-port=8472/udp
     sudo firewall-cmd --permanent --add-port=30000-32767/tcp
     sudo firewall-cmd --add-masquerade --permanent
+    sudo firewall-cmd --permanent --add-port=179/tcp
+    sudo firewall-cmd --permanent --add-port=4789/udp
+    sudo firewall-cmd --permanent --add-port=5473/tcp
+    sudo firewall-cmd --permanent --add-port=9099/tcp
+    sudo firewall-cmd --permanent --add-port=9099/udp
+    sudo firewall-cmd --permanent --zone=trusted --add-interface="cali+"
+    sudo firewall-cmd --permanent --zone=trusted --add-interface="tunl+"
+    sudo firewall-cmd --permanent --zone=trusted --add-interface="vxlan-v6.calico"
+    sudo firewall-cmd --permanent --zone=trusted --add-interface="vxlan.calico"
+    sudo firewall-cmd --permanent --zone=trusted --add-interface="wg-v6.cali"
+    sudo firewall-cmd --permanent --zone=trusted --add-interface="wireguard.cali"
     if [ "$NODE_TYPE" = 'master' ]; then
         sudo firewall-cmd --permanent --add-port=6443/tcp
         sudo firewall-cmd --permanent --add-port=2379-2380/tcp
@@ -47,6 +58,7 @@ installK8s() {
         sudo firewall-cmd --permanent --zone=public --add-service=http
         sudo firewall-cmd --permanent --zone=public --add-service=https
     fi
+    sudo firewall-cmd --reload
 
     # More networking changes
     sudo dnf install -y iptables iproute-tc
@@ -68,6 +80,7 @@ EOF
     sudo dnf install -y kubernetes kubernetes-kubeadm kubernetes-client cri-o containernetworking-plugins
     sudo systemctl enable --now crio
     sudo systemctl enable --now kubelet
+    sudo systemctl disable --now firewalld # TODO: How to avoid this?
 
     # Setup the cluster
     if [ "$NODE_TYPE" = 'master' ]; then
@@ -81,14 +94,14 @@ EOF
         # Allow the master to also be a worker
         kubectl taint nodes --all node-role.kubernetes.io/control-plane-
         # Add overlay networking (Calico)
-        (cat | sudo tee /etc/NetworkManager/conf.d/calico.conf )<<-EOF
+        (cat | sudo tee /etc/NetworkManager/conf.d/calico.conf) <<-EOF
 [keyfile]
 unmanaged-devices=interface-name:cali*;interface-name:tunl*;interface-name:vxlan.calico;interface-name:vxlan-v6.calico;interface-name:wireguard.cali;interface-name:wg-v6.cali
 EOF
         sudo systemctl restart NetworkManager
         kubectl create -f https://raw.githubusercontent.com/projectcalico/calico/v3.28.1/manifests/tigera-operator.yaml
         TEMP_YAML="$(mktemp)"
-        wget -qO- https://raw.githubusercontent.com/projectcalico/calico/v3.28.1/manifests/custom-resources.yaml | sed 's/192.168/10.244/g' > "$TEMP_YAML"
+        wget -qO- https://raw.githubusercontent.com/projectcalico/calico/v3.28.1/manifests/custom-resources.yaml | sed 's/192.168/10.244/g' >"$TEMP_YAML"
         kubectl apply -f "$TEMP_YAML"
         rm "$TEMP_YAML"
         kubectl create -f https://raw.githubusercontent.com/projectcalico/calico/v3.28.1/manifests/custom-resources.yaml
@@ -115,6 +128,8 @@ prepK8s() {
 installTraefik() {
     helm repo add traefik https://helm.traefik.io/traefik
     helm repo update
+    LOCAL_IP="$(ifconfig | grep -Eo 'inet (addr:)?([0-9]*\.){3}[0-9]*' | grep -Eo '([0-9]*\.){3}[0-9]*' | grep -v '127.0.0.1' | tail -1)"
+    sed -i "s/192.168.8.XX/$LOCAL_IP/" "$HERE"/traefik/values.yaml
     helm install --namespace production traefik traefik/traefik --values "$HERE"/traefik/values.yaml
     kubectl apply -f "$HERE"/traefik/middlewares.yaml
     kubectl apply -f "$HERE"/traefik/dashboard/ingress.yaml
@@ -162,6 +177,10 @@ prepForLogtfy() {
 installDockerCompose() {
     awk -v here="$HERE/docker-compose" '{gsub("path_to_here", here); print}' "$HERE"/docker-compose/docker-compose.service | sudo tee /etc/systemd/system/docker-compose.service
     sudo systemctl enable --now docker-compose.service
+}
+
+installPixelNtfy() {
+    kubectl apply -f "$HERE"/pixelntfy/pixelntfy.yaml
 }
 
 # Useful commands:

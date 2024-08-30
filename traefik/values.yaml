@@ -35,7 +35,7 @@ ports:
       port: websecure
       priority: 10
     proxyProtocol:
-      trustedIPs: ["10.244.0.0/16"] # Assuming cluster CIDR is 10.244.0.0/16 and Traefik is accessed via FRP
+      trustedIPs: ["192.168.8.XX"] # Assuming Traefik is accessed via FRP running on host 192.168.8.XX
       insecure: false
   websecure:
     nodePort: 30443
@@ -45,7 +45,7 @@ ports:
     tls:
       enabled: true
     proxyProtocol:
-      trustedIPs: ["10.244.0.0/16"]
+      trustedIPs: ["192.168.8.XX"]
       insecure: false
     middlewares:
       - production-crowdsec-bouncer@kubernetescrd
