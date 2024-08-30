@@ -1,6 +1,7 @@
 #!/bin/bash
 
 # Run these functions in the order they are written
+# PROD TODO: Before the final prod deployment, disable remote repo and address all PROD TODOs
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 CURRENT_DIR="$(pwd)"
@@ -152,6 +153,7 @@ installAuthelia() {
     mkdir -p "$HERE"/state/authelia/session
     mkdir -p "$HERE"/state/authelia/storage
     kubectl apply -f "$HERE"/authelia/nfs.yaml
+    kubectl apply -f "$HERE"/authelia/users-database.yaml
     helm install authelia authelia/authelia --values "$HERE"/authelia/values.yaml --namespace production
     kubectl apply -f "$HERE"/authelia/middleware.yaml
     kubectl apply -f "$HERE"/authelia/ingress.yaml

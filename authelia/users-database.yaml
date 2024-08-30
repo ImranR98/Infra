@@ -1,18 +1,18 @@
-###############################################################
-#                         Users Database                      #
-###############################################################
-
-# This file can be used if you do not have an LDAP set up.
-
-# List of users
-users:
-  authelia:
-    disabled: false
-    displayname: "Authelia User"
-    # Password is authelia
-    password: "$6$rounds=50000$BpLnfgDsc2WD8F2q$Zis.ixdg9s/UOJYrs56b5QEZFiZECu0qZVNsIYxBaNJ7ucIL.nlxVCT5tqh8KHG8X4tlwCFm5r6NTOZZ5qRFN/"  # yamllint disable-line rule:line-length
-    email: authelia@example.org
-    groups:
-      - admins
-      - dev
-...
+apiVersion: v1
+kind: Secret
+metadata:
+  name: users-database
+  namespace: production
+type: Opaque
+stringData:
+  users-database.yaml: |
+    users:
+      imranr:
+        disabled: false
+        displayname: "Imran"
+        password: "***REMOVED***"  # yamllint disable-line rule:line-length
+        email: contact@example.org
+        groups:
+          - admins
+          - dev
+      # PROD TODO: Replace this with the prod version
