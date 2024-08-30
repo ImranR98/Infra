@@ -9,7 +9,7 @@ trap "cd "$CURRENT_DIR"" EXIT
 installK8S() {
     # Adapted from https://docs.fedoraproject.org/en-US/quick-docs/using-kubernetes/#sect-fedora40-and-newer
 
-    # sudo kubeadm reset # Delete existing cluster
+    # sudo kubeadm --cri-socket unix:///var/run/crio/crio.sock reset # Delete existing cluster
 
     NODE_TYPE="$1"
     if [ "$NODE_TYPE" != 'master' ] && [ "$NODE_TYPE" != 'worker' ]; then
@@ -71,15 +71,20 @@ EOF
     # Setup the cluster
     if [ "$NODE_TYPE" = 'master' ]; then
         # Init. cluster
-        sudo kubeadm config images pull
-        sudo kubeadm init --pod-network-cidr=10.244.0.0/16
+        sudo kubeadm --cri-socket unix:///var/run/crio/crio.sock config images pull
+        sudo kubeadm --cri-socket unix:///var/run/crio/crio.sock init --pod-network-cidr=10.244.0.0/16
         # Use user-specific config, leaving original unchanged
         mkdir -p $HOME/.kube
         sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
         sudo chown $(id -u):$(id -g) $HOME/.kube/config
         # Allow the master to also be a worker
         kubectl taint nodes --all node-role.kubernetes.io/control-plane-
-        # Add overlay networking (Flannel)
+        # Add overlay networking (Calico)
+        (cat | sudo tee /etc/NetworkManager/conf.d/calico.conf )<<-EOF
+[keyfile]
+unmanaged-devices=interface-name:cali*;interface-name:tunl*;interface-name:vxlan.calico;interface-name:vxlan-v6.calico;interface-name:wireguard.cali;interface-name:wg-v6.cali
+EOF
+        sudo systemctl restart NetworkManager
         kubectl create -f https://raw.githubusercontent.com/projectcalico/calico/v3.28.1/manifests/tigera-operator.yaml
         kubectl create -f https://raw.githubusercontent.com/projectcalico/calico/v3.28.1/manifests/custom-resources.yaml
         # Check that all basic K8S components are running
