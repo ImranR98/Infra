@@ -201,6 +201,12 @@ installFilebrowser() {
     kubectl apply -f "$HERE"/filebrowser/filebrowser.yaml
 }
 
+installJellyfin() {
+    mkdir -p "$HERE"/state/jellyfin/cache
+    mkdir -p "$HERE"/state/jellyfin/config
+    kubectl apply -f "$HERE"/jellyfin/jellyfin.yaml
+}
+
 # Useful commands:
 # helm upgrade -f service/values.yaml service service/service --namespace production
 # kubectl run curlpod --image=alpine --restart=Never --rm -it -- /bin/sh # Then apk add --no-cache curl
