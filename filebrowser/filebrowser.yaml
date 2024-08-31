@@ -130,6 +130,9 @@ spec:
   routes:
     - match: Host(`files.staging.example.org`)
       kind: Rule
+      middlewares:
+        - name: forwardauth-geoblock
+          namespace: production
       services:
         - name: filebrowser
           port: 3000

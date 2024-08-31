@@ -2,7 +2,7 @@
 apiVersion: v1
 kind: PersistentVolume
 metadata:
-  name: jellyfin-pv
+  name: ollama-pv
   namespace: production
 spec:
   capacity:
@@ -12,7 +12,7 @@ spec:
     - ReadWriteOnce
   persistentVolumeReclaimPolicy: Retain
   local:
-    path: /home/imranr/k8s/state/jellyfin
+    path: /home/imranr/k8s/state/ollama
   nodeAffinity:
     required:
       nodeSelectorTerms:
@@ -25,7 +25,7 @@ spec:
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: jellyfin-pvc
+  name: ollama-pvc
   namespace: production
 spec:
   accessModes:
@@ -33,72 +33,79 @@ spec:
   resources:
     requests:
       storage: 8Gi
-  volumeName: jellyfin-pv
+  volumeName: ollama-pv
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: jellyfin
+  name: ollama
   namespace: production
   labels:
-    app: jellyfin
+    app: ollama
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: jellyfin
+      app: ollama
   template:
     metadata:
       labels:
-        app: jellyfin
+        app: ollama
     spec:
       securityContext:
-        runAsUser: 1000
         runAsGroup: 1000
         fsGroup: 1000
       containers:
-        - name: jellyfin
-          image: jellyfin/jellyfin:latest
+        - name: ollama
+          image: ollama/ollama:latest
           imagePullPolicy: Always
           ports:
-            - containerPort: 8096
+            - containerPort: 11434
           volumeMounts:
-            - name: media
-              mountPath: /files
             - name: state
-              mountPath: /config
-              subPath: config
+              mountPath: /root/.ollama
+              subPath: ollama
+        - name: ollama-webui
+          image: ghcr.io/open-webui/open-webui:main
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+          env:
+          - name: OLLAMA_BASE_URL
+            value: "http://127.0.0.1:11434"
+          - name: WEBUI_AUTH_TRUSTED_EMAIL_HEADER
+            value: "Remote-Email"
+          - name: WEBUI_AUTH_TRUSTED_NAME_HEADER
+            value: "Remote-Name"
+          volumeMounts:
             - name: state
-              mountPath: /cache
-              subPath: cache
+              mountPath: /app/backend/data
+              subPath: webui
       volumes:
-        - name: media
-          persistentVolumeClaim:
-            claimName: main-external-media-pvc
         - name: state
           persistentVolumeClaim:
-            claimName: jellyfin-pvc
+            claimName: ollama-pvc
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: jellyfin
+  name: ollama
   namespace: production
   labels:
-    app: jellyfin
+    app: ollama
 spec:
   selector:
-    app: jellyfin
+    app: ollama
   ports:
     - protocol: TCP
-      port: 8096
-      targetPort: 8096
+      port: 8080
+      targetPort: 8080
   type: ClusterIP
 ---
 apiVersion: traefik.io/v1alpha1
 kind: IngressRoute
 metadata:
-  name: jellyfin
+  name: ollama
   namespace: production
   annotations:
     kubernetes.io/ingress.class: traefik-external
@@ -107,13 +114,13 @@ spec:
     - web
     - websecure
   routes:
-    - match: Host(`tv.staging.example.org`)
+    - match: Host(`gpt.staging.example.org`)
       kind: Rule
       middlewares:
         - name: forwardauth-geoblock
           namespace: production
       services:
-        - name: jellyfin
-          port: 8096
+        - name: ollama
+          port: 8080
   tls:
     secretName: example-org-tls

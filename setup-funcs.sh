@@ -207,6 +207,12 @@ installJellyfin() {
     kubectl apply -f "$HERE"/jellyfin/jellyfin.yaml
 }
 
+installOllama() {
+    mkdir -p "$HERE"/state/ollama/ollama
+    mkdir -p "$HERE"/state/ollama/webui
+    kubectl apply -f "$HERE"/ollama/ollama.yaml
+}
+
 # Useful commands:
 # helm upgrade -f service/values.yaml service service/service --namespace production
 # kubectl run curlpod --image=alpine --restart=Never --rm -it -- /bin/sh # Then apk add --no-cache curl
