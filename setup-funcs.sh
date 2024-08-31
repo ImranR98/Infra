@@ -196,6 +196,11 @@ installImmich() {
     kubectl apply -f "$HERE"/immich/ingress.yaml
 }
 
+installFilebrowser() {
+    mkdir -p "$HERE"/state/filebrowser
+    kubectl apply -f "$HERE"/filebrowser/filebrowser.yaml
+}
+
 # Useful commands:
 # helm upgrade -f service/values.yaml service service/service --namespace production
 # kubectl run curlpod --image=alpine --restart=Never --rm -it -- /bin/sh # Then apk add --no-cache curl
