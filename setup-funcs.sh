@@ -2,6 +2,7 @@
 
 # Run these functions in the order they are written
 # PROD TODO: Before the final prod deployment, disable remote repo and address all PROD TODOs
+# PROD TODO: Remove all instances of 'staging' as a subdomain
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 CURRENT_DIR="$(pwd)"
@@ -124,6 +125,7 @@ prepK8s() {
     kubectl create namespace production
     kubectl label nodes "$(hostname | tr "[:upper:]" "[:lower:]")" main-storage=true # Assume the control plane node is also the main-storage node
     mkdir -p "$HERE"/state
+    kubectl apply -f "$HERE"/common-pv
 }
 
 installTraefik() {
@@ -183,6 +185,15 @@ installDockerCompose() {
 
 installPixelNtfy() {
     kubectl apply -f "$HERE"/pixelntfy/pixelntfy.yaml
+}
+
+installImmich() {
+    mkdir -p "$HERE"/state/immich/postgres
+    mkdir -p "$HERE"/state/immich/redis
+    kubectl apply -f "$HERE"/immich/pv.yaml
+    helm repo add immich https://immich-app.github.io/immich-charts
+    helm install --create-namespace --namespace production immich immich/immich -f "$HERE"/immich/values.yaml
+    kubectl apply -f "$HERE"/immich/ingress.yaml
 }
 
 # Useful commands:
