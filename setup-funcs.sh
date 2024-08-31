@@ -214,6 +214,12 @@ installOllama() {
     kubectl apply -f "$HERE"/ollama/ollama.yaml
 }
 
+installNtfy() {
+    mkdir -p "$HERE"/state/ntfy
+    kubectl apply -f "$HERE"/ntfy/nfs.yaml
+    kubectl apply -f "$HERE"/ntfy/ntfy.yaml
+}
+
 # Useful commands:
 # helm upgrade -f service/values.yaml service service/service --namespace production
 # kubectl run curlpod --image=alpine --restart=Never --rm -it -- /bin/sh # Then apk add --no-cache curl

@@ -1,0 +1,95 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ntfy
+  namespace: production
+data:
+  server.yml: |
+    base-url: "https://ntfy.staging.example.org"
+    behind-proxy: true
+    auth-file: "/home/ntfy/user.db"
+    auth-default-access: "deny-all"
+    listen-http: ":3000"
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ntfy
+  namespace: production
+  labels:
+    app: ntfy
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ntfy
+  template:
+    metadata:
+      labels:
+        app: ntfy
+    spec:
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+      containers:
+        - name: ntfy
+          image: binwiederhier/ntfy:latest
+          imagePullPolicy: Always
+          args: ["serve"]
+          ports:
+            - containerPort: 3000
+          volumeMounts:
+            - name: config
+              mountPath: /etc/ntfy
+              readOnly: true
+            - name: state
+              mountPath: /home/ntfy
+      volumes:
+        - name: config
+          configMap:
+            name: ntfy
+        - name: state
+          persistentVolumeClaim:
+            claimName: ntfy-nfs-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ntfy
+  namespace: production
+  labels:
+    app: ntfy
+spec:
+  selector:
+    app: ntfy
+  ports:
+    - protocol: TCP
+      port: 3000
+      targetPort: 3000
+  type: ClusterIP
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: ntfy
+  namespace: production
+  annotations:
+    kubernetes.io/ingress.class: traefik-external
+spec:
+  entryPoints:
+    - web
+    - websecure
+  routes:
+    - match: Host(`ntfy.staging.example.org`)
+      kind: Rule
+      middlewares:
+        - name: forwardauth-geoblock
+          namespace: production
+      services:
+        - name: ntfy
+          port: 3000
+  tls:
+    secretName: example-org-tls
