@@ -1,40 +1,4 @@
 ---
-apiVersion: v1
-kind: PersistentVolume
-metadata:
-  name: ollama-pv
-  namespace: production
-spec:
-  capacity:
-    storage: 8Gi
-  volumeMode: Filesystem
-  accessModes:
-    - ReadWriteOnce
-  persistentVolumeReclaimPolicy: Retain
-  local:
-    path: /home/imranr/k8s/state/ollama
-  nodeAffinity:
-    required:
-      nodeSelectorTerms:
-        - matchExpressions:
-            - key: main-storage
-              operator: In
-              values:
-                - "true"
----
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: ollama-pvc
-  namespace: production
-spec:
-  accessModes:
-    - ReadWriteOnce
-  resources:
-    requests:
-      storage: 8Gi
-  volumeName: ollama-pv
----
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -84,7 +48,7 @@ spec:
       volumes:
         - name: state
           persistentVolumeClaim:
-            claimName: ollama-pvc
+            claimName: ollama-nfs-pvc
 ---
 apiVersion: v1
 kind: Service

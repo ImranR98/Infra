@@ -210,6 +210,7 @@ installJellyfin() {
 installOllama() {
     mkdir -p "$HERE"/state/ollama/ollama
     mkdir -p "$HERE"/state/ollama/webui
+    kubectl apply -f "$HERE"/ollama/nfs.yaml
     kubectl apply -f "$HERE"/ollama/ollama.yaml
 }
 
