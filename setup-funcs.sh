@@ -242,6 +242,11 @@ installNavidrome() {
     kubectl apply -f "$HERE"/send/send.yaml
 }
 
+installUptime() {
+    mkdir -p "$HERE"/state/uptime
+    kubectl apply -f "$HERE"/uptime/uptime.yaml
+}
+
 # Useful commands:
 # helm upgrade -f service/values.yaml service service/service --namespace production
 # kubectl run curlpod --image=alpine --restart=Never --rm -it -- /bin/sh # Then apk add --no-cache curl

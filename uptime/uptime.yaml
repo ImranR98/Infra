@@ -1,0 +1,109 @@
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: uptime-pv
+  namespace: production
+spec:
+  capacity:
+    storage: 8Gi
+  volumeMode: Filesystem
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  local:
+    path: /home/imranr/k8s/state/uptime
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - key: main-storage
+              operator: In
+              values:
+                - "true"
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: uptime-pvc
+  namespace: production
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 8Gi
+  volumeName: uptime-pv
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: uptime
+  namespace: production
+  labels:
+    app: uptime
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: uptime
+  template:
+    metadata:
+      labels:
+        app: uptime
+    spec:
+      securityContext:
+        runAsGroup: 1000
+        fsGroup: 1000
+      containers:
+        - name: uptime
+          image: louislam/uptime-kuma:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 3001
+          volumeMounts:
+            - name: state
+              mountPath: /app/data
+      volumes:
+        - name: state
+          persistentVolumeClaim:
+            claimName: uptime-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: uptime
+  namespace: production
+  labels:
+    app: uptime
+spec:
+  selector:
+    app: uptime
+  ports:
+    - protocol: TCP
+      port: 3001
+      targetPort: 3001
+  type: ClusterIP
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: uptime
+  namespace: production
+  annotations:
+    kubernetes.io/ingress.class: traefik-external
+spec:
+  entryPoints:
+    - web
+    - websecure
+  routes:
+    - match: Host(`uptime.staging.example.org`)
+      kind: Rule
+      middlewares:
+        - name: forwardauth-geoblock
+          namespace: production
+      services:
+        - name: uptime
+          port: 3001
+  tls:
+    secretName: example-org-tls
