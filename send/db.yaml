@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: send-db
+  namespace: production
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: send-db
+  template:
+    metadata:
+      labels:
+        app: send-db
+    spec:
+      securityContext:
+        runAsGroup: 1000
+        fsGroup: 1000
+      containers:
+        - name: send-db
+          image: redis:alpine
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 6379
+          volumeMounts:
+            - mountPath: /data
+              name: send-volume
+              subPath: db
+      volumes:
+        - name: send-volume
+          persistentVolumeClaim:
+            claimName: send-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: send-db
+  namespace: production
+spec:
+  type: ClusterIP
+  ports:
+    - port: 6379
+  selector:
+    app: send-db

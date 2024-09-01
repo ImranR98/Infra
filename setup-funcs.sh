@@ -230,6 +230,18 @@ installPlausible() {
     kubectl apply -f "$HERE"/plausible/plausible.yaml
 }
 
+installNavidrome() {
+    mkdir -p "$HERE"/state/navidrome
+    kubectl apply -f "$HERE"/navidrome/navidrome.yaml
+}
+
+installNavidrome() {
+    mkdir -p "$HERE"/state/send/uploads
+    mkdir -p "$HERE"/state/send/db
+    kubectl apply -f "$HERE"/send/db.yaml
+    kubectl apply -f "$HERE"/send/send.yaml
+}
+
 # Useful commands:
 # helm upgrade -f service/values.yaml service service/service --namespace production
 # kubectl run curlpod --image=alpine --restart=Never --rm -it -- /bin/sh # Then apk add --no-cache curl
