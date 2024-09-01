@@ -1,0 +1,62 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: isbn-lookup
+  namespace: production
+  labels:
+    app: isbn-lookup
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: isbn-lookup
+  template:
+    metadata:
+      labels:
+        app: isbn-lookup
+    spec:
+      containers:
+      - name: isbn-lookup
+        image: imranrdev/isbn-lookup:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8080
+        env:
+        - name: ANALYTICS_SCRIPT_ELEMENT
+          value: <script defer data-domain="isbn.staging.example.org" src="https://plausible.staging.example.org/js/script.js"></script>
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: isbn-lookup
+  namespace: production
+  labels:
+    app: isbn-lookup
+spec:
+  selector:
+    app: isbn-lookup
+  ports:
+    - protocol: TCP
+      port: 8080
+      targetPort: 8080
+  type: ClusterIP
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: isbn-lookup
+  namespace: production
+  annotations: 
+    kubernetes.io/ingress.class: traefik-external
+spec:
+  entryPoints:
+    - web
+    - websecure
+  routes:
+    - match: Host(`isbn.staging.example.org`)
+      kind: Rule
+      services:
+        - name: isbn-lookup
+          port: 8080
+  tls:
+    secretName: example-org-tls
