@@ -81,9 +81,6 @@ spec:
   routes:
     - match: Host(`plausible.staging.example.org`)
       kind: Rule
-      middlewares:
-        - name: forwardauth-geoblock
-          namespace: production
       services:
         - name: plausible
           port: 8000

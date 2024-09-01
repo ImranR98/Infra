@@ -1,0 +1,116 @@
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: navidrome-pv
+  namespace: production
+spec:
+  capacity:
+    storage: 8Gi
+  volumeMode: Filesystem
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  local:
+    path: /home/imranr/k8s/state/navidrome
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - key: main-storage
+              operator: In
+              values:
+                - "true"
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: navidrome-pvc
+  namespace: production
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 8Gi
+  volumeName: navidrome-pv
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: navidrome
+  namespace: production
+  labels:
+    app: navidrome
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: navidrome
+  template:
+    metadata:
+      labels:
+        app: navidrome
+    spec:
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+      containers:
+        - name: navidrome
+          image: deluan/navidrome:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 4533
+          volumeMounts:
+            - name: media
+              mountPath: /music
+              subPath: Music
+            - name: state
+              mountPath: /data
+      volumes:
+        - name: media
+          persistentVolumeClaim:
+            claimName: main-external-media-pvc
+        - name: state
+          persistentVolumeClaim:
+            claimName: navidrome-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: navidrome
+  namespace: production
+  labels:
+    app: navidrome
+spec:
+  selector:
+    app: navidrome
+  ports:
+    - protocol: TCP
+      port: 4533
+      targetPort: 4533
+  type: ClusterIP
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: navidrome
+  namespace: production
+  annotations:
+    kubernetes.io/ingress.class: traefik-external
+spec:
+  entryPoints:
+    - web
+    - websecure
+  routes:
+    - match: Host(`music.staging.example.org`)
+      kind: Rule
+      middlewares:
+        - name: forwardauth-geoblock
+          namespace: production
+      services:
+        - name: navidrome
+          port: 4533
+  tls:
+    secretName: example-org-tls
