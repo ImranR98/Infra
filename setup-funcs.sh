@@ -141,11 +141,10 @@ installTraefik() {
 installCrowdsec() {
     helm repo add crowdsec https://crowdsecurity.github.io/helm-charts
     helm repo update
-    mkdir -p "$HERE"/state/crowdsec/db
-    kubectl apply -f "$HERE"/crowdsec/db.yaml
-    kubectl apply -f "$HERE"/crowdsec/nfs.yaml
+    mkdir -p "$HERE"/state/crowdsec
+    kubectl apply -f "$HERE"/crowdsec/pv.yaml
     helm install --namespace production crowdsec crowdsec/crowdsec --values "$HERE"/crowdsec/values.yaml
-    # kubectl apply -f "$HERE"/crowdsec/dashboard.yaml # Not working
+    kubectl apply -f "$HERE"/crowdsec/ingress.yaml
 }
 
 installAuthelia() {
