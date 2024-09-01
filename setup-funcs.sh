@@ -220,6 +220,16 @@ installNtfy() {
     kubectl apply -f "$HERE"/ntfy/ntfy.yaml
 }
 
+installPlausible() {
+    mkdir -p "$HERE"/state/plausible/db
+    mkdir -p "$HERE"/state/plausible/clickhouse/data
+    mkdir -p "$HERE"/state/plausible/clickhouse/logs
+    kubectl apply -f "$HERE"/plausible/pv.yaml
+    kubectl apply -f "$HERE"/plausible/db.yaml
+    kubectl apply -f "$HERE"/plausible/clickhouse.yaml
+    kubectl apply -f "$HERE"/plausible/plausible.yaml
+}
+
 # Useful commands:
 # helm upgrade -f service/values.yaml service service/service --namespace production
 # kubectl run curlpod --image=alpine --restart=Never --rm -it -- /bin/sh # Then apk add --no-cache curl
