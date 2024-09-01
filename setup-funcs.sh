@@ -247,6 +247,22 @@ installUptime() {
     kubectl apply -f "$HERE"/uptime/uptime.yaml
 }
 
+installNextcloud() { # DOOESN'T FUCKING WORK
+    mkdir -p "$HERE"/state/nextcloud/db
+    mkdir -p "$HERE"/state/nextcloud/data/root
+    mkdir -p "$HERE"/state/nextcloud/data/html
+    mkdir -p "$HERE"/state/nextcloud/data/data
+    mkdir -p "$HERE"/state/nextcloud/data/config
+    mkdir -p "$HERE"/state/nextcloud/data/custom_apps
+    mkdir -p "$HERE"/state/nextcloud/data/tmp
+    mkdir -p "$HERE"/state/nextcloud/data/themes
+    mkdir -p "$HERE"/state/nextcloud/nc-data
+    kubectl apply -f "$HERE"/nextcloud/nfs.yaml
+    helm repo add nextcloud https://nextcloud.github.io/helm/
+    helm install --create-namespace --namespace production nextcloud nextcloud/nextcloud -f "$HERE"/nextcloud/values.yaml
+    kubectl apply -f "$HERE"/nextcloud/ingress.yaml
+}
+
 # Useful commands:
 # helm upgrade -f service/values.yaml service service/service --namespace production
 # kubectl run curlpod --image=alpine --restart=Never --rm -it -- /bin/sh # Then apk add --no-cache curl
