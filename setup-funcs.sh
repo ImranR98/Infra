@@ -156,7 +156,7 @@ installAuthelia() {
     kubectl create -n production secret generic authelia-users --from-file="$HERE"/authelia/users-database.yaml
     mkdir -p "$HERE"/state/authelia/session
     mkdir -p "$HERE"/state/authelia/storage
-    kubectl apply -f "$HERE"/authelia/nfs.yaml
+    kubectl apply -f "$HERE"/authelia/pv.yaml
     kubectl apply -f "$HERE"/authelia/users-database.yaml
     helm install authelia authelia/authelia --values "$HERE"/authelia/values.yaml --namespace production
     kubectl apply -f "$HERE"/authelia/middleware.yaml
@@ -218,7 +218,6 @@ installOllama() {
 
 installNtfy() {
     mkdir -p "$HERE"/state/ntfy
-    kubectl apply -f "$HERE"/ntfy/nfs.yaml
     kubectl apply -f "$HERE"/ntfy/ntfy.yaml
 }
 
@@ -259,7 +258,7 @@ installNextcloud() { # DOOESN'T FUCKING WORK
     mkdir -p "$HERE"/state/nextcloud/data/tmp
     mkdir -p "$HERE"/state/nextcloud/data/themes
     mkdir -p "$HERE"/state/nextcloud/nc-data
-    kubectl apply -f "$HERE"/nextcloud/nfs.yaml
+    kubectl apply -f "$HERE"/nextcloud/pv.yaml
     helm repo add nextcloud https://nextcloud.github.io/helm/
     helm install --create-namespace --namespace production nextcloud nextcloud/nextcloud -f "$HERE"/nextcloud/values.yaml
     kubectl apply -f "$HERE"/nextcloud/ingress.yaml

@@ -1,5 +1,41 @@
 ---
 apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: ntfy-pv
+  namespace: production
+spec:
+  capacity:
+    storage: 8Gi
+  volumeMode: Filesystem
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  local:
+    path: /home/imranr/k8s/state/ntfy
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - key: main-storage
+              operator: In
+              values:
+                - "true"
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: ntfy-pvc
+  namespace: production
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 8Gi
+  volumeName: ntfy-pv
+---
+apiVersion: v1
 kind: ConfigMap
 metadata:
   name: ntfy
@@ -53,7 +89,7 @@ spec:
             name: ntfy
         - name: state
           persistentVolumeClaim:
-            claimName: ntfy-nfs-pvc
+            claimName: ntfy-pvc
 ---
 apiVersion: v1
 kind: Service
