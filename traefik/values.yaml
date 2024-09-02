@@ -74,6 +74,11 @@ providers:
 rbac:
   enabled: true
 
+metrics:
+  prometheus:
+   service:
+      enabled: true
+
 service:
   enabled: true
   type: NodePort

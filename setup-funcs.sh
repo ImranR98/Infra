@@ -136,6 +136,9 @@ installTraefik() {
     helm install --namespace production traefik traefik/traefik --values "$HERE"/traefik/values.yaml
     kubectl apply -f "$HERE"/traefik/middlewares.yaml
     kubectl apply -f "$HERE"/traefik/dashboard/ingress.yaml
+    mkdir -p "$HERE"/state/traefik-metrics/prometheus
+    mkdir -p "$HERE"/state/traefik-metrics/grafana/data
+    mkdir -p "$HERE"/state/traefik-metrics/grafana/provisioning
 }
 
 installCrowdsec() {

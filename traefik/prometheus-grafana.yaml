@@ -1,0 +1,200 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: traefik-prometheus-config
+  namespace: production
+data:
+  prometheus.yaml: |
+    global:
+      scrape_interval:     15s
+      evaluation_interval: 15s
+
+    rule_files:
+      - 'alert.rules'
+
+    scrape_configs:
+      - job_name: 'prometheus'
+        scrape_interval: 5s
+        static_configs:
+            - targets: ['localhost:9090']
+      - job_name: traefik
+        metrics_path: /metrics
+        static_configs:
+          - targets:
+            - traefik-metrics.production.svc.cluster.local:9100
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: traefik-metrics-pv
+  namespace: production
+spec:
+  capacity:
+    storage: 8Gi
+  volumeMode: Filesystem
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  local:
+    path: /home/imranr/k8s/state/traefik-metrics
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - key: main-storage
+              operator: In
+              values:
+                - "true"
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: traefik-metrics-pvc
+  namespace: production
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 8Gi
+  volumeName: traefik-metrics-pv
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: traefik-prometheus
+  namespace: production
+  labels:
+    app: traefik-prometheus
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: traefik-prometheus
+  template:
+    metadata:
+      labels:
+        app: traefik-prometheus
+    spec:
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+      containers:
+        - name: traefik-prometheus
+          image: prom/prometheus:latest
+          imagePullPolicy: Always
+          args: ["--config.file=/config/prometheus.yaml", "--storage.tsdb.path=/prometheus", "--storage.tsdb.retention.size=512MB"]
+          ports:
+            - containerPort: 9090
+          volumeMounts:
+            - name: config
+              mountPath: /config/prometheus.yaml
+              subPath: prometheus.yaml
+            - name: state
+              mountPath: /prometheus
+              subPath: prometheus
+      volumes:
+        - name: state
+          persistentVolumeClaim:
+            claimName: traefik-metrics-pvc
+        - name: config
+          configMap:
+            name: traefik-prometheus-config
+            items:
+              - key: prometheus.yaml
+                path: prometheus.yaml
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: traefik-prometheus
+  namespace: production
+  labels:
+    app: traefik-prometheus
+spec:
+  selector:
+    app: traefik-prometheus
+  ports:
+    - protocol: TCP
+      port: 9090
+      targetPort: 9090
+  type: ClusterIP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: traefik-grafana
+  namespace: production
+  labels:
+    app: traefik-grafana
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: traefik-grafana
+  template:
+    metadata:
+      labels:
+        app: traefik-grafana
+    spec:
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+      containers:
+        - name: traefik-grafana
+          image: grafana/grafana:latest
+          imagePullPolicy: Always
+          env:
+            - name: GF_INSTALL_PLUGINS
+              value: grafana-piechart-panel
+          ports:
+            - containerPort: 3000
+          volumeMounts:
+            - name: state
+              mountPath: /var/lib/grafana
+              subPath: grafana/data
+            - name: state
+              mountPath: /etc/grafana/provisioning
+              subPath: grafana/provisioning
+      volumes:
+        - name: state
+          persistentVolumeClaim:
+            claimName: traefik-metrics-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: traefik-grafana
+  namespace: production
+  labels:
+    app: traefik-grafana
+spec:
+  selector:
+    app: traefik-grafana
+  ports:
+    - protocol: TCP
+      port: 3000
+      targetPort: 3000
+  type: ClusterIP
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: traefik-grafana
+  namespace: production
+  annotations: 
+    kubernetes.io/ingress.class: traefik-external
+spec:
+  entryPoints:
+    - web
+    - websecure
+  routes:
+    - match: Host(`grafana.staging.example.org`)
+      kind: Rule
+      services:
+        - name: traefik-grafana
+          port: 3000
+  tls:
+    secretName: example-org-tls

@@ -4,7 +4,7 @@ metadata:
   name: opencanary-config
   namespace: production
 data:
-  opencanary.json: |-
+  opencanary.json: |
     {
         "device.node_id": "opencanary-nuc",
         "ip.ignorelist": [],

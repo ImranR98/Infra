@@ -35,12 +35,12 @@ spec:
           ports:
             - containerPort: 8080
           env:
-          - name: OLLAMA_BASE_URL
-            value: "http://127.0.0.1:11434"
-          - name: WEBUI_AUTH_TRUSTED_EMAIL_HEADER
-            value: "Remote-Email"
-          - name: WEBUI_AUTH_TRUSTED_NAME_HEADER
-            value: "Remote-Name"
+            - name: OLLAMA_BASE_URL
+              value: "http://127.0.0.1:11434"
+            - name: WEBUI_AUTH_TRUSTED_EMAIL_HEADER
+              value: "Remote-Email"
+            - name: WEBUI_AUTH_TRUSTED_NAME_HEADER
+              value: "Remote-Name"
           volumeMounts:
             - name: state
               mountPath: /app/backend/data
