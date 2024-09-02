@@ -34,6 +34,7 @@ ALL_COMPONENTS=(
     opencanary
     # nextcloud # Not working
     uptime
+    mdscl
 )
 
 echo "#!/bin/bash -e

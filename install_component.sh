@@ -11,7 +11,7 @@ done
 shift $((OPTIND - 1))
 
 # Get component dir
-COMPONENT_DIR="${1%/}"
+COMPONENT_DIR="$(realpath "$1")"
 COMPONENT_NAME="$(basename "$COMPONENT_DIR")"
 
 # Constants
