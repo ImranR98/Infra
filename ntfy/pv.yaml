@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: PersistentVolume
 metadata:
-  name: plausible-pv
+  name: ntfy-pv
   namespace: production
 spec:
   capacity:
@@ -11,7 +11,7 @@ spec:
     - ReadWriteOnce
   persistentVolumeReclaimPolicy: Retain
   local:
-    path: /home/imranr/k8s/state/plausible
+    path: /home/imranr/k8s/state/ntfy
   nodeAffinity:
     required:
       nodeSelectorTerms:
@@ -24,7 +24,7 @@ spec:
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: plausible-pvc
+  name: ntfy-pvc
   namespace: production
 spec:
   accessModes:
@@ -32,4 +32,4 @@ spec:
   resources:
     requests:
       storage: 8Gi
-  volumeName: plausible-pv
+  volumeName: ntfy-pv

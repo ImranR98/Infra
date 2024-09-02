@@ -1,0 +1,19 @@
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: isbn-lookup
+  namespace: production
+  annotations: 
+    kubernetes.io/ingress.class: traefik-external
+spec:
+  entryPoints:
+    - web
+    - websecure
+  routes:
+    - match: Host(`isbn.staging.example.org`)
+      kind: Rule
+      services:
+        - name: isbn-lookup
+          port: 8080
+  tls:
+    secretName: example-org-tls

@@ -1,40 +1,3 @@
----
-apiVersion: v1
-kind: PersistentVolume
-metadata:
-  name: jellyfin-pv
-  namespace: production
-spec:
-  capacity:
-    storage: 8Gi
-  volumeMode: Filesystem
-  accessModes:
-    - ReadWriteOnce
-  persistentVolumeReclaimPolicy: Retain
-  local:
-    path: /home/imranr/k8s/state/jellyfin
-  nodeAffinity:
-    required:
-      nodeSelectorTerms:
-        - matchExpressions:
-            - key: main-storage
-              operator: In
-              values:
-                - "true"
----
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: jellyfin-pvc
-  namespace: production
-spec:
-  accessModes:
-    - ReadWriteOnce
-  resources:
-    requests:
-      storage: 8Gi
-  volumeName: jellyfin-pv
----
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -94,26 +57,3 @@ spec:
       port: 8096
       targetPort: 8096
   type: ClusterIP
----
-apiVersion: traefik.io/v1alpha1
-kind: IngressRoute
-metadata:
-  name: jellyfin
-  namespace: production
-  annotations:
-    kubernetes.io/ingress.class: traefik-external
-spec:
-  entryPoints:
-    - web
-    - websecure
-  routes:
-    - match: Host(`tv.staging.example.org`)
-      kind: Rule
-      middlewares:
-        - name: forwardauth-geoblock
-          namespace: production
-      services:
-        - name: jellyfin
-          port: 8096
-  tls:
-    secretName: example-org-tls

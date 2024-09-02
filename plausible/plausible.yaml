@@ -1,4 +1,3 @@
----
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -66,23 +65,3 @@ spec:
       port: 8000
       targetPort: 8000
   type: ClusterIP
----
-apiVersion: traefik.io/v1alpha1
-kind: IngressRoute
-metadata:
-  name: plausible
-  namespace: production
-  annotations:
-    kubernetes.io/ingress.class: traefik-external
-spec:
-  entryPoints:
-    - web
-    - websecure
-  routes:
-    - match: Host(`plausible.staging.example.org`)
-      kind: Rule
-      services:
-        - name: plausible
-          port: 8000
-  tls:
-    secretName: example-org-tls
