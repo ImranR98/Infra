@@ -15,7 +15,7 @@ COMPONENT_DIR="$(realpath "$1")"
 COMPONENT_NAME="$(basename "$COMPONENT_DIR")"
 
 # Constants
-START_WITH_FILES=(prep.sh pv.yaml nfs.yaml db.yaml install.sh "$COMPONENT_NAME.yaml")
+START_WITH_FILES=(prep.sh pv.yaml nfs.yaml db.yaml secrets.yaml configmaps.yaml install.sh "$COMPONENT_NAME.yaml")
 END_WITH_FILES=(middlewares.yaml ingress.yaml)
 IGNORE_FILES=(values.yaml)
 

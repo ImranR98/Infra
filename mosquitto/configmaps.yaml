@@ -1,0 +1,25 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mosquitto
+  namespace: production
+data:
+  mosquitto.conf: |-
+    persistence true
+    persistence_location /mosquitto/data/
+    
+    allow_anonymous false
+    password_file /mosquitto/config/password_file
+    
+    listener 1883
+    
+    listener 8883
+    cafile /mosquitto/config/certificate.pem
+    certfile /mosquitto/config/certificate.pem
+    keyfile /mosquitto/config/private_key.pem
+    require_certificate false
+    
+    listener 9001
+    protocol websockets
+    
+    log_type all
