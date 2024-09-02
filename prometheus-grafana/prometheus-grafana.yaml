@@ -1,0 +1,119 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: prometheus
+  namespace: production
+  labels:
+    app: prometheus
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: prometheus
+  template:
+    metadata:
+      labels:
+        app: prometheus
+    spec:
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+      containers:
+        - name: prometheus
+          image: prom/prometheus:latest
+          imagePullPolicy: Always
+          args: ["--config.file=/config/prometheus.yaml", "--storage.tsdb.path=/prometheus", "--storage.tsdb.retention.size=512MB"]
+          ports:
+            - containerPort: 9090
+          volumeMounts:
+            - name: config
+              mountPath: /config/prometheus.yaml
+              subPath: prometheus.yaml
+            - name: state
+              mountPath: /prometheus
+              subPath: prometheus
+      volumes:
+        - name: state
+          persistentVolumeClaim:
+            claimName: prometheus-grafana-pvc
+        - name: config
+          configMap:
+            name: prometheus-config
+            items:
+              - key: prometheus.yaml
+                path: prometheus.yaml
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: prometheus
+  namespace: production
+  labels:
+    app: prometheus
+spec:
+  selector:
+    app: prometheus
+  ports:
+    - protocol: TCP
+      port: 9090
+      targetPort: 9090
+  type: ClusterIP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: grafana
+  namespace: production
+  labels:
+    app: grafana
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: grafana
+  template:
+    metadata:
+      labels:
+        app: grafana
+    spec:
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+      containers:
+        - name: grafana
+          image: grafana/grafana:latest
+          imagePullPolicy: Always
+          env:
+            - name: GF_INSTALL_PLUGINS
+              value: grafana-piechart-panel
+          ports:
+            - containerPort: 3000
+          volumeMounts:
+            - name: state
+              mountPath: /var/lib/grafana
+              subPath: grafana/data
+            - name: state
+              mountPath: /etc/grafana/provisioning
+              subPath: grafana/provisioning
+      volumes:
+        - name: state
+          persistentVolumeClaim:
+            claimName: prometheus-grafana-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: grafana
+  namespace: production
+  labels:
+    app: grafana
+spec:
+  selector:
+    app: grafana
+  ports:
+    - protocol: TCP
+      port: 3000
+      targetPort: 3000
+  type: ClusterIP

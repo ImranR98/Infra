@@ -15,6 +15,7 @@ ALL_COMPONENTS=(
     common-pv
     frpc
     traefik
+    prometheus-grafana
     crowdsec
     authelia
     cert-manager
@@ -32,9 +33,11 @@ ALL_COMPONENTS=(
     dscpln-parsebalx
     send
     opencanary
-    # nextcloud # Not working
     uptime
     mdscl
+    mosquitto
+    homeassistant
+    # nextcloud # Not working
 )
 
 echo "#!/bin/bash -e
