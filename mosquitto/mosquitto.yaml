@@ -24,6 +24,7 @@ spec:
           image: eclipse-mosquitto:openssl
           imagePullPolicy: Always
           ports:
+            - containerPort: 1883
             - containerPort: 8883
             - containerPort: 9001
           volumeMounts:
@@ -76,6 +77,10 @@ spec:
     app: mosquitto
   ports:
     - name: listener
+      protocol: TCP
+      port: 1883
+      targetPort: 1883
+    - name: listener-tls
       protocol: TCP
       port: 8883
       targetPort: 8883

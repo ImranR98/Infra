@@ -1,0 +1,55 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: homeassistant
+  namespace: production
+  labels:
+    app: homeassistant
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: homeassistant
+  template:
+    metadata:
+      labels:
+        app: homeassistant
+    spec:
+      securityContext:
+        runAsGroup: 1000
+        fsGroup: 1000
+      # hostNetwork: true
+      containers:
+        - name: homeassistant
+          image: ghcr.io/home-assistant/home-assistant:stable
+          imagePullPolicy: Always
+          securityContext:
+            privileged: true
+          env:
+            - name: TZ
+              value: "America/Toronto"
+          ports:
+            - containerPort: 8123
+          volumeMounts:
+            - name: data
+              mountPath: /config
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: homeassistant-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: homeassistant
+  namespace: production
+  labels:
+    app: homeassistant
+spec:
+  selector:
+    app: homeassistant
+  ports:
+    - protocol: TCP
+      port: 8123
+      targetPort: 8123
+  type: ClusterIP
