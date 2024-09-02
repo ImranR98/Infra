@@ -12,11 +12,12 @@ SHELL_ONLY_COMPONENTS=(
 )
 
 ALL_COMPONENTS=(
+    common-pv
     frpc
     traefik
     crowdsec
     authelia
-    certmanager
+    cert-manager
     docker-compose
     ntfy
     filebrowser
@@ -24,8 +25,13 @@ ALL_COMPONENTS=(
     jellyfin
     navidrome
     plausible
-    pixelntfy
+    monerod
     ollama
+    pixelntfy
+    isbn-lookup
+    dscpln-parsebalx
+    send
+    opencanary
     # nextcloud # Not working
     uptime
 )

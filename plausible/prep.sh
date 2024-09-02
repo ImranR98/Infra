@@ -1,4 +1,5 @@
 #!/bin/bash -e
-mkdir -p "$SCRIPT_DIR"/../state/plausible/db
-mkdir -p "$SCRIPT_DIR"/../state/plausible/clickhouse/data
-mkdir -p "$SCRIPT_DIR"/../state/plausible/clickhouse/logs
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
+mkdir -p "$HERE"/../state/plausible/db
+mkdir -p "$HERE"/../state/plausible/clickhouse/data
+mkdir -p "$HERE"/../state/plausible/clickhouse/logs
