@@ -42,7 +42,7 @@ TEMP_CODE=0
 ) || TEMP_CODE=$?
 if [ "$TEMP_CODE" != 0 ]; then
     echo "bash '$SCRIPT_DIR/install_k8s.sh' master"
-    echo "bash '$SCRIPT_DIR/setup_cluster.sh'"
+    echo "bash '$SCRIPT_DIR/prep_cluster.sh'"
     echo ""
 fi
 
