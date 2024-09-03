@@ -45,3 +45,26 @@ spec:
     - port: 8123
   selector:
     app: plausible-clickhouse
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: plausible-clickhouse
+  namespace: production
+spec:
+  podSelector:
+    matchLabels:
+      app: plausible-clickhouse
+  policyTypes:
+  - Egress
+  - Ingress
+  egress:
+  - to:
+    - podSelector:
+        matchLabels:
+          app: plausible
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          app: plausible
