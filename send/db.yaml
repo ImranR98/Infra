@@ -42,3 +42,26 @@ spec:
     - port: 6379
   selector:
     app: send-db
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: send-db
+  namespace: production
+spec:
+  podSelector:
+    matchLabels:
+      app: send-db
+  policyTypes:
+  - Egress
+  - Ingress
+  egress:
+  - to:
+    - podSelector:
+        matchLabels:
+          app: send
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          app: send
