@@ -10,4 +10,4 @@ mkdir -p "$HERE"/../state/nextcloud/data/config
 mkdir -p "$HERE"/../state/nextcloud/data/custom_apps
 mkdir -p "$HERE"/../state/nextcloud/data/tmp
 mkdir -p "$HERE"/../state/nextcloud/data/themes
-mkdir -p "$HERE"/../state/nextcloud/nc-data
+sudo chown -R root "$HERE"/../state/nextcloud/data
