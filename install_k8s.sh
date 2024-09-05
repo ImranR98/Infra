@@ -79,7 +79,7 @@ sudo systemctl disable --now firewalld # TODO: How to avoid this?
 if [ "$NODE_TYPE" = 'master' ]; then
     # Init. cluster
     sudo kubeadm --cri-socket unix:///var/run/crio/crio.sock config images pull
-    sudo kubeadm --cri-socket unix:///var/run/crio/crio.sock init --pod-network-cidr=10.244.0.0/16
+    sudo kubeadm --cri-socket unix:///var/run/crio/crio.sock init --pod-network-cidr=10.244.0.0/16 --config "$HERE"/init-config.yaml
     # Use user-specific config, leaving original unchanged
     mkdir -p $HOME/.kube
     sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
@@ -102,6 +102,7 @@ EOF
     sleep 10
     kubectl get pods --all-namespaces
     sudo dnf install -y helm
+    # kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml # Currently does not work
 else
     echo "You still need to join the cluster manually."
 fi
