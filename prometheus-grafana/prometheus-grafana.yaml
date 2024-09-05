@@ -117,26 +117,3 @@ spec:
       port: 3000
       targetPort: 3000
   type: ClusterIP
----
-apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
-metadata:
-  name: grafana-to-prometheus
-  namespace: production
-spec:
-  podSelector:
-    matchLabels:
-      app: grafana
-  policyTypes:
-  - Egress
-  - Ingress
-  egress:
-  - to:
-    - podSelector:
-        matchLabels:
-          app: prometheus
-  ingress:
-  - from:
-    - podSelector:
-        matchLabels:
-          app: prometheus
