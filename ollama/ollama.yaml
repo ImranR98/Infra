@@ -47,7 +47,7 @@ spec:
       volumes:
         - name: state
           persistentVolumeClaim:
-            claimName: ollama-nfs-pvc
+            claimName: ollama-pvc
 ---
 apiVersion: v1
 kind: Service
