@@ -1,7 +1,7 @@
 services:
 
   frpc:
-    image: fatedier/frpc:v0.59.0
+    image: fatedier/frpc:v0.60.0
     container_name: frpc
     restart: always
     volumes:
