@@ -10,7 +10,6 @@ data:
     auth-file: "/home/ntfy/user.db"
     auth-default-access: "deny-all"
     listen-http: ":3000"
-
 ---
 apiVersion: apps/v1
 kind: Deployment
