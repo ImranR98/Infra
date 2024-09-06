@@ -3,6 +3,14 @@
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 source "$SCRIPT_DIR"/helpers.sh
 
+while getopts "u" opt; do
+    case $opt in
+    u) UPDATE_MODE=true ;;
+    \?) echo "Unrecognized parameter." >&2 && exit 1 ;;
+    esac
+done
+shift $((OPTIND - 1))
+
 SHELL_ONLY_COMPONENTS=(
     frpc
     docker-compose
@@ -38,9 +46,13 @@ ALL_COMPONENTS=(
 )
 
 echo "#!/bin/bash -e
-
-# Run these commands to set up the K8s cluster and all services.
-# These are not provided as a pre-made script as manually running one command at a time is less error-prone.
+"
+if [ "$UPDATE_MODE" = true ]; then
+    echo "# Run these commands to update all services in the cluster."
+else
+    echo "# Run these commands to set up the K8s cluster and all services."
+fi
+echo "# These are not provided as a pre-made script as manually running one command at a time is less error-prone.
 "
 
 TEMP_CODE=0
@@ -57,6 +69,9 @@ for component in "${ALL_COMPONENTS[@]}"; do
     command="bash '$SCRIPT_DIR/install_component.sh' "
     if contains "$component" "${SHELL_ONLY_COMPONENTS[@]}"; then
         command+="-c "
+    fi
+    if [ "$UPDATE_MODE" = true ]; then
+        command+="-u "
     fi
     command+="$component"
     echo "$command"

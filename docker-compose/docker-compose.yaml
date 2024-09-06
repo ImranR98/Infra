@@ -12,15 +12,15 @@ services:
       - logtfy_tmp:/tmp/logtfy
     env_file: ".env"
   syncthing:
-    image: syncthing/syncthing
+    image: syncthing/syncthing:latest
     container_name: syncthing
     environment:
-        - PUID=1000
-        - PGID=1000
+      - PUID=1000
+      - PGID=1000
     volumes:
-        - /home/imranr:/var/syncthing
+      - /home/imranr:/var/syncthing
     network_mode: host
     restart: on-failure
 
 volumes:
-    logtfy_tmp: {}
+  logtfy_tmp: {}

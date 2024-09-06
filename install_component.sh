@@ -2,9 +2,10 @@
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 source "$HERE"/helpers.sh
 
-while getopts "c" opt; do
+while getopts "cu" opt; do
     case $opt in
     c) SHELL_ONLY=true ;;
+    u) UPDATE_MODE=true ;;
     \?) echo "Unrecognized parameter." >&2 && exit 1 ;;
     esac
 done
@@ -18,6 +19,14 @@ COMPONENT_NAME="$(basename "$COMPONENT_DIR")"
 START_WITH_FILES=(prep.sh pv.yaml nfs.yaml db.yaml secrets.yaml configmaps.yaml install.sh "$COMPONENT_NAME.yaml")
 END_WITH_FILES=(middlewares.yaml ingress.yaml post_install.sh)
 IGNORE_FILES=(values.yaml)
+INCLUDE_OTHER_FILES=true
+
+if [ "$UPDATE_MODE" = true ]; then
+    START_WITH_FILES=(update.sh)
+    END_WITH_FILES=()
+    IGNORE_FILES=()
+    INCLUDE_OTHER_FILES=false
+fi
 
 # Validate arg
 if [ ! -d "$COMPONENT_DIR" ]; then
@@ -32,13 +41,15 @@ for file in "${START_WITH_FILES[@]}"; do
         ordered_files+=("$file")
     fi
 done
-for file in "$COMPONENT_DIR"/*.{yaml,sh}; do
-    [ -e "$file" ] || continue
-    basefile=$(basename "$file")
-    if ! contains "$basefile" "${ordered_files[@]}" && ! contains "$basefile" "${START_WITH_FILES[@]}" && ! contains "$basefile" "${END_WITH_FILES[@]}" && ! contains "$basefile" "${IGNORE_FILES[@]}"; then
-        ordered_files+=("$basefile")
-    fi
-done
+if [ "$INCLUDE_OTHER_FILES" = true ]; then
+    for file in "$COMPONENT_DIR"/*.{yaml,sh}; do
+        [ -e "$file" ] || continue # For cases when there are no yaml/sh files (ignore the bad ls output)
+        basefile=$(basename "$file")
+        if ! contains "$basefile" "${ordered_files[@]}" && ! contains "$basefile" "${START_WITH_FILES[@]}" && ! contains "$basefile" "${END_WITH_FILES[@]}" && ! contains "$basefile" "${IGNORE_FILES[@]}"; then
+            ordered_files+=("$basefile")
+        fi
+    done
+fi
 for file in "${END_WITH_FILES[@]}"; do
     if [ -f "$COMPONENT_DIR/$file" ]; then
         ordered_files+=("$file")
