@@ -1,3 +1,6 @@
+image:
+  pullPolicy: Always
+
 globalArguments:
   - "--global.sendanonymoususage=false"
   - "--global.checknewversion=false"
