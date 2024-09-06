@@ -52,7 +52,7 @@ if [ "$UPDATE_MODE" = true ]; then
 else
     echo "# Run these commands to set up the K8s cluster and all services."
 fi
-echo "# These are not provided as a pre-made script as manually running one command at a time is less error-prone.
+echo "# These are not provided as a pre-made script since manually running one command at a time is less error-prone.
 "
 
 TEMP_CODE=0

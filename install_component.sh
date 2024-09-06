@@ -76,7 +76,6 @@ RUNNING COMMAND: $COMMAND
 done
 
 # Useful commands:
-# helm upgrade -f service/values.yaml service service/service --namespace production
 # kubectl run curlpod --image=alpine --restart=Never --rm -it -- /bin/sh # Then apk add --no-cache curl
 # kubectl exec -it <pod-name> --stdin --tty -- bash
 # sudo kubeadm --cri-socket unix:///var/run/crio/crio.sock reset && sudo rm -r /etc/cni/net.d
