@@ -52,7 +52,7 @@ spec:
             - name: NEXTCLOUD_ADMIN_USER
               value: imranr
             - name: NEXTCLOUD_ADMIN_PASSWORD
-              value: zoom4321.Nextcloud
+              value: zoom4321.Nextcloud # PROD TODO
           volumeMounts:
             - mountPath: /var/www/html
               name: nextcloud-volume
