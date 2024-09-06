@@ -73,7 +73,7 @@ sysctl net.bridge.bridge-nf-call-iptables net.bridge.bridge-nf-call-ip6tables ne
 sudo dnf install -y kubernetes kubernetes-kubeadm kubernetes-client cri-o containernetworking-plugins
 sudo systemctl enable --now crio
 sudo systemctl enable --now kubelet
-sudo systemctl disable --now firewalld # TODO: How to avoid this?
+# sudo systemctl disable --now firewalld # Likely not be needed with all the firewall rules
 
 # Setup the cluster
 if [ "$NODE_TYPE" = 'master' ]; then

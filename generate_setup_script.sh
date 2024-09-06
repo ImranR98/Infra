@@ -1,8 +1,5 @@
 #!/bin/bash -e
 
-# PROD TODO: Before the final prod deployment, disable remote repo and address all PROD TODOs
-# PROD TODO: Remove all instances of 'staging' as a subdomain
-
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 source "$SCRIPT_DIR"/helpers.sh
 
@@ -37,7 +34,7 @@ ALL_COMPONENTS=(
     mdscl
     mosquitto
     homeassistant
-    # nextcloud # Not working
+    nextcloud
 )
 
 echo "#!/bin/bash -e
