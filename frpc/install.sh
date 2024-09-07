@@ -1,6 +1,7 @@
 #!/bin/bash
 set -e
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
+source "$HERE"/../helpers.sh
 
 # Update image tag
 LATEST_TAG="$(curl -s https://hub.docker.com/v2/repositories/fatedier/frpc/tags | grep -Eo 'name":"v[^"]+' | awk -F '"' '{print $NF}' | head -1)"
@@ -14,7 +15,7 @@ fi
 bash "$HERE"/files/generate_config.sh
 
 # Install service
-awk -v SCRIPT_DIR="$HERE" '{gsub("path_to_here", SCRIPT_DIR); print}' "$HERE"/frpc.service | sudo tee /etc/systemd/system/frpc.service.temp
+generateComposeService frps | awk -v SCRIPT_DIR="$HERE" '{gsub("path_to_here", SCRIPT_DIR); print}' | sudo tee /etc/systemd/system/frpc.service.temp
 awk -v MY_UID="$UID" '{gsub("User=1000", MY_UID); print}' /etc/systemd/system/frpc.service.temp | sudo tee /etc/systemd/system/frpc.service
 sudo rm /etc/systemd/system/frpc.service.temp
 sudo systemctl enable frpc.service

@@ -8,5 +8,6 @@ SSH_USER=$USER
 SSH_HOST=staging.example.org
 SSH_STRING="$SSH_USER@$SSH_HOST"
 
+generateComposeService strelaysrv > "$HERE"/files/strelaysrv.service
 rsync -r "$HERE"/files/ "$SSH_STRING":~/strelaysrv/
 ssh -A -t "$SSH_STRING" "bash '/home/$SSH_USER/strelaysrv/install.sh'"

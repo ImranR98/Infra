@@ -83,3 +83,20 @@ findDomainsInSetup() {
     cat "$LIST_FILE" | sort | uniq
     rm "$LIST_FILE"
 }
+
+generateComposeService() {
+    SERVICE_NAME="$1"
+    echo "[Unit]
+Description=$SERVICE_NAME start
+StartLimitIntervalSec=0
+
+[Service]
+User=1000
+Type=idle
+ExecStart=/usr/bin/docker compose -f path_to_here/$SERVICE_NAME.docker-compose.yaml up
+Restart=always
+RestartSec=30
+
+[Install]
+WantedBy=multi-user.target"
+}
