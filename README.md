@@ -30,3 +30,30 @@ My self-hosted services (in a K8s cluster that uses FRP and Traefik for Ingress)
         - All other files and subdirectories are ignored.
     - The script can be run with the `-u` option to apply updates (this changes what files are processed and how).
 - The `generate_setup_script.sh` file is used to generate a set of `install_component.sh` (and other) commands in the correct order and using the correct parameters to setup or update everything.
+
+## Migration from Docker
+
+Some services' data can easily be migrated from an existing Docker-based (or otherwise) setup.
+
+To do so, use the `rsyncWithChownContent` function in `helpers.sh` (since permissions between the source and destination setups may be different).
+
+For example:
+
+```bash
+#!/bin/bash -e
+
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
+
+mkdir -p "$HERE"/state/ntfy imranr imranr
+mkdir -p "$HERE"/state/uptime imranr imranr
+
+source "$HERE"/helpers.sh
+
+rsyncWithChownContent ~/Main/Other/NUC-services/service-data-unsynced/HAConfig "$HERE"/state/homeassistant root 1000
+rsyncWithChownContent ~/Main/Other/NUC-services/service-data-unsynced/jellyfin "$HERE"/state/jellyfin 1000 1000
+rsyncWithChownContent ~/Main/Other/NUC-services/service-data-unsynced/nextcloud/html "$HERE"/state/nextcloud/data 33 1000
+rsyncWithChownContent ~/Main/Other/NUC-services/service-data-unsynced/nextcloud/db "$HERE"/state/nextcloud/db 1000 1000
+rsyncWithChownContent ~/Main/Other/NUC-services/service-data/ntfy/etc "$HERE"/state/ntfy 1000 1000
+[ -e "$HERE"/state/ntfy/server.yml ] && rm "$HERE"/state/ntfy/server.yml
+rsyncWithChownContent ~/Main/Other/NUC-services/service-data-unsynced/nextcloud/db "$HERE"/state/nextcloud/db 1000 1000
+```
