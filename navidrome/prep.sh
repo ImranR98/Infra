@@ -1,3 +1,3 @@
 #!/bin/bash
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
-mkdir -p "$HERE"/../state/navidrome
+mkdir -p "$STATE_DIR"/navidrome

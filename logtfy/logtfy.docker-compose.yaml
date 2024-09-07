@@ -2,7 +2,7 @@ services:
   logtfy:
     image: imranrdev/logtfy:latest
     container_name: logtfy
-    hostname: PCX
+    hostname: ${MAIN_NODE_HOSTNAME}
     restart: unless-stopped
     volumes:
       - ./token:/logtfy/k8s/token
