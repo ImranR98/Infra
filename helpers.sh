@@ -36,3 +36,25 @@ function rsyncWithChownContent() {
     sudo chown "$OWNER" -R "$DESTINATION"/*
     sudo chgrp "$GROUP" -R "$DESTINATION"/*
 }
+
+function syncRemoteEnvFileIfUndefined() {
+    # Given an env file on a remote server (any file where each line is '<varname>=<varvalue>'),
+    # If the file already defines a given var, don't change it,
+    # But if not, update it with a given value
+    # Then sync (replace) a given local env file with the remote one
+    SSH_STRING="$1"
+    PATH_ON_REMOTE="$2"
+    ENV_VAR_NAME="$3"
+    VALUE_IF_UNDEFINED="$4"
+    LOCAL_ENV_FILE="$5"
+
+    ssh "$SSH_STRING" "mkdir -p "$(dirname "$PATH_ON_REMOTE")""
+    FILE_CONTENT="$(ssh "$SSH_STRING" "cat '$PATH_ON_REMOTE' 2>/dev/null || :")"
+    VAR_VAL="$((echo "$FILE_CONTENT" | grep -E "^$ENV_VAR_NAME=") || :)"
+    if [ -z "$VAR_VAL" ]; then
+        VAR_VAL="$ENV_VAR_NAME=$VALUE_IF_UNDEFINED"
+        ssh "$SSH_STRING" "echo '$VAR_VAL' >> '$PATH_ON_REMOTE'"
+    fi
+
+    scp "$SSH_STRING":"$PATH_ON_REMOTE" "$LOCAL_ENV_FILE"
+}

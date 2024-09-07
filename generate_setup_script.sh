@@ -1,4 +1,5 @@
-#!/bin/bash -e
+#!/bin/bash
+set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 source "$SCRIPT_DIR"/helpers.sh
@@ -45,7 +46,8 @@ ALL_COMPONENTS=(
     nextcloud
 )
 
-echo "#!/bin/bash -e
+echo "#!/bin/bash
+set -e
 "
 if [ "$UPDATE_MODE" = true ]; then
     echo "# Run these commands to update all services in the cluster."

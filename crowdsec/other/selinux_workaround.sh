@@ -1,4 +1,5 @@
-#!/bin/bash -e
+#!/bin/bash
+set -e
 
 # https://github.com/crowdsecurity/helm-charts/issues/190
 

@@ -40,7 +40,8 @@ To do so, use the `rsyncWithChownContent` function in `helpers.sh` (since permis
 For example:
 
 ```bash
-#!/bin/bash -e
+#!/bin/bash
+set -e
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 

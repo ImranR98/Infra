@@ -1,4 +1,5 @@
-#!/bin/bash -e
+#!/bin/bash
+set -e
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 helm repo update
 helm upgrade --namespace production traefik traefik/traefik --values "$HERE"/values.yaml
