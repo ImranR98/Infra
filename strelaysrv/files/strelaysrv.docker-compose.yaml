@@ -1,0 +1,17 @@
+services:
+
+    strelaysrv:
+        image: imranrdev/strelaysrv-docker:latest
+        container_name: strelaysrv
+        restart: always
+        volumes:
+            - strelaysrv:/keys
+        command:
+            - "-global-rate=5000000"
+            - "-provided-by=EXAMPLE.ORG"
+        ports:
+            - 22067:22067
+            - 22070:22070
+
+volumes:
+    strelaysrv: {}

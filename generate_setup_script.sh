@@ -18,6 +18,7 @@ SHELL_ONLY_COMPONENTS=(
     frpc/frpc-preboot-subcomponent
     logtfy
     syncthing
+    strelaysrv
 )
 
 ALL_COMPONENTS=(
@@ -50,6 +51,7 @@ ALL_COMPONENTS=(
     mosquitto
     homeassistant
     nextcloud
+    strelaysrv
 )
 
 echo "#!/bin/bash
