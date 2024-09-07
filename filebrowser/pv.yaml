@@ -11,7 +11,7 @@ spec:
     - ReadWriteOnce
   persistentVolumeReclaimPolicy: Retain
   local:
-    path: /home/imranr/k8s/state/filebrowser
+    path: $STATE_DIR/filebrowser
   nodeAffinity:
     required:
       nodeSelectorTerms:

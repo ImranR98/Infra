@@ -10,7 +10,7 @@ spec:
     - web
     - websecure
   routes:
-    - match: Host(`uptime.staging.example.org`)
+    - match: Host(`uptime.$SERVICES_DOMAIN`)
       kind: Rule
       middlewares:
         - name: forwardauth-geoblock
@@ -19,4 +19,4 @@ spec:
         - name: uptime
           port: 3001
   tls:
-    secretName: example-org-tls
+    secretName: $SERVICES_TLS_NAME-tls

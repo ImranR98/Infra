@@ -31,7 +31,7 @@ spec:
               subPath: uploads
           env:
             - name: VIRTUAL_HOST
-              value: send.staging.example.org
+              value: send.$SERVICES_DOMAIN
             - name: VIRTUAL_PORT
               value: "3000"
             - name: DHPARAM_GENERATION
@@ -39,7 +39,7 @@ spec:
             - name: NODE_ENV
               value: production
             - name: BASE_URL
-              value: https://send.staging.example.org
+              value: https://send.$SERVICES_DOMAIN
             - name: PORT
               value: "3000"
             - name: REDIS_HOST

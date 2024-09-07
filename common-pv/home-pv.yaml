@@ -11,7 +11,7 @@ spec:
     - ReadWriteOnce
   persistentVolumeReclaimPolicy: Retain
   local:
-    path: /home/imranr/k8s/mock-data # PROD TODO: Replace this with the actual path
+    path: $MAIN_PARENT_DIR # PROD TODO: Replace this with the actual path
   nodeAffinity:
     required:
       nodeSelectorTerms:

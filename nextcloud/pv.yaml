@@ -12,7 +12,7 @@ spec:
     - ReadWriteOnce
   persistentVolumeReclaimPolicy: Retain
   local:
-    path: /home/imranr/k8s/state/nextcloud
+    path: $STATE_DIR/nextcloud
   nodeAffinity:
     required:
       nodeSelectorTerms:

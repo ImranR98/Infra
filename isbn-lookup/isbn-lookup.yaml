@@ -23,7 +23,7 @@ spec:
         - containerPort: 8080
         env:
         - name: ANALYTICS_SCRIPT_ELEMENT
-          value: <script defer data-domain="isbn.staging.example.org" src="https://plausible.staging.example.org/js/script.js"></script>
+          value: <script defer data-domain="isbn.$SERVICES_DOMAIN" src="https://plausible.$SERVICES_DOMAIN/js/script.js"></script>
 ---
 apiVersion: v1
 kind: Service

@@ -10,7 +10,7 @@ spec:
     - web
     - websecure
   routes:
-    - match: Host(`gpt.staging.example.org`)
+    - match: Host(`gpt.$SERVICES_DOMAIN`)
       kind: Rule
       middlewares:
         - name: forwardauth-geoblock
@@ -19,4 +19,4 @@ spec:
         - name: ollama
           port: 8080
   tls:
-    secretName: example-org-tls
+    secretName: $SERVICES_TLS_NAME-tls

@@ -5,7 +5,7 @@ metadata:
   namespace: production
 data:
   server.yml: |
-    base-url: "https://ntfy.staging.example.org"
+    base-url: "https://ntfy.$SERVICES_DOMAIN"
     cache-file: "/home/ntfy/cache.db"
     attachment-cache-dir: "/home/ntfy/attachments"
     behind-proxy: true

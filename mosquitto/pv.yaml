@@ -11,7 +11,7 @@ spec:
     - ReadWriteOnce
   persistentVolumeReclaimPolicy: Retain
   local:
-    path: /home/imranr/k8s/state/mosquitto
+    path: $STATE_DIR/mosquitto
   nodeAffinity:
     required:
       nodeSelectorTerms:

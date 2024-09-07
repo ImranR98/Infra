@@ -10,7 +10,7 @@ spec:
     - web
     - websecure
   routes:
-    - match: Host(`music.staging.example.org`)
+    - match: Host(`music.$SERVICES_DOMAIN`)
       kind: Rule
       middlewares:
         - name: forwardauth-geoblock
@@ -19,4 +19,4 @@ spec:
         - name: navidrome
           port: 4533
   tls:
-    secretName: example-org-tls
+    secretName: $SERVICES_TLS_NAME-tls

@@ -10,10 +10,10 @@ spec:
     - web
     - websecure
   routes:
-    - match: Host(`send.staging.example.org`)
+    - match: Host(`send.$SERVICES_DOMAIN`)
       kind: Rule      
       services:
         - name: send
           port: 3000
   tls:
-    secretName: example-org-tls
+    secretName: $SERVICES_TLS_NAME-tls

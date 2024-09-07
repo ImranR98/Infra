@@ -10,7 +10,7 @@ spec:
     - web
     - websecure
   routes:
-    - match: Host(`traefik.staging.example.org`)
+    - match: Host(`traefik.$SERVICES_DOMAIN`)
       kind: Rule
       middlewares:
         - name: forwardauth-geoblock
@@ -19,4 +19,4 @@ spec:
         - name: api@internal
           kind: TraefikService
   tls:
-    secretName: example-org-tls
+    secretName: $SERVICES_TLS_NAME-tls

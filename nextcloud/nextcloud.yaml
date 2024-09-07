@@ -44,9 +44,9 @@ spec:
             - name: TRUSTED_PROXIES
               value: 10.244.0.0/16
             - name: NEXTCLOUD_TRUSTED_DOMAINS
-              value: nextcloud.staging.example.org
+              value: nextcloud.$SERVICES_DOMAIN
             - name: OVERWRITECLIURL
-              value: https://nextcloud.staging.example.org
+              value: https://nextcloud.$SERVICES_DOMAIN
             - name: OVERWRITEPROTOCOL
               value: https
             - name: NEXTCLOUD_ADMIN_USER

@@ -10,7 +10,7 @@ spec:
     - web
     - websecure
   routes:
-    - match: Host(`tv.staging.example.org`)
+    - match: Host(`tv.$SERVICES_DOMAIN`)
       kind: Rule
       middlewares:
         - name: forwardauth-geoblock
@@ -19,4 +19,4 @@ spec:
         - name: jellyfin
           port: 8096
   tls:
-    secretName: example-org-tls
+    secretName: $SERVICES_TLS_NAME-tls

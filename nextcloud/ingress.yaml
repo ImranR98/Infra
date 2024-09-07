@@ -10,7 +10,7 @@ spec:
     - web
     - websecure
   routes:
-    - match: Host(`nextcloud.staging.example.org`)
+    - match: Host(`nextcloud.$SERVICES_DOMAIN`)
       kind: Rule
       middlewares:
         - name: forwardauth-geoblock
@@ -19,4 +19,4 @@ spec:
         - name: nextcloud
           port: 80
   tls:
-    secretName: example-org-tls
+    secretName: $SERVICES_TLS_NAME-tls

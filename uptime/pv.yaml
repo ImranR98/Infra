@@ -11,7 +11,7 @@ spec:
     - ReadWriteOnce
   persistentVolumeReclaimPolicy: Retain
   local:
-    path: /home/imranr/k8s/state/uptime
+    path: $STATE_DIR/uptime
   nodeAffinity:
     required:
       nodeSelectorTerms:

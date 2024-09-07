@@ -10,10 +10,10 @@ spec:
     - web
     - websecure
   routes:
-    - match: Host(`plausible.staging.example.org`)
+    - match: Host(`plausible.$SERVICES_DOMAIN`)
       kind: Rule
       services:
         - name: plausible
           port: 8000
   tls:
-    secretName: example-org-tls
+    secretName: $SERVICES_TLS_NAME-tls

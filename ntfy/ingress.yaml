@@ -10,7 +10,7 @@ spec:
     - web
     - websecure
   routes:
-    - match: Host(`ntfy.staging.example.org`)
+    - match: Host(`ntfy.$SERVICES_DOMAIN`)
       kind: Rule
       middlewares:
         - name: forwardauth-geoblock
@@ -19,4 +19,4 @@ spec:
         - name: ntfy
           port: 3000
   tls:
-    secretName: example-org-tls
+    secretName: $SERVICES_TLS_NAME-tls

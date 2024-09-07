@@ -11,7 +11,7 @@ spec:
     - ReadWriteOnce
   persistentVolumeReclaimPolicy: Retain
   local:
-    path: /home/imranr/k8s/state/navidrome
+    path: $STATE_DIR/navidrome
   nodeAffinity:
     required:
       nodeSelectorTerms:
