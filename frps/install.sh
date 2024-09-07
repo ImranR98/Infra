@@ -12,4 +12,4 @@ syncRemoteEnvFileIfUndefined "$SSH_STRING" "/home/$SSH_USER/frps/frps-tokens.txt
 
 rsync -r "$HERE"/files/ "$SSH_STRING":~/frps/
 
-ssh -t "$SSH_STRING" "bash '/home/$SSH_USER/frps/install.sh'"
+ssh -A -t "$SSH_STRING" "bash '/home/$SSH_USER/frps/install.sh'"

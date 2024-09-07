@@ -19,7 +19,7 @@ COMPONENT_NAME="$(basename "$COMPONENT_DIR")"
 # Constants
 START_WITH_FILES=(prep.sh pv.yaml nfs.yaml db.yaml secrets.yaml configmaps.yaml install.sh "$COMPONENT_NAME.yaml")
 END_WITH_FILES=(middlewares.yaml ingress.yaml post_install.sh)
-IGNORE_FILES=(values.yaml)
+IGNORE_FILES=(values.yaml update.sh)
 INCLUDE_OTHER_FILES=true
 
 if [ "$UPDATE_MODE" = true ]; then

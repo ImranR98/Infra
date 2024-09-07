@@ -13,13 +13,15 @@ done
 shift $((OPTIND - 1))
 
 SHELL_ONLY_COMPONENTS=(
+    frps
     frpc
     docker-compose
 )
 
 ALL_COMPONENTS=(
-    common-pv
+    frps
     frpc
+    common-pv
     traefik
     prometheus-grafana
     crowdsec

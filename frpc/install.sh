@@ -14,6 +14,10 @@ fi
 bash "$HERE"/files/generate_config.sh
 
 # Install service
-awk -v SCRIPT_DIR="$HERE" '{gsub("path_to_here", SCRIPT_DIR); print}' "$HERE"/frpc.service | sudo tee /etc/systemd/system/frpc.service
+awk -v SCRIPT_DIR="$HERE" '{gsub("path_to_here", SCRIPT_DIR); print}' "$HERE"/frpc.service | sudo tee /etc/systemd/system/frpc.service.temp
+awk -v MY_UID="$UID" '{gsub("User=1000", MY_UID); print}' /etc/systemd/system/frpc.service.temp | sudo tee /etc/systemd/system/frpc.service
+sudo rm /etc/systemd/system/frpc.service.temp
 sudo systemctl enable frpc.service
-sudo systemctl restart frpc.service
+sudo systemctl stop frpc.service || :
+sleep 5
+sudo systemctl start frpc.service
