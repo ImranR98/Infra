@@ -19,6 +19,7 @@ Self-hosted services.
         - `Main/` (typically but not necessarily in `~/Main`): All your personal files (media, notes, documents, everything).
             - Irreplaceable - only provide to containers that need it, and use the `subPath` option when possible to limit access.
             - Ensure it has the directory structure expected by the services that use it.
+            - This directory and any required subdirectories must already exist before you begin setup - they are not automatically created.
         - `./state/` (always relative to this repo): Persistent storage/state for all services (each service can have a subdirectory here that is mounted with the `subPath` option).
             - Significance of the data varies on a per-service basis - some services store ephemeral state while others store more important long-term data.
     - Services that need to access persistent storage can only run on the main storage node.
