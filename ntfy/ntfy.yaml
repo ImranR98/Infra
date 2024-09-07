@@ -6,6 +6,8 @@ metadata:
 data:
   server.yml: |
     base-url: "https://ntfy.staging.example.org"
+    cache-file: "/home/ntfy/cache.db"
+    attachment-cache-dir: "/home/ntfy/attachments"
     behind-proxy: true
     auth-file: "/home/ntfy/user.db"
     auth-default-access: "deny-all"
