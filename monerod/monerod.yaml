@@ -30,7 +30,7 @@ spec:
             - name: home
               mountPath: /home/monero/.bitmonero
               subPath: .bitmonero
-          args: ["--rpc-restricted-bind-ip=0.0.0.0", "--rpc-restricted-bind-port=18089", "--no-igd", "--no-zmq", "--enable-dns-blocklist", "--prune-blockchain", "--rpc-login=imranr:zoom4321"] # PROD TODO: Replace with production version
+          args: ["--rpc-restricted-bind-ip=0.0.0.0", "--rpc-restricted-bind-port=18089", "--no-igd", "--no-zmq", "--enable-dns-blocklist", "--prune-blockchain", "--rpc-login=$MONEROD_RPC_LOGIN"]
       volumes:
         - name: home
           persistentVolumeClaim:

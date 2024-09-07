@@ -50,9 +50,9 @@ spec:
             - name: OVERWRITEPROTOCOL
               value: https
             - name: NEXTCLOUD_ADMIN_USER
-              value: imranr
+              value: $NEXTCLOUD_ADMIN_USER
             - name: NEXTCLOUD_ADMIN_PASSWORD
-              value: zoom4321.Nextcloud # PROD TODO
+              value: "$NEXTCLOUD_ADMIN_PASSWORD"
           volumeMounts:
             - mountPath: /var/www/html
               name: nextcloud-volume
