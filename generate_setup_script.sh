@@ -15,6 +15,7 @@ shift $((OPTIND - 1))
 SHELL_ONLY_COMPONENTS=(
     frps
     frpc
+    frpc/frpc-preboot-subcomponent
     logtfy
     syncthing
 )
@@ -22,6 +23,7 @@ SHELL_ONLY_COMPONENTS=(
 ALL_COMPONENTS=(
     frps
     frpc
+    frpc/frpc-preboot-subcomponent
     common-pv
     traefik
     prometheus-grafana
