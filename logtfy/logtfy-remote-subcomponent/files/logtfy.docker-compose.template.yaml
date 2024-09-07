@@ -3,7 +3,7 @@ services:
     logtfy:
         image: imranrdev/logtfy:latest
         container_name: logtfy
-        hostname: SRV
+        hostname: $PROXY_NODE_HOSTNAME
         restart: unless-stopped
         volumes:
           - /var/log/journal:/var/log/journal:ro

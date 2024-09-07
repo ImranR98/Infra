@@ -12,4 +12,6 @@ generateComposeService logtfy | awk -v SCRIPT_DIR="$HERE" '{gsub("path_to_here",
 awk -v MY_UID="$UID" '{gsub("User=1000", MY_UID); print}' /etc/systemd/system/logtfy.service.temp | sudo tee /etc/systemd/system/logtfy.service
 sudo rm /etc/systemd/system/logtfy.service.temp
 sudo systemctl enable logtfy.service
+cat "$HERE"/logtfy.template.json | envsubst > "$HERE"/logtfy.json
+cat "$HERE"/logtfy.docker-compose.template.yaml | envsubst > "$HERE"/logtfy.docker-compose.yaml
 sudo systemctl restart logtfy.service

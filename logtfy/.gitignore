@@ -2,4 +2,6 @@ prepLogtfy.sh
 role.yaml
 token
 ca.crt
+logtfy.json
+logtfy.docker-compose.yaml
 .env
