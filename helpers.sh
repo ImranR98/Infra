@@ -1,3 +1,5 @@
+#!/bin/bash
+
 function contains() {
     local item="$1"
     shift
@@ -50,7 +52,7 @@ function syncRemoteEnvFileIfUndefined() {
 
     ssh "$SSH_STRING" "mkdir -p "$(dirname "$PATH_ON_REMOTE")""
     FILE_CONTENT="$(ssh "$SSH_STRING" "cat '$PATH_ON_REMOTE' 2>/dev/null || :")"
-    VAR_VAL="$((echo "$FILE_CONTENT" | grep -E "^$ENV_VAR_NAME=") || :)"
+    VAR_VAL="$( (echo "$FILE_CONTENT" | grep -E "^$ENV_VAR_NAME=") || :)"
     if [ -z "$VAR_VAL" ]; then
         VAR_VAL="$ENV_VAR_NAME=$VALUE_IF_UNDEFINED"
         ssh "$SSH_STRING" "echo '$VAR_VAL' >> '$PATH_ON_REMOTE'"
