@@ -1,0 +1,14 @@
+services:
+
+    logtfy:
+        image: imranrdev/logtfy:latest
+        container_name: logtfy
+        hostname: SRV
+        restart: unless-stopped
+        volumes:
+          - /var/log/journal:/var/log/journal:ro
+          - ./logtfy.json:/logtfy/config.json
+          - logtfy_tmp:/tmp/logtfy
+
+volumes:
+    logtfy_tmp: {}

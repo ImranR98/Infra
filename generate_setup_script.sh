@@ -17,6 +17,7 @@ SHELL_ONLY_COMPONENTS=(
     frpc
     frpc/frpc-preboot-subcomponent
     logtfy
+    logtfy/logtfy-remote-subcomponent
     syncthing
     strelaysrv
 )
@@ -32,6 +33,7 @@ ALL_COMPONENTS=(
     authelia
     cert-manager
     logtfy
+    logtfy/logtfy-remote-subcomponent
     syncthing
     ntfy
     filebrowser

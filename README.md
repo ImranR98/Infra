@@ -49,6 +49,7 @@ Many variables are hardcoded in scripts and manifest files (and must be manually
 - Each component of the setup has its own directory.
     - A "component" is usually a service or other modular part of the infrastructure (for example the `common-pv` directory contains K8s persistent volume claims that are general and can be re-used across services).
     - Some components are completely independent and can be added/removed without affecting the rest of the system (this is usually the case for services), but others (like `traefik` or `frpc`) are not.
+    - Some component may have subcomponent subdirectories - these are components that overlap enough (share enough files) with their parent components and therefore benefit from being part of the same "unit", but are still different enough to be installed and updated separately.
 - The `install_component.sh` script, given a component directory, installs or updates that component using the files inside.
     - Some files have special purposes and are installed in a specific order and method as decided by the script (for example `prep.sh` or `values.yaml`).
     - All files in the component directory that do not have a special pre-defined purpose is processed in one of these ways (in alphabetical order):
