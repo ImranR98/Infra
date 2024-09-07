@@ -68,3 +68,18 @@ pullComposeImages() {
     done
     echo "NOTE: This script assumes all images in "$(dirname "$COMPOSE_FILE")" are tagged with a non version-specific tag (like 'latest')."
 }
+
+findDomainsInSetup() {
+    LIST_FILE="$(mktemp)"
+    find . 2>/dev/null | grep -E 'ingress\.yaml$' | while read -r ingress; do
+        echo "$(cat "$ingress" | grep Host | awk -F '`' '{print $2}')" >> "$LIST_FILE"
+    done
+    find . 2>/dev/null | grep -E '\.sh$' | while read -r install; do
+        DOMAIN="$(cat "$install" | grep '^SSH_HOST=' | awk -F '=' '{print $2}')"
+        if [ -n "$DOMAIN" ]; then
+            echo "$DOMAIN" >> "$LIST_FILE"
+        fi
+    done
+    cat "$LIST_FILE" | sort | uniq
+    rm "$LIST_FILE"
+}

@@ -1,14 +1,41 @@
 # Services
 
-My self-hosted services (in a K8s cluster that uses FRP and Traefik for Ingress).
+Self-hosted services.
+- Most services run in a K8s cluster that uses Traefik for ingress.
+- Some services run in Docker (based on `docker compose` files launched by Systemd services).
+- The cluster is not directly exposed to the internet (due to the availability of port forwarding not being guaranteed in all environments).
+    - Instead, [FRP](https://github.com/fatedier/frp) is used to forward requests from a remote public-facing proxy server to the main control plane node (where is is picked up by Traefik or other services listening on specified ports).
+    - This does mean the main control plane node is the entrypoint for all requests.
+    - A select few services may run on the remote proxy server itself.
+- Everything is automated as much as possible; [IaC](https://en.wikipedia.org/wiki/Infrastructure_as_code) FTW.
 
 ## Prerequisites
+
 - A Fedora server with internet access.
-- A remote FRP server already set up and ready to use for public-facing access
-    - This is needed because the main server is assumed to be on a network where port forwarding is not an option.
-    - TODO: Automate the setup of a remote FRP server given SSH access to it.
-- DNS rules already in place for the domain hardcoded in various manifest files.
+    - The server is assumed to have a LUKS-encrypted drive (if this is not the case, skip the `frpc-preboot` step during setup).
+- A "main" node that will be the first control plane node for your K8s cluster.
+    - For now, this is also the "main storage" node that holds the `~/Main/` and `./state/` directories (in the future this could be a separate dedicated node).
+    - The main storage directories are:
+        - `Main/` (typically but not necessarily in `~/Main`): All your personal files (media, notes, documents, everything).
+            - Irreplaceable - only provide to containers that need it, and use the `subPath` option when possible to limit access.
+            - Ensure it has the directory structure expected by the services that use it.
+        - `./state/` (always relative to this repo): Persistent storage/state for all services (each service can have a subdirectory here that is mounted with the `subPath` option).
+            - Significance of the data varies on a per-service basis - some services store ephemeral state while others store more important long-term data.
+    - Services that need to access persistent storage can only run on the main storage node.
+        - This is fine for most services, but any service that must run on other nodes should be able to access storage via an NFS share (which would have to be setup as needed).
+        - In the future it might make sense to use a dedicated storage node that serves everything via NFS 
+- Any other nodes (optional) must be network-accessible.
+- A remote public-facing server reachable via SSH from your main node.
+- DNS rules already in place (point all required domains to the remote proxy). For a list of all required domains, run: `source helpers.sh; findDomainsInSetup`
 - CloudFlare DNS must be used so that the HTTPS challenge passes. So the `cert-manager/issuers/secret-cf-token.yaml` file must contain a valid token.
+
+## Hardcoded Variables
+
+Many variables are hardcoded in scripts and manifest files (and must be manually modified before setup if needed). These include:
+- The domain names for all services.
+- The username and hostname of the public-facing proxy server.
+- Some "secret" values such as some service DB credentials, default initial login credentials for some services, the Cloudflare token, various service config values (such as Ntfy webhook URLs), etc. 
+- Path to the `Main/` directory and any subdirectories needed by various services.
 
 ## Usage
 
@@ -37,7 +64,7 @@ Some services' data can easily be migrated from an existing Docker-based (or oth
 
 To do so, use the `rsyncWithChownContent` function in `helpers.sh` (since permissions between the source and destination setups may be different).
 
-For example:
+For example (specifically for my migration):
 
 ```bash
 #!/bin/bash
