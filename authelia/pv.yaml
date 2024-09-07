@@ -11,7 +11,7 @@ spec:
     - ReadWriteOnce
   persistentVolumeReclaimPolicy: Retain
   local:
-    path: /home/imranr/k8s/state/authelia
+    path: $STATE_DIR/authelia
   nodeAffinity:
     required:
       nodeSelectorTerms:

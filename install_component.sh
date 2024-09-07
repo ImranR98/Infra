@@ -2,6 +2,8 @@
 set -e
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 source "$HERE"/helpers.sh
+source "$HERE"/VARS.sh
+echo "$STATE_DIR"
 
 while getopts "cu" opt; do
     case $opt in
@@ -65,7 +67,7 @@ for file in "${ordered_files[@]}"; do
         continue
     fi
     if [ "$extension" = yaml ]; then
-        COMMAND="kubectl apply -f "$filepath""
+        COMMAND="kubectl apply -f <(cat "$filepath" | envsubst)"
     elif [ "$extension" = sh ]; then
         COMMAND="bash "$filepath""
     fi

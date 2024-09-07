@@ -10,7 +10,7 @@ spec:
     - web
     - websecure
   routes:
-    - match: Host(`auth.staging.example.org`)
+    - match: Host(`auth.$SERVICES_DOMAIN`)
       kind: Rule
       services:
         - name: authelia

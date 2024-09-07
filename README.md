@@ -28,23 +28,9 @@ Self-hosted services.
 - Any other nodes (optional) must be network-accessible.
 - A remote public-facing server reachable via SSH from your main node.
 - DNS rules already in place (point all required domains to the remote proxy). For a list of all required domains, run: `source helpers.sh; findDomainsInSetup`
-- CloudFlare DNS must be used so that the HTTPS challenge passes. So the `cert-manager/issuers/secret-cf-token.yaml` file must contain a valid token.
+- CloudFlare DNS must be used so that the HTTPS challenge passes. So a valid Cloudflare token is required.
 
-## Hardcoded Variables
-
-Many variables are hardcoded in scripts and manifest files (and must be manually modified before setup if needed). These include:
-- The domain names for all services.
-- The username and hostname of the public-facing proxy server.
-- Some "secret" values such as some service DB credentials, default initial login credentials for some services, the Cloudflare token, various service config values (such as Ntfy webhook URLs), etc. 
-- Path to the `Main/` directory and any subdirectories needed by various services.
-
-## Usage
-
-1. Run `generate_setup_script.sh` and run the printed commands manually, one line at a time.
-    - If the K8s cluster has multiple nodes, you must join all worker nodes manually after the K8s install step (the current machine is the control plane).
-2. If all goes well, periodically update the cluster services by running `generate_setup_script.sh` with the `-u` (update) parameter.
-
-## More Details
+## Details
 
 - Most services run in a K8s cluster, with a few exceptions like FRPC and Syncthing, which run in Docker (via `docker compose`).
 - Each component of the setup has its own directory.
@@ -59,6 +45,25 @@ Many variables are hardcoded in scripts and manifest files (and must be manually
         - All other files and subdirectories are ignored.
     - The script can be run with the `-u` option to apply updates (this changes what files are processed and how).
 - The `generate_setup_script.sh` file is used to generate a set of `install_component.sh` (and other) commands in the correct order and using the correct parameters to setup or update everything.
+
+### Variables
+
+- While the overall structure of the cluster (services deployed, service configs, etc.) are hardcoded, many per-environment variables are defined in `VARS.sh` (each environment - staging, production, etc. - can have its own version of this file).
+- When a component is being installed, the `install_component.sh` script passes the variables on to any child shell scripts, and replaces the variables in any `yaml` files using the `envsubst` command.
+- This means that the scripts and `yaml` files in the component subdirectories should never be applied directly - anytime you need to install or make changes to a component, you must use `install_component.sh` to apply those changes.
+- Examples of dynamic variables include:
+    - The domain names for all services.
+    - The username and hostname of the public-facing proxy server.
+    - Some "secret" values such as some service DB credentials, default initial login credentials for some services, the Cloudflare token, various service config values (such as Ntfy webhook URLs), etc. 
+    - Path to the `Main/` directory and any subdirectories needed by various services.
+- **TODO:** Many services still use hardcoded variables that have not been moved to `VARS.sh`. These must be cleaned up.
+
+## Usage
+
+1. Modify `VARS.sh` as needed.
+2. Run `generate_setup_script.sh` and run the printed commands manually, one line at a time.
+    - If the K8s cluster has multiple nodes, you must join all worker nodes manually after the K8s install step (the current machine is the control plane).
+3. If all goes well, periodically update the cluster services by running `generate_setup_script.sh` with the `-u` (update) parameter.
 
 ## Migration from Docker
 

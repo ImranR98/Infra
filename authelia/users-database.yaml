@@ -9,9 +9,9 @@ stringData:
     users:
       imranr:
         disabled: false
-        displayname: "Imran"
-        password: "***REMOVED***"  # yamllint disable-line rule:line-length
-        email: contact@example.org
+        displayname: "$AUTHELIA_ADMIN_DISPLAYNAME"
+        password: "$AUTHELIA_ADMIN_PASSWORD_HASH"  # yamllint disable-line rule:line-length
+        email: $AUTHELIA_ADMIN_EMAIL
         groups:
           - admins
           - dev
