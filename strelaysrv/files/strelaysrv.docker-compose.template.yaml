@@ -8,7 +8,7 @@ services:
             - strelaysrv:/keys
         command:
             - "-global-rate=5000000"
-            - "-provided-by=$SERVICES_TOP_DOMAIN"
+            - "-provided-by=$STRELAYSRV_PROVIDED_BY_TEXT"
         ports:
             - 22067:22067
             - 22070:22070
