@@ -5,8 +5,8 @@ StartLimitIntervalSec=0
 [Service]
 User=1000
 Type=idle
-ExecStart=/usr/bin/docker compose -f path_to_here/docker-compose.yaml up
-Restart=always
+ExecStart=/usr/bin/docker compose -f path_to_here/syncthing.docker-compose.yaml up
+Restart=unless-stopped
 RestartSec=30
 
 [Install]

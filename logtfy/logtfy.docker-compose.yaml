@@ -11,16 +11,6 @@ services:
       - /var/log/journal:/var/log/journal:ro
       - logtfy_tmp:/tmp/logtfy
     env_file: ".env"
-  syncthing:
-    image: syncthing/syncthing:latest
-    container_name: syncthing
-    environment:
-      - PUID=1000
-      - PGID=1000
-    volumes:
-      - /home/imranr:/var/syncthing
-    network_mode: host
-    restart: on-failure
 
 volumes:
   logtfy_tmp: {}

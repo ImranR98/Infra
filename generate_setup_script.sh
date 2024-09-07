@@ -15,7 +15,8 @@ shift $((OPTIND - 1))
 SHELL_ONLY_COMPONENTS=(
     frps
     frpc
-    docker-compose
+    logtfy
+    syncthing
 )
 
 ALL_COMPONENTS=(
@@ -27,7 +28,8 @@ ALL_COMPONENTS=(
     crowdsec
     authelia
     cert-manager
-    docker-compose
+    logtfy
+    syncthing
     ntfy
     filebrowser
     immich

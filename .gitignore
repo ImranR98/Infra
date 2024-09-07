@@ -1,6 +1,1 @@
 state/
-docker-compose/prepLogtfy.sh
-docker-compose/role.yaml
-docker-compose/token
-docker-compose/ca.crt
-docker-compose/.env

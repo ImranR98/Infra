@@ -58,3 +58,11 @@ function syncRemoteEnvFileIfUndefined() {
 
     scp "$SSH_STRING":"$PATH_ON_REMOTE" "$LOCAL_ENV_FILE"
 }
+
+pullComposeImages() {
+    COMPOSE_FILE="$1"
+    grep '    image: ' "$COMPOSE_FILE" | awk '{print $NF}' | while read item; do
+        docker pull "$item"
+    done
+    echo "NOTE: This script assumes all images in "$(dirname "$COMPOSE_FILE")" are tagged with a non version-specific tag (like 'latest')."
+}

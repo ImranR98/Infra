@@ -1,0 +1,5 @@
+prepLogtfy.sh
+role.yaml
+token
+ca.crt
+.env
