@@ -32,10 +32,10 @@ ALL_COMPONENTS=(
     frpc/frpc-preboot-subcomponent
     common-pv
     traefik
-    prometheus-grafana
-    crowdsec
     authelia
+    crowdsec
     cert-manager
+    prometheus-grafana
     logtfy
     logtfy/logtfy-remote-subcomponent
     syncthing

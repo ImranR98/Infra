@@ -38,7 +38,7 @@ My self-hosted apps/services setup.
 
 - While the overall structure of the cluster (apps deployed, apps configs, etc.) are hardcoded, many per-environment variables are defined in `VARS.sh` (each environment - staging, production, etc. - can have its own version of this file).
 - When a component is being installed, the `install_component.sh` script passes the variables on to any child shell scripts, and replaces the variables in any `yaml` files using the `envsubst` command.
-- This means that the scripts and `yaml` files in the component subdirectories should never be applied directly - anytime you need to install or make changes to a component, you must use `install_component.sh` to apply those changes.
+- This means that the scripts and `yaml` files in the component subdirectories should never be applied directly - anytime you need to install or make changes to a component, you must use `install_component.sh` to apply those changes (if you really need to run apply a specific file manually, you need to `source VARS.sh` first, then run the file through `envsubst`).
 - Examples of dynamic variables include:
     - The domain names for all apps.
     - The username and hostname of the public-facing proxy server.

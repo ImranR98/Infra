@@ -10,4 +10,4 @@ cat "$HERE"/files/logtfy.docker-compose.template.yaml | envsubst > "$HERE"/files
 
 generateComposeService logtfy > "$HERE"/files/logtfy.service
 rsync -r "$HERE"/files/ "$PROXY_SSH_STRING":~/logtfy/
-ssh -A -t "$PROXY_SSH_STRING" "bash '/home/$PROXY_SSH_USER/logtfy/install.sh'"
+ssh -A -t "$PROXY_SSH_STRING" "bash '/home/$PROXY_USER/logtfy/install.sh'"
