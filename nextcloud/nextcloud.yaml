@@ -16,7 +16,7 @@ spec:
         app: nextcloud
     spec:
       securityContext:
-        fsGroup: 1000
+        fsGroup: $UID
       containers:
         - name: nextcloud
           image: nextcloud:latest

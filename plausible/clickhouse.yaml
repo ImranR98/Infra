@@ -14,8 +14,8 @@ spec:
         app: plausible-clickhouse
     spec:
       securityContext:
-        runAsGroup: 1000
-        fsGroup: 1000
+        runAsGroup: $UID
+        fsGroup: $UID
       containers:
         - name: plausible-clickhouse
           image: clickhouse/clickhouse-server:203.0.113.10-alpine

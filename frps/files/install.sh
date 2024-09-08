@@ -17,8 +17,7 @@ cd frps-with-multiuser-docker
 cd ..
 
 # Install service
-awk -v SCRIPT_DIR="$HERE" '{gsub("path_to_here", SCRIPT_DIR); print}' "$HERE"/frps.service | sudo tee /etc/systemd/system/frps.service.temp
-awk -v MY_UID="$UID" '{gsub("User=1000", MY_UID); print}' /etc/systemd/system/frps.service.temp | sudo tee /etc/systemd/system/frps.service
+awk -v SCRIPT_DIR="$HERE" '{gsub("path_to_here", SCRIPT_DIR); print}' "$HERE"/frps.service | sudo tee /etc/systemd/system/frps.service
 sudo rm /etc/systemd/system/frps.service.temp
 sudo systemctl daemon-reload
 sudo systemctl enable frps.service

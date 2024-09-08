@@ -17,9 +17,9 @@ spec:
         app: monerod
     spec:
       securityContext:
-        runAsUser: 1000
-        runAsGroup: 1000
-        fsGroup: 1000
+        runAsUser: $UID
+        runAsGroup: $UID
+        fsGroup: $UID
       containers:
         - name: monerod
           image: sethsimmons/simple-monerod:latest

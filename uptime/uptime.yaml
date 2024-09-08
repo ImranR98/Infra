@@ -16,8 +16,8 @@ spec:
         app: uptime
     spec:
       securityContext:
-        runAsGroup: 1000
-        fsGroup: 1000
+        runAsGroup: $UID
+        fsGroup: $UID
       containers:
         - name: uptime
           image: louislam/uptime-kuma:latest

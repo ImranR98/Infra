@@ -28,10 +28,10 @@ function rsyncWithChownContent() {
     OWNER="$3"
     GROUP="$4"
     if [ -z "$OWNER" ]; then
-        OWNER=1000
+        OWNER=$UID
     fi
     if [ -z "$GROUP" ]; then
-        GROUP=1000
+        GROUP=$UID
     fi
     mkdir -p "$DESTINATION"
     sudo rsync -ar "$ORIGIN"/ "$DESTINATION"/
@@ -86,12 +86,16 @@ findDomainsInSetup() {
 
 generateComposeService() {
     SERVICE_NAME="$1"
+    USER_ID="$2"
+    if [ -z "$USER_ID" ]; then
+        USER_ID="$UID"
+    fi
     echo "[Unit]
 Description=$SERVICE_NAME start
 StartLimitIntervalSec=0
 
 [Service]
-User=1000
+User=$USER_ID
 Type=idle
 ExecStart=/usr/bin/docker compose -f path_to_here/$SERVICE_NAME.docker-compose.yaml up
 Restart=always

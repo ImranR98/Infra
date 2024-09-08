@@ -52,11 +52,11 @@ ALL_COMPONENTS=(
     dscpln-parsebalx
     send
     opencanary
-    uptime
     mdscl
     mosquitto
     homeassistant
     nextcloud
+    uptime
     strelaysrv
 )
 

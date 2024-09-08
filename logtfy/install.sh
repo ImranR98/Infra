@@ -11,7 +11,7 @@ if [ -d "$HERE"/logtfy.json ]; then
 fi
 bash "$HERE"/prepLogtfy.sh production
 echo "KUBE_API_SERVER=$(kubectl config view --minify -o jsonpath='{.clusters[0].cluster.server}')" >"$HERE"/.env
-generateComposeService logtfy | awk -v SCRIPT_DIR="$HERE" '{gsub("path_to_here", SCRIPT_DIR); print}' | sudo tee /etc/systemd/system/logtfy.service.temp
+generateComposeService logtfy 1000 | awk -v SCRIPT_DIR="$HERE" '{gsub("path_to_here", SCRIPT_DIR); print}' | sudo tee /etc/systemd/system/logtfy.service.temp
 awk -v MY_UID="$UID" '{gsub("User=1000", MY_UID); print}' /etc/systemd/system/logtfy.service.temp | sudo tee /etc/systemd/system/logtfy.service
 sudo rm /etc/systemd/system/logtfy.service.temp
 cat "$HERE"/logtfy.template.json | envsubst >"$HERE"/logtfy.json

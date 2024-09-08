@@ -16,9 +16,9 @@ spec:
         app: mosquitto
     spec:
       securityContext:
-        runAsUser: 1000
-        runAsGroup: 1000
-        fsGroup: 1000
+        runAsUser: 1000 # TODO: For some reason this must be hardcoded, using $UID then running envsubst causes a permission error
+        runAsGroup: 1000 # As above (unsure which of the 3 is the problem)
+        fsGroup: 1000 # As above
       containers:
         - name: mosquitto
           image: eclipse-mosquitto:openssl
