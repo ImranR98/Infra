@@ -16,9 +16,9 @@ spec:
         app: jellyfin
     spec:
       securityContext:
-        runAsUser: $UID
-        runAsGroup: $UID
-        fsGroup: $UID
+        runAsUser: $MY_UID
+        runAsGroup: $MY_UID
+        fsGroup: $MY_UID
       containers:
         - name: jellyfin
           image: jellyfin/jellyfin:latest

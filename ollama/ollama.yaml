@@ -16,8 +16,8 @@ spec:
         app: ollama
     spec:
       securityContext:
-        runAsGroup: $UID
-        fsGroup: $UID
+        runAsGroup: $MY_UID
+        fsGroup: $MY_UID
       containers:
         - name: ollama
           image: ollama/ollama:latest

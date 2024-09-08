@@ -31,9 +31,9 @@ spec:
         app: ntfy
     spec:
       securityContext:
-        runAsUser: $UID
-        runAsGroup: $UID
-        fsGroup: $UID
+        runAsUser: $MY_UID
+        runAsGroup: $MY_UID
+        fsGroup: $MY_UID
       containers:
         - name: ntfy
           image: binwiederhier/ntfy:latest

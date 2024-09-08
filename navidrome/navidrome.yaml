@@ -16,9 +16,9 @@ spec:
         app: navidrome
     spec:
       securityContext:
-        runAsUser: $UID
-        runAsGroup: $UID
-        fsGroup: $UID
+        runAsUser: $MY_UID
+        runAsGroup: $MY_UID
+        fsGroup: $MY_UID
       containers:
         - name: navidrome
           image: deluan/navidrome:latest

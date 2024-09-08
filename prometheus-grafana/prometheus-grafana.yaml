@@ -16,9 +16,9 @@ spec:
         app: prometheus
     spec:
       securityContext:
-        runAsUser: $UID
-        runAsGroup: $UID
-        fsGroup: $UID
+        runAsUser: $MY_UID
+        runAsGroup: $MY_UID
+        fsGroup: $MY_UID
       containers:
         - name: prometheus
           image: prom/prometheus:latest
@@ -78,9 +78,9 @@ spec:
         app: grafana
     spec:
       securityContext:
-        runAsUser: $UID
-        runAsGroup: $UID
-        fsGroup: $UID
+        runAsUser: $MY_UID
+        runAsGroup: $MY_UID
+        fsGroup: $MY_UID
       containers:
         - name: grafana
           image: grafana/grafana:latest

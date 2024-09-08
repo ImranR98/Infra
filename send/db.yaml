@@ -14,8 +14,8 @@ spec:
         app: send-db
     spec:
       securityContext:
-        runAsGroup: $UID
-        fsGroup: $UID
+        runAsGroup: $MY_UID
+        fsGroup: $MY_UID
       containers:
         - name: send-db
           image: redis:alpine

@@ -16,8 +16,8 @@ spec:
         app: homeassistant
     spec:
       securityContext:
-        runAsGroup: $UID
-        fsGroup: $UID
+        runAsGroup: $MY_UID
+        fsGroup: $MY_UID
       # hostNetwork: true
       containers:
         - name: homeassistant
