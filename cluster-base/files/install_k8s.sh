@@ -71,6 +71,13 @@ EOF
 sudo sysctl --system
 sysctl net.bridge.bridge-nf-call-iptables net.bridge.bridge-nf-call-ip6tables net.ipv4.ip_forward
 
+# Install Docker for runc
+sudo dnf config-manager --add-repo https://download.docker.com/linux/fedora/docker-ce.repo &&
+        sudo dnf -q install docker-ce docker-ce-cli containerd.io docker-compose docker-compose-plugin -y &&
+        sudo systemctl enable --now -q docker && sleep 5 &&
+        sudo systemctl is-active docker &&
+        sudo usermod -aG docker $USER
+
 # Install and enable K8s
 sudo dnf install -y kubernetes kubernetes-kubeadm kubernetes-client cri-o containernetworking-plugins
 sudo systemctl enable --now crio
@@ -89,13 +96,14 @@ sleep 20
 if [ "$NODE_TYPE" = 'master' ]; then
     # Init. cluster
     sudo kubeadm --cri-socket unix:///var/run/crio/crio.sock config images pull
-    sudo kubeadm init --config "$HERE"/init-config.yaml
+    sudo kubeadm init --cri-socket unix:///var/run/crio/crio.sock --pod-network-cidr=10.244.0.0/16 # --config "$HERE"/init-config.yaml
     # Use user-specific config, leaving original unchanged
     mkdir -p $HOME/.kube
     sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
     sudo chown $(id -u):$(id -g) $HOME/.kube/config
     # Allow the master to also be a worker
     kubectl taint nodes --all node-role.kubernetes.io/control-plane-
+    #  kubectl apply -f https://github.com/flannel-io/flannel/releases/latest/download/kube-flannel.yml
     kubectl create -f https://raw.githubusercontent.com/projectcalico/calico/v3.28.1/manifests/tigera-operator.yaml
     TEMP_YAML="$(mktemp)"
     wget -qO- https://raw.githubusercontent.com/projectcalico/calico/v3.28.1/manifests/custom-resources.yaml | sed 's/192.168/10.244/g' >"$TEMP_YAML"
