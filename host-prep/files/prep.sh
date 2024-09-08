@@ -9,10 +9,11 @@ mkdir -p ~/.ssh
 if [ -z "$(grep "$2" ~/.ssh/authorized_keys)" ]; then
     echo "$2" >~/.ssh/authorized_keys
 fi
-chmod 0600 ~/.ssh/* || :
-chmod 0700 ~/.ssh/*.pub || :
+chmod 0600 ~/.ssh/* 2>/dev/null || :
+chmod 0700 ~/.ssh/*.pub 2>/dev/null || :
 sudo sed -i "s/#* *PasswordAuthentication yes/PasswordAuthentication no/" /etc/ssh/sshd_config
-sudo systemctl enable sshd
-sudo systemctl restart sshd
+SSH_SERVICE_NAME="$(sudo systemctl list-units | grep -E 'ssh.*\.service' | awk '{print $1}')"
+sudo systemctl enable "$SSH_SERVICE_NAME"
+sudo systemctl restart "$SSH_SERVICE_NAME"
 sleep 7
-sudo systemctl is-active sshd
+sudo systemctl is-active "$SSH_SERVICE_NAME"

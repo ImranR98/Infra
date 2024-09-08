@@ -2,8 +2,16 @@
 set -e
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 source "$HERE"/helpers.sh
-source "$HERE"/VARS.sh
-echo "$STATE_DIR"
+if [ -f "$HERE"/VARS.production.sh  ]; then
+    source "$HERE"/VARS.production.sh
+elif [ -f "$HERE"/VARS.staging.sh  ]; then
+    source "$HERE"/VARS.staging.sh
+elif [ -f "$HERE"/VARS.sh  ]; then
+    source "$HERE"/VARS.sh
+else
+    echo "No VARS.sh file found!" >&2
+    exit 1
+fi
 
 while getopts "cu" opt; do
     case $opt in
