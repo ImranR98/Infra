@@ -1,5 +1,6 @@
 #!/bin/bash
 set -e
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 
 # Adapted from https://docs.fedoraproject.org/en-US/quick-docs/using-kubernetes/#sect-fedora40-and-newer
 # And https://docs.tigera.io/calico/latest/getting-started/kubernetes/quickstart
@@ -80,7 +81,7 @@ sudo systemctl enable --now kubelet
 if [ "$NODE_TYPE" = 'master' ]; then
     # Init. cluster
     sudo kubeadm --cri-socket unix:///var/run/crio/crio.sock config images pull
-    sudo kubeadm --cri-socket unix:///var/run/crio/crio.sock init --pod-network-cidr=10.244.0.0/16 --config "$HERE"/init-config.yaml
+    sudo kubeadm init --config "$HERE"/init-config.yaml
     # Use user-specific config, leaving original unchanged
     mkdir -p $HOME/.kube
     sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
@@ -93,14 +94,14 @@ if [ "$NODE_TYPE" = 'master' ]; then
 unmanaged-devices=interface-name:cali*;interface-name:tunl*;interface-name:vxlan.calico;interface-name:vxlan-v6.calico;interface-name:wireguard.cali;interface-name:wg-v6.cali
 EOF
     sudo systemctl restart NetworkManager
+    sleep 20
     kubectl create -f https://raw.githubusercontent.com/projectcalico/calico/v3.28.1/manifests/tigera-operator.yaml
     TEMP_YAML="$(mktemp)"
     wget -qO- https://raw.githubusercontent.com/projectcalico/calico/v3.28.1/manifests/custom-resources.yaml | sed 's/192.168/10.244/g' >"$TEMP_YAML"
     kubectl apply -f "$TEMP_YAML"
     rm "$TEMP_YAML"
-    kubectl create -f https://raw.githubusercontent.com/projectcalico/calico/v3.28.1/manifests/custom-resources.yaml
     # Check that all basic K8s components are running
-    sleep 10
+    sleep 30
     kubectl get pods --all-namespaces
     sudo dnf install -y helm
     # kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml # Currently does not work
