@@ -5,7 +5,7 @@ HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 # Adapted from https://docs.fedoraproject.org/en-US/quick-docs/using-kubernetes/#sect-fedora40-and-newer
 # And https://docs.tigera.io/calico/latest/getting-started/kubernetes/quickstart
 
-# sudo kubeadm --cri-socket unix:///var/run/crio/crio.sock reset # Delete existing cluster
+# sudo kubeadm reset # Delete existing cluster
 
 NODE_TYPE="$1"
 if [ "$NODE_TYPE" != 'master' ] && [ "$NODE_TYPE" != 'worker' ]; then
@@ -95,8 +95,8 @@ sudo systemctl enable --now kubelet
 # Setup the cluster
 if [ "$NODE_TYPE" = 'master' ]; then
     # Init. cluster
-    sudo kubeadm --cri-socket unix:///var/run/crio/crio.sock config images pull
-    sudo kubeadm init --cri-socket unix:///var/run/crio/crio.sock --pod-network-cidr=10.244.0.0/16 # --config "$HERE"/init-config.yaml
+    sudo kubeadm config images pull
+    sudo kubeadm init --pod-network-cidr=10.244.0.0/16 # --config "$HERE"/init-config.yaml
     # Use user-specific config, leaving original unchanged
     mkdir -p $HOME/.kube
     sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config

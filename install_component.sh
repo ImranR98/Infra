@@ -89,7 +89,7 @@ done
 # Useful commands:
 # kubectl run curlpod --image=alpine --restart=Never --rm -it -- /bin/sh # Then apk add --no-cache curl
 # kubectl exec -it <pod-name> --stdin --tty -- bash
-# sudo kubeadm --cri-socket unix:///var/run/crio/crio.sock reset && sudo rm -r /etc/cni/net.d
+# sudo kubeadm reset && sudo rm -r /etc/cni/net.d
 # kubectl run --rm -i --tty alpine-ping --image=alpine --restart=Never --overrides='
 # {
 #   "apiVersion": "v1",
