@@ -13,6 +13,7 @@ done
 shift $((OPTIND - 1))
 
 SHELL_ONLY_COMPONENTS=(
+    host-prep
     cluster-base
     frps
     frpc
@@ -24,6 +25,7 @@ SHELL_ONLY_COMPONENTS=(
 )
 
 ALL_COMPONENTS=(
+    host-prep
     cluster-base
     frps
     frpc
