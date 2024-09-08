@@ -77,6 +77,14 @@ sudo systemctl enable --now crio
 sudo systemctl enable --now kubelet
 # sudo systemctl disable --now firewalld # Likely not be needed with all the firewall rules
 
+# Add overlay networking (Calico)
+(cat | sudo tee /etc/NetworkManager/conf.d/calico.conf) <<-EOF
+[keyfile]
+unmanaged-devices=interface-name:cali*;interface-name:tunl*;interface-name:vxlan.calico;interface-name:vxlan-v6.calico;interface-name:wireguard.cali;interface-name:wg-v6.cali
+EOF
+sudo systemctl restart NetworkManager
+sleep 20
+
 # Setup the cluster
 if [ "$NODE_TYPE" = 'master' ]; then
     # Init. cluster
@@ -88,13 +96,6 @@ if [ "$NODE_TYPE" = 'master' ]; then
     sudo chown $(id -u):$(id -g) $HOME/.kube/config
     # Allow the master to also be a worker
     kubectl taint nodes --all node-role.kubernetes.io/control-plane-
-    # Add overlay networking (Calico)
-    (cat | sudo tee /etc/NetworkManager/conf.d/calico.conf) <<-EOF
-[keyfile]
-unmanaged-devices=interface-name:cali*;interface-name:tunl*;interface-name:vxlan.calico;interface-name:vxlan-v6.calico;interface-name:wireguard.cali;interface-name:wg-v6.cali
-EOF
-    sudo systemctl restart NetworkManager
-    sleep 20
     kubectl create -f https://raw.githubusercontent.com/projectcalico/calico/v3.28.1/manifests/tigera-operator.yaml
     TEMP_YAML="$(mktemp)"
     wget -qO- https://raw.githubusercontent.com/projectcalico/calico/v3.28.1/manifests/custom-resources.yaml | sed 's/192.168/10.244/g' >"$TEMP_YAML"
