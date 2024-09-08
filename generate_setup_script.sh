@@ -36,10 +36,10 @@ ALL_COMPONENTS=(
     crowdsec
     cert-manager
     prometheus-grafana
+    ntfy
     logtfy
     logtfy/logtfy-remote-subcomponent
     syncthing
-    ntfy
     filebrowser
     immich
     jellyfin
@@ -80,5 +80,5 @@ for component in "${ALL_COMPONENTS[@]}"; do
         command+="-u "
     fi
     command+="$component"
-    echo "$command"
+    echo "$command && sleep 60"
 done
