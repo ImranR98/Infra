@@ -84,13 +84,13 @@ sudo systemctl enable --now crio
 sudo systemctl enable --now kubelet
 # sudo systemctl disable --now firewalld # Likely not be needed with all the firewall rules
 
-# Add overlay networking (Calico)
-(cat | sudo tee /etc/NetworkManager/conf.d/calico.conf) <<-EOF
-[keyfile]
-unmanaged-devices=interface-name:cali*;interface-name:tunl*;interface-name:vxlan.calico;interface-name:vxlan-v6.calico;interface-name:wireguard.cali;interface-name:wg-v6.cali
-EOF
-sudo systemctl restart NetworkManager
-sleep 20
+# Prep for Calico overlay networking
+# (cat | sudo tee /etc/NetworkManager/conf.d/calico.conf) <<-EOF
+# [keyfile]
+# unmanaged-devices=interface-name:cali*;interface-name:tunl*;interface-name:vxlan.calico;interface-name:vxlan-v6.calico;interface-name:wireguard.cali;interface-name:wg-v6.cali
+# EOF
+# sudo systemctl restart NetworkManager
+# sleep 20
 
 # Setup the cluster
 if [ "$NODE_TYPE" = 'master' ]; then
@@ -103,13 +103,15 @@ if [ "$NODE_TYPE" = 'master' ]; then
     sudo chown $(id -u):$(id -g) $HOME/.kube/config
     # Allow the master to also be a worker
     kubectl taint nodes --all node-role.kubernetes.io/control-plane-
-    #  kubectl apply -f https://github.com/flannel-io/flannel/releases/latest/download/kube-flannel.yml
-    kubectl create -f https://raw.githubusercontent.com/projectcalico/calico/v3.28.1/manifests/tigera-operator.yaml
-    TEMP_YAML="$(mktemp)"
-    wget -qO- https://raw.githubusercontent.com/projectcalico/calico/v3.28.1/manifests/custom-resources.yaml | sed 's/192.168/10.244/g' >"$TEMP_YAML"
-    kubectl apply -f "$TEMP_YAML"
-    rm "$TEMP_YAML"
-    # Check that all basic K8s components are running
+    # Add overlay networking (Flannel)
+    kubectl apply -f https://github.com/flannel-io/flannel/releases/latest/download/kube-flannel.yml
+    # Add overlay networking (Calico) - NOT WORKING
+    # kubectl create -f https://raw.githubusercontent.com/projectcalico/calico/v3.28.1/manifests/tigera-operator.yaml
+    # TEMP_YAML="$(mktemp)"
+    # wget -qO- https://raw.githubusercontent.com/projectcalico/calico/v3.28.1/manifests/custom-resources.yaml | sed 's/192.168/10.244/g' >"$TEMP_YAML"
+    # kubectl apply -f "$TEMP_YAML"
+    # rm "$TEMP_YAML"
+    # Check that all basic K8S components are running
     sleep 30
     kubectl get pods --all-namespaces
     sudo dnf install -y helm
