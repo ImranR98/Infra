@@ -13,6 +13,7 @@ done
 shift $((OPTIND - 1))
 
 SHELL_ONLY_COMPONENTS=(
+    cluster-base
     frps
     frpc
     frpc/frpc-preboot-subcomponent
@@ -23,6 +24,7 @@ SHELL_ONLY_COMPONENTS=(
 )
 
 ALL_COMPONENTS=(
+    cluster-base
     frps
     frpc
     frpc/frpc-preboot-subcomponent
@@ -60,22 +62,12 @@ echo "#!/bin/bash
 set -e
 "
 if [ "$UPDATE_MODE" = true ]; then
-    echo "# Run these commands to update all services in the cluster."
+    echo "# Run these commands to update all components in the cluster."
 else
-    echo "# Run these commands to set up the K8s cluster and all services."
+    echo "# Run these commands to set up the K8s cluster and all components."
 fi
 echo "# These are not provided as a pre-made script since manually running one command at a time is less error-prone.
 "
-
-TEMP_CODE=0
-(
-    kubectl get nodes >/dev/null 2>&1
-) || TEMP_CODE=$?
-if [ "$TEMP_CODE" != 0 ]; then
-    echo "bash '$SCRIPT_DIR/install_k8s.sh' master"
-    echo "bash '$SCRIPT_DIR/prep_cluster.sh'"
-    echo ""
-fi
 
 for component in "${ALL_COMPONENTS[@]}"; do
     command="bash '$SCRIPT_DIR/install_component.sh' "

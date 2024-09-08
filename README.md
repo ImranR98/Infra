@@ -1,42 +1,30 @@
-# Services
+# Landscape
 
-Self-hosted services.
-- Most services run in a K8s cluster that uses Traefik for ingress.
-- Some services run in Docker (based on `docker compose` files launched by Systemd services).
+My self-hosted apps/services setup.
+
+## Overview
+
+- Most apps run in a K8s cluster that uses Traefik for ingress.
+- Some apps run in Docker (based on `docker compose` files launched by Systemd services).
 - The cluster is not directly exposed to the internet (due to the availability of port forwarding not being guaranteed in all environments).
-    - Instead, [FRP](https://github.com/fatedier/frp) is used to forward requests from a remote public-facing proxy server to the main control plane node (where is is picked up by Traefik or other services listening on specified ports).
+    - Instead, [FRP](https://github.com/fatedier/frp) is used to forward requests from a remote public-facing proxy server to the main control plane node (where is is picked up by Traefik or other apps listening on specified ports).
     - This does mean the main control plane node is the entrypoint for all requests.
-    - A select few services may run on the remote proxy server itself.
+    - A select few apps may run on the remote proxy server itself.
 - Everything is automated as much as possible; [IaC](https://en.wikipedia.org/wiki/Infrastructure_as_code) FTW.
 
-## Prerequisites
+## Components
+- A "component" is the term for a set of things (K8s objects, Docker images, scripts, etc.) in the infrasturcture that are tied to a distinct entity or that serve a distinct purpose.
+    - For example, any hosted app that runs on the cluster is a component, but the cluster itself is also a component, and so are the FRP server and client.
+    - Another example of a component is `common-pv` - the set of K8s PVs that are generally used across the cluster (not tied to a specific component).
+    - Most components install to the K8s cluster, with a few exceptions like FRPC and Syncthing, which run separately as Docker containers.
+- Everything in a component is installed and updated together as one unit.
+- Some components are completely independent and can be added/removed without affecting the rest of the system (this is usually the case), but others (like `traefik` or `frpc`) are not. Thus, some components need to be installed in a specific order.
+- Each component is stored in its own directory.
+    - Some component may have subcomponents in subdirectories - these are components that overlap enough (share enough files) with their parent components and therefore benefit from being part of the same "unit", but are still different enough to be installed and updated separately.
+    - With rare exceptions, all directories in the root of this repo are component directories.
 
-- A Fedora server with internet access.
-    - The server is assumed to have a LUKS-encrypted drive (if this is not the case, skip the `frpc-preboot` step during setup).
-- A "main" node that will be the first control plane node for your K8s cluster.
-    - For now, this is also the "main storage" node that holds the `~/Main/` and `./state/` directories (in the future this could be a separate dedicated node).
-    - The main storage directories are:
-        - `Main/` (typically but not necessarily in `~/Main`): All your personal files (media, notes, documents, everything).
-            - Irreplaceable - only provide to containers that need it, and use the `subPath` option when possible to limit access.
-            - Ensure it has the directory structure expected by the services that use it.
-            - This directory and any required subdirectories must already exist before you begin setup - they are not automatically created.
-        - `./state/` (always relative to this repo): Persistent storage/state for all services (each service can have a subdirectory here that is mounted with the `subPath` option).
-            - Significance of the data varies on a per-service basis - some services store ephemeral state while others store more important long-term data.
-    - Services that need to access persistent storage can only run on the main storage node.
-        - This is fine for most services, but any service that must run on other nodes should be able to access storage via an NFS share (which would have to be setup as needed).
-        - In the future it might make sense to use a dedicated storage node that serves everything via NFS 
-- Any other nodes (optional) must be network-accessible.
-- A remote public-facing server reachable via SSH from your main node.
-- DNS rules already in place (point all required domains to the remote proxy). For a list of all required domains, run: `source helpers.sh; findDomainsInSetup`
-- CloudFlare DNS must be used so that the HTTPS challenge passes. So a valid Cloudflare token is required.
+### Installing Components
 
-## Details
-
-- Most services run in a K8s cluster, with a few exceptions like FRPC and Syncthing, which run in Docker (via `docker compose`).
-- Each component of the setup has its own directory.
-    - A "component" is usually a service or other modular part of the infrastructure (for example the `common-pv` directory contains K8s persistent volume claims that are general and can be re-used across services).
-    - Some components are completely independent and can be added/removed without affecting the rest of the system (this is usually the case for services), but others (like `traefik` or `frpc`) are not.
-    - Some component may have subcomponent subdirectories - these are components that overlap enough (share enough files) with their parent components and therefore benefit from being part of the same "unit", but are still different enough to be installed and updated separately.
 - The `install_component.sh` script, given a component directory, installs or updates that component using the files inside.
     - Some files have special purposes and are installed in a specific order and method as decided by the script (for example `prep.sh` or `values.yaml`).
     - All files in the component directory that do not have a special pre-defined purpose is processed in one of these ways (in alphabetical order):
@@ -48,30 +36,52 @@ Self-hosted services.
 
 ### Variables
 
-- While the overall structure of the cluster (services deployed, service configs, etc.) are hardcoded, many per-environment variables are defined in `VARS.sh` (each environment - staging, production, etc. - can have its own version of this file).
+- While the overall structure of the cluster (apps deployed, apps configs, etc.) are hardcoded, many per-environment variables are defined in `VARS.sh` (each environment - staging, production, etc. - can have its own version of this file).
 - When a component is being installed, the `install_component.sh` script passes the variables on to any child shell scripts, and replaces the variables in any `yaml` files using the `envsubst` command.
 - This means that the scripts and `yaml` files in the component subdirectories should never be applied directly - anytime you need to install or make changes to a component, you must use `install_component.sh` to apply those changes.
 - Examples of dynamic variables include:
-    - The domain names for all services.
+    - The domain names for all apps.
     - The username and hostname of the public-facing proxy server.
-    - Some "secret" values such as some service DB credentials, default initial login credentials for some services, the Cloudflare token, various service config values (such as Ntfy webhook URLs), etc. 
-    - Path to the `Main/` directory and any subdirectories needed by various services.
-- **TODO:** Many services still use hardcoded variables that have not been moved to `VARS.sh`. These must be cleaned up.
+    - Some "secret" values such as some apps' DB credentials, default initial login credentials for some apps, the Cloudflare token, various app config values (such as Ntfy webhook URLs), etc. 
+    - Path to the `Main/` directory and any subdirectories needed by various apps.
 
 ## Usage
+
+### Prerequisites
+
+- A Fedora server with internet access.
+    - The server is assumed to have a LUKS-encrypted drive (if this is not the case, skip the `frpc-preboot` step during setup).
+- A "main" node that will be the first control plane node for your K8s cluster.
+    - For now, this is also the "main storage" node that holds the `~/Main/` and `./state/` directories (in the future this could be a separate dedicated node).
+    - The main storage directories are:
+        - `Main/` (typically but not necessarily in `~/Main`): All your personal files (media, notes, documents, everything).
+            - Irreplaceable - only provide to containers that need it, and use the `subPath` option when possible to limit access.
+            - Ensure it has the directory structure expected by the apps that use it.
+            - This directory and any required subdirectories must already exist before you begin setup - they are not automatically created.
+        - `./state/` (always relative to this repo): Persistent storage/state for all apps (each apps can have a subdirectory here that is mounted with the `subPath` option).
+            - Significance of the data varies on a per-apps basis - some apps store ephemeral state while others store more important long-term data.
+    - Apps that need to access persistent storage can only run on the main storage node.
+        - This is fine for most apps, but any apps that must run on other nodes should be able to access storage via an NFS share (which would have to be setup as needed).
+        - In the future it might make sense to use a dedicated storage node that serves everything via NFS 
+- Any other nodes (optional) must be network-accessible.
+- A remote public-facing server reachable via SSH from your main node.
+- DNS rules already in place (point all required domains to the remote proxy). For a list of all required domains, run: `source helpers.sh; findDomainsInSetup`
+- CloudFlare DNS must be used so that the HTTPS challenge passes. So a valid Cloudflare token is required.
+
+# Steps
 
 1. Modify `VARS.sh` as needed.
 2. Run `generate_setup_script.sh` and run the printed commands manually, one line at a time.
     - If the K8s cluster has multiple nodes, you must join all worker nodes manually after the K8s install step (the current machine is the control plane).
-3. If all goes well, periodically update the cluster services by running `generate_setup_script.sh` with the `-u` (update) parameter.
+3. If all goes well, periodically update the components by running `generate_setup_script.sh` with the `-u` (update) parameter.
 
 ## Migration from Docker
 
-Some services' data can easily be migrated from an existing Docker-based (or otherwise) setup.
+Some apps' data can easily be migrated from an existing Docker-based (or otherwise) setup.
 
 To do so, use the `rsyncWithChownContent` function in `helpers.sh` (since permissions between the source and destination setups may be different).
 
-For example (specifically for my migration):
+For example:
 
 ```bash
 #!/bin/bash
