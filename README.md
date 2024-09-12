@@ -102,3 +102,33 @@ rsyncWithChownContent ~/Main/Other/NUC-services/service-data/ntfy/etc "$HERE"/st
 [ -e "$HERE"/state/ntfy/server.yml ] && rm "$HERE"/state/ntfy/server.yml
 rsyncWithChownContent ~/Main/Other/NUC-services/service-data-unsynced/nextcloud/db "$HERE"/state/nextcloud/db 1000 1000
 ```
+
+# Some Useful Commands
+
+```bash
+# Run a temporary pod (in this case, Alpine with the pkg package manager)
+kubectl run curlpod --image=alpine --restart=Never --rm -it -- /bin/sh # Then apk add --no-cache curl
+# Shell into a pod
+kubectl exec -it <pod-name> --stdin --tty -- bash
+# Reset the cluster (be careful with this one)
+sudo kubeadm --cri-socket unix:///var/run/crio/crio.sock reset && sudo rm -r /etc/cni/net.d
+# Run a temporary pod with a custom security context (ping neeeds this for example as seen below)
+kubectl run --rm -i --tty alpine-ping --image=alpine --restart=Never --overrides='
+{
+  "apiVersion": "v1",
+  "spec": {
+    "nodeSelector": { "kubernetes.io/hostname": "box" },
+    "containers": [
+      {
+        "name": "alpine-ping",
+        "image": "alpine",
+        "command": ["/bin/sh", "-c", "apk add --no-cache iputils && ping -c 4 10.96.0.10"],
+        "securityContext": {
+          "runAsUser": 0,
+          "privileged": true
+        }
+      }
+    ]
+  }
+}' -- /bin/sh
+```

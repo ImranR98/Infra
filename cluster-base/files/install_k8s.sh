@@ -96,7 +96,10 @@ sleep 20
 if [ "$NODE_TYPE" = 'master' ]; then
     # Init. cluster
     sudo kubeadm --cri-socket unix:///var/run/crio/crio.sock config images pull
-    sudo kubeadm --config "$HERE"/init-config.yaml
+    sudo kubeadm init --config "$HERE"/init-config.yaml
+    sleep 20
+    bash "$HERE"/enableTLSBootstrap.sh
+    sleep 10
     # Use user-specific config, leaving original unchanged
     mkdir -p $HOME/.kube
     sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
