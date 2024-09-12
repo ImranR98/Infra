@@ -95,8 +95,8 @@ sudo systemctl enable --now kubelet
 # Setup the cluster
 if [ "$NODE_TYPE" = 'master' ]; then
     # Init. cluster
-    sudo kubeadm config images pull
-    sudo kubeadm init --pod-network-cidr=10.244.0.0/16 # --config "$HERE"/init-config.yaml
+    sudo kubeadm --cri-socket unix:///var/run/crio/crio.sock config images pull
+    sudo kubeadm --config <(cat "$HERE"/init-config.yaml "$HERE"/kubelet-config.yaml)
     # Use user-specific config, leaving original unchanged
     mkdir -p $HOME/.kube
     sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
@@ -117,5 +117,5 @@ if [ "$NODE_TYPE" = 'master' ]; then
     sudo dnf install -y helm
     # kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml # Currently does not work
 else
-    echo "You still need to join the cluster manually."
+    echo "You still need to join the cluster manually (remember to include --config kubelet-config.yaml)."
 fi

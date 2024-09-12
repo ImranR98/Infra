@@ -12,7 +12,7 @@ fi
 chmod 0600 ~/.ssh/* 2>/dev/null || :
 chmod 0700 ~/.ssh/*.pub 2>/dev/null || :
 sudo sed -i "s/#* *PasswordAuthentication yes/PasswordAuthentication no/" /etc/ssh/sshd_config
-SSH_SERVICE_NAME="$(sudo systemctl list-units | grep -E 'ssh.*\.service' | awk '{print $1}')"
+SSH_SERVICE_NAME="$(sudo systemctl list-units | grep -E 'ssh.*\.service' | awk '{print $1}' | tail -1)"
 sudo systemctl enable "$SSH_SERVICE_NAME"
 sudo systemctl restart "$SSH_SERVICE_NAME"
 sleep 7
