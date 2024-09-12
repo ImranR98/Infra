@@ -1,7 +1,3 @@
 apiVersion: kubelet.config.k8s.io/v1beta1
 kind: KubeletConfiguration
 serverTLSBootstrap: true # Needed for metrics-server (which still doesn't work for other reasons)
-
-# NOTE: On systems with systemd-resolved the following issue exists: https://kubernetes.io/docs/tasks/administer-cluster/dns-debugging-resolution/#known-issues
-#       If you use kubeadm, it automatically applies a KubeletConfiguration that fixes the above issue: https://github.com/kubernetes/kubeadm/issues/845#issuecomment-392451575
-#       But applying this file as part of the cluster init will cause kubeadm's auto-config to be overridden so you'll have to workaround that issue yourself

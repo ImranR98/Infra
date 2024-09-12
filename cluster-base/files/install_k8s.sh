@@ -96,17 +96,16 @@ sleep 20
 if [ "$NODE_TYPE" = 'master' ]; then
     # Init. cluster
     sudo kubeadm --cri-socket unix:///var/run/crio/crio.sock config images pull
-    sudo kubeadm init --config "$HERE"/init-config.yaml
+    TEMP_FILE="$(mktemp)"
+    (cat "$HERE"/init-config.yaml; echo ""; echo "---"; cat "$HERE"/kubelet-config.yaml) > "$TEMP_FILE"
+    sudo kubeadm init --config "$TEMP_FILE"
+    rm "$TEMP_FILE"
     # Use user-specific config, leaving original unchanged
     mkdir -p $HOME/.kube
     sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
     sudo chown $(id -u):$(id -g) $HOME/.kube/config
     # Allow the master to also be a worker
     kubectl taint nodes --all node-role.kubernetes.io/control-plane-
-    # Enable TLS Bootstrap
-    sleep 20
-    bash "$HERE"/enableTLSBootstrap.sh
-    sleep 10
     # Add overlay networking (Flannel)
     # kubectl apply -f https://github.com/flannel-io/flannel/releases/latest/download/kube-flannel.yml
     # Add overlay networking (Calico)
