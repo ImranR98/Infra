@@ -85,18 +85,18 @@ sudo systemctl enable --now kubelet
 # sudo systemctl disable --now firewalld # Likely not be needed with all the firewall rules
 
 # Prep for Calico overlay networking
-# (cat | sudo tee /etc/NetworkManager/conf.d/calico.conf) <<-EOF
-# [keyfile]
-# unmanaged-devices=interface-name:cali*;interface-name:tunl*;interface-name:vxlan.calico;interface-name:vxlan-v6.calico;interface-name:wireguard.cali;interface-name:wg-v6.cali
-# EOF
-# sudo systemctl restart NetworkManager
-# sleep 20
+(cat | sudo tee /etc/NetworkManager/conf.d/calico.conf) <<-EOF
+[keyfile]
+unmanaged-devices=interface-name:cali*;interface-name:tunl*;interface-name:vxlan.calico;interface-name:vxlan-v6.calico;interface-name:wireguard.cali;interface-name:wg-v6.cali
+EOF
+sudo systemctl restart NetworkManager
+sleep 20
 
 # Setup the cluster
 if [ "$NODE_TYPE" = 'master' ]; then
     # Init. cluster
     sudo kubeadm --cri-socket unix:///var/run/crio/crio.sock config images pull
-    sudo kubeadm --config <(cat "$HERE"/init-config.yaml "$HERE"/kubelet-config.yaml)
+    sudo kubeadm --config "$HERE"/init-config.yaml
     # Use user-specific config, leaving original unchanged
     mkdir -p $HOME/.kube
     sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
@@ -104,18 +104,18 @@ if [ "$NODE_TYPE" = 'master' ]; then
     # Allow the master to also be a worker
     kubectl taint nodes --all node-role.kubernetes.io/control-plane-
     # Add overlay networking (Flannel)
-    kubectl apply -f https://github.com/flannel-io/flannel/releases/latest/download/kube-flannel.yml
-    # Add overlay networking (Calico) - NOT WORKING
-    # kubectl create -f https://raw.githubusercontent.com/projectcalico/calico/v3.28.1/manifests/tigera-operator.yaml
-    # TEMP_YAML="$(mktemp)"
-    # wget -qO- https://raw.githubusercontent.com/projectcalico/calico/v3.28.1/manifests/custom-resources.yaml | sed 's/192.168/10.244/g' >"$TEMP_YAML"
-    # kubectl apply -f "$TEMP_YAML"
-    # rm "$TEMP_YAML"
+    # kubectl apply -f https://github.com/flannel-io/flannel/releases/latest/download/kube-flannel.yml
+    # Add overlay networking (Calico)
+    kubectl create -f https://raw.githubusercontent.com/projectcalico/calico/v3.28.1/manifests/tigera-operator.yaml
+    TEMP_YAML="$(mktemp)"
+    wget -qO- https://raw.githubusercontent.com/projectcalico/calico/v3.28.1/manifests/custom-resources.yaml | sed 's/192.168/10.244/g' >"$TEMP_YAML"
+    kubectl apply -f "$TEMP_YAML"
+    rm "$TEMP_YAML"
     # Check that all basic K8S components are running
     sleep 30
     kubectl get pods --all-namespaces
     sudo dnf install -y helm
     # kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml # Currently does not work
 else
-    echo "You still need to join the cluster manually (remember to include --config kubelet-config.yaml)."
+    echo "You still need to join the cluster manually."
 fi
