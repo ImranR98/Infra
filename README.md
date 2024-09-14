@@ -131,4 +131,9 @@ kubectl run --rm -i --tty alpine-ping --image=alpine --restart=Never --overrides
     ]
   }
 }' -- /bin/sh
+# Join node
+kubeadm token create --print-join-command # May need to run the actual join command with --cri-socket unix:///var/run/crio/crio.sock
+# Remove node
+kubectl drain nodename --ignore-daemonsets --delete-local-data
+kubectl delete node nodename
 ```

@@ -112,13 +112,13 @@ if [ "$NODE_TYPE" = 'master' ]; then
     # Allow the master to also be a worker
     kubectl taint nodes --all node-role.kubernetes.io/control-plane-
     # Add overlay networking (Flannel)
-    # kubectl apply -f https://github.com/flannel-io/flannel/releases/latest/download/kube-flannel.yml
+    kubectl apply -f https://github.com/flannel-io/flannel/releases/latest/download/kube-flannel.yml
     # Add overlay networking (Calico)
-    kubectl create -f https://raw.githubusercontent.com/projectcalico/calico/v3.28.1/manifests/tigera-operator.yaml
-    TEMP_YAML="$(mktemp)"
-    wget -qO- https://raw.githubusercontent.com/projectcalico/calico/v3.28.1/manifests/custom-resources.yaml | sed 's/192.168/10.244/g' >"$TEMP_YAML"
-    kubectl apply -f "$TEMP_YAML"
-    rm "$TEMP_YAML"
+    # kubectl create -f https://raw.githubusercontent.com/projectcalico/calico/v3.28.1/manifests/tigera-operator.yaml
+    # TEMP_YAML="$(mktemp)"
+    # wget -qO- https://raw.githubusercontent.com/projectcalico/calico/v3.28.1/manifests/custom-resources.yaml | sed 's/192.168/10.244/g' >"$TEMP_YAML"
+    # kubectl apply -f "$TEMP_YAML"
+    # rm "$TEMP_YAML"
     # Check that all basic K8S components are running
     sleep 30
     kubectl get pods --all-namespaces
