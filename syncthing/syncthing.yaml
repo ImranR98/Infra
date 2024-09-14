@@ -1,0 +1,33 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: syncthing
+  namespace: production
+  labels:
+    app: syncthing
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: syncthing
+  template:
+    metadata:
+      labels:
+        app: syncthing
+    spec:
+      securityContext:
+        runAsUser: $MY_UID
+        runAsGroup: $MY_UID
+        fsGroup: $MY_UID
+      hostNetwork: true
+      containers:
+        - name: syncthing
+          image: syncthing/syncthing:latest
+          imagePullPolicy: Always
+          volumeMounts:
+            - name: home
+              mountPath: /var/syncthing
+      volumes:
+        - name: home
+          persistentVolumeClaim:
+            claimName: home-pvc
