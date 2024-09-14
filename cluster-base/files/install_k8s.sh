@@ -84,13 +84,13 @@ sudo systemctl enable --now crio
 sudo systemctl enable --now kubelet
 # sudo systemctl disable --now firewalld # Likely not be needed with all the firewall rules
 
-# Prep for Calico overlay networking
-(cat | sudo tee /etc/NetworkManager/conf.d/calico.conf) <<-EOF
-[keyfile]
-unmanaged-devices=interface-name:cali*;interface-name:tunl*;interface-name:vxlan.calico;interface-name:vxlan-v6.calico;interface-name:wireguard.cali;interface-name:wg-v6.cali
-EOF
-sudo systemctl restart NetworkManager
-sleep 20
+# Prep for Calico overlay networking (DOESN'T WORK)
+# (cat | sudo tee /etc/NetworkManager/conf.d/calico.conf) <<-EOF
+# [keyfile]
+# unmanaged-devices=interface-name:cali*;interface-name:tunl*;interface-name:vxlan.calico;interface-name:vxlan-v6.calico;interface-name:wireguard.cali;interface-name:wg-v6.cali
+# EOF
+# sudo systemctl restart NetworkManager
+# sleep 20
 
 # Disable systemd-resolved stub due to https://coredns.io/plugins/loop/#troubleshooting-loops-in-kubernetes-clusters
 # kubeadm does automatically apply the required 'resolvConf' Kubelet option to fix this but it doesn't seem to work
@@ -113,7 +113,7 @@ if [ "$NODE_TYPE" = 'master' ]; then
     kubectl taint nodes --all node-role.kubernetes.io/control-plane-
     # Add overlay networking (Flannel)
     kubectl apply -f https://github.com/flannel-io/flannel/releases/latest/download/kube-flannel.yml
-    # Add overlay networking (Calico)
+    # Add overlay networking (Calico) (DOESN'T WORK)
     # kubectl create -f https://raw.githubusercontent.com/projectcalico/calico/v3.28.1/manifests/tigera-operator.yaml
     # TEMP_YAML="$(mktemp)"
     # wget -qO- https://raw.githubusercontent.com/projectcalico/calico/v3.28.1/manifests/custom-resources.yaml | sed 's/192.168/10.244/g' >"$TEMP_YAML"
