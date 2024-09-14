@@ -18,7 +18,6 @@ cd ..
 
 # Install service
 awk -v SCRIPT_DIR="$HERE" '{gsub("path_to_here", SCRIPT_DIR); print}' "$HERE"/frps.service | sudo tee /etc/systemd/system/frps.service
-sudo rm /etc/systemd/system/frps.service.temp
 sudo systemctl daemon-reload
 sudo systemctl enable frps.service
 sudo systemctl stop frps.service || :

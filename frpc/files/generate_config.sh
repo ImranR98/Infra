@@ -13,7 +13,7 @@ if [ "$1" == preboot ]; then
 fi
 
 NEW_RANDOM_TOKEN="$(echo $RANDOM | sha512sum | awk '{print $1}')$(echo $RANDOM | sha512sum | awk '{print $1}')"
-syncRemoteEnvFileIfUndefined "$PROXY_SSH_STRING" "/home/$PROXY_USER/frps/frps-tokens.txt" "$FRPC_USERNAME" "$NEW_RANDOM_TOKEN" "$HERE"/temp_code.txt
+syncRemoteEnvFileIfUndefined "$PROXY_SSH_STRING" "$PROXY_HOME/frps/frps-tokens.txt" "$FRPC_USERNAME" "$NEW_RANDOM_TOKEN" "$HERE"/temp_code.txt
 CHAR_COUNT=$(( "$(echo "$FRPC_USERNAME" | wc -c)" + 1))
 TOKEN="$(grep -Eo "^$FRPC_USERNAME=.+" "$HERE"/temp_code.txt | tail -c +$CHAR_COUNT)"
 awk -v TOKEN="$TOKEN" '{gsub("put_token_here", TOKEN); print}' "$HERE/$FRPC_FILENAME.template.ini" | envsubst | tee "$HERE/../$FRPC_FILENAME.ini"
