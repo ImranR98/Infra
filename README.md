@@ -94,13 +94,11 @@ mkdir -p "$HERE"/state/uptime imranr imranr
 
 source "$HERE"/helpers.sh
 
+# Note: Plausible and Uptime migrations must be done manually in-app
 rsyncWithChownContent ~/Main/Other/NUC-services/service-data-unsynced/HAConfig "$HERE"/state/homeassistant root 1000
 rsyncWithChownContent ~/Main/Other/NUC-services/service-data-unsynced/jellyfin "$HERE"/state/jellyfin 1000 1000
-rsyncWithChownContent ~/Main/Other/NUC-services/service-data-unsynced/nextcloud/html "$HERE"/state/nextcloud/data 33 1000
-rsyncWithChownContent ~/Main/Other/NUC-services/service-data-unsynced/nextcloud/db "$HERE"/state/nextcloud/db 1000 1000
 rsyncWithChownContent ~/Main/Other/NUC-services/service-data/ntfy/etc "$HERE"/state/ntfy 1000 1000
 [ -e "$HERE"/state/ntfy/server.yml ] && rm "$HERE"/state/ntfy/server.yml
-rsyncWithChownContent ~/Main/Other/NUC-services/service-data-unsynced/nextcloud/db "$HERE"/state/nextcloud/db 1000 1000
 ```
 
 # Some Useful Commands
