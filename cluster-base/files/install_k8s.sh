@@ -122,6 +122,11 @@ if [ "$NODE_TYPE" = 'master' ]; then
     kubectl get pods --all-namespaces
     sudo dnf install -y helm
     # kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml # Currently does not work
+    # Restart some services to get DNS to work (unclear why this is needed)
+    sudo systemctl restart crio
+    sleep 20
+    kubectl -n kube-system rollout restart coredns
+    sleep 20
 else
     echo "You still need to join the cluster manually."
 fi
