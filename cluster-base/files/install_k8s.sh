@@ -92,6 +92,11 @@ EOF
 sudo systemctl restart NetworkManager
 sleep 20
 
+# Disable systemd-resolved stub due to https://coredns.io/plugins/loop/#troubleshooting-loops-in-kubernetes-clusters
+# kubeadm does automatically apply the required 'resolvConf' Kubelet option to fix this but it doesn't seem to work
+sudo mv /etc/resolv.conf /etc/resolv.conf.bak
+sudo ln -s /run/systemd/resolve/resolv.conf /etc/resolv.conf
+
 # Setup the cluster
 if [ "$NODE_TYPE" = 'master' ]; then
     # Init. cluster
