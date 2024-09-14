@@ -11,7 +11,7 @@ spec:
     - ReadWriteOnce
   persistentVolumeReclaimPolicy: Retain
   local:
-    path: "$MAIN_PARENT_DIR/Main" # PROD TODO: Replace this with the actual path
+    path: "$MAIN_PARENT_DIR/Main"
   nodeAffinity:
     required:
       nodeSelectorTerms:

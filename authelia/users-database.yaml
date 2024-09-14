@@ -6,13 +6,4 @@ metadata:
 type: Opaque
 stringData:
   users-database.yaml: |
-    users:
-      imranr:
-        disabled: false
-        displayname: "$AUTHELIA_ADMIN_DISPLAYNAME"
-        password: "$AUTHELIA_ADMIN_PASSWORD_HASH"  # yamllint disable-line rule:line-length
-        email: $AUTHELIA_ADMIN_EMAIL
-        groups:
-          - admins
-          - dev
-      # PROD TODO: Replace this with the prod version
+    $AUTHELIA_USERS_DATABASE

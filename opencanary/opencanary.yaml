@@ -73,7 +73,7 @@ data:
                     },
                     "Webhook": {
                         "class": "opencanary.logger.WebhookHandler",
-                        "url": "http://ntfy.sh/TODO_PROD_REPLACE_WITH_PROD_VERSION",
+                        "url": "http://ntfy.sh/$OPENCANARY_NTFY_OFFICIAL_TOPIC",
                         "method": "POST",
                         "data": "%(message)s",
                         "status_code": 200,
