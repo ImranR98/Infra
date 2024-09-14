@@ -33,7 +33,7 @@ IGNORE_FILES=(values.yaml update.sh)
 INCLUDE_OTHER_FILES=true
 
 if [ "$UPDATE_MODE" = true ]; then
-    START_WITH_FILES=(update.sh "$COMPONENT_NAME.yaml")
+    START_WITH_FILES=(update.sh)
     END_WITH_FILES=()
     IGNORE_FILES=()
     INCLUDE_OTHER_FILES=false
