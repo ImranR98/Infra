@@ -79,9 +79,8 @@ for file in "${ordered_files[@]}"; do
     elif [ "$extension" = sh ]; then
         COMMAND="bash "$filepath""
     fi
-    echo "===
-RUNNING COMMAND: $COMMAND
----"
+    printLine -
+    echo "RUNNING COMMAND: $COMMAND"
     eval "$COMMAND"
     sleep 1 # Make progress easy to follow + allow time for pods to ramp up, etc.
 done

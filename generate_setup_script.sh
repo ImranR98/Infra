@@ -25,19 +25,23 @@ SHELL_ONLY_COMPONENTS=(
 ALL_COMPONENTS=(
     host-prep
     cluster-base
+    ---
     frps
     frpc
     frpc/frpc-preboot-subcomponent
+    ---
     common-pv
     traefik
     authelia
+    ---
     crowdsec
     cert-manager
+    ---
     prometheus-grafana
     ntfy
     logtfy
     logtfy/logtfy-remote-subcomponent
-    syncthing
+    ---
     filebrowser
     immich
     jellyfin
@@ -49,11 +53,13 @@ ALL_COMPONENTS=(
     dscpln-parsebalx
     send
     opencanary
-    mdscl
     mosquitto
     homeassistant
     nextcloud
     uptime
+    ---
+    mdscl
+    syncthing
     strelaysrv
     monerod
 )
@@ -68,16 +74,26 @@ if [ -n "$SINGLE_ITEM" ]; then
         "$SINGLE_ITEM"
     )
 else
+    echo "#!/bin/bash
+set -e
+source "$SCRIPT_DIR"/helpers.sh
+"
     if [ "$UPDATE_MODE" = true ]; then
-        echo "# Run the following commands to update all components in the cluster."
+        echo "# Run this script to update all components in the cluster."
     else
-        echo "# Run the following commands to set up the K8s cluster and all components."
+        echo "# Run this script to set up the K8s cluster and all components."
     fi
-    echo "# These are meant to be run manually, one line at a time (not as a single script).
+    echo "# This is scripted for convenience, but it is recommended to run each command manually one at a time.
 "
 fi
 
 for component in "${ALL_COMPONENTS[@]}"; do
+    echo "printLine"
+    if [ "$component" = '---' ]; then
+        echo "read -p 'Paused. Ensure everything so far looks okay, then press Enter to continue... ' anything
+"
+        continue
+    fi
     command="bash '$SCRIPT_DIR/install_component.sh' "
     if contains "$component" "${SHELL_ONLY_COMPONENTS[@]}"; then
         command+="-c "
@@ -87,14 +103,19 @@ for component in "${ALL_COMPONENTS[@]}"; do
     fi
     command+="$component"
     echo "$command"
+    echo "sleep 60
+"
 done
 
 if [ "$UPDATE_MODE" != true ] && [ -z "$SINGLE_ITEM" ]; then
-    echo "
-# Keep an eye on the console output while commands run, since some may require further manual steps.
-
-# After running manual steps as specified, you must run these commands to update/restart specific services:"
+    echo "read -p 'Some components need additional manual setup. Look at the logs above for details and take action as needed.
+Then press Enter to continue (the relevant components will be updated/restarted)... ' anything
+"
     for component in "${IMMEDIATE_UPDATE_COMPONENTS[@]}"; do
         bash "${BASH_SOURCE[0]}" -u -s "$component"
     done
+fi
+
+if [ -z "$SINGLE_ITEM" ]; then
+    echo "echo Done."
 fi
