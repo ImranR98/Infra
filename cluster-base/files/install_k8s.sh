@@ -73,10 +73,10 @@ sysctl net.bridge.bridge-nf-call-iptables net.bridge.bridge-nf-call-ip6tables ne
 
 # Install Docker for runc
 sudo dnf config-manager --add-repo https://download.docker.com/linux/fedora/docker-ce.repo &&
-        sudo dnf -q install docker-ce docker-ce-cli containerd.io docker-compose docker-compose-plugin -y &&
-        sudo systemctl enable --now -q docker && sleep 5 &&
-        sudo systemctl is-active docker &&
-        sudo usermod -aG docker $USER
+    sudo dnf -q install docker-ce docker-ce-cli containerd.io docker-compose docker-compose-plugin -y &&
+    sudo systemctl enable --now -q docker && sleep 5 &&
+    sudo systemctl is-active docker &&
+    sudo usermod -aG docker $USER
 
 # Install and enable K8s
 sudo dnf install -y kubernetes kubernetes-kubeadm kubernetes-client cri-o containernetworking-plugins
@@ -102,7 +102,12 @@ if [ "$NODE_TYPE" = 'master' ]; then
     # Init. cluster
     sudo kubeadm --cri-socket unix:///var/run/crio/crio.sock config images pull
     TEMP_FILE="$(mktemp)"
-    (cat "$HERE"/init-config.yaml; echo ""; echo "---"; cat "$HERE"/kubelet-config.yaml) > "$TEMP_FILE"
+    (
+        cat "$HERE"/init-config.yaml
+        echo ""
+        echo "---"
+        cat "$HERE"/kubelet-config.yaml
+    ) >"$TEMP_FILE"
     sudo kubeadm init --config "$TEMP_FILE"
     rm "$TEMP_FILE"
     # Use user-specific config, leaving original unchanged
@@ -119,14 +124,14 @@ if [ "$NODE_TYPE" = 'master' ]; then
     rm "$TEMP_YAML"
     # Check that all basic K8S components are running
     sleep 30
-    kubectl get pods --all-namespaces
     sudo dnf install -y helm
     # kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml # Currently does not work
     # Restart some services to get DNS to work (unclear why this is needed)
     sudo systemctl restart crio
     sleep 20
-    kubectl -n kube-system rollout restart coredns
+    kubectl -n kube-system rollout restart deployment coredns
     sleep 20
+    kubectl get pods --all-namespaces
 else
     echo "You still need to join the cluster manually."
 fi
