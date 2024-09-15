@@ -12,6 +12,7 @@ fi
 bash "$HERE"/prepLogtfy.sh production
 rm "$HERE"/token
 rm "$HERE"/ca.crt
+rm "$HERE"/prepLogtfy.sh
 
 # Create secret
 cat "$HERE"/logtfy.template.json | envsubst >"$HERE"/logtfy.json

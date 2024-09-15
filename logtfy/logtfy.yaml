@@ -15,6 +15,7 @@ spec:
       labels:
         app: logtfy
     spec:
+      hostname: $MAIN_NODE_HOSTNAME_LOWERCASE
       securityContext:
         runAsUser: $MY_UID
         runAsGroup: $MY_UID
