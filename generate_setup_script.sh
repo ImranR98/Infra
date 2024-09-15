@@ -43,7 +43,6 @@ ALL_COMPONENTS=(
     jellyfin
     navidrome
     plausible
-    monerod
     ollama
     pixelntfy
     isbn-lookup
@@ -56,10 +55,12 @@ ALL_COMPONENTS=(
     nextcloud
     uptime
     strelaysrv
+    monerod
 )
 
 IMMEDIATE_UPDATE_COMPONENTS=(
     authelia
+    homeassistant
 )
 
 if [ -n "$SINGLE_ITEM" ]; then
