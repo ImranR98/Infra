@@ -10,6 +10,4 @@ echo "NOTE: Modify settings in the GUI to enable OAuth. Enter these values:
     clientId: immich
     clientSecret: $IMMICH_OAUTH_CLIENT_SECRET
     autoLaunch: true
-NOTE: External libraries are mounted under '/external'.
-"
-printLine -
+NOTE: External libraries are mounted under '/external'."

@@ -16,4 +16,3 @@ echo "NOTE: Some lines in authelia/values.yaml were commented out according to t
 $(cat "$HERE"/values.yaml | envsubst | grep -Eo 'domain: .+# IGNORE INITIALLY$' | awk '{print "      - ", $2}')"
 echo 'NOTE: To get notification.txt from inside the container, run this:
       kubectl -n production exec --stdin --tty "$(kubectl -n production get pod | grep authelia | grep -v redis | grep -v postgres | awk '"'"'{print $1}'"'"')" -- cat /config/notification.txt'
-printLine -

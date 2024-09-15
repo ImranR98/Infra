@@ -11,4 +11,3 @@ kubectl apply -f <(cat "$HERE"/certificates/production/services.yaml | envsubst)
 printLine -
 echo "NOTE: Run this to keep an eye on pending cert requests:
 watch -n 1 kubectl -n production get certificaterequests.cert-manager.io -o wide"
-printLine -

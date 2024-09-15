@@ -17,4 +17,3 @@ ntfy user change-role $USER admin
 ntfy user add $SERVICES_USER
 ntfy access $SERVICES_USER \"$SERVICES_TOPIC\" rw
 ntfy token add $SERVICES_USER"
-printLine -
