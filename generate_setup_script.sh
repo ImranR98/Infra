@@ -17,11 +17,8 @@ SHELL_ONLY_COMPONENTS=(
     host-prep
     cluster-base
     frps
-    frpc
     frpc/frpc-preboot-subcomponent
-    logtfy
     logtfy/logtfy-remote-subcomponent
-    syncthing
     strelaysrv
 )
 
