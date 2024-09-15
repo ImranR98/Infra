@@ -13,6 +13,7 @@ My self-hosted apps/services setup.
 - Everything is automated as much as possible; [IaC](https://en.wikipedia.org/wiki/Infrastructure_as_code) FTW.
 
 ## Components
+
 - A "component" is the term for a set of things (K8s objects, Docker images, scripts, etc.) in the infrasturcture that are tied to a distinct entity or that serve a distinct purpose.
     - For example, any hosted app that runs on the cluster is a component, but the cluster itself is also a component, and so are the FRP server and client.
     - Another example of a component is `common-pv` - the set of K8s PVs that are generally used across the cluster (not tied to a specific component).
@@ -75,7 +76,17 @@ My self-hosted apps/services setup.
     - If the K8s cluster has multiple nodes, you must join all worker nodes manually after the K8s install step (the current machine is the control plane).
 3. If all goes well, periodically update the components by running `generate_setup_script.sh` with the `-u` (update) parameter.
 
+# Adding New Components
+
+- At minimum, there should be a `yaml` containing a deployment, or an `install.sh` containing `helm` commands.
+- An `update.sh` should be provided in all cases except rare exceptions where "update" makes no sense.
+- Other `yaml` and `sh` files can be added as needed (see `install_component.sh` for details).
+    - Note that only files in the top level of the component directory are directly used by that script - subdirectories are ignored.
+- It is good practice to include an `uninstall.sh` as well.
+
 ## Migration from Docker
+
+> TODO: Remove this section after migration
 
 Some apps' data can easily be migrated from an existing Docker-based (or otherwise) setup.
 
