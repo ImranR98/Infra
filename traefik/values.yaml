@@ -78,7 +78,7 @@ rbac:
   enabled: true
 
 metrics:
-  prometheus:
+  prometheus: # https://grafana.com/grafana/dashboards/17346-traefik-official-standalone-dashboard/
    service:
       enabled: true
 
