@@ -59,8 +59,8 @@ ALL_COMPONENTS=(
 )
 
 IMMEDIATE_UPDATE_COMPONENTS=(
-    authelia
     homeassistant
+    authelia
 )
 
 if [ -n "$SINGLE_ITEM" ]; then
