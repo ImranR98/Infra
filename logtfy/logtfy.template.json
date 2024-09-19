@@ -15,9 +15,11 @@
             }
         ],
         "defaultConfig": "ntfy_self",
-        "fallbackConfig": "ntfy_official",
-        "modulesEnabledByDefault": false
+        "fallbackConfig": "ntfy_official"
     },
+    "modulesEnabledByDefault": false,
+    "catchModuleCrashes": false,
+    "allowModuleFailCount": 3,
     "moduleCustomization": [
         {
             "module": "ssh_logins",
