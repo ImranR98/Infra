@@ -103,8 +103,11 @@ for component in "${ALL_COMPONENTS[@]}"; do
     fi
     command+="$component"
     echo "$command"
-    echo "sleep 60
-"
+    if [ "$UPDATE_MODE" = true ]; then
+        echo "sleep 20"
+    else
+        echo "sleep 60"
+    fi
 done
 
 if [ "$UPDATE_MODE" != true ] && [ -z "$SINGLE_ITEM" ]; then
