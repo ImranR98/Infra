@@ -34,6 +34,10 @@ spec:
             - name: state
               mountPath: /cache
               subPath: cache
+          securityContext:
+            allowPrivilegeEscalation: false
+            seLinuxOptions:
+              type: spc_t # SELinux may cause issues with file watching/reading for external libraries
       volumes:
         - name: media
           persistentVolumeClaim:
