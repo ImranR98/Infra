@@ -5,3 +5,4 @@ helm repo add immich https://immich-app.github.io/immich-charts
 helm repo update
 mkdir -p "$STATE_DIR"/immich/postgres
 mkdir -p "$STATE_DIR"/immich/redis
+mkdir -p "$STATE_DIR"/immich/server
