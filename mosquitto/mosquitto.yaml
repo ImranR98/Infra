@@ -16,9 +16,12 @@ spec:
         app: mosquitto
     spec:
       securityContext:
-        runAsUser: 1000 # For some reason this must be hardcoded, using $MY_UID then running envsubst causes a permission error
-        runAsGroup: 1000 # As above (unsure which of the 3 is the problem)
-        fsGroup: 1000 # The only other workaround is to disable 'defaultMode' below but that will fail in future versions
+        runAsUser: $MY_UID
+        runAsGroup: $MY_UID
+        fsGroup: $MY_UID
+        allowPrivilegeEscalation: false
+        seLinuxOptions:
+          type: spc_t # SELinux may cause issues with file watching/reading for external libraries
       containers:
         - name: mosquitto
           image: eclipse-mosquitto:openssl

@@ -19,6 +19,9 @@ spec:
         runAsUser: $MY_UID
         runAsGroup: $MY_UID
         fsGroup: $MY_UID
+        allowPrivilegeEscalation: false
+        seLinuxOptions:
+          type: spc_t # SELinux may cause issues with file watching/reading for external libraries
       containers:
         - name: prometheus
           image: prom/prometheus:latest
@@ -80,6 +83,9 @@ spec:
         runAsUser: $MY_UID
         runAsGroup: $MY_UID
         fsGroup: $MY_UID
+        allowPrivilegeEscalation: false
+        seLinuxOptions:
+          type: spc_t # SELinux may cause issues with file watching/reading for external libraries
       containers:
         - name: grafana
           image: grafana/grafana:latest
