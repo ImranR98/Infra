@@ -13,14 +13,20 @@ else
     exit 1
 fi
 
-while getopts "cu" opt; do
+while getopts "cur" opt; do
     case $opt in
     c) SHELL_ONLY=true ;;
     u) UPDATE_MODE=true ;;
+    r) REMOVE_MODE=true ;;
     \?) echo "Unrecognized parameter." >&2 && exit 1 ;;
     esac
 done
 shift $((OPTIND - 1))
+
+if [ "$UPDATE_MODE" = true ] && [ "$REMOVE_MODE" = true ]; then
+    echo "You can only use either -u or -r for update mode or remove mode respectively."
+    exit 1
+fi
 
 # Get component dir
 COMPONENT_DIR="$(realpath "$1")"
@@ -29,11 +35,18 @@ COMPONENT_NAME="$(basename "$COMPONENT_DIR")"
 # Constants
 START_WITH_FILES=(prep.sh pv.yaml nfs.yaml db.yaml secrets.yaml configmaps.yaml install.sh "$COMPONENT_NAME.yaml")
 END_WITH_FILES=(middlewares.yaml ingress.yaml post_install.sh)
-IGNORE_FILES=(values.yaml update.sh)
+IGNORE_FILES=(uninstall.sh values.yaml update.sh)
 INCLUDE_OTHER_FILES=true
 
 if [ "$UPDATE_MODE" = true ]; then
     START_WITH_FILES=(update.sh)
+    END_WITH_FILES=()
+    IGNORE_FILES=()
+    INCLUDE_OTHER_FILES=false # Since this is false we don't need to specify any IGNORE_FILES
+fi
+
+if [ "$REMOVE_MODE" ]; then
+    START_WITH_FILES=(uninstall.sh "$COMPONENT_NAME.yaml" configmaps.yaml secrets.yaml db.yaml nfs.yaml pv.yaml middlewares.yaml ingress.yaml)
     END_WITH_FILES=()
     IGNORE_FILES=()
     INCLUDE_OTHER_FILES=false
@@ -75,7 +88,9 @@ for file in "${ordered_files[@]}"; do
         continue
     fi
     if [ "$extension" = yaml ]; then
-        COMMAND="kubectl apply -f <(replaceImageTagsInYAML "$filepath" | envsubst)"
+        COMMAND_ACTION="apply"
+        if [ "$REMOVE_MODE" = true ]; then COMMAND_ACTION="delete"; fi
+        COMMAND="kubectl $COMMAND_ACTION -f <(replaceImageTagsInYAML "$filepath" | envsubst)"
     elif [ "$extension" = sh ]; then
         COMMAND="bash "$filepath""
     fi
@@ -84,3 +99,7 @@ for file in "${ordered_files[@]}"; do
     eval "$COMMAND"
     sleep 1 # Make progress easy to follow + allow time for pods to ramp up, etc.
 done
+
+if [ -n "${ordered_files[@]}" ] && [ -n "$WAIT_AFTER_INSTALL" ]; then
+    sleep "$WAIT_AFTER_INSTALL"
+fi

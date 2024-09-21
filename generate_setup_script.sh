@@ -4,9 +4,10 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 source "$SCRIPT_DIR"/helpers.sh
 
-while getopts "s:u" opt; do
+while getopts "s:ur" opt; do
     case $opt in
     u) UPDATE_MODE=true ;;
+    r) REMOVE_MODE=true ;;
     s) SINGLE_ITEM="$OPTARG" ;;
     \?) echo "Unrecognized parameter." >&2 && exit 1 ;;
     esac
@@ -76,15 +77,26 @@ if [ -n "$SINGLE_ITEM" ]; then
 else
     echo "#!/bin/bash
 set -e
-source "$SCRIPT_DIR"/helpers.sh
-"
+source "$SCRIPT_DIR"/helpers.sh"
     if [ "$UPDATE_MODE" = true ]; then
-        echo "# Run this script to update all components in the cluster."
+        echo "export WAIT_AFTER_INSTALL=20
+
+# Run this script to update all components in the cluster."
+    elif [ "$REMOVE_MODE" = true ]; then
+        echo "export WAIT_AFTER_INSTALL=10
+
+# Run this script to remove some components from the cluster (the ones which support automated removal)."
     else
-        echo "# Run this script to set up the K8s cluster and all components."
+        echo "export WAIT_AFTER_INSTALL=60
+
+# Run this script to set up the K8s cluster and all components."
     fi
     echo "# This is scripted for convenience, but it is recommended to run each command manually one at a time.
 "
+fi
+
+if [ "$REMOVE_MODE" = true ]; then
+    ALL_COMPONENTS=($(printf "%s\n" "${ALL_COMPONENTS[@]}" | tac))
 fi
 
 for component in "${ALL_COMPONENTS[@]}"; do
@@ -101,16 +113,14 @@ for component in "${ALL_COMPONENTS[@]}"; do
     if [ "$UPDATE_MODE" = true ]; then
         command+="-u "
     fi
+    if [ "$REMOVE_MODE" = true ]; then
+        command+="-r "
+    fi
     command+="$component"
     echo "$command"
-    if [ "$UPDATE_MODE" = true ]; then
-        echo "sleep 20"
-    else
-        echo "sleep 60"
-    fi
 done
 
-if [ "$UPDATE_MODE" != true ] && [ -z "$SINGLE_ITEM" ]; then
+if [ "$UPDATE_MODE" != true ] && [ "$REMOVE_MODE" != true ] && [ -z "$SINGLE_ITEM" ]; then
     echo "read -p 'Some components need additional manual setup. Look at the logs above for details and take action as needed.
 Then press Enter to continue (the relevant components will be updated/restarted)... ' anything
 "
