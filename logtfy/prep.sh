@@ -13,6 +13,7 @@ bash "$HERE"/prepLogtfy.sh production
 rm "$HERE"/token
 rm "$HERE"/ca.crt
 rm "$HERE"/prepLogtfy.sh
+rm "$HERE"/role.yaml
 
 # Create secret
 cat "$HERE"/logtfy.template.json | envsubst >"$HERE"/logtfy.json
