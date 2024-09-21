@@ -8,19 +8,16 @@ Kubernetes cluster setup for my self-hosted apps/services.
     - Instead, [FRP](https://github.com/fatedier/frp) is used to forward requests from a remote public-facing proxy server to the main control plane node (where is is picked up by Traefik or other apps listening on specified ports).
     - This does mean the main control plane node is the entrypoint for all requests.
     - A select few apps may run on the remote proxy server itself.
-- Everything is automated as much as possible; [IaC](https://en.wikipedia.org/wiki/Infrastructure_as_code) FTW.
 
 ## Components
 
-- A "component" is the term for a set of things (K8s objects, Docker images, scripts, etc.) in the infrasturcture that are tied to a distinct entity or that serve a distinct purpose.
-    - For example, any hosted app that runs on the cluster is a component, but the cluster itself is also a component, and so are the FRP server and client.
-    - Another example of a component is `common-pv` - the set of K8s PVs that are generally used across the cluster (not tied to a specific component).
-    - Most components install to the K8s cluster, with a few exceptions like FRPC and Syncthing, which run separately as Docker containers.
-- Everything in a component is installed and updated together as one unit.
+- A "component" is the term for a group of apps/configs/scripts that are installed/uninstalled/run as a single "unit". Everything in this setup is part of a component.
+    - For example, any hosted app/service that runs on the cluster is a component, but the cluster itself is also a component, and so are the FRP server and client.
+    - Another example of a component is `common-pv` - the set of K8s `PersistentVolume`s and `PersistentVolumeClaim`s that are generally used across the cluster my multiple apps.
 - Some components are completely independent and can be added/removed without affecting the rest of the system (this is usually the case), but others (like `traefik` or `frpc`) are not. Thus, some components need to be installed in a specific order.
-- Each component is stored in its own directory.
-    - Some component may have subcomponents in subdirectories - these are components that overlap enough (share enough files) with their parent components and therefore benefit from being part of the same "unit", but are still different enough to be installed and updated separately.
-    - With rare exceptions, all directories in the root of this repo are component directories.
+- All the files that make up a component are stored in a dedicated directory for that component.
+    - Some components may have subcomponents in subdirectories - these are components that overlap enough (share enough files) with their parent components and therefore benefit from being in a subdirectory, but are still different enough to be installed and updated separately.
+    - With rare exceptions (like `mock-data`), all directories in the root of this repo are component directories.
 
 ### Installing Components
 
@@ -36,17 +33,13 @@ Kubernetes cluster setup for my self-hosted apps/services.
 
 ### Variables
 
-- While the overall structure of the cluster (apps deployed, apps configs, etc.) are hardcoded, many per-environment variables are defined in `VARS.sh` (each environment - staging, production, etc. - can have its own version of this file).
+- In order to re-use this setup across multiple environments (staging, production, etc.), the component files do not include any hardcoded values that are environment-specific or otherwise sensitive, like domain names or secrets.
+- Instead, such variables are defined in a `VARS.sh` file (each environment can have its own version of this file).
 - When a component is being installed, the `install_component.sh` script passes the variables on to any child shell scripts, and replaces the variables in any `yaml` files using the `envsubst` command.
-- This means that the scripts and `yaml` files in the component subdirectories should never be applied directly - anytime you need to install or make changes to a component, you must use `install_component.sh` to apply those changes (if you really need to run apply a specific file manually, you need to `source VARS.sh` first, then run the file through `envsubst`).
-- Examples of dynamic variables include:
-    - The domain names for all apps.
-    - The username and hostname of the public-facing proxy server.
-    - Some "secret" values such as some apps' DB credentials, default initial login credentials for some apps, the Cloudflare token, various app config values (such as Ntfy webhook URLs), etc. 
-    - Path to the `Main/` directory and any subdirectories needed by various apps.
-- Aside from variables, image tags are replaced by dynamically fetched image hash values during install time by `install_component.sh`. This is useful because it [avoids the use of `imagePullPolicy: Always`](https://kubernetes.io/docs/concepts/containers/images/#image-pull-policy) and avoids rate limiting and version ambiguity issues.
-    - This is another reason for never trying to apply `yaml` files directly - let `install_component.sh` handle it.
+- Aside from variable substitution, `install_component.sh` also looks for the `image` property in all Pod specs and replaces the image tags with dynamically fetched image hash values. This is useful because it [avoids the use of `imagePullPolicy: Always`](https://kubernetes.io/docs/concepts/containers/images/#image-pull-policy) and avoids rate limiting and version ambiguity issues.
     - Note that this only applies to Docker Hub images for now.
+- All the `yaml` file changes described above are made to temporary copies of the files during install time, leaving the original files unchanged.
+  - This means that the scripts and `yaml` files in the component subdirectories should never be applied directly - anytime you need to install or make changes to a component, you must use `install_component.sh` to apply those changes.
 
 ## Usage
 
@@ -54,19 +47,19 @@ Kubernetes cluster setup for my self-hosted apps/services.
 
 - A Fedora server with internet access.
     - The server is assumed to have a LUKS-encrypted drive (if this is not the case, skip the `frpc-preboot` step during setup).
-    - While K8s infrastructure is distro-agnostic, the K8s install script itself runs on Fedora. Some pod securityContext options have also been written with SELinux in mind (default on Fedora). 
+    - While K8s infrastructure is distro-agnostic, the K8s install script itself runs on Fedora. Some Pod `securityContext` options have also been written with SELinux in mind (default on Fedora). 
 - A "main" node that will be the first control plane node for your K8s cluster.
-    - For now, this is also the "main storage" node that holds the `~/Main/` and `./state/` directories (in the future this could be a separate dedicated node).
-    - The main storage directories are:
-        - `Main/` (typically but not necessarily in `~/Main`): All your personal files (media, notes, documents, everything).
+    - For now, this is also the "main storage" node that holds the directories needed by apps in the cluster (in the future this could be a separate dedicated node).
+    - The main storage directories you need are:
+        1. `MAIN_PARENT_DIR` (usually just your home directory): All your personal files (media, notes, documents, everything).
             - Irreplaceable - only provide to containers that need it, and use the `subPath` option when possible to limit access.
-            - Ensure it has the directory structure expected by the apps that use it.
+            - Ensure it has the directory structure expected by the apps that use it (for example, the `Main` `Phone Sync Folder` subdirectories - see `mock-data/` for example).
             - This directory and any required subdirectories must already exist before you begin setup - they are not automatically created.
-        - `./state/` (always relative to this repo): Persistent storage/state for all apps (each apps can have a subdirectory here that is mounted with the `subPath` option).
+        2. `STATE_DIR` (`./state/` by default): Persistent storage/state for all apps (each apps can have a subdirectory here that is mounted with the `subPath` option).
             - Significance of the data varies on a per-apps basis - some apps store ephemeral state while others store more important long-term data.
     - Apps that need to access persistent storage can only run on the main storage node.
         - This is fine for most apps, but any apps that must run on other nodes should be able to access storage via an NFS share (which would have to be setup as needed).
-        - In the future it might make sense to use a dedicated storage node that serves everything via NFS 
+        - In the future it might make sense to use a dedicated storage node that serves everything via NFS.
 - Any other nodes (optional) must be network-accessible.
 - A remote public-facing server reachable via SSH from your main node.
 - DNS rules already in place (point all required domains to the remote proxy). For a list of all required domains, run: `source helpers.sh; findDomainsInSetup`
@@ -74,7 +67,7 @@ Kubernetes cluster setup for my self-hosted apps/services.
 
 # Steps
 
-1. Modify `VARS.sh` as needed.
+1. Create a copy of `template.VARS.sh` named `VARS.sh` (or `staging.VARS.sh` or `production.VARS.sh`). Fill in the values as appropriate.
 2. Run `generate_setup_script.sh > temp.sh` and run the resulting `temp.sh` script.
     - If the K8s cluster has multiple nodes, the current machine is the control plane. You must join all worker nodes manually after the K8s install step (the script pauses at this point).
 3. If all goes well, periodically update the components by running `generate_setup_script.sh > temp.sh` with the `-u` (update) parameter and running the resulting `temp.sh` script.
