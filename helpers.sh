@@ -145,7 +145,7 @@ getImageDigest() {
 
 replaceImageTagsInYAML() {
     FILE="$1"
-    while IFS= read -r LINE; do
+    while IFS= read -r LINE || [ -n "$LINE" ]; do
         if echo "$LINE" | grep -Eq '\s*image:' && ! echo "$LINE" | grep -q '@' && [ -z "$(echo "$LINE" | awk -F '/' '{print $3}')" ]; then
             read -r NAMESPACE REPOSITORY TAG <<<"$(parseImageLine "$LINE")"
             DIGEST=$(getImageDigest "$NAMESPACE" "$REPOSITORY" "$TAG")
