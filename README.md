@@ -87,34 +87,6 @@ My self-hosted apps/services setup.
     - Note that only files in the top level of the component directory are directly used by that script - subdirectories are ignored.
 - It is good practice to include an `uninstall.sh` as well.
 
-## Migration from Docker
-
-> TODO: Remove this section after migration
-
-Some apps' data can easily be migrated from an existing Docker-based (or otherwise) setup.
-
-To do so, use the `rsyncWithChownContent` function in `helpers.sh` (since permissions between the source and destination setups may be different).
-
-For example:
-
-```bash
-#!/bin/bash
-set -e
-
-HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
-
-mkdir -p "$HERE"/state/ntfy imranr imranr
-mkdir -p "$HERE"/state/uptime imranr imranr
-
-source "$HERE"/helpers.sh
-
-# Note: Plausible and Uptime migrations must be done manually in-app
-rsyncWithChownContent ~/Main/Other/NUC-services/service-data-unsynced/HAConfig "$HERE"/state/homeassistant root 1000
-rsyncWithChownContent ~/Main/Other/NUC-services/service-data-unsynced/jellyfin "$HERE"/state/jellyfin 1000 1000
-rsyncWithChownContent ~/Main/Other/NUC-services/service-data/ntfy/etc "$HERE"/state/ntfy 1000 1000
-[ -e "$HERE"/state/ntfy/server.yml ] && rm "$HERE"/state/ntfy/server.yml
-```
-
 # Some Useful Commands
 
 ```bash
