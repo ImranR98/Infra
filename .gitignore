@@ -4,3 +4,7 @@ temp.sh
 
 # A minimal version of mock-data has been checked in - any further changes should be local only 
 mock-data/
+
+# Ignore Syncthing-related files
+.stfolder/
+.stignore
