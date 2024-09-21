@@ -20,9 +20,6 @@ spec:
         runAsUser: $MY_UID
         runAsGroup: $MY_UID
         fsGroup: $MY_UID
-        allowPrivilegeEscalation: false
-        seLinuxOptions:
-          type: spc_t # SELinux may cause issues with file watching/reading for external libraries
       serviceAccountName: logtfy-service-account
       containers:
         - name: logtfy
@@ -36,6 +33,10 @@ spec:
           env:
             - name: KUBE_API_SERVER
               value: "https://kubernetes.default.svc"
+          securityContext:
+            allowPrivilegeEscalation: false
+            seLinuxOptions:
+              type: spc_t # SELinux may cause issues with file watching/reading for external libraries
       volumes:
         - name: journal
           persistentVolumeClaim:

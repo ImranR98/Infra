@@ -19,9 +19,6 @@ spec:
         runAsUser: $MY_UID
         runAsGroup: $MY_UID
         fsGroup: $MY_UID
-        allowPrivilegeEscalation: false
-        seLinuxOptions:
-          type: spc_t # SELinux may cause issues with file watching/reading for external libraries
       hostNetwork: true
       containers:
         - name: syncthing
@@ -29,6 +26,10 @@ spec:
           volumeMounts:
             - name: home
               mountPath: /var/syncthing
+          securityContext:
+            allowPrivilegeEscalation: false
+            seLinuxOptions:
+              type: spc_t # SELinux may cause issues with file watching/reading for external libraries
       volumes:
         - name: home
           persistentVolumeClaim:

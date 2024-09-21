@@ -20,9 +20,6 @@ spec:
         runAsUser: $MY_UID
         runAsGroup: $MY_UID
         fsGroup: $MY_UID
-        allowPrivilegeEscalation: false
-        seLinuxOptions:
-          type: spc_t # SELinux may cause issues with file watching/reading for external libraries
       containers:
         - name: monerod
           image: sethsimmons/simple-monerod:latest
@@ -33,6 +30,10 @@ spec:
               mountPath: /home/monero/.bitmonero
               subPath: .bitmonero
           args: ["--rpc-restricted-bind-ip=0.0.0.0", "--rpc-restricted-bind-port=18089", "--no-igd", "--no-zmq", "--enable-dns-blocklist", "--prune-blockchain", "--rpc-login=$MONEROD_RPC_LOGIN"]
+          securityContext:
+            allowPrivilegeEscalation: false
+            seLinuxOptions:
+              type: spc_t # SELinux may cause issues with file watching/reading for external libraries
       volumes:
         - name: home
           persistentVolumeClaim:

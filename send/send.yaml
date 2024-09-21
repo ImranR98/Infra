@@ -19,9 +19,6 @@ spec:
         runAsUser: $MY_UID
         runAsGroup: $MY_UID
         fsGroup: $MY_UID
-        allowPrivilegeEscalation: false
-        seLinuxOptions:
-          type: spc_t # SELinux may cause issues with file watching/reading for external libraries
       containers:
         - name: send
           image: registry.gitlab.com/timvisee/send:latest
@@ -48,6 +45,10 @@ spec:
               value: send-db.production.svc.cluster.local
             - name: FILE_DIR
               value: /uploads
+          securityContext:
+            allowPrivilegeEscalation: false
+            seLinuxOptions:
+              type: spc_t # SELinux may cause issues with file watching/reading for external libraries
       volumes:
         - name: state
           persistentVolumeClaim:
