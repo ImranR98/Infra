@@ -5,7 +5,7 @@ source "$HELPERS_PATH"
 TEMP_SECRET_MANIFEST="$(mktemp)"
 TEMP_FILE="$(mktemp)"
 trap "rm "$TEMP_SECRET_MANIFEST"; rm "$TEMP_FILE"" EXIT
-cat "$HERE"/users-database.yaml | envsubst >"$TEMP_SECRET_MANIFEST"
+cat "$HERE"/files/users-database.yaml | envsubst >"$TEMP_SECRET_MANIFEST"
 kubectl create -n production secret generic authelia-users --from-file="$TEMP_SECRET_MANIFEST"
 sed '/# IGNORE INITIALLY$/ s/^/# /' "$HERE"/values.yaml >"$TEMP_FILE"
 helm install authelia authelia/authelia --values <(cat "$TEMP_FILE" | envsubst) --namespace production
