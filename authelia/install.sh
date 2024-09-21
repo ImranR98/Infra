@@ -2,11 +2,9 @@
 set -e
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 source "$HELPERS_PATH"
-TEMP_SECRET_MANIFEST="$(mktemp)"
+kubectl apply -f <(cat "$HERE"/files/authelia-users.yaml | envsubst)
 TEMP_FILE="$(mktemp)"
-trap "rm "$TEMP_SECRET_MANIFEST"; rm "$TEMP_FILE"" EXIT
-cat "$HERE"/files/users-database.yaml | envsubst >"$TEMP_SECRET_MANIFEST"
-kubectl create -n production secret generic authelia-users --from-file="$TEMP_SECRET_MANIFEST"
+trap "rm "$TEMP_FILE"" EXIT
 sed '/# IGNORE INITIALLY$/ s/^/# /' "$HERE"/values.yaml >"$TEMP_FILE"
 helm install authelia authelia/authelia --values <(cat "$TEMP_FILE" | envsubst) --namespace production
 printLine -
