@@ -12,6 +12,7 @@ else
     echo "No VARS.sh file found!" >&2
     exit 1
 fi
+source "$HERE"/fixed.VARS.sh
 
 while getopts "cur" opt; do
     case $opt in
