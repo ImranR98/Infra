@@ -46,7 +46,7 @@ if [ "$UPDATE_MODE" = true ]; then
 fi
 
 if [ "$REMOVE_MODE" ]; then
-    START_WITH_FILES=(uninstall.sh "$COMPONENT_NAME.yaml" configmaps.yaml secrets.yaml db.yaml nfs.yaml pv.yaml middlewares.yaml ingress.yaml)
+    START_WITH_FILES=(pre_uninstall.sh uninstall.sh "$COMPONENT_NAME.yaml" configmaps.yaml secrets.yaml db.yaml nfs.yaml pv.yaml middlewares.yaml ingress.yaml)
     END_WITH_FILES=()
     IGNORE_FILES=()
     INCLUDE_OTHER_FILES=false
