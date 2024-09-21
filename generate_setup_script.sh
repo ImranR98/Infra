@@ -100,9 +100,9 @@ if [ "$REMOVE_MODE" = true ]; then
 fi
 
 for component in "${ALL_COMPONENTS[@]}"; do
-    echo "printLine"
     if [ "$component" = '---' ]; then
-        echo "read -p 'Paused. Ensure everything so far looks okay, then press Enter to continue... ' anything
+        echo "
+read -p 'Paused. Ensure everything so far looks okay, then press Enter to continue... ' anything
 "
         continue
     fi
@@ -121,7 +121,8 @@ for component in "${ALL_COMPONENTS[@]}"; do
 done
 
 if [ "$UPDATE_MODE" != true ] && [ "$REMOVE_MODE" != true ] && [ -z "$SINGLE_ITEM" ]; then
-    echo "read -p 'Some components need additional manual setup. Look at the logs above for details and take action as needed.
+    echo "
+read -p 'Some components need additional manual setup. Look at the logs above for details and take action as needed.
 Then press Enter to continue (the relevant components will be updated/restarted)... ' anything
 "
     for component in "${IMMEDIATE_UPDATE_COMPONENTS[@]}"; do

@@ -109,6 +109,7 @@ printLine() {
     linechar="="
     if [ -n "$1" ]; then linechar="$1"; fi
     printf "%0.s"$linechar"" $(seq 1 "$(tput cols)")
+    echo ""
 }
 
 parseImageLine() {

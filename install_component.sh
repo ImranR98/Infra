@@ -81,6 +81,13 @@ for file in "${END_WITH_FILES[@]}"; do
 done
 
 # Process each file to install the component
+if [ -n "$ordered_files" ]; then
+    echo ""
+    printLine =
+    echo "$COMPONENT_NAME"
+    printLine =
+fi
+FIRST_ITEM=true
 for file in "${ordered_files[@]}"; do
     filepath="$COMPONENT_DIR/$file"
     extension="${file##*.}"
@@ -94,12 +101,21 @@ for file in "${ordered_files[@]}"; do
     elif [ "$extension" = sh ]; then
         COMMAND="bash "$filepath""
     fi
-    printLine -
+    if [ "$FIRST_ITEM" = true ]; then
+        FIRST_ITEM=false
+    else
+        printLine -
+    fi
     echo "RUNNING COMMAND: $COMMAND"
+    printLine -
     eval "$COMMAND"
     sleep 1 # Make progress easy to follow + allow time for pods to ramp up, etc.
 done
+if [ -n "$ordered_files" ]; then
+    printLine =
+    echo ""
+fi
 
-if [ -n "${ordered_files[@]}" ] && [ -n "$WAIT_AFTER_INSTALL" ]; then
+if [ -n "$ordered_files" ] && [ -n "$WAIT_AFTER_INSTALL" ]; then
     sleep "$WAIT_AFTER_INSTALL"
 fi
