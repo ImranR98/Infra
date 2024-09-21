@@ -23,7 +23,6 @@ spec:
       containers:
         - name: frpc
           image: fatedier/frpc:v0.60.0
-          imagePullPolicy: Always
           volumeMounts:
             - name: config
               mountPath: /frpc.ini

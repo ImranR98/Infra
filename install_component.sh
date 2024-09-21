@@ -75,7 +75,7 @@ for file in "${ordered_files[@]}"; do
         continue
     fi
     if [ "$extension" = yaml ]; then
-        COMMAND="kubectl apply -f <(cat "$filepath" | envsubst)"
+        COMMAND="kubectl apply -f <(replaceImageTagsInYAML "$filepath" | envsubst)"
     elif [ "$extension" = sh ]; then
         COMMAND="bash "$filepath""
     fi

@@ -22,7 +22,6 @@ spec:
       containers:
         - name: send
           image: registry.gitlab.com/timvisee/send:latest
-          imagePullPolicy: Always
           ports:
             - containerPort: 3000
           volumeMounts:

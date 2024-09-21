@@ -21,7 +21,6 @@ spec:
       containers:
         - name: uptime
           image: louislam/uptime-kuma:latest
-          imagePullPolicy: Always
           ports:
             - containerPort: 3001
           volumeMounts:

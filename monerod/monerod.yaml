@@ -23,7 +23,6 @@ spec:
       containers:
         - name: monerod
           image: sethsimmons/simple-monerod:latest
-          imagePullPolicy: Always
           ports:
             - containerPort: 3000
           volumeMounts:

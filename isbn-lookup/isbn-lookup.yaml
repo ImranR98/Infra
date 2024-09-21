@@ -18,7 +18,6 @@ spec:
       containers:
       - name: isbn-lookup
         image: imranrdev/isbn-lookup:latest
-        imagePullPolicy: Always
         ports:
         - containerPort: 8080
         env:

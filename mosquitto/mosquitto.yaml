@@ -22,7 +22,6 @@ spec:
       containers:
         - name: mosquitto
           image: eclipse-mosquitto:openssl
-          imagePullPolicy: Always
           ports:
             - containerPort: 1883
             - containerPort: 8883

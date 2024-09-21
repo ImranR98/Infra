@@ -164,7 +164,6 @@ spec:
       containers:
       - name: opencanary
         image: thinkst/opencanary:latest
-        imagePullPolicy: Always
         ports:
         - containerPort: 21
           hostPort: 21

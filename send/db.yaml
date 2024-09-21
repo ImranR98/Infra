@@ -19,7 +19,6 @@ spec:
       containers:
         - name: send-db
           image: redis:alpine
-          imagePullPolicy: Always
           ports:
             - containerPort: 6379
           volumeMounts:

@@ -24,7 +24,6 @@ spec:
       containers:
         - name: logtfy
           image: imranrdev/logtfy:latest
-          imagePullPolicy: Always
           volumeMounts:
             - name: journal
               mountPath: /var/log/journal

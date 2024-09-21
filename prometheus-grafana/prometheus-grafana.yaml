@@ -22,7 +22,6 @@ spec:
       containers:
         - name: prometheus
           image: prom/prometheus:latest
-          imagePullPolicy: Always
           args: ["--config.file=/config/prometheus.yaml", "--storage.tsdb.path=/prometheus", "--storage.tsdb.retention.size=512MB"]
           ports:
             - containerPort: 9090
@@ -84,7 +83,6 @@ spec:
       containers:
         - name: grafana
           image: grafana/grafana:latest
-          imagePullPolicy: Always
           env:
             - name: GF_INSTALL_PLUGINS
               value: grafana-piechart-panel

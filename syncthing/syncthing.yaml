@@ -23,7 +23,6 @@ spec:
       containers:
         - name: syncthing
           image: syncthing/syncthing:latest
-          imagePullPolicy: Always
           volumeMounts:
             - name: home
               mountPath: /var/syncthing

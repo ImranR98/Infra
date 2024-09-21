@@ -37,7 +37,6 @@ spec:
       containers:
         - name: ntfy
           image: binwiederhier/ntfy:latest
-          imagePullPolicy: Always
           args: ["serve"]
           ports:
             - containerPort: 3000

@@ -72,12 +72,12 @@ pullComposeImages() {
 findDomainsInSetup() {
     LIST_FILE="$(mktemp)"
     find . 2>/dev/null | grep -E 'ingress\.yaml$' | while read -r ingress; do
-        echo "$(cat "$ingress" | grep Host | awk -F '`' '{print $2}')" >> "$LIST_FILE"
+        echo "$(cat "$ingress" | grep Host | awk -F '`' '{print $2}')" >>"$LIST_FILE"
     done
     find . 2>/dev/null | grep -E '\.sh$' | while read -r install; do
         DOMAIN="$(cat "$install" | grep '^SSH_HOST=' | awk -F '=' '{print $2}')"
         if [ -n "$DOMAIN" ]; then
-            echo "$DOMAIN" >> "$LIST_FILE"
+            echo "$DOMAIN" >>"$LIST_FILE"
         fi
     done
     cat "$LIST_FILE" | sort | uniq
@@ -109,4 +109,50 @@ printLine() {
     linechar="="
     if [ -n "$1" ]; then linechar="$1"; fi
     printf "%0.s"$linechar"" $(seq 1 "$(tput cols)")
+}
+
+parseImageLine() {
+    LINE="$1"
+    if [ -z "$(echo "$LINE" | awk '{print $2}')" ]; then
+        LINE="image: $LINE"
+    fi
+    IMAGE=$(echo "$LINE" | awk '{print $2}')
+    if [ -n "$(echo "$IMAGE" | grep '/')" ]; then
+        NAMESPACE=$(echo "$IMAGE" | awk -F'/' '{print $1}')
+        REPOSITORY=$(echo "$IMAGE" | awk -F'/' '{print $2}' | awk -F':' '{print $1}')
+    else
+        NAMESPACE="library"
+        REPOSITORY=$(echo "$IMAGE" | awk -F':' '{print $1}')
+    fi
+    TAG=$(echo "$IMAGE" | awk -F':' '{print $2}')
+    if [ -z "$TAG" ]; then
+        TAG="latest"
+    fi
+    echo "$NAMESPACE $REPOSITORY $TAG"
+}
+
+getImageDigest() {
+    NAMESPACE="$1"
+    REPOSITORY="$2"
+    TAG="$3"
+    DIGEST=$(curl -s "https://hub.docker.com/v2/namespaces/$NAMESPACE/repositories/$REPOSITORY/tags?name=$TAG" | jq -r '.results[0].digest')
+    if [[ -z "$DIGEST" || "$DIGEST" == "null" ]]; then
+        echo "Error: Could not fetch digest for image $NAMESPACE/$REPOSITORY:$TAG" >&2
+    fi
+    echo "$DIGEST"
+}
+
+replaceImageTagsInYAML() {
+    FILE="$1"
+    while IFS= read -r LINE; do
+        if echo "$LINE" | grep -Eq '\s*image:' && ! echo "$LINE" | grep -q '@' && [ -z "$(echo "$LINE" | awk -F '/' '{print $3}')" ]; then
+            read -r NAMESPACE REPOSITORY TAG <<<"$(parseImageLine "$LINE")"
+            DIGEST=$(getImageDigest "$NAMESPACE" "$REPOSITORY" "$TAG")
+            OLD_IMAGE="$(echo "$NAMESPACE/$REPOSITORY:$TAG" | sed 's/\//\\\//g')"
+            NEW_IMAGE="$NAMESPACE/$REPOSITORY@$DIGEST"
+            echo "$LINE" | sed "s|$OLD_IMAGE|$NEW_IMAGE|"
+        else
+            echo "$LINE"
+        fi
+    done <"$FILE"
 }

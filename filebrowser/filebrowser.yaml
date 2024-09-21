@@ -22,7 +22,6 @@ spec:
       containers:
         - name: filebrowser
           image: filebrowser/filebrowser:latest
-          imagePullPolicy: Always
           ports:
             - containerPort: 3000
           volumeMounts:

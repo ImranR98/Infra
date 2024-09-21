@@ -21,7 +21,6 @@ spec:
       containers:
         - name: ollama
           image: ollama/ollama:latest
-          imagePullPolicy: Always
           ports:
             - containerPort: 11434
           volumeMounts:
@@ -30,7 +29,6 @@ spec:
               subPath: ollama
         - name: ollama-webui
           image: ghcr.io/open-webui/open-webui:main
-          imagePullPolicy: Always
           ports:
             - containerPort: 8080
           env:

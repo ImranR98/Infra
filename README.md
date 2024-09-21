@@ -45,6 +45,9 @@ My self-hosted apps/services setup.
     - The username and hostname of the public-facing proxy server.
     - Some "secret" values such as some apps' DB credentials, default initial login credentials for some apps, the Cloudflare token, various app config values (such as Ntfy webhook URLs), etc. 
     - Path to the `Main/` directory and any subdirectories needed by various apps.
+- Aside from variables, image tags are replaced by dynamically fetched image hash values during install time by `install_component.sh`. This is useful because it [avoids the use of `imagePullPolicy: Always`](https://kubernetes.io/docs/concepts/containers/images/#image-pull-policy) and avoids rate limiting and version ambiguity issues.
+    - This is another reason for never trying to apply `yaml` files directly - let `install_component.sh` handle it.
+    - Note that this only applies to Docker Hub images for now.
 
 ## Usage
 
@@ -72,9 +75,9 @@ My self-hosted apps/services setup.
 # Steps
 
 1. Modify `VARS.sh` as needed.
-2. Run `generate_setup_script.sh` and run the printed commands manually, one line at a time.
-    - If the K8s cluster has multiple nodes, you must join all worker nodes manually after the K8s install step (the current machine is the control plane).
-3. If all goes well, periodically update the components by running `generate_setup_script.sh` with the `-u` (update) parameter.
+2. Run `generate_setup_script.sh > temp.sh` and run the resulting `temp.sh` script.
+    - If the K8s cluster has multiple nodes, the current machine is the control plane. You must join all worker nodes manually after the K8s install step (the script pauses at this point).
+3. If all goes well, periodically update the components by running `generate_setup_script.sh > temp.sh` with the `-u` (update) parameter and running the resulting `temp.sh` script.
 
 # Adding New Components
 
