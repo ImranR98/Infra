@@ -1,11 +1,9 @@
 # Landscape
 
-My self-hosted apps/services setup.
+Kubernetes cluster setup for my self-hosted apps/services.
 
 ## Overview
 
-- Most apps run in a K8s cluster that uses Traefik for ingress.
-- Some apps run in Docker (based on `docker compose` files launched by Systemd services).
 - The cluster is not directly exposed to the internet (due to the availability of port forwarding not being guaranteed in all environments).
     - Instead, [FRP](https://github.com/fatedier/frp) is used to forward requests from a remote public-facing proxy server to the main control plane node (where is is picked up by Traefik or other apps listening on specified ports).
     - This does mean the main control plane node is the entrypoint for all requests.
@@ -33,6 +31,7 @@ My self-hosted apps/services setup.
         - All `yaml` files are applied as K8s manifests.
         - All other files and subdirectories are ignored.
     - The script can be run with the `-u` option to apply updates (this changes what files are processed and how).
+    - The script can be run with the `-r` option to remove/uninstall some components (where available).
 - The `generate_setup_script.sh` file is used to generate a set of `install_component.sh` (and other) commands in the correct order and using the correct parameters to setup or update everything.
 
 ### Variables
@@ -55,6 +54,7 @@ My self-hosted apps/services setup.
 
 - A Fedora server with internet access.
     - The server is assumed to have a LUKS-encrypted drive (if this is not the case, skip the `frpc-preboot` step during setup).
+    - While K8s infrastructure is distro-agnostic, the K8s install script itself runs on Fedora. Some pod securityContext options have also been written with SELinux in mind (default on Fedora). 
 - A "main" node that will be the first control plane node for your K8s cluster.
     - For now, this is also the "main storage" node that holds the `~/Main/` and `./state/` directories (in the future this could be a separate dedicated node).
     - The main storage directories are:
