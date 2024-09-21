@@ -35,7 +35,7 @@ ports:
       port: websecure
       priority: 10
     proxyProtocol:
-      trustedIPs: ["$TRAEFIK_TRUSTED_IP_RANGE"] # Assuming Traefik is accessed via FRP running on the control plane node
+      trustedIPs: [$TRAEFIK_TRUSTED_IP_RANGE] # Assuming Traefik is accessed via FRP running on the control plane node
       insecure: false
   websecure:
     nodePort: 30443
@@ -45,7 +45,7 @@ ports:
     tls:
       enabled: true
     proxyProtocol:
-      trustedIPs: ["$TRAEFIK_TRUSTED_IP_RANGE"]
+      trustedIPs: [$TRAEFIK_TRUSTED_IP_RANGE]
       insecure: false
     middlewares:
       - production-crowdsec-bouncer@kubernetescrd
