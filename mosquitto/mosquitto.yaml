@@ -24,8 +24,11 @@ spec:
           image: eclipse-mosquitto:openssl
           ports:
             - containerPort: 1883
+              hostPort: 1833
             - containerPort: 8883
+              hostPort: 8883
             - containerPort: 9001
+              hostPort: 9001
           volumeMounts:
             - name: mosquitto-secrets
               mountPath: /mosquitto/config/certificate.pem
@@ -83,15 +86,12 @@ spec:
       protocol: TCP
       port: 1883
       targetPort: 1883
-      nodePort: 30183
     - name: listener-tls
       protocol: TCP
       port: 8883
       targetPort: 8883
-      nodePort: 30883
     - name: websocket
       protocol: TCP
       port: 9001
       targetPort: 9001
-      nodePort: 30901
   type: ClusterIP
