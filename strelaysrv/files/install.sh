@@ -25,4 +25,4 @@ sudo systemctl enable strelaysrv.service
 sudo systemctl stop strelaysrv.service || :
 sleep 5
 sudo systemctl start strelaysrv.service
-echo "strelaysrv installed. You may still need to open ports manually (run openTCPPorts.sh with a port number argument)."
+echo "strelaysrv installed."
