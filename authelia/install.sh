@@ -6,7 +6,8 @@ kubectl apply -f <(cat "$HERE"/files/authelia-users.yaml | envsubst)
 TEMP_FILE="$(mktemp)"
 trap "rm "$TEMP_FILE"" EXIT
 sed '/# IGNORE INITIALLY$/ s/^/# /' "$HERE"/values.yaml >"$TEMP_FILE"
-helm install authelia authelia/authelia --values <(cat "$TEMP_FILE" | envsubst) --namespace production
+helm repo update
+helm upgrade --install authelia authelia/authelia --values <(cat "$TEMP_FILE" | envsubst) --namespace production
 printLine -
 echo "NOTE: Some lines in authelia/values.yaml were commented out according to the \"IGNORE INITIALLY\" annotation.
       The update script will uncomment those lines, so ensure it is okay to do so before running it.

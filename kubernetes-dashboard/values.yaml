@@ -1,0 +1,12 @@
+api:
+  containers:
+    args:
+      - '--disable-csrf-protection=true'
+web:
+  scaling:
+    args:
+      - '--disable-csrf-protection=true'
+kong:
+  proxy:
+    http:
+      enabled: true
