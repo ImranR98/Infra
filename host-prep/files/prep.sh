@@ -17,7 +17,3 @@ sudo systemctl enable "$SSH_SERVICE_NAME"
 sudo systemctl restart "$SSH_SERVICE_NAME"
 sleep 7
 sudo systemctl is-active "$SSH_SERVICE_NAME"
-
-# Increase inotify limit (useful for Syncthing, generally good practice as the default is too low)
-echo "fs.inotify.max_user_watches=1000000" | sudo tee -a /etc/sysctl.conf
-echo 1000000 | sudo tee /proc/sys/fs/inotify/max_user_watches
