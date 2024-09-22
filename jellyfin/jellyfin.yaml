@@ -36,7 +36,7 @@ spec:
           securityContext:
             allowPrivilegeEscalation: false
             seLinuxOptions:
-              type: spc_t # SELinux may cause issues with file watching/reading for external libraries
+              type: spc_t # SELinux doesn't play well with K8s PVCs
       volumes:
         - name: media
           persistentVolumeClaim:
