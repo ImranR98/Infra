@@ -5,7 +5,9 @@ HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 source "$HERE"/../../helpers.sh
 
 cat "$HERE"/../logtfy.template.json | envsubst > "$HERE"/../logtfy.json
-jq '.moduleCustomization |= map(select(.module == "ssh_logins" or .module == "port_checker")) | .moduleCustomization[] |= if .module == "ssh_logins" then . + {loggerArg: "ssh"} else . + {loggerArg: "localhost 8888"} end' "$HERE"/../logtfy.json > "$HERE"/files/logtfy.temp
+jq '.moduleCustomization |= map(select(.module == "ssh_logins" or .module == "port_checker"))
+    | .moduleCustomization[] |= if .module == "ssh_logins" then . + {loggerArg: "ssh"} 
+    else . + {loggerArg: "localhost 8888", enabled: true} end' "$HERE"/../logtfy.json > "$HERE"/files/logtfy.json
 cat "$HERE"/files/logtfy.docker-compose.template.yaml | envsubst > "$HERE"/files/logtfy.docker-compose.yaml
 
 generateComposeService logtfy > "$HERE"/files/logtfy.service
