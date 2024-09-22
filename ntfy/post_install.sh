@@ -15,5 +15,6 @@ ntfy access $USER \"*\" rw
 ntfy user change-role $USER admin
 
 ntfy user add $SERVICES_USER
-ntfy access $SERVICES_USER \"$SERVICES_TOPIC\" rw
+ntfy access $SERVICES_USER \"$SERVICES_TOPIC\" ro
+ntfy access $SERVICES_USER \"$PIXELNTFY_TOPIC_SUFFIX\" ro
 ntfy token add $SERVICES_USER"
