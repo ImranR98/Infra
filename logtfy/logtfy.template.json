@@ -27,6 +27,12 @@
             "enabled": true
         },
         {
+            "module": "port_checker",
+            "ntfyTopic": "logtfy",
+            "enabled": false,
+            "loggerArg": "localhost 8888"
+        },
+        {
             "module": "authelia_logins_k8s",
             "loggerArg": "production",
             "ntfyTopic": "logtfy",

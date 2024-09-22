@@ -40,8 +40,8 @@ IGNORE_FILES=(pre_uninstall.sh uninstall.sh values.yaml update.sh)
 INCLUDE_OTHER_FILES=true
 
 if [ "$UPDATE_MODE" = true ]; then
-    START_WITH_FILES=(update.sh)
-    END_WITH_FILES=()
+    START_WITH_FILES=(pv.yaml nfs.yaml db.yaml secrets.yaml configmaps.yaml "$COMPONENT_NAME.yaml" update.sh)
+    END_WITH_FILES=(middlewares.yaml ingress.yaml)
     IGNORE_FILES=()
     INCLUDE_OTHER_FILES=false # Since this is false we don't need to specify any IGNORE_FILES
 fi
