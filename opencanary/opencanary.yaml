@@ -6,7 +6,7 @@ metadata:
 data:
   opencanary.json: |
     {
-        "device.node_id": "opencanary-nuc",
+        "device.node_id": "opencanary-$MAIN_NODE_HOSTNAME_LOWERCASE",
         "ip.ignorelist": [],
         "logtype.ignorelist": [],
         "git.enabled": true,
@@ -78,7 +78,7 @@ data:
                         "data": "%(message)s",
                         "status_code": 200,
                         "headers": {
-                            "Title": "OpenCanary on NUC"
+                            "Title": "OpenCanary on $MAIN_NODE_HOSTNAME"
                         }
                     }
                 }
