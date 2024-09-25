@@ -2,7 +2,8 @@
 set -e
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 source "$HELPERS_PATH"
-helm install --namespace production immich immich/immich --values <(cat "$HERE"/values.yaml | envsubst)
+helm repo update
+helm upgrade --install --namespace production immich immich/immich --values <(cat "$HERE"/values.yaml | envsubst)
 
 printLine -
 echo "NOTE: Modify settings in the GUI to enable OAuth. Enter these values:
