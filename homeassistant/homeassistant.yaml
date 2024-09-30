@@ -22,6 +22,7 @@ spec:
       containers:
         - name: homeassistant
           image: ghcr.io/home-assistant/home-assistant:stable
+          imagePullPolicy: Always
           securityContext:
             privileged: true
           env:

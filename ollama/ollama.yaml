@@ -29,6 +29,7 @@ spec:
               subPath: ollama
         - name: ollama-webui
           image: ghcr.io/open-webui/open-webui:main
+          imagePullPolicy: Always
           ports:
             - containerPort: 8080
           env:

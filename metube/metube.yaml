@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: metube
+  namespace: production
+  labels:
+    app: metube
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: metube
+  template:
+    metadata:
+      labels:
+        app: metube
+    spec:
+      securityContext:
+        runAsGroup: $MY_UID
+        fsGroup: $MY_UID
+      containers:
+        - name: metube
+          image: ghcr.io/alexta69/metube:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8081
+          volumeMounts:
+            - name: state
+              mountPath: /downloads
+      volumes:
+        - name: state
+          persistentVolumeClaim:
+            claimName: metube-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: metube
+  namespace: production
+  labels:
+    app: metube
+spec:
+  selector:
+    app: metube
+  ports:
+    - protocol: TCP
+      port: 8081
+      targetPort: 8081
+  type: ClusterIP
