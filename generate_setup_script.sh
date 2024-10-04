@@ -38,7 +38,7 @@ ALL_COMPONENTS=(
     crowdsec
     cert-manager
     ---
-    prometheus-grafana
+    monitoring
     ntfy
     logtfy
     logtfy/logtfy-remote-subcomponent

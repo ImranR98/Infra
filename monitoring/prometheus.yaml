@@ -39,7 +39,7 @@ spec:
       volumes:
         - name: state
           persistentVolumeClaim:
-            claimName: prometheus-grafana-pvc
+            claimName: monitoring-pvc
         - name: config
           configMap:
             name: prometheus-config
@@ -61,65 +61,4 @@ spec:
     - protocol: TCP
       port: 9090
       targetPort: 9090
-  type: ClusterIP
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: grafana
-  namespace: production
-  labels:
-    app: grafana
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: grafana
-  template:
-    metadata:
-      labels:
-        app: grafana
-    spec:
-      securityContext:
-        runAsUser: $MY_UID
-        runAsGroup: $MY_UID
-        fsGroup: $MY_UID
-      containers:
-        - name: grafana
-          image: grafana/grafana:latest
-          env:
-            - name: GF_INSTALL_PLUGINS
-              value: grafana-piechart-panel
-          ports:
-            - containerPort: 3000
-          volumeMounts:
-            - name: state
-              mountPath: /var/lib/grafana
-              subPath: grafana/data
-            - name: state
-              mountPath: /etc/grafana/provisioning
-              subPath: grafana/provisioning
-          securityContext:
-            allowPrivilegeEscalation: false
-            seLinuxOptions:
-              type: spc_t # SELinux doesn't play well with K8s PVCs
-      volumes:
-        - name: state
-          persistentVolumeClaim:
-            claimName: prometheus-grafana-pvc
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: grafana
-  namespace: production
-  labels:
-    app: grafana
-spec:
-  selector:
-    app: grafana
-  ports:
-    - protocol: TCP
-      port: 3000
-      targetPort: 3000
   type: ClusterIP
