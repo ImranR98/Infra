@@ -24,7 +24,7 @@ additionalVolumeMounts:
 logs:
   general:
     format:
-    level: DEBUG
+    level: INFO
   access:
     enabled: true
 

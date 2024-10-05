@@ -1,0 +1,33 @@
+deploymentMode: SingleBinary
+loki:
+  auth_enabled: false # Is this a security hole?
+  commonConfig:
+    replication_factor: 1
+  storage:
+    type: 'filesystem'
+  schemaConfig:
+    configs:
+    - from: "2024-01-01"
+      store: tsdb
+      index:
+        prefix: loki_index_
+        period: 24h
+      object_store: filesystem
+      schema: v13
+  compactor:
+    retention_enabled: true
+    delete_request_store: 'filesystem'
+  limits_config:
+    retention_period: 90d
+  podSecurityContext:
+    fsGroup: $MY_UID
+    runAsGroup: $MY_UID
+    runAsUser: $MY_UID
+singleBinary:
+  replicas: 1
+read:
+  replicas: 0
+backend:
+  replicas: 0
+write:
+  replicas: 0
