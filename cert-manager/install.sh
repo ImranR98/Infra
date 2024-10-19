@@ -8,6 +8,13 @@ kubectl apply -f <(cat "$HERE"/issuers/secret-cf-token.yaml | envsubst)
 kubectl apply -f <(cat "$HERE"/issuers/letsencrypt-staging.yaml | envsubst)
 kubectl apply -f <(cat "$HERE"/issuers/letsencrypt-production.yaml | envsubst)
 kubectl apply -f <(cat "$HERE"/certificates/production/services.yaml | envsubst)
+kubectl apply -f <(cat "$HERE"/issuers/mtls.yaml | envsubst)
+kubectl apply -f <(cat "$HERE"/certificates/mtls.yaml | envsubst)
+
+mkdir -p "$STATE_DIR"/mtls
+kubectl get secret mtls-client-secret -n production -o jsonpath='{.data.tls\.crt}' | base64 --decode > "$STATE_DIR"/mtls/mtls-client.crt
+kubectl get secret mtls-client-secret -n production -o jsonpath='{.data.tls\.key}' | base64 --decode > "$STATE_DIR"/mtls/mtls-client.key
+openssl pkcs12 -export -out "$STATE_DIR"/mtls/mtls-client.p12 -inkey "$STATE_DIR"/mtls/mtls-client.key -in "$STATE_DIR"/mtls/mtls-client.crt
 
 printLine -
 echo "NOTE: Run this to keep an eye on pending cert requests:

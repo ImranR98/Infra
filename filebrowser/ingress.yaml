@@ -20,3 +20,6 @@ spec:
           port: 3000
   tls:
     secretName: $SERVICES_TLS_NAME-tls
+    options:
+      name: mtls
+      namespace: production   

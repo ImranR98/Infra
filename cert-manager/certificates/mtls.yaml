@@ -1,0 +1,15 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: mtls-client
+  namespace: production
+spec:
+  secretName: mtls-client-secret
+  isCA: false
+  usages:
+    - client auth
+  emailAddresses:
+    - $DOMAIN_OWNER_EMAIL
+  issuerRef:
+    name: self-ca-issuer
+    kind: Issuer

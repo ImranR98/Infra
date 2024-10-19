@@ -1,0 +1,10 @@
+apiVersion: traefik.io/v1alpha1
+kind: TLSOption
+metadata:
+  name: mtls
+  namespace: production
+spec:
+  clientAuth:
+    secretNames:
+      - selfsigned-crt
+    clientAuthType: RequireAndVerifyClientCert
