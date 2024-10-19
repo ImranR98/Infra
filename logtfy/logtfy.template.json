@@ -43,6 +43,13 @@
             "loggerArg": "production",
             "ntfyTopic": "logtfy",
             "enabled": true
+        },
+        {
+            "module": "syncthing_connections_k8s",
+            "loggerArg": "production",
+            "ntfyTopic": "logtfy",
+            "enabled": true,
+            "parserArg": "${LOGTFY_SYNCTHING_EXCLUDED_DEVICE_IDS}"
         }
     ]
 }
