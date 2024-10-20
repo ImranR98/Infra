@@ -41,6 +41,7 @@ if [ $EXCLUSIVE_OPTS_PICKED -gt 1 ]; then
 fi
 
 # Get component dir
+echo "$1"
 COMPONENT_DIR="$(realpath "$1")"
 COMPONENT_NAME="$(basename "$COMPONENT_DIR")"
 
@@ -148,19 +149,19 @@ for file in "${ordered_files[@]}"; do
     sleep 1 # Make progress easy to follow + allow time for pods to ramp up, etc.
 done
 
-if [ "$UPDATE_CHECK_MODE" ]; then
+if [ "$UPDATE_CHECK_MODE" = true ]; then
     if [ "$UPDATE_CHECKING_POSSIBLE" != true ]; then
         echo "Cannot reliably check this service for updates."
     elif [ "$UPDATE_AVAILABLE" != true ]; then
         echo "No updates."
-    fi    
+    fi
 fi
 
 if [ -n "$ordered_files" ] || [ "$UPDATE_CHECK_MODE" = true ]; then
-        printLine =
-        echo ""
-    fi
+    printLine =
+    echo ""
+fi
 
-if [ -n "$ordered_files" ] && [ -n "$WAIT_AFTER_INSTALL" ]; then
+if [ -n "$ordered_files" ] && [ -n "$WAIT_AFTER_INSTALL" ] && [ "$UPDATE_CHECK_MODE" != true ]; then
     sleep "$WAIT_AFTER_INSTALL"
 fi

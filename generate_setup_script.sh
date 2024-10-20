@@ -4,9 +4,10 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 source "$SCRIPT_DIR"/helpers.sh
 
-while getopts "s:urt" opt; do
+while getopts "s:urtp" opt; do
     case $opt in
     u) UPDATE_MODE=true ;;
+    p) UPDATE_ALL_MODE=true ;;
     r) REMOVE_MODE=true ;;
     s) SINGLE_ITEM="$OPTARG" ;;
     t) UPDATE_CHECK_MODE=true ;;
@@ -79,15 +80,10 @@ else
     echo "#!/bin/bash
 set -e
 source "$SCRIPT_DIR"/helpers.sh"
-    if [ "$UPDATE_MODE" = true ]; then
+    if [ "$UPDATE_MODE" = true ] || [ "$UPDATE_ALL_MODE" = true ]; then
         echo "export WAIT_AFTER_INSTALL=20
 
-# Run this script to update all components in the cluster."
-    elif [ "$UPDATE_CHECK_MODE" = true ]; then
-        echo "export WAIT_AFTER_INSTALL=0
-
-# Run this script to check for updates for all components in the cluster.
-# Note: Updates are \"available\" if at least one image has changed. Does not apply to Helm charts."
+# Run this script to update components in the cluster."
     elif [ "$REMOVE_MODE" = true ]; then
         echo "export WAIT_AFTER_INSTALL=10
 
@@ -118,20 +114,23 @@ read -p 'Paused. Ensure everything so far looks okay, then press Enter to contin
     if contains "$component" "${SHELL_ONLY_COMPONENTS[@]}"; then
         command+="-c "
     fi
-    if [ "$UPDATE_MODE" = true ]; then
-        command+="-u "
-    fi
-    if [ "$UPDATE_CHECK_MODE" = true ]; then
-        command+="-t "
-    fi
     if [ "$REMOVE_MODE" = true ]; then
         command+="-r "
     fi
-    command+="$component"
+
+    if [ "$UPDATE_MODE" = true ]; then
+        command="UPDATE_RESULT=\"\$($command-t $component)\"; if ! echo \"\$UPDATE_RESULT\" | grep -q 'No updates'; then $command-u $component; else echo \"\$UPDATE_RESULT\"; fi"
+    elif [ "$UPDATE_ALL_MODE" = true ]; then
+        command+="-u $component"
+    elif [ "$UPDATE_CHECK_MODE" = true ]; then
+        command+="-t $component"
+    else
+        command+="$component"
+    fi
     echo "$command"
 done
 
-if [ "$UPDATE_MODE" != true ] && [ "$UPDATE_CHECK_MODE" != true ] && [ "$REMOVE_MODE" != true ] && [ -z "$SINGLE_ITEM" ]; then
+if [ "$UPDATE_ALL_MODE" != true ] && [ "$UPDATE_MODE" != true ] && [ "$UPDATE_CHECK_MODE" != true ] && [ "$REMOVE_MODE" != true ] && [ -z "$SINGLE_ITEM" ]; then
     echo "
 read -p 'Some components need additional manual setup. Look at the logs above for details and take action as needed.
 Then press Enter to continue (the relevant components will be updated/restarted)... ' anything
