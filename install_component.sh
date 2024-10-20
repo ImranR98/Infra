@@ -14,18 +14,29 @@ else
 fi
 source "$HERE"/fixed.VARS.sh
 
-while getopts "cur" opt; do
+EXCLUSIVE_OPTS_PICKED=0
+while getopts "curt" opt; do
     case $opt in
     c) SHELL_ONLY=true ;;
-    u) UPDATE_MODE=true ;;
-    r) REMOVE_MODE=true ;;
+    u)
+        UPDATE_MODE=true
+        EXCLUSIVE_OPTS_PICKED=$((EXCLUSIVE_OPTS_PICKED + 1))
+        ;;
+    r)
+        REMOVE_MODE=true
+        EXCLUSIVE_OPTS_PICKED=$((EXCLUSIVE_OPTS_PICKED + 1))
+        ;;
+    t)
+        UPDATE_CHECK_MODE=true
+        EXCLUSIVE_OPTS_PICKED=$((EXCLUSIVE_OPTS_PICKED + 1))
+        ;;
     \?) echo "Unrecognized parameter." >&2 && exit 1 ;;
     esac
 done
 shift $((OPTIND - 1))
 
-if [ "$UPDATE_MODE" = true ] && [ "$REMOVE_MODE" = true ]; then
-    echo "You can only use either -u or -r for update mode or remove mode respectively."
+if [ $EXCLUSIVE_OPTS_PICKED -gt 1 ]; then
+    echo "The -u, -r, and -q parameters are mutually exclusive."
     exit 1
 fi
 
@@ -39,7 +50,7 @@ END_WITH_FILES=(middlewares.yaml ingress.yaml post_install.sh)
 IGNORE_FILES=(pre_uninstall.sh uninstall.sh values.yaml update.sh)
 INCLUDE_OTHER_FILES=true
 
-if [ "$UPDATE_MODE" = true ]; then
+if [ "$UPDATE_MODE" = true ] || [ "$UPDATE_CHECK_MODE" = true ]; then
     START_WITH_FILES=(pv.yaml nfs.yaml db.yaml secrets.yaml configmaps.yaml "$COMPONENT_NAME.yaml" update.sh)
     END_WITH_FILES=(middlewares.yaml ingress.yaml)
     IGNORE_FILES=()
@@ -89,6 +100,8 @@ if [ -n "$ordered_files" ]; then
     printLine =
 fi
 FIRST_ITEM=true
+UPDATE_CHECKING_POSSIBLE=false
+UPDATE_AVAILABLE=false
 for file in "${ordered_files[@]}"; do
     filepath="$COMPONENT_DIR/$file"
     extension="${file##*.}"
@@ -104,17 +117,48 @@ for file in "${ordered_files[@]}"; do
     fi
     if [ "$FIRST_ITEM" = true ]; then
         FIRST_ITEM=false
-    else
+    elif [ "$UPDATE_CHECK_MODE" != true ]; then
         printLine -
+    fi
+    if [ "$UPDATE_CHECK_MODE" = true ]; then
+        if [ "$extension" = yaml ]; then
+            TEMPLATE_YAML_TAGS="$(sed '/^\s*#/d' "$filepath" | (grep -E '\s*image:' || :) | (grep -Eo 'image: .*' || :))"
+            EXISTING_YAML_TAGS="$(grab_existing_k8s_objects_in_file "$filepath" | (grep -E '\s*image:' || :) | (grep -Eo 'image: .*' || :))"
+            if [ -z "$TEMPLATE_YAML_TAGS" ]; then
+                continue # Not a YAML relevant to update checking
+            fi
+            if [ "$TEMPLATE_YAML_TAGS" == "$EXISTING_YAML_TAGS" ]; then
+                continue # Not a YAML that can reliably be checked for updates
+            fi
+            UPDATE_CHECKING_POSSIBLE=true
+            NEW_YAML_TAGS="$(replaceImageTagsInYAML "$filepath" | (grep -E '\s*image:' || :) | (grep -Eo 'image: .*' || :))"
+            if [ "$EXISTING_YAML_TAGS" != "$NEW_YAML_TAGS" ]; then
+                UPDATE_AVAILABLE=true
+                echo "Update available (based on $file)."
+            fi
+        elif [ "$extension" = sh ]; then
+            # TODO: Helm chart updates
+            :
+        fi
+        continue
     fi
     echo "RUNNING COMMAND: $COMMAND"
     printLine -
     eval "$COMMAND"
     sleep 1 # Make progress easy to follow + allow time for pods to ramp up, etc.
 done
-if [ -n "$ordered_files" ]; then
-    printLine =
-    echo ""
+
+if [ "$UPDATE_CHECK_MODE" ]; then
+    if [ "$UPDATE_CHECKING_POSSIBLE" != true ]; then
+        echo "Cannot reliably check this service for updates."
+    elif [ "$UPDATE_AVAILABLE" != true ]; then
+        echo "No updates."
+    fi
+else
+    if [ -n "$ordered_files" ]; then
+        printLine =
+        echo ""
+    fi
 fi
 
 if [ -n "$ordered_files" ] && [ -n "$WAIT_AFTER_INSTALL" ]; then

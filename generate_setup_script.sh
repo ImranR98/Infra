@@ -4,11 +4,12 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 source "$SCRIPT_DIR"/helpers.sh
 
-while getopts "s:ur" opt; do
+while getopts "s:urt" opt; do
     case $opt in
     u) UPDATE_MODE=true ;;
     r) REMOVE_MODE=true ;;
     s) SINGLE_ITEM="$OPTARG" ;;
+    t) UPDATE_CHECK_MODE=true ;;
     \?) echo "Unrecognized parameter." >&2 && exit 1 ;;
     esac
 done
@@ -82,6 +83,11 @@ source "$SCRIPT_DIR"/helpers.sh"
         echo "export WAIT_AFTER_INSTALL=20
 
 # Run this script to update all components in the cluster."
+    elif [ "$UPDATE_CHECK_MODE" = true ]; then
+        echo "export WAIT_AFTER_INSTALL=0
+
+# Run this script to check for updates for all components in the cluster.
+# Note: Updates are \"available\" if at least one image has changed. Does not apply to Helm charts."
     elif [ "$REMOVE_MODE" = true ]; then
         echo "export WAIT_AFTER_INSTALL=10
 
@@ -101,9 +107,11 @@ fi
 
 for component in "${ALL_COMPONENTS[@]}"; do
     if [ "$component" = '---' ]; then
-        echo "
+        if [ "$UPDATE_CHECK_MODE" != true ]; then
+            echo "
 read -p 'Paused. Ensure everything so far looks okay, then press Enter to continue... ' anything
 "
+        fi
         continue
     fi
     command="bash '$SCRIPT_DIR/install_component.sh' "
@@ -113,6 +121,9 @@ read -p 'Paused. Ensure everything so far looks okay, then press Enter to contin
     if [ "$UPDATE_MODE" = true ]; then
         command+="-u "
     fi
+    if [ "$UPDATE_CHECK_MODE" = true ]; then
+        command+="-t "
+    fi
     if [ "$REMOVE_MODE" = true ]; then
         command+="-r "
     fi
@@ -120,7 +131,7 @@ read -p 'Paused. Ensure everything so far looks okay, then press Enter to contin
     echo "$command"
 done
 
-if [ "$UPDATE_MODE" != true ] && [ "$REMOVE_MODE" != true ] && [ -z "$SINGLE_ITEM" ]; then
+if [ "$UPDATE_MODE" != true ] && [ "$UPDATE_CHECK_MODE" != true ] && [ "$REMOVE_MODE" != true ] && [ -z "$SINGLE_ITEM" ]; then
     echo "
 read -p 'Some components need additional manual setup. Look at the logs above for details and take action as needed.
 Then press Enter to continue (the relevant components will be updated/restarted)... ' anything

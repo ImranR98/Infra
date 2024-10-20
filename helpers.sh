@@ -146,6 +146,9 @@ getImageDigest() {
 replaceImageTagsInYAML() {
     FILE="$1"
     while IFS= read -r LINE || [ -n "$LINE" ]; do
+        if [[ "$LINE" =~ ^\s*# ]]; then
+            continue
+        fi
         if echo "$LINE" | grep -Eq '\s*image:' && ! echo "$LINE" | grep -q '@' && [ -z "$(echo "$LINE" | awk -F '/' '{print $3}')" ]; then
             read -r NAMESPACE REPOSITORY TAG <<<"$(parseImageLine "$LINE")"
             DIGEST=$(getImageDigest "$NAMESPACE" "$REPOSITORY" "$TAG")
@@ -156,4 +159,16 @@ replaceImageTagsInYAML() {
             echo "$LINE"
         fi
     done <"$FILE"
+}
+
+grab_existing_k8s_objects_in_file() {
+    local manifest_file="$1"
+    sed '/^\s*#/d' "$manifest_file" | kubectl apply --dry-run=client -f - -o json | (jq -c '.items[]' 2>/dev/null || :) | while read -r object; do
+        kind=$(echo "$object" | jq -r '.kind')
+        name=$(echo "$object" | jq -r '.metadata.name')
+        namespace=$(echo "$object" | jq -r '.metadata.namespace // "default"') # Default to "default" namespace if not present
+        if kubectl get "$kind" "$name" -n "$namespace" >/dev/null 2>&1; then
+            kubectl get "$kind" "$name" -n "$namespace" -o yaml
+        fi
+    done
 }
