@@ -41,7 +41,6 @@ if [ $EXCLUSIVE_OPTS_PICKED -gt 1 ]; then
 fi
 
 # Get component dir
-echo "$1"
 COMPONENT_DIR="$(realpath "$1")"
 COMPONENT_NAME="$(basename "$COMPONENT_DIR")"
 
