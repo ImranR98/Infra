@@ -93,7 +93,7 @@ for file in "${END_WITH_FILES[@]}"; do
 done
 
 # Process each file to install the component
-if [ -n "$ordered_files" ]; then
+if [ -n "$ordered_files" ] || [ "$UPDATE_CHECK_MODE" = true ]; then
     echo ""
     printLine =
     echo "$COMPONENT_NAME"
@@ -153,13 +153,13 @@ if [ "$UPDATE_CHECK_MODE" ]; then
         echo "Cannot reliably check this service for updates."
     elif [ "$UPDATE_AVAILABLE" != true ]; then
         echo "No updates."
-    fi
-else
-    if [ -n "$ordered_files" ]; then
+    fi    
+fi
+
+if [ -n "$ordered_files" ] || [ "$UPDATE_CHECK_MODE" = true ]; then
         printLine =
         echo ""
     fi
-fi
 
 if [ -n "$ordered_files" ] && [ -n "$WAIT_AFTER_INSTALL" ]; then
     sleep "$WAIT_AFTER_INSTALL"
