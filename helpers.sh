@@ -172,3 +172,11 @@ grab_existing_k8s_objects_in_file() {
         fi
     done
 }
+
+deletePodsByGrep() {
+    if [ -n "$1" ]; then
+        for pod in $(kubectl -n production get pod | grep "$1" | awk '{print $1}'); do
+            kubectl -n production delete pod "$pod"
+        done
+    fi
+}
