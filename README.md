@@ -114,3 +114,9 @@ kubeadm token create --print-join-command # May need to run the actual join comm
 kubectl drain nodename --ignore-daemonsets --delete-local-data
 kubectl delete node nodename
 ```
+
+<!--
+TODO:
+- The 'rollout restart' in the update scripts is unnecessary (if something in the config changes it should auto restart). Remove.
+- The opodsync image is from some rando Docker repo. Either find a more trustworthy source or build it yourself.
+-->
