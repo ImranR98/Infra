@@ -136,7 +136,7 @@ getImageDigest() {
     NAMESPACE="$1"
     REPOSITORY="$2"
     TAG="$3"
-    DIGEST=$(curl -s "https://hub.docker.com/v2/namespaces/$NAMESPACE/repositories/$REPOSITORY/tags?name=$TAG" | jq -r '.results[0].digest')
+    DIGEST=$(curl -s "https://hub.docker.com/v2/namespaces/$NAMESPACE/repositories/$REPOSITORY/tags?name=$TAG" | jq -r '.results[0].images[] | select(.architecture == "amd64") | .digest')
     if [[ -z "$DIGEST" || "$DIGEST" == "null" ]]; then
         echo "Error: Could not fetch digest for image $NAMESPACE/$REPOSITORY:$TAG" >&2
     fi
