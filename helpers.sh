@@ -152,7 +152,11 @@ replaceImageTagsInYAML() {
         if echo "$LINE" | grep -Eq '\s*image:' && ! echo "$LINE" | grep -q '@' && [ -z "$(echo "$LINE" | awk -F '/' '{print $3}')" ]; then
             read -r NAMESPACE REPOSITORY TAG <<<"$(parseImageLine "$LINE")"
             DIGEST=$(getImageDigest "$NAMESPACE" "$REPOSITORY" "$TAG")
-            OLD_IMAGE="$(echo "$NAMESPACE/$REPOSITORY:$TAG" | sed 's/\//\\\//g')"
+            OLD_NAMESPACE="$NAMESPACE/"
+            if [ "$OLD_NAMESPACE" = 'library/' ] && [[ ! "$LINE" =~ library ]]; then
+                OLD_NAMESPACE=''
+            fi
+            OLD_IMAGE="$(echo "${OLD_NAMESPACE}$REPOSITORY:$TAG" | sed 's/\//\\\//g')"
             NEW_IMAGE="$NAMESPACE/$REPOSITORY@$DIGEST"
             echo "$LINE" | sed "s|$OLD_IMAGE|$NEW_IMAGE|"
         else
