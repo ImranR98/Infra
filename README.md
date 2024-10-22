@@ -117,6 +117,5 @@ kubectl delete node nodename
 
 <!--
 TODO:
-- The 'rollout restart' in the update scripts is unnecessary (if something in the config changes it should auto restart). Remove.
 - The opodsync image is from some rando Docker repo. Either find a more trustworthy source or build it yourself.
 -->
