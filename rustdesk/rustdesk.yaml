@@ -1,0 +1,48 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rustdesk
+  namespace: production
+  labels:
+    app: rustdesk
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: rustdesk
+  template:
+    metadata:
+      labels:
+        app: rustdesk
+        app.kubernetes.io/name: rustdesk
+    spec:
+      securityContext:
+        runAsUser: $MY_UID
+        runAsGroup: $MY_UID
+        fsGroup: $MY_UID
+      hostNetwork: true
+      containers:
+        - name: rustdesk-id-server
+          image: rustdesk/rustdesk-server:latest
+          command: ["hbbs"]
+          volumeMounts:
+            - name: state
+              mountPath: /root
+          securityContext:
+            allowPrivilegeEscalation: false
+            seLinuxOptions:
+              type: spc_t # SELinux doesn't play well with K8s PVCs
+        - name: rustdesk-relay-server
+          image: rustdesk/rustdesk-server:latest
+          command: ["hbbr"]
+          volumeMounts:
+            - name: state
+              mountPath: /root
+          securityContext:
+            allowPrivilegeEscalation: false
+            seLinuxOptions:
+              type: spc_t # SELinux doesn't play well with K8s PVCs
+      volumes:
+        - name: state
+          persistentVolumeClaim:
+            claimName: rustdesk-pvc
