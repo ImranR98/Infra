@@ -58,7 +58,6 @@ ALL_COMPONENTS=(
     opencanary
     mosquitto
     homeassistant
-    nextcloud
     uptime
     ---
     mdscl
