@@ -170,8 +170,11 @@ putHashInImageLineIfPossible() {
         read -r NAMESPACE REPOSITORY TAG ORIGIN <<<"$(parseImageLine "$LINE")"
         if [ "$ORIGIN" = 'ghcr.io' ]; then
             DIGEST=$(getGHCRImageDigest "$NAMESPACE" "$REPOSITORY" "$TAG")
-        else # Assume empty (Docker Hub)
+        elif [ -z "$ORIGIN" ]; then
             DIGEST=$(getDockerHubImageDigest "$NAMESPACE" "$REPOSITORY" "$TAG")
+        else
+            echo "$LINE"
+            exit
         fi
         OLD_NAMESPACE_SLASH="$NAMESPACE/"
         NEW_NAMESPACE_SLASH="$NAMESPACE/"
@@ -179,7 +182,10 @@ putHashInImageLineIfPossible() {
             OLD_NAMESPACE_SLASH=''
             NEW_NAMESPACE_SLASH=''
         fi
-        OLD_IMAGE="$(echo "${OLD_NAMESPACE_SLASH}$REPOSITORY:$TAG" | sed 's/\//\\\//g')"
+        OLD_IMAGE="$(echo "${OLD_NAMESPACE_SLASH}$REPOSITORY" | sed 's/\//\\\//g')"
+        if [ "$(echo "$LINE" | awk -F':' '{print $NF}')" = "$TAG" ]; then
+            OLD_IMAGE="$OLD_IMAGE:$TAG"
+        fi
         NEW_IMAGE="$(echo "${NEW_NAMESPACE_SLASH}$REPOSITORY" | sed 's/\//\\\//g')@$DIGEST"
         echo "$LINE" | sed "s|$OLD_IMAGE|$NEW_IMAGE|"
     fi

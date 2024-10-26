@@ -48,20 +48,18 @@ COMPONENT_NAME="$(basename "$COMPONENT_DIR")"
 START_WITH_FILES=(prep.sh pv.yaml nfs.yaml db.yaml secrets.yaml configmaps.yaml install.sh "$COMPONENT_NAME.yaml")
 END_WITH_FILES=(middlewares.yaml ingress.yaml post_install.sh)
 IGNORE_FILES=(pre_uninstall.sh uninstall.sh values.yaml update.sh)
-INCLUDE_OTHER_FILES=true
 
 if [ "$UPDATE_MODE" = true ] || [ "$UPDATE_CHECK_MODE" = true ]; then
     START_WITH_FILES=(pv.yaml nfs.yaml db.yaml secrets.yaml configmaps.yaml "$COMPONENT_NAME.yaml" update.sh)
     END_WITH_FILES=(middlewares.yaml ingress.yaml)
-    IGNORE_FILES=()
-    INCLUDE_OTHER_FILES=false # Since this is false we don't need to specify any IGNORE_FILES
+    IGNORE_FILES=(prep.sh install.sh post_install.sh pre_uninstall.sh uninstall.sh values.yaml)
 fi
 
 if [ "$REMOVE_MODE" ]; then
     START_WITH_FILES=(pre_uninstall.sh uninstall.sh "$COMPONENT_NAME.yaml" configmaps.yaml secrets.yaml db.yaml nfs.yaml pv.yaml middlewares.yaml ingress.yaml)
     END_WITH_FILES=()
-    IGNORE_FILES=()
-    INCLUDE_OTHER_FILES=false
+    IGNORE_FILES=(values.yaml)      # No need to add .sh files here as we set IGNORE_UNMENTIONED_SCRIPTS below
+    IGNORE_UNMENTIONED_SCRIPTS=true # Don't run any scripts during uninstall except the ones specifically defined above
 fi
 
 # Validate arg
@@ -77,15 +75,16 @@ for file in "${START_WITH_FILES[@]}"; do
         ordered_files+=("$file")
     fi
 done
-if [ "$INCLUDE_OTHER_FILES" = true ]; then
-    for file in "$COMPONENT_DIR"/*.{yaml,sh}; do
-        [ -e "$file" ] || continue # For cases when there are no yaml/sh files (ignore the bad ls output)
-        basefile=$(basename "$file")
-        if ! contains "$basefile" "${ordered_files[@]}" && ! contains "$basefile" "${START_WITH_FILES[@]}" && ! contains "$basefile" "${END_WITH_FILES[@]}" && ! contains "$basefile" "${IGNORE_FILES[@]}"; then
-            ordered_files+=("$basefile")
+for file in "$COMPONENT_DIR"/*.{yaml,sh}; do
+    [ -e "$file" ] || continue # For cases when there are no yaml/sh files (ignore the bad ls output)
+    basefile=$(basename "$file")
+    if ! contains "$basefile" "${ordered_files[@]}" && ! contains "$basefile" "${START_WITH_FILES[@]}" && ! contains "$basefile" "${END_WITH_FILES[@]}" && ! contains "$basefile" "${IGNORE_FILES[@]}"; then
+        if [ "$IGNORE_UNMENTIONED_SCRIPTS" = true ] && [ "${file##*.}" = sh ]; then
+            continue
         fi
-    done
-fi
+        ordered_files+=("$basefile")
+    fi
+done
 for file in "${END_WITH_FILES[@]}"; do
     if [ -f "$COMPONENT_DIR/$file" ]; then
         ordered_files+=("$file")
@@ -137,9 +136,6 @@ for file in "${ordered_files[@]}"; do
                 echo "NONE"
             fi
             printLine -
-            if [ "$TEMPLATE_YAML_TAGS" == "$EXISTING_YAML_TAGS" ]; then
-                continue # Not a YAML that can reliably be checked for updates
-            fi
             UPDATE_CHECKING_POSSIBLE=true
             NEW_YAML_TAGS="$(replaceImageTagsInYAML "$filepath" | (grep -E '\s*image:' || :) | (grep -Eo 'image: .*' || :))"
             echo "New tags found for $file:"
@@ -147,8 +143,6 @@ for file in "${ordered_files[@]}"; do
             printLine -
             if [ "$EXISTING_YAML_TAGS" != "$NEW_YAML_TAGS" ]; then
                 UPDATE_AVAILABLE=true
-                echo "Update available (based on $file)."
-                break
             fi
         elif [ "$extension" = sh ]; then
             # TODO: Helm chart updates
@@ -167,6 +161,8 @@ if [ "$UPDATE_CHECK_MODE" = true ]; then
         echo "Cannot reliably check this service for updates."
     elif [ "$UPDATE_AVAILABLE" != true ]; then
         echo "No updates."
+    else
+        echo "Update available."
     fi
 fi
 
