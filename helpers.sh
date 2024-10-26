@@ -1,6 +1,6 @@
 #!/bin/bash
 
-function contains() {
+contains() {
     local item="$1"
     shift
     local arr=("$@")
@@ -14,7 +14,7 @@ function contains() {
     return 1
 }
 
-function rsyncWithChownContent() {
+rsyncWithChownContent() {
     ORIGIN="$1"
     if [ ! -d "$ORIGIN" ]; then
         echo "No/Invalid origin directory!" >&2
@@ -39,7 +39,7 @@ function rsyncWithChownContent() {
     sudo chgrp "$GROUP" -R "$DESTINATION"/*
 }
 
-function syncRemoteEnvFileIfUndefined() {
+syncRemoteEnvFileIfUndefined() {
     # Given an env file on a remote server (any file where each line is '<varname>=<varvalue>'),
     # If the file already defines a given var, don't change it,
     # But if not, update it with a given value
@@ -118,29 +118,71 @@ parseImageLine() {
         LINE="image: $LINE"
     fi
     IMAGE=$(echo "$LINE" | awk '{print $2}')
-    if [ -n "$(echo "$IMAGE" | grep '/')" ]; then
-        NAMESPACE=$(echo "$IMAGE" | awk -F'/' '{print $1}')
-        REPOSITORY=$(echo "$IMAGE" | awk -F'/' '{print $2}' | awk -F':' '{print $1}')
-    else
-        NAMESPACE="library"
-        REPOSITORY=$(echo "$IMAGE" | awk -F':' '{print $1}')
+    NAMESPACE="$(echo "$IMAGE" | awk -F'/' '{print $(NF-1)}' || :)"
+    if [ "$(echo "$IMAGE" | awk -F'/' '{print NF}')" = 1 ]; then
+        NAMESPACE='library'
     fi
+    REPOSITORY_TAG="$(echo "$IMAGE" | awk -F'/' '{print $NF}')"
+    ORIGIN="$(echo $IMAGE | head -c -$(($(echo "$NAMESPACE/$REPOSITORY_TAG" | wc -c) + 1)))"
+    REPOSITORY="$(echo "$REPOSITORY_TAG" | awk -F':' '{print $1}')"
     TAG=$(echo "$IMAGE" | awk -F':' '{print $2}')
     if [ -z "$TAG" ]; then
-        TAG="latest"
+        TAG='latest'
     fi
-    echo "$NAMESPACE $REPOSITORY $TAG"
+    echo "$NAMESPACE $REPOSITORY $TAG $ORIGIN"
 }
 
-getImageDigest() {
+archForDocker() {
+    arch | sed s/aarch64/arm64/ | sed s/x86_64/amd64/
+}
+
+getDockerHubImageDigest() {
     NAMESPACE="$1"
     REPOSITORY="$2"
     TAG="$3"
-    DIGEST=$(curl -s "https://hub.docker.com/v2/namespaces/$NAMESPACE/repositories/$REPOSITORY/tags?name=$TAG" | jq -r ".results[] | select(.name == \""$TAG\"") | .images[] | select(.architecture == \"amd64\") | .digest")
+    DIGEST=$(curl -s "https://hub.docker.com/v2/namespaces/$NAMESPACE/repositories/$REPOSITORY/tags?name=$TAG" | jq -r ".results[] | select(.name == \""$TAG\"") | .images[] | select(.architecture == \"$(archForDocker)\") | .digest")
     if [[ -z "$DIGEST" || "$DIGEST" == "null" ]]; then
         echo "Error: Could not fetch digest for image $NAMESPACE/$REPOSITORY:$TAG" >&2
     fi
     echo "$DIGEST"
+}
+
+getGHCRImageDigest() {
+    NAMESPACE="$1"
+    REPOSITORY="$2"
+    TAG="$3"
+    TOKEN="$(
+        curl -s "https://ghcr.io/token?scope=repository:$NAMESPACE/$REPOSITORY:pull" |
+            awk -F'"' '$0=$4'
+    )"
+    curl -s -H "Authorization: Bearer $TOKEN" -H 'Accept: application/vnd.oci.image.index.v1+json' "https://ghcr.io/v2/$NAMESPACE/$REPOSITORY/manifests/$TAG" | jq -r ".manifests[] | select(.platform.architecture == \"$(archForDocker)\") | .digest"
+}
+
+putHashInImageLineIfPossible() {
+    LINE="$1"
+    IS_SUPPORTED=false
+    if [ "$(echo "$LINE" | awk '{print NF}')" -le 2 ] || [ "$(echo "$LINE" | awk -F '/' '{print $1}')" = 'ghcr.io' ]; then
+        IS_SUPPORTED=true
+    fi
+    if [ "$IS_SUPPORTED" != true ]; then
+        echo "$LINE"
+    else
+        read -r NAMESPACE REPOSITORY TAG ORIGIN <<<"$(parseImageLine "$LINE")"
+        if [ "$ORIGIN" = 'ghcr.io' ]; then
+            DIGEST=$(getGHCRImageDigest "$NAMESPACE" "$REPOSITORY" "$TAG")
+        else # Assume empty (Docker Hub)
+            DIGEST=$(getDockerHubImageDigest "$NAMESPACE" "$REPOSITORY" "$TAG")
+        fi
+        OLD_NAMESPACE_SLASH="$NAMESPACE/"
+        NEW_NAMESPACE_SLASH="$NAMESPACE/"
+        if [ "$OLD_NAMESPACE_SLASH" = 'library/' ] && [[ ! "$LINE" =~ library ]] && [ -z "$ORIGIN" ]; then
+            OLD_NAMESPACE_SLASH=''
+            NEW_NAMESPACE_SLASH=''
+        fi
+        OLD_IMAGE="$(echo "${OLD_NAMESPACE_SLASH}$REPOSITORY:$TAG" | sed 's/\//\\\//g')"
+        NEW_IMAGE="$(echo "${NEW_NAMESPACE_SLASH}$REPOSITORY" | sed 's/\//\\\//g')@$DIGEST"
+        echo "$LINE" | sed "s|$OLD_IMAGE|$NEW_IMAGE|"
+    fi
 }
 
 replaceImageTagsInYAML() {
@@ -149,25 +191,17 @@ replaceImageTagsInYAML() {
         if [[ "$LINE" =~ ^\s*# ]]; then
             continue
         fi
-        if echo "$LINE" | grep -Eq '\s*image:' && ! echo "$LINE" | grep -q '@' && [ -z "$(echo "$LINE" | awk -F '/' '{print $3}')" ]; then
-            read -r NAMESPACE REPOSITORY TAG <<<"$(parseImageLine "$LINE")"
-            DIGEST=$(getImageDigest "$NAMESPACE" "$REPOSITORY" "$TAG")
-            OLD_NAMESPACE="$NAMESPACE/"
-            if [ "$OLD_NAMESPACE" = 'library/' ] && [[ ! "$LINE" =~ library ]]; then
-                OLD_NAMESPACE=''
-            fi
-            OLD_IMAGE="$(echo "${OLD_NAMESPACE}$REPOSITORY:$TAG" | sed 's/\//\\\//g')"
-            NEW_IMAGE="$NAMESPACE/$REPOSITORY@$DIGEST"
-            echo "$LINE" | sed "s|$OLD_IMAGE|$NEW_IMAGE|"
+        if echo "$LINE" | grep -Eq '\s*image:' && ! echo "$LINE" | grep -q '@'; then
+            putHashInImageLineIfPossible "$LINE"
         else
             echo "$LINE"
         fi
     done <"$FILE"
 }
 
-grab_existing_k8s_objects_in_file() {
+grabK8sObjectsInManifest() {
     local manifest_file="$1"
-    sed '/^\s*#/d' "$manifest_file" | kubectl apply --dry-run=client -f - -o json | (jq -c '.items[]' 2>/dev/null || :) | while read -r object; do
+    sed '/^\s*#/d' "$manifest_file" | kubectl apply --dry-run=client -f - -o json | (jq -c 'if has("items") and (.items | type == "array") then .items else [.] end' 2>/dev/null || :) | while read -r object; do
         kind=$(echo "$object" | jq -r '.kind')
         name=$(echo "$object" | jq -r '.metadata.name')
         namespace=$(echo "$object" | jq -r '.metadata.namespace // "default"') # Default to "default" namespace if not present

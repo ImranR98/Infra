@@ -123,18 +123,32 @@ for file in "${ordered_files[@]}"; do
     if [ "$UPDATE_CHECK_MODE" = true ]; then
         if [ "$extension" = yaml ]; then
             TEMPLATE_YAML_TAGS="$(sed '/^\s*#/d' "$filepath" | (grep -E '\s*image:' || :) | (grep -Eo 'image: .*' || :))"
-            EXISTING_YAML_TAGS="$(grab_existing_k8s_objects_in_file "$filepath" | (grep -E '\s*image:' || :) | (grep -Eo 'image: .*' || :))"
+            EXISTING_YAML_TAGS="$(grabK8sObjectsInManifest "$filepath" | (grep -E '\s*image:' || :) | (grep -Eo 'image: .*' || :))"
             if [ -z "$TEMPLATE_YAML_TAGS" ]; then
                 continue # Not a YAML relevant to update checking
             fi
+            echo "Template tags found in $file:"
+            echo "$TEMPLATE_YAML_TAGS"
+            printLine -
+            echo "Existing tags found in $file:"
+            if [ -n "$EXISTING_YAML_TAGS" ]; then
+                echo "$EXISTING_YAML_TAGS"
+            else
+                echo "NONE"
+            fi
+            printLine -
             if [ "$TEMPLATE_YAML_TAGS" == "$EXISTING_YAML_TAGS" ]; then
                 continue # Not a YAML that can reliably be checked for updates
             fi
             UPDATE_CHECKING_POSSIBLE=true
             NEW_YAML_TAGS="$(replaceImageTagsInYAML "$filepath" | (grep -E '\s*image:' || :) | (grep -Eo 'image: .*' || :))"
+            echo "New tags found for $file:"
+            echo "$NEW_YAML_TAGS"
+            printLine -
             if [ "$EXISTING_YAML_TAGS" != "$NEW_YAML_TAGS" ]; then
                 UPDATE_AVAILABLE=true
                 echo "Update available (based on $file)."
+                break
             fi
         elif [ "$extension" = sh ]; then
             # TODO: Helm chart updates
