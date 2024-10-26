@@ -158,6 +158,17 @@ getGHCRImageDigest() {
     curl -s -H "Authorization: Bearer $TOKEN" -H 'Accept: application/vnd.oci.image.index.v1+json' "https://ghcr.io/v2/$NAMESPACE/$REPOSITORY/manifests/$TAG" | jq -r ".manifests[] | select(.platform.architecture == \"$(archForDocker)\") | .digest"
 }
 
+getGitlabImageDigest() {
+    NAMESPACE="$1"
+    REPOSITORY="$2"
+    TAG="$3"
+    ID="$(
+        curl -s "https://gitlab.com/api/v4/projects/$NAMESPACE%2F$REPOSITORY/registry/repositories" |
+            jq -r ".[] | select(.path == \""$NAMESPACE/$REPOSITORY\"") | .id"
+    )"
+    curl -s https://gitlab.com/api/v4/projects/$NAMESPACE%2F$REPOSITORY/registry/repositories/$ID/tags/$TAG | jq -r '.digest'
+}
+
 putHashInImageLineIfPossible() {
     LINE="$1"
     IS_SUPPORTED=false
@@ -168,10 +179,12 @@ putHashInImageLineIfPossible() {
         echo "$LINE"
     else
         read -r NAMESPACE REPOSITORY TAG ORIGIN <<<"$(parseImageLine "$LINE")"
-        if [ "$ORIGIN" = 'ghcr.io' ]; then
-            DIGEST=$(getGHCRImageDigest "$NAMESPACE" "$REPOSITORY" "$TAG")
-        elif [ -z "$ORIGIN" ]; then
+        if [ -z "$ORIGIN" ]; then
             DIGEST=$(getDockerHubImageDigest "$NAMESPACE" "$REPOSITORY" "$TAG")
+        elif [ "$ORIGIN" = 'ghcr.io' ]; then
+            DIGEST=$(getGHCRImageDigest "$NAMESPACE" "$REPOSITORY" "$TAG")
+        elif [ "$ORIGIN" = 'registry.gitlab.com' ]; then
+            DIGEST=$(getGitlabImageDigest "$NAMESPACE" "$REPOSITORY" "$TAG")
         else
             echo "$LINE"
             exit
