@@ -201,7 +201,7 @@ replaceImageTagsInYAML() {
 
 grabK8sObjectsInManifest() {
     local manifest_file="$1"
-    sed '/^\s*#/d' "$manifest_file" | kubectl apply --dry-run=client -f - -o json | (jq -c 'if has("items") and (.items | type == "array") then .items else [.] end' 2>/dev/null || :) | while read -r object; do
+    sed '/^\s*#/d' "$manifest_file" | kubectl apply --dry-run=client -f - -o json | (jq -c 'if has("items") and (.items | type == "array") then .items[] else [.][] end' 2>/dev/null || :) | while read -r object; do
         kind=$(echo "$object" | jq -r '.kind')
         name=$(echo "$object" | jq -r '.metadata.name')
         namespace=$(echo "$object" | jq -r '.metadata.namespace // "default"') # Default to "default" namespace if not present
