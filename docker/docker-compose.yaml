@@ -1,5 +1,4 @@
 # TODO:
-# 1. Prep script that checks all instances of STATE_DIR here and creates all requried subdirs
 # 2. Figure out all config files that must be there on init (and how they can be generated from variables.sh) (automate w/ script)
 # 3. Test on staging environment
 # 4. Try keeping some advantages of K8s system:
@@ -160,7 +159,7 @@ services:
             - "--metrics.prometheus.buckets=0.1,0.3,1.2,5.0"
             - "--providers.docker=true"
             - "--providers.docker.exposedByDefault=false"
-            - "--providers.file.filename=/etc/traefik/dynamic-configuration.yml"
+            - "--providers.file.filename=/etc/traefik/dynamic-configuration.yaml"
             - "--entryPoints.web=true"
             - "--entryPoints.web.address=:8081/tcp"
             - "--entryPoints.web.http.redirections.entryPoint.to=websecure"
@@ -184,8 +183,8 @@ services:
         volumes:
             - /var/run/docker.sock:/var/run/docker.sock
             - $STATE_DIR/traefik/acme.json:/acme.json
-            - $STATE_DIR/traefik/dynamic-configuration.yml:/etc/traefik/dynamic-configuration.yml
-            - $STATE_DIR/mtls:/etc/traefik/mtls/
+            - $STATE_DIR/traefik/dynamic-configuration.yaml:/etc/traefik/dynamic-configuration.yaml
+            - $STATE_DIR/traefik/mtls:/etc/traefik/mtls/
             - $STATE_DIR/traefik_logs:/var/log/traefik/
         labels:
             - "traefik.enable=true"
@@ -208,7 +207,7 @@ services:
             - $STATE_DIR/prometheus/:/config
             - prometheus_data:/prometheus
         command:
-            - "--config.file=/config/prometheus.yml"
+            - "--config.file=/config/prometheus.yaml"
             - "--storage.tsdb.path=/prometheus"
             - "--storage.tsdb.retention.size=512MB"
         networks:
@@ -692,7 +691,7 @@ services:
             - traefik
 
     # oPodSync - Podcast Sync
-    navidrome:
+    opodsync:
         container_name: opodsync
         image: ganeshlab/opodsync:latest
         user: 1000:1000
@@ -703,12 +702,12 @@ services:
             - "$STATE_DIR/opodsync:/var/www/server/data"
         labels:
             - "traefik.enable=true"
-            - "traefik.http.routers.navidrome.rule=Host(`opodsync.$SERVICES_DOMAIN`)"
-            - "traefik.http.routers.navidrome.entrypoints=websecure"
-            - "traefik.http.routers.navidrome.tls=true"
-            - "traefik.http.routers.navidrome.tls.certresolver=le"
-            - "traefik.http.routers.navidrome.middlewares=geoblock@file"
-            - "traefik.http.services.navidrome.loadbalancer.server.port=8080"
+            - "traefik.http.routers.opodsync.rule=Host(`opodsync.$SERVICES_DOMAIN`)"
+            - "traefik.http.routers.opodsync.entrypoints=websecure"
+            - "traefik.http.routers.opodsync.tls=true"
+            - "traefik.http.routers.opodsync.tls.certresolver=le"
+            - "traefik.http.routers.opodsync.middlewares=geoblock@file"
+            - "traefik.http.services.opodsync.loadbalancer.server.port=8080"
         networks:
             - traefik
 
