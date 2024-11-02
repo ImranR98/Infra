@@ -1,0 +1,6 @@
+base-url: "https://ntfy.$SERVICES_DOMAIN"
+cache-file: "/var/cache/ntfy/cache.db"
+attachment-cache-dir: "/var/cache/ntfy/attachments"
+behind-proxy: true
+auth-file: "/etc/ntfy/user.db"
+auth-default-access: "deny-all"

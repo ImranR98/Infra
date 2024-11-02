@@ -741,9 +741,6 @@ services:
             - $STATE_DIR/mosquitto/config:/mosquitto/config
             - $STATE_DIR/mosquitto/data:/mosquitto/data
             - $STATE_DIR/mosquitto/log:/mosquitto/log
-        environment:
-            - PSK_FILE=/mosquitto/config/psk.txt
-            - PSK_HINTS_FILE=/mosquitto/config/psk-hints.txt
         command: mosquitto -c /mosquitto/config/mosquitto.conf
         restart: unless-stopped
         networks:

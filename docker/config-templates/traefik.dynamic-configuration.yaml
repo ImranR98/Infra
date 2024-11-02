@@ -1,0 +1,33 @@
+http:
+  middlewares:
+    geoblock:
+      plugin:
+        geoblock:
+          silentStartUp: false
+          allowLocalRequests: true
+          logLocalRequests: false
+          logAllowedRequests: true
+          logApiRequests: true
+          api: "https://get.geojs.io/v1/ip/country/{ip}"
+          apiTimeoutMs: 750                                 # optional
+          cacheSize: 15
+          forceMonthlyUpdate: true
+          allowUnknownCountries: false
+          unknownCountryApiResponse: "nil"
+          blackListMode: false
+          countries:
+            - CA
+            - TZ
+            - US
+    crowdsec-bouncer:
+      forwardauth:
+        address: http://crowdsec-bouncer:8080/api/v1/forwardAuth
+        trustForwardHeader: true
+
+tls:
+  options:
+    mtls:
+      clientAuth:
+        caFiles:
+          - /etc/traefik/mtls/cacert.pem
+        clientAuthType: RequireAndVerifyClientCert

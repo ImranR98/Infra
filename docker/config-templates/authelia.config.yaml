@@ -1,0 +1,104 @@
+default_redirection_url: https://auth.${SERVICES_DOMAIN}
+
+log:
+  level: debug
+
+totp:
+  issuer: ${SERVICES_DOMAIN}
+
+authentication_backend:
+  file:
+    path: /config/users_database.yaml
+
+access_control:
+  rules:
+    - domain: tv.$SERVICES_DOMAIN
+      policy: bypass
+    - domain: pixelntfy.$SERVICES_DOMAIN
+      policy: bypass
+    - domain: isbn.$SERVICES_DOMAIN
+      policy: bypass
+    - domain: ha.$SERVICES_DOMAIN
+      policy: bypass
+    - domain: ntfy.$SERVICES_DOMAIN
+      policy: bypass
+    - domain: files.$SERVICES_DOMAIN
+      resources:
+      - '^/share([/?].*)?$'
+      - '^/static([/?].*)?$'
+      - '^/api/public([/?].*)?$'
+      policy: bypass
+    - domain: send.$SERVICES_DOMAIN
+      resources:
+      - '^/download/[^/]+/?$'
+      - '^/api/download/[^/]+/?$'
+      - '^/api/download/blob/[^/]+/?$'
+      - '^/api/info/[^/]+/?$'
+      - '^/api/metadata/[^/]+/?$'
+      - '^/[^/]+\.js$'
+      - '^/[^/]+\.svg$'
+      - '^/[^/]+\.css$'
+      - '^/[^/]+\.woff2$'
+      - '^/[^/]+\.png$'
+      - '^/__heartbeat__/?$'
+      policy: bypass
+    - domain: music.$SERVICES_DOMAIN
+      policy: bypass
+    - domain: immich.$SERVICES_DOMAIN
+      policy: bypass
+    - domain: auth.$SERVICES_DOMAIN
+      policy: bypass
+    - domain: webdav.$SERVICES_DOMAIN
+      policy: bypass
+    - domain: plausible.$SERVICES_DOMAIN
+      policy: bypass
+    - domain: opodsync.$SERVICES_DOMAIN
+      policy: bypass
+    - domain: ytdl.$SERVICES_DOMAIN
+      policy: one_factor
+    - domain: '*.$SERVICES_TOP_DOMAIN'
+      policy: two_factor
+
+session:
+  domain: ${SERVICES_DOMAIN}
+  redis:
+    host: authelia-db
+    port: 6379
+
+regulation:
+  max_retries: 3
+  find_time: 120
+  ban_time: 300
+
+storage:
+  encryption_key: '$AUTHELIA_DB_ENCRYPTION_KEY'
+  local:
+    path: /config/db.sqlite3
+
+notifier:
+  filesystem:
+    filename: /config/notification.txt
+
+identity_providers:
+  oidc:
+    ## See: https://www.authelia.com/c/oidc
+    hmac_secret: '$AUTHELIA_OIDC_HMAC_SECRET'
+    jwks:
+      - key: |
+          $AUTHELIA_JWKS_KEY
+    enable_client_debug_messages: false
+    clients:
+      - client_id: 'immich'
+        client_name: 'immich'
+        client_secret: '$AUTHELIA_IMMICH_CLIENT_SECRET'
+        public: false
+        authorization_policy: 'two_factor'
+        redirect_uris:
+          - 'https://immich.${SERVICES_DOMAIN}/auth/login'
+          - 'https://immich.${SERVICES_DOMAIN}/user-settings'
+          - 'app.immich:/'
+        scopes:
+          - 'openid'
+          - 'profile'
+          - 'email'
+        userinfo_signed_response_alg: 'none'
