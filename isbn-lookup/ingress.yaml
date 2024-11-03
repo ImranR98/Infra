@@ -12,6 +12,9 @@ spec:
   routes:
     - match: Host(`isbn.$SERVICES_DOMAIN`)
       kind: Rule
+      middlewares:
+        - name: crowdsec-bouncer
+          namespace: production
       services:
         - name: isbn-lookup
           port: 8080

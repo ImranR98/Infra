@@ -48,7 +48,6 @@ ports:
       trustedIPs: [$TRAEFIK_TRUSTED_IP_RANGE]
       insecure: false
     middlewares:
-      - production-crowdsec-bouncer@kubernetescrd
       - production-forwardauth-authelia@kubernetescrd
 
 ingressRoute:

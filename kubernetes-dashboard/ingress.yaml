@@ -12,6 +12,11 @@ spec:
   routes:
     - match: Host(`k8s.$SERVICES_DOMAIN`)
       kind: Rule
+      middlewares:
+        - name: forwardauth-geoblock
+          namespace: production
+        - name: crowdsec-bouncer
+          namespace: production
       services:
         - name: kubernetes-dashboard-kong-proxy
           port: 80

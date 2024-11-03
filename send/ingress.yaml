@@ -11,7 +11,10 @@ spec:
     - websecure
   routes:
     - match: Host(`send.$SERVICES_DOMAIN`)
-      kind: Rule      
+      kind: Rule
+      middlewares:
+        - name: crowdsec-bouncer
+          namespace: production
       services:
         - name: send
           port: 3000

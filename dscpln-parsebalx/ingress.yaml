@@ -39,6 +39,8 @@ spec:
       middlewares:
         - name: forwardauth-geoblock
           namespace: production
+        - name: crowdsec-bouncer
+          namespace: production
       services:
         - name: dscpln-parsebalx
           port: 3000

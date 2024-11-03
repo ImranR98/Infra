@@ -12,6 +12,9 @@ spec:
   routes:
     - match: Host(`pixelntfy.$SERVICES_DOMAIN`)
       kind: Rule
+      middlewares:
+        - name: crowdsec-bouncer
+          namespace: production
       services:
         - name: pixelntfy
           port: 3000

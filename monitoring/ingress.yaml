@@ -12,6 +12,11 @@ spec:
   routes:
     - match: Host(`grafana.$SERVICES_DOMAIN`)
       kind: Rule
+      middlewares:
+        - name: forwardauth-geoblock
+          namespace: production
+        - name: crowdsec-bouncer
+          namespace: production
       services:
         - name: grafana
           port: 3000
