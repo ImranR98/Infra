@@ -1,9 +1,5 @@
 # TODO:
-# 2. Figure out all config files that must be there on init (and how they can be generated from variables.sh) (automate w/ script)
 # 3. Test on staging environment
-# 4. Try keeping some advantages of K8s system:
-#    - Manual updates for some containers (mainly Immich). Exclude from Watchtower and have manual 'docker pull' script (preferably exclude list and pull script use the same source data)
-#    - Wildcard cert for TLS
 # 5. Go through and ensure it has parity with K8s (mTLS, etc.)
 # 6. Plan and do migration
 
