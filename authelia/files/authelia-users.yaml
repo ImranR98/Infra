@@ -1,9 +1,0 @@
-apiVersion: v1
-kind: Secret
-metadata:
-  name: authelia-users
-  namespace: production
-type: Opaque
-stringData:
-  users-database.yaml: |
-    $AUTHELIA_USERS_DATABASE

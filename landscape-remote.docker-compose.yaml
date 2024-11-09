@@ -1,0 +1,37 @@
+services:
+
+    frps-with-multiuser:
+        image: imranrdev/frps-with-multiuser:latest
+        container_name: frps-with-multiuser
+        restart: always
+        volumes:
+            - ./frps-tokens.txt:/workdir/service-data/frps-tokens.txt
+        network_mode: host
+
+    logtfy:
+        image: imranrdev/logtfy:latest
+        container_name: logtfy
+        hostname: $PROXY_NODE_HOSTNAME
+        network_mode: host
+        restart: unless-stopped
+        volumes:
+          - /var/log/journal:/var/log/journal:ro
+          - ./logtfy.json:/logtfy/config.json
+          - logtfy_tmp:/tmp/logtfy
+
+    strelaysrv:
+        image: imranrdev/strelaysrv-docker:latest
+        container_name: strelaysrv
+        restart: always
+        volumes:
+            - strelaysrv:/keys
+        command:
+            - "-global-rate=5000000"
+            - "-provided-by=$STRELAYSRV_PROVIDED_BY_TEXT"
+        ports:
+            - 22067:22067
+            - 22070:22070
+
+volumes:
+    logtfy_tmp: {}
+    strelaysrv: {}

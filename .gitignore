@@ -1,4 +1,5 @@
 state/
+state_dir/
 VARS.*.sh
 temp.sh
 migrate.sh

@@ -1,9 +1,0 @@
-services:
-
-    frps-with-multiuser:
-        image: imranrdev/frps-with-multiuser:latest
-        container_name: frps-with-multiuser
-        restart: always
-        volumes:
-            - ./frps-tokens.txt:/workdir/service-data/frps-tokens.txt
-        network_mode: host
