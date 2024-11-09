@@ -123,7 +123,7 @@ if [ -z "$CROWDSEC_BOUNCER_KEY" ]; then
 fi
 
 if [ -z "$NTFY_SERVICE_USER_TOKEN" ]; then
-    printTitle "Create Write-Only Ntfy Service Account + Token"
+    printTitle "Create Write-Only Ntfy Service Account + Token and Ntfy Admin Account"
     docker compose -p landscape -f "$STATE_DIR"/landscape.docker-compose.yaml up -d ntfy
     echo "Waiting for Ntfy to start..."
     sleep 10 # Hopefully enough time for any initialization to occur
@@ -135,6 +135,11 @@ if [ -z "$NTFY_SERVICE_USER_TOKEN" ]; then
     docker exec ntfy ntfy access "$SERVICES_USER" "$PIXELNTFY_TOPIC_SUFFIX" wo
     export NTFY_SERVICE_USER_TOKEN="$(docker exec ntfy ntfy token add "$SERVICES_USER" 2>&1 | awk '{print $2}')"
     echo "export NTFY_SERVICE_USER_TOKEN='$NTFY_SERVICE_USER_TOKEN'" >>"$STATE_DIR"/generated.VARS.sh
+    read -s -p "Enter password for Ntfy admin user: " NTFY_ADMIN_PASSWORD
+    docker exec ntfy ntfy user del "$USER" 2>/dev/null || :
+    docker exec ntfy sh -c "NTFY_PASSWORD=\"$NTFY_ADMIN_PASSWORD\" ntfy user add \"$USER\""
+    docker exec ntfy sh -c "ntfy access $USER \"*\" rw"
+    docker exec ntfy sh -c "ntfy user change-role $USER admin"
     docker compose -p landscape -f "$STATE_DIR"/landscape.docker-compose.yaml down ntfy
     echo "Done."
 fi
