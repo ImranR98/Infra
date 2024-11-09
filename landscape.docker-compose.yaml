@@ -1,4 +1,5 @@
 services:
+
     # Watchtower - Container Updater
     watchtower:
         container_name: watchtower
@@ -300,6 +301,7 @@ services:
             - "8082:8082"
             - "9418:9418"
 
+    # Plausible - Web Analytics
     plausible_db:
         # Plausible v2.1.1 was tested against PostgreSQL versions 15 and 16
         # https://github.com/plausible/analytics/blob/v2.1.1/.github/workflows/elixir.yml#L21-L32
@@ -458,7 +460,7 @@ services:
         networks:
             - traefik
 
-    # NTFY - Push Notifications
+    # Ntfy - Push Notifications
     ntfy:
         image: binwiederhier/ntfy
         container_name: ntfy
@@ -808,6 +810,7 @@ services:
             - "traefik.http.routers.ollama-webui.middlewares=crowdsec-bouncer@file,geoblock@file"
             - "traefik.http.services.ollama-webui.loadbalancer.server.port=8080"
 
+    # MeTube - YouTube Downloader
     metube:
         image: ghcr.io/alexta69/metube:latest
         container_name: metube
@@ -827,6 +830,7 @@ services:
             - "traefik.http.routers.metube.tls=true"
             - "traefik.http.services.metube.loadbalancer.server.port=8081"
 
+    # WebDAV Server
     webdav:
         image: rclone/rclone:latest
         container_name: webdav
