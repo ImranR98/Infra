@@ -4,7 +4,7 @@
 # - Ensures all environment variables are loaded
 # - Defines helper functions
 
-HERE_L3D9="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd;)"
+HERE_L3D9="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 
 if [ -f "$HERE_L3D9"/VARS.production.sh ]; then
     source "$HERE_L3D9"/VARS.production.sh
@@ -91,18 +91,7 @@ pullComposeImages() {
 }
 
 findDomainsInSetup() {
-    LIST_FILE="$(mktemp)"
-    find . 2>/dev/null | grep -E 'ingress\.yaml$' | while read -r ingress; do
-        echo "$(cat "$ingress" | grep Host | awk -F '`' '{print $2}')" >>"$LIST_FILE"
-    done
-    find . 2>/dev/null | grep -E '\.sh$' | while read -r install; do
-        DOMAIN="$(cat "$install" | grep '^SSH_HOST=' | awk -F '=' '{print $2}')"
-        if [ -n "$DOMAIN" ]; then
-            echo "$DOMAIN" >>"$LIST_FILE"
-        fi
-    done
-    cat "$LIST_FILE" | sort | uniq
-    rm "$LIST_FILE"
+    cat "$HERE_L3D9"/landscape.docker-compose.yaml | grep Host | awk -F '`' '{print $2}' | sort | uniq | envsubst
 }
 
 generateComposeService() {
