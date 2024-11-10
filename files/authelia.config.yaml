@@ -106,6 +106,7 @@ identity_providers:
           - 'https://immich.${SERVICES_DOMAIN}/auth/login'
           - 'https://immich.${SERVICES_DOMAIN}/user-settings'
           - 'app.immich:/'
+          - 'app.immich:///oauth-callback'
         scopes:
           - 'openid'
           - 'profile'
