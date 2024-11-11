@@ -111,13 +111,14 @@ if [ ! -f "$STATE_DIR"/homeassistant/configuration.yaml ] || [ -z "$(grep -Eo '^
 fi
 
 if [ -z "$CROWDSEC_BOUNCER_KEY" ]; then
-    printTitle "Generate Crowdsec Bouncer Key"
+    printTitle "Generate Crowdsec Bouncer Key (and tweak config)"
     docker compose -p landscape -f "$STATE_DIR"/landscape.docker-compose.yaml up -d crowdsec
     echo "Waiting for Crowdsec to start..."
     sleep 10 # Hopefully enough time for any initialization to occur
     docker exec crowdsec cscli bouncers remove crowdsecBouncer 2>/dev/null || :
     export CROWDSEC_BOUNCER_KEY="$(docker exec crowdsec cscli bouncers add crowdsecBouncer | head -3 | tail -1 | awk '{print $1}')"
     echo "export CROWDSEC_BOUNCER_KEY='$CROWDSEC_BOUNCER_KEY'" >>"$STATE_DIR"/generated.VARS.sh
+    sed -i 's/use_wal: false/use_wal: true/' "$STATE_DIR"/crowdsec/config/config.yaml
     docker compose -p landscape -f "$STATE_DIR"/landscape.docker-compose.yaml down crowdsec
     echo "Done."
 fi
@@ -183,3 +184,6 @@ echo "Note:
 - Some image tags are hardcoded - you may need to update these manually.
 - Some services may need manual setup in their respective GUIs."
 printLine -
+
+# TODO:
+# Separate FRPC update script which auto-grabs latest tag and, if an update was done, reminds user to check FRPS too.
