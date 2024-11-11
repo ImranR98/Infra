@@ -607,7 +607,7 @@ services:
             - "traefik.http.routers.immich.entrypoints=websecure"
             - "traefik.http.routers.immich.tls.certresolver=le"
             - "traefik.http.routers.immich.tls=true"
-            - "traefik.http.routers.immich.middlewares=crowdsec-bouncer@file,geoblock@file"
+            - "traefik.http.routers.immich.middlewares=geoblock@file"
             - "traefik.http.services.immich.loadbalancer.server.port=2283"
     immich-machine-learning:
         container_name: immich-machine-learning
