@@ -587,7 +587,7 @@ services:
         volumes:
             - $STATE_DIR/immich/upload:/usr/src/app/upload
             - /etc/localtime:/etc/localtime:ro
-            - "$MAIN_PARENT_DIR/Main/Media:/mnt/media/ext-media"
+            - "$MAIN_PARENT_DIR/Main/Media:/mnt/media/ext-media:ro"
         environment:
             - UPLOAD_LOCATION=$STATE_DIR/immich-upload
             - DB_HOSTNAME=immich-database
