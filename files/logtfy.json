@@ -38,6 +38,11 @@
             "enabled": true
         },
         {
+            "module": "watchtower_updates",
+            "ntfyTopic": "logtfy",
+            "enabled": true
+        },
+        {
             "module": "traefik_geoblock_allowed_requests",
             "ntfyTopic": "logtfy",
             "defaultPriority": "1",
