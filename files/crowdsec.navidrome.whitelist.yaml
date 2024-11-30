@@ -1,0 +1,7 @@
+name: imranr/navidrome
+description: "Whitelist for Navidrome"
+whitelist:
+  reason: "Downloading from Navidrome using client apps can cause false positives"
+  expression:
+    - evt.Overflow.Alert.Events[0].GetMeta('target_fqdn') == 'music.$SERVICES_DOMAIN'
+    - evt.Overflow.Alert.GetScenario() in ['crowdsecurity/http-probing', 'crowdsecurity/http-crawl-non_statics']

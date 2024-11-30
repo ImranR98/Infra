@@ -1,0 +1,7 @@
+name: imranr/immich
+description: "Whitelist for Immich"
+whitelist:
+  reason: "Browsing Immich can cause false positives"
+  expression:
+    - evt.Overflow.Alert.Events[0].GetMeta('target_fqdn') == 'music.$SERVICES_DOMAIN'
+    - evt.Overflow.Alert.GetScenario() in ['crowdsecurity/http-probing', 'crowdsecurity/http-crawl-non_statics']
