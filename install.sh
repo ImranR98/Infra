@@ -115,11 +115,6 @@ if [ ! -d "$STATE_DIR"/crowdsec/config/postoverflows/s01-whitelist ]; then
     docker compose -p landscape -f "$STATE_DIR"/landscape.docker-compose.yaml up -d crowdsec
     echo "Waiting for Crowdsec to start..."
     sleep 10 # Hopefully enough time for any initialization to occur
-    sed -i 's/use_wal: false/use_wal: true/' "$STATE_DIR"/crowdsec/config/config.yaml
-    sudo mkdir -p "$STATE_DIR"/crowdsec/config/postoverflows/s01-whitelist
-    cat "$HERE_LX1A"/files/crowdsec.navidrome.whitelist.yaml | envsubst | sudo sudo dd status=none of="$STATE_DIR"/crowdsec/config/postoverflows/s01-whitelist/navidrome.whitelist.yaml
-    cat "$HERE_LX1A"/files/crowdsec.immich.whitelist.yaml | envsubst | sudo sudo dd status=none of="$STATE_DIR"/crowdsec/config/postoverflows/s01-whitelist/immich.whitelist.yaml
-    cat "$HERE_LX1A"/files/crowdsec.plausible.whitelist.yaml | envsubst | sudo sudo dd status=none of="$STATE_DIR"/crowdsec/config/postoverflows/s01-whitelist/plausible.whitelist.yaml
     docker compose -p landscape -f "$STATE_DIR"/landscape.docker-compose.yaml down crowdsec
     echo "Done."
 fi
@@ -127,7 +122,7 @@ if [ -z "$CROWDSEC_BOUNCER_KEY" ]; then
     printTitle "Generate Crowdsec Bouncer Key"
     docker compose -p landscape -f "$STATE_DIR"/landscape.docker-compose.yaml up -d crowdsec
     echo "Waiting for Crowdsec to start..."
-    sleep 10 # Hopefully enough time for any initialization to occur
+    sleep 10
     docker exec crowdsec cscli bouncers remove crowdsecBouncer 2>/dev/null || :
     export CROWDSEC_BOUNCER_KEY="$(docker exec crowdsec cscli bouncers add crowdsecBouncer | head -3 | tail -1 | awk '{print $1}')"
     echo "export CROWDSEC_BOUNCER_KEY='$CROWDSEC_BOUNCER_KEY'" >>"$STATE_DIR"/generated.VARS.sh
@@ -139,6 +134,7 @@ sudo mkdir -p "$STATE_DIR"/crowdsec/config/postoverflows/s01-whitelist
 cat "$HERE_LX1A"/files/crowdsec.navidrome.whitelist.yaml | envsubst | sudo sudo dd status=none of="$STATE_DIR"/crowdsec/config/postoverflows/s01-whitelist/navidrome.whitelist.yaml
 cat "$HERE_LX1A"/files/crowdsec.immich.whitelist.yaml | envsubst | sudo sudo dd status=none of="$STATE_DIR"/crowdsec/config/postoverflows/s01-whitelist/immich.whitelist.yaml
 cat "$HERE_LX1A"/files/crowdsec.plausible.whitelist.yaml | envsubst | sudo sudo dd status=none of="$STATE_DIR"/crowdsec/config/postoverflows/s01-whitelist/plausible.whitelist.yaml
+cat "$HERE_LX1A"/files/crowdsec.homeassistant.whitelist.yaml | envsubst | sudo sudo dd status=none of="$STATE_DIR"/crowdsec/config/postoverflows/s01-whitelist/homeassistant.whitelist.yaml
 
 if [ -z "$NTFY_SERVICE_USER_TOKEN" ]; then
     printTitle "Create Write-Only Ntfy Service Account + Token and Ntfy Admin Account"

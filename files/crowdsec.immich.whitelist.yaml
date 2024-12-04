@@ -4,4 +4,7 @@ whitelist:
   reason: "Browsing Immich can cause false positives"
   expression:
     - evt.Overflow.Alert.Events[0].GetMeta('target_fqdn') == 'music.$SERVICES_DOMAIN'
-    - evt.Overflow.Alert.GetScenario() in ['crowdsecurity/http-probing', 'crowdsecurity/http-crawl-non_statics']
+    - evt.Overflow.Alert.GetScenario() in ['crowdsecurity/http-probing']
+    - evt.Meta.http_verb == 'GET'
+    - evt.Meta.http_status == '404'
+    - evt.Meta.http_path matches '/api/assets/.+'

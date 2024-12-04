@@ -1,0 +1,9 @@
+name: imranr/homeassistant
+description: "Whitelist for HomeAssistant"
+whitelist:
+  reason: "HomeAssistant webhooks can cause false positives"
+  expression:
+    - evt.Overflow.Alert.Events[0].GetMeta('target_fqdn') == 'ha.$SERVICES_DOMAIN'
+    - evt.Overflow.Alert.GetScenario() in ['LePresidente/http-generic-403-bf']
+    - evt.Meta.http_verb == 'POST'
+    - evt.Meta.http_path matches '^/api/webhook/.+'
