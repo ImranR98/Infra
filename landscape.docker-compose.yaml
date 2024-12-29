@@ -415,6 +415,7 @@ services:
             - PORT=80
             - REDIS_HOST=send-db
             - FILE_DIR=/uploads
+            - MAX_FILES_PER_ARCHIVE=512
         labels:
             - "traefik.enable=true"
             - "traefik.http.routers.send.rule=Host(`send.$SERVICES_DOMAIN`)"
