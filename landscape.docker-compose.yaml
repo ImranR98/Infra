@@ -526,7 +526,7 @@ services:
         volumes:
             - "$MAIN_PARENT_DIR/Main/Notes/Transactions:/Transactions"
         environment:
-            - "TEXTFILE_DATA_PROVIDER_DATA_PATH=/Transactions/Acc 2024.md"
+            - "TEXTFILE_DATA_PROVIDER_DATA_PATH=/Transactions/Acc 2025.md"
             - MONTHLY_LIMIT_NTFY_URL=https://ntfy.$SERVICES_DOMAIN/${MAIN_NODE_HOSTNAME_LOWERCASE}_services_dscpln
             - WEEKLY_LIMIT_NTFY_URL=https://ntfy.$SERVICES_DOMAIN/${MAIN_NODE_HOSTNAME_LOWERCASE}_services_dscpln
             - NTFY_TOKEN=$NTFY_SERVICE_USER_TOKEN
