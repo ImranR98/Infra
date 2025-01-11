@@ -28,6 +28,7 @@ mkdir -p "$STATE_DIR"/opencanary
 mkdir -p "$STATE_DIR"/filebrowser
 mkdir -p "$STATE_DIR"/plausible
 mkdir -p "$STATE_DIR"/frpc
+mkdir -p "$STATE_DIR"/beszel
 echo "Done."
 
 printTitle "Generate Required Config Files"

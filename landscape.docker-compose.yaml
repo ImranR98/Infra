@@ -1,5 +1,4 @@
 services:
-
     # Watchtower - Container Updater
     watchtower:
         container_name: watchtower
@@ -284,6 +283,39 @@ services:
             - "traefik.docker.network=traefik"
         restart: unless-stopped
 
+    # Beszel - Local resource monitoring
+    beszel:
+        image: henrygd/beszel:latest
+        container_name: beszel
+        restart: unless-stopped
+        depends_on:
+            traefik:
+                condition: service_started
+        extra_hosts:
+            - host.docker.internal:host-gateway
+        volumes:
+            - $STATE_DIR/beszel:/beszel_data
+        networks:
+            - traefik
+        labels:
+            - "traefik.enable=true"
+            - "traefik.http.routers.beszel.rule=Host(`beszel.$SERVICES_DOMAIN`)"
+            - "traefik.http.routers.beszel.entrypoints=websecure"
+            - "traefik.http.routers.beszel.tls.certresolver=le"
+            - "traefik.http.routers.beszel.tls=true"
+            - "traefik.http.routers.beszel.middlewares=geoblock@file"
+            - "traefik.http.services.beszel.loadbalancer.server.port=8090"
+    beszel-agent:
+        image: henrygd/beszel-agent:latest
+        container_name: beszel-agent
+        restart: unless-stopped
+        network_mode: host
+        volumes:
+            - /var/run/docker.sock:/var/run/docker.sock:ro
+        environment:
+            PORT: 45876
+            KEY: "ssh-ed25519 ***REMOVED***"
+
     # OpenCanary - Honeypot
     opencanary:
         container_name: opencanary
@@ -333,7 +365,11 @@ services:
                 soft: 262144
                 hard: 262144
         healthcheck:
-            test: ["CMD-SHELL", "wget --no-verbose --tries=1 -O - http://127.0.0.1:8123/ping || exit 1"]
+            test:
+                [
+                    "CMD-SHELL",
+                    "wget --no-verbose --tries=1 -O - http://127.0.0.1:8123/ping || exit 1",
+                ]
             start_period: 1m
     plausible:
         image: ghcr.io/plausible/community-edition:v2.1.4
