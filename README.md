@@ -22,6 +22,8 @@ Docker-based setup for my self-hosted apps/services.
     - Everything in `mock_data/`: Data used to demo some services in a staging environment.
         - Some services depend on data on the host that is expected to be there in a specific directory hierarchy.
         - The `mock_data` folder reflects this hierarchy, except in production the folder would typically be the user's home directory.
+    - `simple_restart.sh`: Restart a running service.
+    - `update_frp.sh`: Check for FRPC/FRPS updates and install them if needed.
 
 ## Usage
 
