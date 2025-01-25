@@ -23,4 +23,6 @@ if [ "$MYFRPVER" != "$THEIRFRPVER" ]; then
     ssh -A -t "$PROXY_SSH_STRING" "bash '$PROXY_HOME/landscape-remote-services/frps.create-image.sh'"
     scp "$HERE_2G4U"/files/landscape-remote.install.sh "$PROXY_SSH_STRING":~/landscape-remote-services/landscape-remote.install.sh
     ssh -A -t "$PROXY_SSH_STRING" "bash '$PROXY_HOME/landscape-remote-services/landscape-remote.install.sh' frps-with-multiuser"
+else
+    echo "No update."
 fi

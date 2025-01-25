@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-HERE_M3U8="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd;)"
+HERE_M3U8="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 source "$HERE_M3U8"/prep_env.sh
 
 printTitle "Install Docker"
@@ -47,8 +47,8 @@ rm "$HERE_M3U8"/files/logtfy.remote.temp.json
 echo "Done."
 
 printTitle "Generate Docker Compose and Systemd Files and Start the Service"
-generateComposeService landscape-remote 1000 > "$HERE_M3U8"/files/landscape-remote.service
-cat "$HERE_M3U8"/landscape-remote.docker-compose.yaml | envsubst > "$HERE_M3U8"/files/landscape-remote.docker-compose.yaml
+generateComposeService landscape-remote 1000 >"$HERE_M3U8"/files/landscape-remote.service
+cat "$HERE_M3U8"/landscape-remote.docker-compose.yaml | envsubst >"$HERE_M3U8"/files/landscape-remote.docker-compose.yaml
 scp "$HERE_M3U8"/files/landscape-remote.install.sh "$PROXY_SSH_STRING":~/landscape-remote-services/landscape-remote.install.sh
 scp "$HERE_M3U8"/files/landscape-remote.service "$PROXY_SSH_STRING":~/landscape-remote-services/state/landscape-remote.service
 scp "$HERE_M3U8"/files/landscape-remote.docker-compose.yaml "$PROXY_SSH_STRING":~/landscape-remote-services/state/landscape-remote.docker-compose.yaml
@@ -57,7 +57,9 @@ rm "$HERE_M3U8"/files/landscape-remote.service
 ssh -A -t "$PROXY_SSH_STRING" "bash '$PROXY_HOME/landscape-remote-services/landscape-remote.install.sh'"
 echo "Done."
 
-printTitle "Install FRPC-Preboot"
-bash "$HERE_M3U8"/files/dracut-crypt-ssh.install.sh
-bash "$HERE_M3U8"/files/frpc-preboot.install.sh
-rm "$HERE_M3U8"/files/frpc-preboot.ini
+if "$HERE_M3U8"/files/check_root_luks.sh >/dev/null 2>&1; then
+    printTitle "Install FRPC-Preboot and Dracut-Crypt-SSH so that root volume can be decrypted remotely."
+    bash "$HERE_M3U8"/files/dracut-crypt-ssh.install.sh
+    bash "$HERE_M3U8"/files/frpc-preboot.install.sh
+    rm "$HERE_M3U8"/files/frpc-preboot.ini
+fi

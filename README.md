@@ -44,28 +44,28 @@ Docker-based setup for my self-hosted apps/services.
 
 ## Usage
 
-1. Create a copy of `template.VARS.sh` named `VARS.sh` (or `staging.VARS.sh` or `production.VARS.sh`). Fill in the values as appropriate.
-2. Fork this repo and modify any of the source files as appropriate to fit your needs.
-    - This is optional since all user/environment-specific information comes from the user-defined `VARS.sh` file.
-    - But this repo is tailored to the author's needs - it is likely that you will at least want to disable certain apps or change some hardcoded app settings.
-3. Set up a server with outbound internet access.
+1. Set up a server with outbound internet access.
     - Most of the code is distro-agnostic but a few lines are not. We assume the server is running Fedora 41.
     - The server must be powerful enough to run all apps defined in `landscape.docker-compose.yaml`.
-    - The server is assumed to have a LUKS-encrypted drive.
-        - If this is not the case, comment out the lines in `install_remote.sh` related to FRPC preboot.
-        - The boot process cannot complete without manual decrption of the drive. As part of `install_remote.sh`, a way to decrypt remotely via SSH will be set up.
-    - The server must contain the following directories as defined in your `VARS.sh` file:
-        1. `MAIN_PARENT_DIR`: Your data, used by the apps.
-            - This is typically just your home directory.
-            - All apps that work with your personal data (photos, notes, etc.) expect those files to be stored in a specific folder structure. You must provide that structure - use `mock-data/` as a template to copy from.
-        2. `STATE_DIR`: Persistent internal storage/state for all apps.
-            - Set to `./state/` by default.
-            - Running services exclusively rely on this folder to store their internal data.
-            - The folder and everything in it is auto-generated and should not be modified.
-            - Significance of the data varies on a per-apps basis - some apps store ephemeral state while others store more important long-term data.
-3. Set up a remote public-facing server reachable via SSH from your main server.
+    - If the server has a LUKS-encrypted drive (optional), a way to decrypt it remotely via SSH will be installed as part of the setup process.
+2. Clone this repo on the server and create a copy of `template.VARS.sh` named `VARS.sh` (or `staging.VARS.sh` or `production.VARS.sh`). Fill in the values as appropriate. You may benefit from reading through the rest of these steps first.
+3. Modify any of the source files in a fork of this repo, as appropriate to fit your needs.
+    - This is optional since all user/environment-specific information comes from the user-defined `VARS.sh` file.
+    - But this repo is tailored to the author's needs - it is likely that you will at least want to disable certain apps or change some hardcoded app settings.
+4. Ensure the server contains the following directories as defined in your `VARS.sh` file:
+    1. `MAIN_PARENT_DIR`: Your data, used by the apps.
+        - This is typically just your home directory.
+        - All apps that work with your personal data (photos, notes, etc.) expect that data to be stored in a specific folder structure inside this directory. You must create that structure and arrange your files accordingly - use `mock-data/` as a template to copy from.
+    2. `STATE_DIR`: Persistent internal storage/state for all apps.
+        - Set to `./state/` by default.
+        - Running services exclusively rely on this folder and/or named Docker volumes to store their internal data.
+        - The folder and everything in it is auto-generated and should not be modified.
+        - Significance of the data varies on a per-apps basis - some apps store ephemeral state (for example generated video thumbnails) while others store more important long-term data that should be backed up (for example Home Assistant settings).
+3. Set up a proxy server with outbound and inbound internet access (public IP/ports).
+    - Ensure it is reachable via SSH from your main server.
     - We assume this is running Ubuntu 24.04.
-4. Set up DNS rules for all apps, each pointing to the remote proxy server's IP.
-    - For a list of all required domains, define a `VARS.sh` file and then run: `source prep_env.sh; findDomainsInSetup`
-5. Run `install_remote.sh`.
-6. Run `install.sh`.
+4. Purchase a domain for your apps, and set up DNS rules for each app subdomain, all to the remote proxy server's IP.
+    - For a list of all required subdomains, run: `source prep_env.sh; findDomainsInSetup`
+5. Run `install_remote.sh` on the main server to remotely install services on the proxy.
+6. Run `install.sh` on the main server to install all apps/services on the main server.
+7. Occasionally run `update_frp.sh`.
