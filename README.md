@@ -44,8 +44,3 @@ Docker-based setup for my self-hosted apps/services.
 1. Create a copy of `template.VARS.sh` named `VARS.sh` (or `staging.VARS.sh` or `production.VARS.sh`). Fill in the values as appropriate.
 2. Run `install_remote.sh`.
 3. Run `install.sh`.
-
-<!--
-TODO:
-- The opodsync image is from some rando Docker repo. Either find a more trustworthy source or build it yourself.
--->

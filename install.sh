@@ -198,6 +198,3 @@ echo "Note:
 - Some image tags are hardcoded - you may need to update these manually.
 - Some services may need manual setup in their respective GUIs."
 printLine -
-
-# TODO:
-# Separate FRPC update script which auto-grabs latest tag and, if an update was done, reminds user to check FRPS too.

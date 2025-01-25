@@ -2,7 +2,7 @@ services:
 
     # FRPC - Reverse Proxy Client
     frpc:
-        image: fatedier/frpc:v0.61.0
+        image: fatedier/frpc:v0.61.1
         container_name: frpc
         restart: always
         volumes:
