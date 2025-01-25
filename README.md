@@ -23,7 +23,7 @@ Docker-based setup for my self-hosted apps/services.
     - `landscape.docker-compose.yaml`: Defines all services that run on the server (except FRPC).
     - `frpc.docker-compose.yaml`: Defines the FRPC service (this is separate because starting/stopping FRPC can be much riskier than for other services).
     - `landscape-remote.docker-compose.yaml`: Defines all services that run on the remote proxy.
-- In order to have multiple instances of this setup (staging, production, etc.) and protect secret values from being checked in to Git, all environment-specific configuration and/or sensitive information is stored in environment-specific Git-ignored variable fles.
+- In order to have multiple instances of this setup (staging, production, etc.) and protect secret values from being checked in to Git, all environment-specific configuration and/or sensitive information is stored in environment-specific Git-ignored variable files.
     - `template.VARS.sh`: Example file used as a starting point for a user to define their own `VARS.sh` containing environment-specific variables and secrets.
     - For the install script to run, at least one of the following user-defined files must exist (listed in order of preference):
         - `VARS.production.sh`
@@ -60,12 +60,12 @@ Docker-based setup for my self-hosted apps/services.
         - Set to `./state/` by default.
         - Running services exclusively rely on this folder and/or named Docker volumes to store their internal data.
         - The folder and everything in it is auto-generated and should not be modified.
-        - Significance of the data varies on a per-apps basis - some apps store ephemeral state (for example generated video thumbnails) while others store more important long-term data that should be backed up (for example Home Assistant settings).
+        - Significance of the data varies on a per-app basis - some apps store ephemeral state (for example generated video thumbnails) while others store more important long-term data that should be backed up (for example Home Assistant settings).
 3. Set up a proxy server with outbound and inbound internet access (public IP/ports).
     - Ensure it is reachable via SSH from your main server.
     - We assume this is running Ubuntu 24.04.
-4. Purchase a domain for your apps, and set up DNS rules for each app subdomain, all to the remote proxy server's IP.
+4. Purchase a domain for your apps, and set up DNS rules for each app subdomain, all pointing to the remote proxy server's IP.
     - For a list of all required subdomains, run: `source prep_env.sh; findDomainsInSetup`
-5. Run `install_remote.sh` on the main server to remotely install services on the proxy.
+5. Run `install_remote.sh` on the main server to remotely setup everything needed on the proxy server.
 6. Run `install.sh` on the main server to install all apps/services on the main server.
-7. Occasionally run `update_frp.sh`.
+7. Occasionally run `update_frp.sh` to keep FRP up to date.
