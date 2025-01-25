@@ -70,7 +70,7 @@ Docker-based setup for my self-hosted apps/services.
 6. Run `install.sh` on the main server to install all apps/services on the main server.
 7. Some apps require manual initialization after they have been installed.
     - It is dangerous to publicly expose these apps without initializing them, since they may allow for unauthorized access.
-    - For this reason, certain apps are temporatily protected with Authelia authentication middleware upon initial install, even when those apps would not usually be protected in their final post-initialization state (due to having their own authentication, or having specific client needs that are not compatible with Authelia).
+    - For this reason, certain apps are temporarily protected with Authelia authentication middleware upon initial install, even when those apps would not usually be protected in their final post-initialization state (due to having their own authentication, or having specific client needs that are not compatible with Authelia).
     - At this stage, you must manually complete the setup process for each of these apps. For a list of these apps' domains, run the following command: `cat state/authelia/config/configuration.yml | grep -Eo 'domain:.+# IGNORE INITIALLY' | awk '{print $2}'`
     - Once finished, re-run `install.sh`. This time, the Authelia middleware will not apply to those apps.
 8. Setup is complete.
