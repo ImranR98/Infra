@@ -17,6 +17,12 @@ Docker-based setup for my self-hosted apps/services.
     - This has the additional benefit of hiding the home server's IP as all app domain/subdomain DNS entries point to the cloud proxy. 
 - The cloud-based proxy also runs a few additional apps itself where appropriate (for example, [Syncthing Relay Server](https://docs.syncthing.net/users/strelaysrv.html)).
 
+## Diagram
+
+![Landscape Diagram](./files/landscape.svg)
+
+*Note: Diagram may be out of date.*
+
 ## Files
 
 - Services are defined in Docker Compose files. Specifically:
