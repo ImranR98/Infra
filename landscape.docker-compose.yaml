@@ -432,42 +432,43 @@ services:
             timeout: 20s
             retries: 3
 
-    # Send - File Sharing
-    send:
-        container_name: send
-        image: registry.gitlab.com/timvisee/send:latest
-        restart: unless-stopped
-        depends_on:
-            - traefik
-            - send-db
+    # Sharry - File Sharing
+    sharry:
+        image: eikek0/sharry:latest
+        container_name: sharry
+        command: /opt/sharry.conf
         volumes:
-            - $STATE_DIR/send/uploads:/uploads
-        environment:
-            - VIRTUAL_HOST=send.$SERVICES_DOMAIN
-            - VIRTUAL_PORT=80
-            - DHPARAM_GENERATION=false
-            - NODE_ENV=production
-            - BASE_URL=https://send.$SERVICES_DOMAIN
-            - PORT=80
-            - REDIS_HOST=send-db
-            - FILE_DIR=/uploads
-            - MAX_FILES_PER_ARCHIVE=512
+            - $STATE_DIR/sharry/sharry.conf:/opt/sharry.conf
+            - $STATE_DIR/sharry/uploads:/uploads
+        depends_on:
+            sharry-db:
+                condition: service_healthy
         labels:
             - "traefik.enable=true"
-            - "traefik.http.routers.send.rule=Host(`send.$SERVICES_DOMAIN`)"
-            - "traefik.http.routers.send.entrypoints=websecure"
-            - "traefik.http.routers.send.middlewares=crowdsec-bouncer@file"
-            - "traefik.http.routers.send.tls.certresolver=le"
-            - "traefik.http.routers.send.tls=true"
-            - "traefik.http.services.send.loadbalancer.server.port=80"
+            - "traefik.http.routers.sharry.rule=Host(`share.$SERVICES_DOMAIN`)"
+            - "traefik.http.routers.sharry.entrypoints=websecure"
+            - "traefik.http.routers.sharry.middlewares=crowdsec-bouncer@file"
+            - "traefik.http.routers.sharry.tls.certresolver=le"
+            - "traefik.http.routers.sharry.tls=true"
+            - "traefik.http.services.sharry.loadbalancer.server.port=9090"
         networks:
             - traefik
-    send-db:
-        container_name: send-db
-        image: "redis:alpine"
-        restart: unless-stopped
+    sharry-db:
+        image: postgres:17.2
+        container_name: sharry-db
         volumes:
-            - $STATE_DIR/send/db:/data
+            - $STATE_DIR/sharry/db:/var/lib/postgresql/data/
+        environment:
+            - POSTGRES_USER=dbuser
+            - POSTGRES_PASSWORD=dbpass
+            - POSTGRES_DB=dbname
+            - PGUSER=dbuser
+        healthcheck:
+            test: ["CMD-SHELL", "pg_isready", "-d", "dbname"]
+            interval: 15s
+            timeout: 60s
+            retries: 5
+            start_period: 15s
         networks:
             - traefik
 
