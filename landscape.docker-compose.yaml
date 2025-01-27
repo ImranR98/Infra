@@ -730,27 +730,6 @@ services:
         networks:
             - traefik
 
-    # oPodSync - Podcast Sync
-    opodsync:
-        container_name: opodsync
-        image: ganeshlab/opodsync:latest
-        user: 1000:1000
-        depends_on:
-            - traefik
-        restart: unless-stopped
-        volumes:
-            - "$STATE_DIR/opodsync:/var/www/server/data"
-        labels:
-            - "traefik.enable=true"
-            - "traefik.http.routers.opodsync.rule=Host(`opodsync.$SERVICES_DOMAIN`)"
-            - "traefik.http.routers.opodsync.entrypoints=websecure"
-            - "traefik.http.routers.opodsync.tls.certresolver=le"
-            - "traefik.http.routers.opodsync.tls=true"
-            - "traefik.http.routers.opodsync.middlewares=geoblock@file"
-            - "traefik.http.services.opodsync.loadbalancer.server.port=8080"
-        networks:
-            - traefik
-
     # Home Assistant + MQTT
     homeassistant:
         container_name: homeassistant
