@@ -9,7 +9,6 @@ if [ -n "$2" ]; then
 fi
 cat "$HERE_F00D"/"$PROJECT".docker-compose.yaml | envsubst >"$STATE_DIR"/"$PROJECT".docker-compose.yaml
 if [ -f "$HERE_F00D"/private.docker-compose.yaml ]; then
-    echo AAAA
     mergeComposeFiles "$STATE_DIR"/landscape.docker-compose.yaml "$HERE_F00D"/private.docker-compose.yaml
 fi
 if [ -n "$1" ]; then
