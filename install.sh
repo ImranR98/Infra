@@ -165,6 +165,12 @@ printTitle "Regenerate Docker Compose File to Pick Up any Changes"
 cat "$HERE_LX1A"/landscape.docker-compose.yaml | envsubst >"$STATE_DIR"/landscape.docker-compose.yaml
 echo "Done."
 
+if [ -f "$HERE_LX1A"/private.docker-compose.yaml ]; then
+    printTitle "Append Private Docker Compose File to Generated Docker Compose File"
+    mergeComposeFiles "$STATE_DIR"/landscape.docker-compose.yaml "$HERE_LX1A"/private.docker-compose.yaml
+    echo "Done."
+fi
+
 printTitle "Generate and Start the Systemd Service"
 generateComposeService landscape 1000 >"$STATE_DIR"/landscape.service
 awk -v SCRIPT_DIR="$STATE_DIR" '{gsub("path_to_here", SCRIPT_DIR); print}' "$STATE_DIR"/landscape.service >"$STATE_DIR"/landscape.service.temp

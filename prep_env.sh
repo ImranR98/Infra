@@ -233,3 +233,41 @@ replaceImageTagsInYAML() {
         fi
     done <"$FILE"
 }
+
+mergeComposeFiles() {
+    # Paths to the existing and separate service files
+    existing_file="$1"
+    separate_service_file="$2"
+
+    # Find the insertion line in the existing file (next top-level key after 'services:')
+    insert_line=$(awk '
+    BEGIN { found=0 }
+    /^services:/ { found=1; next }
+    found && /^[[:alpha:]_][[:alnum:]_]*:/ { print NR; exit }
+' "$existing_file")
+
+    # Extract the service content from the separate file (under 'services:' and indented)
+    service_content=$(awk '
+    /^services:/ { in_services=1; next }
+    in_services && /^[^[:space:]]/ { exit }
+    in_services { print }
+' "$separate_service_file")
+
+    # Backup the original file
+    cp "$existing_file" "${existing_file}.bak"
+
+    # Insert the service content into the existing file
+    if [ -z "$insert_line" ]; then
+        # Append if no top-level key found after services
+        echo "$service_content" >>"$existing_file"
+    else
+        # Use a temporary file to construct the new content
+        temp_file=$(mktemp)
+        # Combine parts: before insertion, service content, after insertion
+        head -n $((insert_line - 1)) "$existing_file" >"$temp_file"
+        echo "$service_content" >>"$temp_file"
+        tail -n +$insert_line "$existing_file" >>"$temp_file"
+        # Overwrite the original file
+        mv "$temp_file" "$existing_file"
+    fi
+}
