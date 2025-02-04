@@ -52,6 +52,8 @@ access_control:
       policy: one_factor
     - domain: '*.$SERVICES_TOP_DOMAIN'
       policy: two_factor
+    - domain: '*'
+      policy: two_factor
 
 session:
   secret: ${AUTHELIA_SESSION_SECRET}

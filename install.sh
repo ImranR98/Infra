@@ -41,6 +41,11 @@ if [ ! -f ""$STATE_DIR"/authelia/config/configuration.yml" ]; then
 else
     cat "$HERE_LX1A"/files/authelia.config.yaml | envsubst >"$STATE_DIR"/authelia/config/configuration.yml
 fi
+if [ -f "$HERE_LX1A"/private.authelia.config.yaml ]; then
+    printTitle "Merge Private Authelia Config with Main Authelia Config"
+    mergeYaml "$STATE_DIR"/authelia/config/configuration.yml "$HERE_LX1A"/private.authelia.config.yaml
+    echo "Done."
+fi
 echo "$AUTHELIA_USERS_DATABASE" >"$STATE_DIR"/authelia/config/users_database.yml
 if [ ! -f "$STATE_DIR"/traefik/acme.json ]; then
     echo '{}' >"$STATE_DIR"/traefik/acme.json
@@ -166,8 +171,8 @@ cat "$HERE_LX1A"/landscape.docker-compose.yaml | envsubst >"$STATE_DIR"/landscap
 echo "Done."
 
 if [ -f "$HERE_LX1A"/private.docker-compose.yaml ]; then
-    printTitle "Append Private Docker Compose File to Generated Docker Compose File"
-    mergeComposeFiles "$STATE_DIR"/landscape.docker-compose.yaml "$HERE_LX1A"/private.docker-compose.yaml
+    printTitle "Merge Private Docker Compose File with Generated Docker Compose File"
+    mergeYaml "$STATE_DIR"/landscape.docker-compose.yaml "$HERE_LX1A"/private.docker-compose.yaml
     echo "Done."
 fi
 
