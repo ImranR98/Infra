@@ -48,6 +48,8 @@ access_control:
       policy: bypass # IGNORE INITIALLY
     - domain: opodsync.$SERVICES_DOMAIN # IGNORE INITIALLY
       policy: bypass # IGNORE INITIALLY
+    - domain: docker.$SERVICES_DOMAIN
+      policy: bypass
     - domain: ytdl.$SERVICES_DOMAIN
       policy: one_factor
     - domain: '*.$SERVICES_TOP_DOMAIN'

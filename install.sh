@@ -30,6 +30,8 @@ mkdir -p "$STATE_DIR"/plausible
 mkdir -p "$STATE_DIR"/frpc
 mkdir -p "$STATE_DIR"/beszel
 mkdir -p "$STATE_DIR"/sharry
+mkdir -p "$STATE_DIR"/registry/data
+mkdir -p "$STATE_DIR"/registry/auth
 echo "Done."
 
 printTitle "Generate Required Config Files"
@@ -100,6 +102,9 @@ if [ -n "$PRINT_IMMICH_OAUTH_INFO" ]; then
     cat "$STATE_DIR"/immich/oauth_info.txt
 fi
 sudo chown -R root:root "$STATE_DIR"/homeassistant
+if [ ! -f "$STATE_DIR"/registry/auth/.htpasswd ]; then
+    htpasswd -Bc "$STATE_DIR"/registry/auth/.htpasswd "$USER"
+fi
 echo "Done."
 
 printTitle "Generate Docker Compose File"

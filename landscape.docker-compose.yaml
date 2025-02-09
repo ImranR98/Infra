@@ -153,12 +153,12 @@ services:
             - "--providers.docker.exposedByDefault=false"
             - "--providers.file.filename=/etc/traefik/dynamic-configuration.yaml"
             - "--entryPoints.web=true"
-            - "--entryPoints.web.address=:8081/tcp"
+            - "--entryPoints.web.address=:8081"
             - "--entryPoints.web.http.redirections.entryPoint.to=websecure"
-            - "--entryPoints.web.http.redirections.entryPoint.scheme=websecure"
+            - "--entryPoints.web.http.redirections.entryPoint.scheme=https"
             - "--entrypoints.web.http.redirections.entrypoint.permanent=true"
             - "--entryPoints.websecure=true"
-            - "--entryPoints.websecure.address=:8443/tcp"
+            - "--entryPoints.websecure.address=:8443"
             - "--entryPoints.websecure.forwardedHeaders.trustedIPs=172.19.0.0/16,192.168.0.0/16"
             - "--entryPoints.websecure.proxyProtocol.trustedIPs=172.19.0.0/16,192.168.0.0/16"
             - "--entryPoints.websecure.http.middlewares=crowdsec-bouncer@file"
@@ -404,6 +404,32 @@ services:
             - "traefik.http.routers.plausible.tls=true"
             - "traefik.http.services.plausible.loadbalancer.server.port=8000"
             - "traefik.http.routers.plausible.middlewares=authelia@docker"
+
+    registry:
+        container_name: registry
+        image: registry
+        restart: unless-stopped
+        depends_on:
+            - traefik
+        user: 1000:1000
+        environment:
+            - REGISTRY_AUTH=htpasswd
+            - REGISTRY_AUTH_HTPASSWD_REALM=Registry Realm
+            - REGISTRY_AUTH_HTPASSWD_PATH=/auth/.htpasswd
+            - REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY=/data
+        volumes:
+            - $STATE_DIR/registry/auth:/auth
+            - $STATE_DIR/registry/data:/data
+        labels:
+            - "traefik.enable=true"
+            - "traefik.http.routers.registry.rule=Host(`docker.$SERVICES_DOMAIN`)"
+            - "traefik.http.routers.registry.entrypoints=websecure"
+            - "traefik.http.routers.registry.tls.certresolver=le"
+            - "traefik.http.routers.registry.tls=true"
+            - "traefik.http.routers.registry.middlewares=authelia@docker,geoblock@file"
+            - "traefik.http.services.registry.loadbalancer.server.port=5000"
+        networks:
+            - traefik
 
     # File Browser
     filebrowser:
