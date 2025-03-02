@@ -70,4 +70,4 @@ export GEOBLOCK_CONFIG_SUBSET='
             - CU
 '
 
-export AUTHELIA_SHARRY_CLIENT_SECRET='$pbkdf2-sha512$abc' # docker run authelia/authelia:latest authelia crypto hash generate pbkdf2 --variant sha512 --random --random.length 72 --random.charset rfc3986
+export AUTHELIA_SHARRY_CLIENT_SECRET='abcd' # docker run authelia/authelia:latest authelia crypto hash generate pbkdf2 --variant sha512 --random --random.length 72 --random.charset rfc3986
