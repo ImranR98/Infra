@@ -50,7 +50,7 @@
         },
         {
             "module": "syncthing_connections",
-            "ntfyTopic": "logtfy",
+            "ntfyTopic": "syncthing",
             "defaultPriority": "1",
             "enabled": true,
             "parserArg": "${LOGTFY_SYNCTHING_EXCLUDED_DEVICE_IDS}"
