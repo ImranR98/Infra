@@ -44,7 +44,7 @@
         },
         {
             "module": "traefik_geoblock_allowed_requests",
-            "ntfyTopic": "logtfy",
+            "ntfyTopic": "traefik",
             "defaultPriority": "1",
             "enabled": true
         },
