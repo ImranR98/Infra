@@ -315,7 +315,7 @@ services:
             - /var/run/docker.sock:/var/run/docker.sock:ro
         environment:
             PORT: 45876
-            KEY: "ssh-ed25519 ***REMOVED***"
+            # ${BESZEL_ENV_VARS} # DO NOT REMOVE, THIS IS REPLACED BY envsubst
 
     # OpenCanary - Honeypot
     opencanary:
@@ -902,6 +902,50 @@ services:
             - "traefik.http.routers.webdav.tls.certresolver=le"
             - "traefik.http.routers.webdav.tls=true"
             - "traefik.http.services.webdav.loadbalancer.server.port=8080"
+
+    sxncd:
+        image: nowsci/sxncd
+        container_name: sxncd
+        environment:
+            DEBUG: true
+            POSTGRES_URL: postgresql://***REMOVED***@sxncd-db/sxncd
+            PUBLIC_URL: https://sxncd.$SERVICES_DOMAIN
+            APP_MODULES: obtainium
+            AUTH_MODULES: oidc
+            OIDC_CLIENT_ID: sxncd
+            OIDC_CLIENT_SECRET: $AUTHELIA_SXNCD_CLIENT_SECRET
+            OIDC_ISSUER: https://auth.$SERVICES_DOMAIN
+            OIDC_AUTHORIZATION_URL: https://auth.$SERVICES_DOMAIN/api/oidc/authorization
+            OIDC_TOKEN_URL: https://auth.$SERVICES_DOMAIN/api/oidc/token
+            OIDC_USERINFO_URL: https://auth.$SERVICES_DOMAIN/api/oidc/userinfo
+        restart: unless-stopped
+        depends_on:
+            - traefik
+            - sxncd-db
+        networks:
+            - traefik
+        labels:
+            - "traefik.enable=true"
+            - "traefik.http.routers.sxncd.rule=Host(`sxncd.$SERVICES_DOMAIN`)"
+            - "traefik.http.routers.sxncd.entrypoints=websecure"
+            - "traefik.http.routers.sxncd.middlewares=authelia@docker,crowdsec-bouncer@file,geoblock@file"
+            - "traefik.http.routers.sxncd.tls.certresolver=le"
+            - "traefik.http.routers.sxncd.tls=true"
+            - "traefik.http.services.sxncd.loadbalancer.server.port=9693"
+    sxncd-db:
+        image: postgres:17-alpine
+        container_name: sxncd-db
+        depends_on:
+            - traefik
+        environment:
+            - POSTGRES_USER=sxncd
+            - POSTGRES_PASSWORD=password
+            - POSTGRES_DB=sxncd
+        volumes:
+            - $STATE_DIR/sxncd:/var/lib/postgresql/data
+        restart: unless-stopped
+        networks:
+            - traefik 
 
 networks:
     traefik:

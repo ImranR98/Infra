@@ -71,3 +71,8 @@ export GEOBLOCK_CONFIG_SUBSET='
 '
 
 export AUTHELIA_SHARRY_CLIENT_SECRET='abcd' # docker run authelia/authelia:latest authelia crypto hash generate pbkdf2 --variant sha512 --random --random.length 72 --random.charset rfc3986
+export AUTHELIA_SXNCD_CLIENT_SECRET='abcd' # As above
+
+export BESZEL_ENV_VARS='
+            KEY: "ssh-ed25519 ABCXYZ"
+            SENSORSS: "cros_ec_f75303_cpu,acpitz_2,nvme_sensor_2,cros_ec_peci,acpitz,coretemp_core_12,cros_ec_f75303_ddr,cros_ec_f75303_local,acpitz_1,coretemp_package_id_O,jc42,jc42_10,coretemp_core_4,coretemp_core_16,coretemp_core_17,coretemp_core_18,coretemp_core_19,coretemp_core_20,coretemp_core_21,coretemp_core_22,coretemp_core_23,nvme_composite,nyme_sensor_1,nvme_sensor_8,coretemp_core_8,coretemp_core_O,cros_ec_f75397-vccgt,acpitz_3,iwlwifi_1"'
