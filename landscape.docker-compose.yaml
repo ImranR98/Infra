@@ -460,43 +460,50 @@ services:
             timeout: 20s
             retries: 3
 
-    # Sharry - File Sharing
-    sharry:
-        image: eikek0/sharry:latest
-        container_name: sharry
-        command: /opt/sharry.conf
-        volumes:
-            - $STATE_DIR/sharry/sharry.conf:/opt/sharry.conf
-            - $STATE_DIR/sharry/uploads:/uploads
+    
+    # Send - File Sharing
+    send:
+        container_name: send
+        image: registry.gitlab.com/timvisee/send:latest
+        restart: unless-stopped
         depends_on:
-            sharry-db:
-                condition: service_healthy
+            - traefik
+            - send-db
+        volumes:
+            - $STATE_DIR/send/uploads:/uploads
+        environment:
+            - VIRTUAL_HOST=share.$SERVICES_DOMAIN
+            - VIRTUAL_PORT=80
+            - DHPARAM_GENERATION=false
+            - NODE_ENV=production
+            - BASE_URL=https://share.$SERVICES_DOMAIN
+            - PORT=80
+            - REDIS_HOST=send-db
+            - FILE_DIR=/uploads
+            - MAX_FILES_PER_ARCHIVE=512
+            - MAX_FILE_SIZE=137438953472 # 128 GB
+            - MAX_EXPIRE_SECONDS=31536000 # 365 days
+            - MAX_DOWNLOADS=1000000000 # 1 billion
+            - DOWNLOAD_COUNTS=10,1,2,5,10,15,25,50,100,1000,1000000000
+            - EXPIRE_TIMES_SECONDS=3600,86400,604800,2592000,31536000
+            - DEFAULT_DOWNLOADS=100
+            - DEFAULT_EXPIRE_SECONDS=2592000
         labels:
             - "traefik.enable=true"
-            - "traefik.http.routers.sharry.rule=Host(`share.$SERVICES_DOMAIN`)"
-            - "traefik.http.routers.sharry.entrypoints=websecure"
-            - "traefik.http.routers.sharry.middlewares=authelia@docker"
-            - "traefik.http.routers.sharry.tls.certresolver=le"
-            - "traefik.http.routers.sharry.tls=true"
-            - "traefik.http.services.sharry.loadbalancer.server.port=9090"
+            - "traefik.http.routers.send.rule=Host(`share.$SERVICES_DOMAIN`)"
+            - "traefik.http.routers.send.entrypoints=websecure"
+            - "traefik.http.routers.send.middlewares=authelia@docker"
+            - "traefik.http.routers.send.tls.certresolver=le"
+            - "traefik.http.routers.send.tls=true"
+            - "traefik.http.services.send.loadbalancer.server.port=80"
         networks:
             - traefik
-    sharry-db:
-        image: postgres:17.2
-        container_name: sharry-db
+    send-db:
+        container_name: send-db
+        image: "redis:alpine"
+        restart: unless-stopped
         volumes:
-            - $STATE_DIR/sharry/db:/var/lib/postgresql/data/
-        environment:
-            - POSTGRES_USER=dbuser
-            - POSTGRES_PASSWORD=dbpass
-            - POSTGRES_DB=dbname
-            - PGUSER=dbuser
-        healthcheck:
-            test: ["CMD-SHELL", "pg_isready", "-d", "dbname"]
-            interval: 15s
-            timeout: 60s
-            retries: 5
-            start_period: 15s
+            - $STATE_DIR/send/db:/data
         networks:
             - traefik
 

@@ -35,6 +35,18 @@ access_control:
       - '^/api/public([/?].*)?$'
       policy: bypass
     - domain: share.$SERVICES_DOMAIN
+      resources:
+      - '^/download/[^/]+/?$'
+      - '^/api/download/[^/]+/?$'
+      - '^/api/download/blob/[^/]+/?$'
+      - '^/api/info/[^/]+/?$'
+      - '^/api/metadata/[^/]+/?$'
+      - '^/[^/]+\.js$'
+      - '^/[^/]+\.svg$'
+      - '^/[^/]+\.css$'
+      - '^/[^/]+\.woff2$'
+      - '^/[^/]+\.png$'
+      - '^/__heartbeat__/?$'
       policy: bypass
     - domain: music.$SERVICES_DOMAIN # IGNORE INITIALLY
       policy: bypass # IGNORE INITIALLY
@@ -104,16 +116,3 @@ identity_providers:
           - 'profile'
           - 'email'
         userinfo_signed_response_alg: 'none'
-      - client_id: 'sharry'
-        client_name: 'sharry'
-        client_secret: '$AUTHELIA_SHARRY_CLIENT_SECRET'
-        public: false
-        authorization_policy: 'two_factor'
-        redirect_uris:
-          - https://share.${SERVICES_DOMAIN}/api/v2/open/auth/oauth/authelia/resume
-        scopes:
-          - 'openid'
-          - 'profile'
-          - 'email'
-        userinfo_signed_response_alg: 'none'
-        token_endpoint_auth_method: 'client_secret_post'

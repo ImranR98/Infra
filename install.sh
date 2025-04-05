@@ -29,14 +29,12 @@ mkdir -p "$STATE_DIR"/filebrowser
 mkdir -p "$STATE_DIR"/plausible
 mkdir -p "$STATE_DIR"/frpc
 mkdir -p "$STATE_DIR"/beszel
-mkdir -p "$STATE_DIR"/sharry
 mkdir -p "$STATE_DIR"/registry/data
 mkdir -p "$STATE_DIR"/registry/auth
 echo "Done."
 
 printTitle "Generate Required Config Files"
 cat "$HERE_LX1A"/files/logtfy.json | envsubst >"$STATE_DIR"/logtfy/config.json
-cat "$HERE_LX1A"/files/sharry.conf | envsubst >"$STATE_DIR"/sharry/sharry.conf
 if [ ! -f ""$STATE_DIR"/authelia/config/configuration.yml" ]; then
     sed '/# IGNORE INITIALLY$/ s/^/# /' "$HERE_LX1A"/files/authelia.config.yaml | envsubst >"$STATE_DIR"/authelia/config/configuration.yml
     echo "- Generated Authelia config does not include lines that end with \"# IGNORE INITIALLY\"."
