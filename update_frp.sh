@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-read -p "WARNING: ONLY run this script if you have LOCAL access to the FRPC machine. Type 'continue' to continue. " USER_RESPONSE
+read -p "WARNING: ONLY run this script if you have LOCAL access to the FRPC machine (if your current session is an SSH session, it must also be a local connection). Type 'continue' to continue. " USER_RESPONSE
 if [ "$USER_RESPONSE" != 'continue' ]; then
     exit
 fi

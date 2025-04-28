@@ -153,12 +153,12 @@ services:
             - "--providers.docker.exposedByDefault=false"
             - "--providers.file.filename=/etc/traefik/dynamic-configuration.yaml"
             - "--entryPoints.web=true"
-            - "--entryPoints.web.address=:8081"
+            - "--entryPoints.web.address=:80"
             - "--entryPoints.web.http.redirections.entryPoint.to=websecure"
             - "--entryPoints.web.http.redirections.entryPoint.scheme=https"
             - "--entrypoints.web.http.redirections.entrypoint.permanent=true"
             - "--entryPoints.websecure=true"
-            - "--entryPoints.websecure.address=:8443"
+            - "--entryPoints.websecure.address=:443"
             - "--entryPoints.websecure.forwardedHeaders.trustedIPs=172.19.0.0/16,192.168.0.0/16"
             - "--entryPoints.websecure.proxyProtocol.trustedIPs=172.19.0.0/16,192.168.0.0/16"
             - "--entryPoints.websecure.http.middlewares=crowdsec-bouncer@file"
@@ -169,7 +169,7 @@ services:
             - "--experimental.plugins.geoblock.version=v0.2.8"
         ports:
             - "80:80"
-            - "443:8443"
+            - "443:443"
         volumes:
             - /var/run/docker.sock:/var/run/docker.sock
             - $STATE_DIR/traefik/acme.json:/acme.json
