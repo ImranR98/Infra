@@ -64,6 +64,8 @@ access_control:
       policy: bypass
     - domain: ytdl.$SERVICES_DOMAIN
       policy: one_factor
+    - domain: ln.$SERVICES_DOMAIN
+      policy: bypass
     - domain: '*.$SERVICES_TOP_DOMAIN'
       policy: two_factor
     - domain: '*'

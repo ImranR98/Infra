@@ -335,6 +335,8 @@ services:
             - "9418:9418"
 
     # Plausible - Web Analytics
+    # TODO: Is it possible to move to normal local volumes? Should be at least for Postgres (see shlink_db example)
+    # TODO: Change default DB password
     plausible_db:
         # Plausible v2.1.1 was tested against PostgreSQL versions 15 and 16
         # https://github.com/plausible/analytics/blob/v2.1.1/.github/workflows/elixir.yml#L21-L32
@@ -909,6 +911,47 @@ services:
             - "traefik.http.routers.webdav.tls.certresolver=le"
             - "traefik.http.routers.webdav.tls=true"
             - "traefik.http.services.webdav.loadbalancer.server.port=8080"
+
+    # Link Sharing
+    shlink:
+        image: shlinkio/shlink:stable
+        container_name: shlink
+        environment:
+            - SHORT_DOMAIN_HOST=ln.example.org
+            - SHORT_DOMAIN_SCHEMA=https
+            - DB_DRIVER=postgres
+            - DB_HOST=shlink_db
+            - DB_USER=postgres
+            - DB_PASSWORD=$SHLINK_DB_PASSWORD
+            - INITIAL_API_KEY=$SHLINK_API_KEY
+        networks:
+            - traefik
+        depends_on:
+            - traefik
+            - shlink_db
+        restart: unless-stopped
+        labels:
+            - "traefik.enable=true"
+            - "traefik.http.routers.shlink.rule=Host(`ln.$SERVICES_DOMAIN`)"
+            - "traefik.http.routers.shlink.entrypoints=websecure"
+            - "traefik.http.routers.shlink.middlewares=authelia@docker"
+            - "traefik.http.routers.shlink.tls.certresolver=le"
+            - "traefik.http.routers.shlink.tls=true"
+            - "traefik.http.services.shlink.loadbalancer.server.port=8080"
+    shlink_db:
+        image: postgres:17-alpine
+        container_name: shlink_db
+        restart: unless-stopped
+        volumes:
+            - $STATE_DIR/shlink/db:/var/lib/postgresql/data
+        environment:
+            - POSTGRES_PASSWORD=$SHLINK_DB_PASSWORD
+        healthcheck:
+            test: ["CMD-SHELL", "pg_isready -U postgres"]
+            start_period: 1m
+        networks:
+            - traefik
+        user: 1000:1000
 
 networks:
     traefik:
