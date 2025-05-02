@@ -924,6 +924,7 @@ services:
             - DB_USER=postgres
             - DB_PASSWORD=$SHLINK_DB_PASSWORD
             - INITIAL_API_KEY=$SHLINK_API_KEY
+            - GEOLITE_LICENSE_KEY=$GEOLITE_LICENSE_KEY
         networks:
             - traefik
         depends_on:
