@@ -917,7 +917,7 @@ services:
         image: shlinkio/shlink:stable
         container_name: shlink
         environment:
-            - SHORT_DOMAIN_HOST=ln.example.org
+            - SHORT_DOMAIN_HOST=ln.$SERVICES_DOMAIN
             - SHORT_DOMAIN_SCHEMA=https
             - DB_DRIVER=postgres
             - DB_HOST=shlink_db
@@ -953,6 +953,27 @@ services:
         networks:
             - traefik
         user: 1000:1000
+    shlink-web-client:
+        image: shlinkio/shlink-web-client:stable
+        container_name: shlink-web-client
+        environment: # Important: Only pre-configure a server if the app is behind Authelia
+            - SHLINK_SERVER_URL=https://ln.$SERVICES_DOMAIN
+            - SHLINK_SERVER_NAME=ln.$SERVICES_DOMAIN
+            - SHLINK_SERVER_API_KEY=$SHLINK_API_KEY # Will be made available to client browser
+        networks:
+            - traefik
+        depends_on:
+            - traefik
+            - shlink
+        restart: unless-stopped
+        labels:
+            - "traefik.enable=true"
+            - "traefik.http.routers.shlink-web-client.rule=Host(`ui.ln.$SERVICES_DOMAIN`)"
+            - "traefik.http.routers.shlink-web-client.entrypoints=websecure"
+            - "traefik.http.routers.shlink-web-client.middlewares=authelia@docker,geoblock@file"
+            - "traefik.http.routers.shlink-web-client.tls.certresolver=le"
+            - "traefik.http.routers.shlink-web-client.tls=true"
+            - "traefik.http.services.shlink-web-client.loadbalancer.server.port=8080"
 
 networks:
     traefik:
