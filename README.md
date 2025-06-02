@@ -51,7 +51,8 @@ Docker-based setup for my self-hosted apps/services.
 ## Usage
 
 1. Set up a server with outbound internet access.
-    - Most of the code is distro-agnostic but a few lines are not. We assume the server is running Fedora 41.
+    - Most of the code is distro-agnostic but a few lines are not. We assume the server is running Fedora 42.
+    - We assume the server is running an x86-64 CPU and an AMD GPU with ROCm support.
     - The server must be powerful enough to run all apps defined in `landscape.docker-compose.yaml`.
     - If the server has a LUKS-encrypted drive (optional), a way to decrypt it remotely via SSH will be installed as part of the setup process.
 2. Clone this repo on the server and create a copy of `template.VARS.sh` named `VARS.sh` (or `staging.VARS.sh` or `production.VARS.sh`). Fill in the values as appropriate. You may benefit from reading through the rest of these steps first.
