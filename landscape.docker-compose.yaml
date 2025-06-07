@@ -979,6 +979,6 @@ volumes:
     logtfy_tmp: {}
     grafana_data: {} # For some reason this causes crashes if it is a bind mount
     ollama: {}
-    ollama-webui: {} # TODO: This should be a bind mount
+    ollama-webui: {} # Decided not to bind mount this
     navidrome-cache: {}
     immich-model-cache: {}
