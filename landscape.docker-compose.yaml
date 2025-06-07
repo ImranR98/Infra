@@ -246,8 +246,8 @@ services:
         depends_on:
             - traefik
         volumes:
-            - $STATE_DIR/prometheus/:/config
-            - prometheus_data:/prometheus
+            - $STATE_DIR/prometheus/config:/config
+            - $STATE_DIR/prometheus/data:/prometheus
         command:
             - "--config.file=/config/prometheus.yaml"
             - "--storage.tsdb.path=/prometheus"
@@ -335,7 +335,6 @@ services:
             - "9418:9418"
 
     # Plausible - Web Analytics
-    # TODO: Is it possible to move to normal local volumes? Should be at least for Postgres (see shlink_db example)
     # TODO: Change default DB password
     plausible_db:
         # Plausible v2.1.1 was tested against PostgreSQL versions 15 and 16
@@ -344,7 +343,7 @@ services:
         container_name: plausible_db
         restart: unless-stopped
         volumes:
-            - plausible-db-data:/var/lib/postgresql/data
+            - $STATE_DIR/plausible/db:/var/lib/postgresql/data
         environment:
             - POSTGRES_PASSWORD=postgres
         healthcheck:
@@ -352,6 +351,7 @@ services:
             start_period: 1m
         networks:
             - traefik
+        user: 1000:1000
     plausible_events_db:
         image: clickhouse/clickhouse-server:203.0.113.10-alpine
         restart: unless-stopped
@@ -359,10 +359,10 @@ services:
         networks:
             - traefik
         volumes:
-            - plausible-event-data:/var/lib/clickhouse
-            - plausible-event-logs:/var/log/clickhouse-server
-            - $STATE_DIR/plausible/logs.xml:/etc/clickhouse-server/config.d/logs.xml:ro
-            - $STATE_DIR/plausible/ipv4-only.xml:/etc/clickhouse-server/config.d/ipv4-only.xml:ro
+            - $STATE_DIR/plausible/event_data:/var/lib/clickhouse
+            - $STATE_DIR/plausible/event_logs:/var/log/clickhouse-server
+            - $STATE_DIR/plausible/config/logs.xml:/etc/clickhouse-server/config.d/logs.xml:ro
+            - $STATE_DIR/plausible/config/ipv4-only.xml:/etc/clickhouse-server/config.d/ipv4-only.xml:ro
         ulimits:
             nofile:
                 soft: 262144
@@ -389,7 +389,7 @@ services:
         networks:
             - traefik
         volumes:
-            - plausible-data:/var/lib/plausible
+            - $STATE_DIR/plausible/data:/var/lib/plausible
         ulimits:
             nofile:
                 soft: 65535
@@ -977,13 +977,8 @@ networks:
 
 volumes:
     logtfy_tmp: {}
-    grafana_data: {}
-    prometheus_data: {}
-    plausible-db-data: {}
-    plausible-event-data: {}
-    plausible-event-logs: {}
-    plausible-data: {}
+    grafana_data: {} # For some reason this causes crashes if it is a bind mount
     ollama: {}
-    ollama-webui: {}
+    ollama-webui: {} # TODO: This should be a bind mount
     navidrome-cache: {}
     immich-model-cache: {}

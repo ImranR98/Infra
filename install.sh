@@ -23,10 +23,10 @@ grep -Eo '\$STATE_DIR[^:]+:' "$HERE_LX1A"/landscape.docker-compose.yaml | awk -F
     mkdir -p "$STATE_DIR/$(echo $dir | tail -c +12)"
 done
 mkdir -p "$STATE_DIR"/logtfy
-mkdir -p "$STATE_DIR"/prometheus
+mkdir -p "$STATE_DIR"/prometheus/config
 mkdir -p "$STATE_DIR"/opencanary
 mkdir -p "$STATE_DIR"/filebrowser
-mkdir -p "$STATE_DIR"/plausible
+mkdir -p "$STATE_DIR"/plausible/config
 mkdir -p "$STATE_DIR"/frpc
 mkdir -p "$STATE_DIR"/beszel
 mkdir -p "$STATE_DIR"/registry/data
@@ -53,7 +53,7 @@ if [ ! -f "$STATE_DIR"/traefik/acme.json ]; then
 fi
 chmod 600 "$STATE_DIR"/traefik/acme.json
 cat "$HERE_LX1A"/files/traefik.dynamic-configuration.yaml | envsubst >"$STATE_DIR"/traefik/dynamic-configuration.yaml
-cat "$HERE_LX1A"/files/prometheus.yaml | envsubst >"$STATE_DIR"/prometheus/prometheus.yaml
+cat "$HERE_LX1A"/files/prometheus.yaml | envsubst >"$STATE_DIR"/prometheus/config/prometheus.yaml
 cat "$HERE_LX1A"/files/crowdsec.acquis.yaml | envsubst >"$STATE_DIR"/crowdsec/acquis.yaml
 cat "$HERE_LX1A"/files/crowdsec.notifications-http.yaml | envsubst >"$STATE_DIR"/crowdsec/notifications-http.yaml
 cat "$HERE_LX1A"/files/crowdsec.profiles.yaml | envsubst >"$STATE_DIR"/crowdsec/profiles.yaml
@@ -66,8 +66,8 @@ cat "$HERE_LX1A"/files/filebrowser.json | envsubst >"$STATE_DIR"/filebrowser/fil
 cat "$HERE_LX1A"/files/ntfy.server.yml | envsubst >"$STATE_DIR"/ntfy/etc/server.yml
 cp "$HERE_LX1A"/files/immich.hwaccel.ml.yml "$STATE_DIR"/immich/hwaccel.ml.yml
 cp "$HERE_LX1A"/files/immich.hwaccel.transcoding.yml "$STATE_DIR"/immich/hwaccel.transcoding.yml
-cp "$HERE_LX1A"/files/plausible.logs.xml "$STATE_DIR"/plausible/logs.xml
-cp "$HERE_LX1A"/files/plausible.ipv4-only.xml "$STATE_DIR"/plausible/ipv4-only.xml
+cp "$HERE_LX1A"/files/plausible.logs.xml "$STATE_DIR"/plausible/config/logs.xml
+cp "$HERE_LX1A"/files/plausible.ipv4-only.xml "$STATE_DIR"/plausible/config/ipv4-only.xml
 cat "$HERE_LX1A"/files/mosquitto.conf | envsubst | sudo dd status=none of="$STATE_DIR"/mosquitto/config/mosquitto.conf
 echo "$MOSQUITTO_PRIVATE_KEY" | sudo dd status=none of="$STATE_DIR"/mosquitto/config/private_key.pem
 echo "$MOSQUITTO_CERTIFICATE" | sudo dd status=none of="$STATE_DIR"/mosquitto/config/certificate.pem
@@ -100,6 +100,11 @@ if [ -n "$PRINT_IMMICH_OAUTH_INFO" ]; then
     cat "$STATE_DIR"/immich/oauth_info.txt
 fi
 sudo chown -R root:root "$STATE_DIR"/homeassistant
+sudo chown 999:999 $STATE_DIR/plausible/data
+sudo chown root:root $STATE_DIR/plausible/event_data
+sudo chown root:root $STATE_DIR/plausible/event_logs
+sudo chown 65534:65534 "$STATE_DIR/prometheus/data"
+
 if [ ! -f "$STATE_DIR"/registry/auth/.htpasswd ]; then
     htpasswd -Bc "$STATE_DIR"/registry/auth/.htpasswd "$USER"
 fi
