@@ -66,6 +66,8 @@ access_control:
       policy: one_factor
     - domain: ln.$SERVICES_DOMAIN
       policy: bypass
+    - domain: meet.$SERVICES_DOMAIN
+      policy: bypass
     - domain: '*.$SERVICES_TOP_DOMAIN'
       policy: two_factor
     - domain: '*'
