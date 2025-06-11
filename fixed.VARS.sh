@@ -16,5 +16,3 @@ export PROXY_HOME="/home/$PROXY_USER"
 if [ "$PROXY_USER" = root ]; then
     export PROXY_HOME="/root"
 fi
-
-export PROXY_IP="$((nslookup $PROXY_HOST || '') | awk '/^Address: / { print $2 }' | head -1)"
