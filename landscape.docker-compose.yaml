@@ -656,7 +656,7 @@ services:
         image: ghcr.io/immich-app/immich-server:release
         extends: # uncomment this section for hardware acceleration - see https://immich.app/docs/features/hardware-transcoding
             file: $STATE_DIR/immich/hwaccel.transcoding.yml
-            service: cpu # set to one of [nvenc, quicksync, rkmpp, vaapi, vaapi-wsl] for accelerated transcoding
+            service: vaapi # set to one of [nvenc, quicksync, rkmpp, vaapi, vaapi-wsl] for accelerated transcoding
         user: 1000:1000
         volumes:
             - $STATE_DIR/immich/upload:/usr/src/app/upload
