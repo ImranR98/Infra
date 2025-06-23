@@ -970,6 +970,8 @@ services:
             - "traefik.http.services.shlink-web-client.loadbalancer.server.port=8080"
 
     # Jitsi Meet - Video calling
+    # TODO: The following should be done automatically in install.sh (currently must be done manually)
+    #       'docker exec -it jitsi-prosody prosodyctl --config=/config/prosody.cfg.lua register <username> meet.jitsi <password>'
     jitsi-web:
         image: jitsi/web:stable
         container_name: jitsi-web
