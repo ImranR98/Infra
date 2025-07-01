@@ -23,6 +23,15 @@ if [ "$MYFRPVER" != "$THEIRFRPVER" ]; then
     ssh -A -t "$PROXY_SSH_STRING" "bash '$PROXY_HOME/landscape-remote-services/frps.create-image.sh'"
     scp "$HERE_2G4U"/files/landscape-remote.install.sh "$PROXY_SSH_STRING":~/landscape-remote-services/landscape-remote.install.sh
     ssh -A -t "$PROXY_SSH_STRING" "bash '$PROXY_HOME/landscape-remote-services/landscape-remote.install.sh' frps-with-multiuser"
+
+    chmod +x "$HERE_2G4U"/files/check_root_luks.sh
+    if "$HERE_2G4U"/files/check_root_luks.sh >/dev/null 2>&1; then
+        printTitle "Install FRPC-Preboot and Dracut-Crypt-SSH so that root volume can be decrypted remotely."
+        bash "$HERE_2G4U"/files/dracut-crypt-ssh.install.sh
+        bash "$HERE_2G4U"/files/frpc-preboot.install.sh
+        rm "$HERE_2G4U"/files/frpc-preboot.ini
+    fi
+
 else
     echo "No update."
 fi
