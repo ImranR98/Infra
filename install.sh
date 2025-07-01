@@ -25,7 +25,8 @@ done
 mkdir -p "$STATE_DIR"/logtfy
 mkdir -p "$STATE_DIR"/prometheus/config
 mkdir -p "$STATE_DIR"/opencanary
-mkdir -p "$STATE_DIR"/filebrowser
+mkdir -p "$STATE_DIR"/filebrowser/config
+mkdir -p "$STATE_DIR"/filebrowser/database
 mkdir -p "$STATE_DIR"/plausible/config
 mkdir -p "$STATE_DIR"/frpc
 mkdir -p "$STATE_DIR"/beszel
@@ -58,11 +59,11 @@ cat "$HERE_LX1A"/files/crowdsec.acquis.yaml | envsubst >"$STATE_DIR"/crowdsec/ac
 cat "$HERE_LX1A"/files/crowdsec.notifications-http.yaml | envsubst >"$STATE_DIR"/crowdsec/notifications-http.yaml
 cat "$HERE_LX1A"/files/crowdsec.profiles.yaml | envsubst >"$STATE_DIR"/crowdsec/profiles.yaml
 cat "$HERE_LX1A"/files/opencanary.json | envsubst >"$STATE_DIR"/opencanary/opencanary.json
-if [ ! -f "$STATE_DIR"/filebrowser/filebrowser.db ]; then
-    touch "$STATE_DIR"/filebrowser/filebrowser.db
+if [ ! -f "$STATE_DIR"/filebrowser/database/filebrowser.db ]; then
+    touch "$STATE_DIR"/filebrowser/database/filebrowser.db
     echo "- New \"filebrowser.db\" created."
 fi
-cat "$HERE_LX1A"/files/filebrowser.json | envsubst >"$STATE_DIR"/filebrowser/filebrowser.json
+cat "$HERE_LX1A"/files/filebrowser.json | envsubst >"$STATE_DIR"/filebrowser/config/settings.json
 cat "$HERE_LX1A"/files/ntfy.server.yml | envsubst >"$STATE_DIR"/ntfy/etc/server.yml
 cp "$HERE_LX1A"/files/immich.hwaccel.ml.yml "$STATE_DIR"/immich/hwaccel.ml.yml
 cp "$HERE_LX1A"/files/immich.hwaccel.transcoding.yml "$STATE_DIR"/immich/hwaccel.transcoding.yml

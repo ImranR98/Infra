@@ -443,8 +443,8 @@ services:
         user: "1000:1000"
         volumes:
             - $MAIN_PARENT_DIR:/srv
-            - $STATE_DIR/filebrowser/filebrowser.db:/database.db
-            - $STATE_DIR/filebrowser/filebrowser.json:/.filebrowser.json
+            - $STATE_DIR/filebrowser/database:/database
+            - $STATE_DIR/filebrowser/config:/config
         labels:
             - "traefik.enable=true"
             - "traefik.http.routers.filebrowser.rule=Host(`files.$SERVICES_DOMAIN`)"
