@@ -19,8 +19,12 @@ export DOMAIN_OWNER_EMAIL="contact@example.org"
 
 export NTFY_SERVICES_PASSWORD="password"
 
-export IMMICH_OAUTH_CLIENT_SECRET="abc" # echo $RANDOM | sha256sum | awk '{print $1}'
+export IMMICH_OAUTH_CLIENT_SECRET="abc" # docker run authelia/authelia:latest authelia crypto hash generate pbkdf2 --variant sha512 --random --random.length 72 --random.charset rfc3986
+export AUTHELIA_IMMICH_CLIENT_SECRET='$pbkdf2-sha512$abc' # Alongside $IMMICH_OAUTH_CLIENT_SECRET
 export IMMICH_DB_PASSWORD="abc"         # echo $RANDOM | sha256sum | awk '{print $1}'
+
+export OPEN_WEBUI_OAUTH_CLIENT_SECRET="abc" # docker run authelia/authelia:latest authelia crypto hash generate pbkdf2 --variant sha512 --random --random.length 72 --random.charset rfc3986
+export AUTHELIA_OPEN_WEBUI_CLIENT_SECRET='$pbkdf2-sha512$abc' # Alongside $OPEN_WEBUI_OAUTH_CLIENT_SECRET
 
 export AUTHELIA_USERS_DATABASE="users:
   admin:
@@ -37,7 +41,6 @@ export AUTHELIA_OIDC_HMAC_SECRET="abc"  # echo $RANDOM | sha256sum | awk '{print
 export AUTHELIA_JWKS_KEY="-----BEGIN PRIVATE KEY-----
           abc
           -----END PRIVATE KEY-----"                      #openssl genrsa -out private.pem 2048 # openssl rsa -in private.pem -outform PEM -pubout -out public.pem
-export AUTHELIA_IMMICH_CLIENT_SECRET='$pbkdf2-sha512$abc' # docker run authelia/authelia:latest authelia crypto hash generate pbkdf2 --variant sha512 --random --random.length 72 --random.charset rfc3986 "$IMMICH_OAUTH_CLIENT_SECRET"
 
 export OPENCANARY_NTFY_OFFICIAL_TOPIC="abc123"
 

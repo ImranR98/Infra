@@ -837,9 +837,19 @@ services:
         image: ghcr.io/open-webui/open-webui:main
         container_name: ollama-webui
         environment:
-            - "OLLAMA_BASE_URL=http://ollama:11434"
-            - "WEBUI_AUTH_TRUSTED_EMAIL_HEADER=Remote-Email"
-            - "WEBUI_AUTH_TRUSTED_NAME_HEADER=Remote-Name"
+            - OLLAMA_BASE_URL=http://ollama:11434
+            - WEBUI_URL=https://gpt.${SERVICES_DOMAIN}
+            - ENABLE_OAUTH_SIGNUP=true
+            - OAUTH_MERGE_ACCOUNTS_BY_EMAIL=true
+            - OAUTH_CLIENT_ID=open-webui
+            - OAUTH_CLIENT_SECRET=${OPEN_WEBUI_OAUTH_CLIENT_SECRET}
+            - OPENID_PROVIDER_URL=https://auth.${SERVICES_DOMAIN}/.well-known/openid-configuration
+            - OAUTH_PROVIDER_NAME=Authelia
+            - OAUTH_SCOPES=openid email profile groups
+            - ENABLE_OAUTH_ROLE_MANAGEMENT=true
+            - OAUTH_ALLOWED_ROLES=admins,dev,family
+            - OAUTH_ADMIN_ROLES=admins
+            - OAUTH_ROLES_CLAIM=groups
         volumes:
             - ollama-webui:/app/backend/data
         networks:
