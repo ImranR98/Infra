@@ -610,26 +610,6 @@ services:
             - traefik
         restart: unless-stopped
 
-    # ParseBalX - Monthly Expenses/Earnings Charts
-    parsebalx:
-        container_name: parsebalx
-        image: imranrdev/parsebalx
-        depends_on:
-            - traefik
-        labels:
-            - "traefik.enable=true"
-            - "traefik.http.routers.parsebalx.rule=Host(`bal.$SERVICES_DOMAIN`)"
-            - "traefik.http.routers.parsebalx.entrypoints=websecure"
-            - "traefik.http.routers.parsebalx.tls.certresolver=le"
-            - "traefik.http.routers.parsebalx.tls=true"
-            - "traefik.http.routers.parsebalx.middlewares=authelia@docker,geoblock@file"
-            - "traefik.http.services.parsebalx.loadbalancer.server.port=3000"
-        volumes:
-            - "$MAIN_PARENT_DIR/Main/Documents/Balance/Balance.xlsx:/Balance.xlsx:ro"
-        networks:
-            - traefik
-        restart: unless-stopped
-
     # ISBN Lookup
     isbn-lookup:
         container_name: isbn-lookup
