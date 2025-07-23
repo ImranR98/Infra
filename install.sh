@@ -44,7 +44,8 @@ else
 fi
 if [ -f "$HERE_LX1A"/private.authelia.config.yaml ]; then
     printTitle "Merge Private Authelia Config with Main Authelia Config"
-    mergeYaml "$STATE_DIR"/authelia/config/configuration.yml "$HERE_LX1A"/private.authelia.config.yaml
+    cat "$HERE_LX1A"/private.authelia.config.yaml | envsubst >"$STATE_DIR"/authelia/config/private.authelia.config.yaml
+    mergeYaml "$STATE_DIR"/authelia/config/configuration.yml "$STATE_DIR"/authelia/config/private.authelia.config.yaml
     echo "Done."
 fi
 echo "$AUTHELIA_USERS_DATABASE" >"$STATE_DIR"/authelia/config/users_database.yml
@@ -179,9 +180,10 @@ printTitle "Regenerate Docker Compose File to Pick Up any Changes"
 cat "$HERE_LX1A"/landscape.docker-compose.yaml | envsubst >"$STATE_DIR"/landscape.docker-compose.yaml
 echo "Done."
 
-if [ -f "$HERE_LX1A"/private.docker-compose.yaml ]; then
+if [ -f "$HERE_LX1A"/landscape.private.docker-compose.yaml ]; then
     printTitle "Merge Private Docker Compose File with Generated Docker Compose File"
-    mergeYaml "$STATE_DIR"/landscape.docker-compose.yaml "$HERE_LX1A"/private.docker-compose.yaml
+    cat "$HERE_LX1A"/landscape.private.docker-compose.yaml | envsubst >"$STATE_DIR"/landscape.private.docker-compose.yaml
+    mergeYaml "$STATE_DIR"/landscape.docker-compose.yaml "$HERE_LX1A"/landscape.private.docker-compose.yaml
     echo "Done."
 fi
 

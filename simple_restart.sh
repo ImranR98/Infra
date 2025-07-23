@@ -8,8 +8,9 @@ if [ -n "$2" ]; then
     PROJECT="$2"
 fi
 cat "$HERE_F00D"/"$PROJECT".docker-compose.yaml | envsubst >"$STATE_DIR"/"$PROJECT".docker-compose.yaml
-if [ -f "$HERE_F00D"/private.docker-compose.yaml ]; then
-    mergeYaml "$STATE_DIR"/landscape.docker-compose.yaml "$HERE_F00D"/private.docker-compose.yaml
+if [ -f "$HERE_F00D"/"$PROJECT".private.docker-compose.yaml ]; then
+    cat "$HERE_F00D"/"$PROJECT".private.docker-compose.yaml | envsubst >"$STATE_DIR"/"$PROJECT".private.docker-compose.yaml
+    mergeYaml "$STATE_DIR"/"$PROJECT".docker-compose.yaml "$STATE_DIR"/"$PROJECT".private.docker-compose.yaml
 fi
 if [ -n "$1" ]; then
     docker compose -p "$PROJECT" -f ./state/"$PROJECT".docker-compose.yaml down "$1" || :
