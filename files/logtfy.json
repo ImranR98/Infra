@@ -54,6 +54,13 @@
             "defaultPriority": "1",
             "enabled": true,
             "parserArg": "${LOGTFY_SYNCTHING_EXCLUDED_DEVICE_IDS}"
+        },
+        {
+            "module": "traefik_accesslogs_custom",
+            "ntfyTopic": "fmd_logins",
+            "defaultPriority": "1",
+            "enabled": true,
+            "parserArg": "/api/v1/requestAccess HTTP/2.0\" 200"
         }
     ]
 }
