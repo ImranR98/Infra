@@ -87,3 +87,5 @@ export JITSI_MEET_JIGASI_XMPP_PASSWORD='abcd' # openssl rand -hex 16
 export JITSI_MEET_JIGASI_TRANSCRIBER_PASSWORD='abcd' # openssl rand -hex 16
 export JITSI_MEET_JIBRI_RECORDER_PASSWORD='abcd' # openssl rand -hex 16
 export JITSI_MEET_JIBRI_XMPP_PASSWORD='abcd' # openssl rand -hex 16
+
+export FMD_REGISTRATIONTOKEN='abcd' # openssl rand -hex 32

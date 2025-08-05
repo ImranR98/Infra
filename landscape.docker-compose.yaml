@@ -1057,6 +1057,27 @@ services:
         networks:
             - traefik
 
+    # Find My Device Server
+    fmd:
+        image: registry.gitlab.com/fmd-foss/fmd-server:latest
+        container_name: fmd
+        volumes:
+            - $STATE_DIR/fmd/db:/var/lib/fmd-server/db/
+        networks:
+            - traefik
+        depends_on:
+            - traefik
+        restart: unless-stopped
+        environment:
+            - FMD_REGISTRATIONTOKEN=$FMD_REGISTRATIONTOKEN
+        labels:
+            - "traefik.enable=true"
+            - "traefik.http.routers.fmd.rule=Host(`fmd.$SERVICES_DOMAIN`)"
+            - "traefik.http.routers.fmd.entrypoints=websecure"
+            - "traefik.http.routers.fmd.tls.certresolver=le"
+            - "traefik.http.routers.fmd.tls=true"
+            - "traefik.http.services.fmd.loadbalancer.server.port=8080"
+
 networks:
     traefik:
         ipam:
