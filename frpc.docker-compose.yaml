@@ -8,3 +8,5 @@ services:
         volumes:
         - $STATE_DIR/frpc/frpc.ini:/frpc.ini
         network_mode: host
+        labels:
+        - "com.centurylinklabs.watchtower.enable=false"

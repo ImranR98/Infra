@@ -14,7 +14,7 @@ if [ -f "$HERE_F00D"/"$PROJECT".private.docker-compose.yaml ]; then
 fi
 if [ -n "$1" ]; then
     docker compose -p "$PROJECT" -f ./state/"$PROJECT".docker-compose.yaml down "$1" || :
-    docker compose -p "$PROJECT" -f ./state/"$PROJECT".docker-compose.yaml up -d "$1"
+    docker compose -p "$PROJECT" -f ./state/"$PROJECT".docker-compose.yaml up -d "$1" --remove-orphans
 else
     echo "No service specified. Nothing will be restarted."
 fi

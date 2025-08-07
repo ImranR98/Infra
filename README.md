@@ -81,4 +81,5 @@ Docker-based setup for my self-hosted apps/services.
     - At this stage, you must manually complete the setup process for each of these apps. For a list of these apps' domains, run the following command: `source prep_env.sh; cat files/authelia.config.yaml | envsubst | grep -Eo 'domain:.+# IGNORE INITIALLY' | awk '{print $2}'`
     - Once finished, re-run `install.sh`. This time, the Authelia middleware will not apply to those apps.
 8. Setup is complete.
-    - Remember to occasionally run `update_frp.sh` to keep FRP up to date.
+    - Remember to occasionally run `./update_frp.sh` to keep FRP up to date.
+    - Remember to occasionally run and `./install_remote.sh updateNonProxy` to keep other services on the proxy server up to date (the proxy server does not run Watchtower).
