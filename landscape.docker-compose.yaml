@@ -458,7 +458,7 @@ services:
         networks:
             - traefik
         healthcheck:
-            test: ["CMD", "curl", "-f", "http://localhost:80/health"]
+            test: ["CMD", "sh", "-c", "wget -qO - http://localhost:80/health | grep -q OK"]
             interval: 30s
             timeout: 20s
             retries: 3
