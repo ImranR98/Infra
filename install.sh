@@ -4,23 +4,12 @@ set -e
 HERE_LX1A="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 source "$HERE_LX1A"/prep_env.sh
 
-printTitle "Install Docker"
-if [ -z "$(docker compose version 2>/dev/null || :)" ]; then
-    sudo dnf config-manager addrepo --from-repofile=https://download.docker.com/linux/fedora/docker-ce.repo --overwrite &&
-        sudo dnf -q install docker-ce docker-compose-plugin -y &&
-        sudo systemctl enable --now -q docker && sleep 5 &&
-        sudo systemctl is-active docker &&
-        sudo usermod -aG docker $USER
-else
-    echo "Already installed."
-fi
-
 printTitle "Create Required Directories"
 grep -Eo '\$MAIN_PARENT_DIR[^:]+:' "$HERE_LX1A"/landscape.docker-compose.yaml | awk -F: '{print $1}' | grep -E '/[^(/|.)]+$' | while read dir; do
-    mkdir -p "$MAIN_PARENT_DIR/$(echo $dir | tail -c +18)"
+    mkdir -p "$MAIN_PARENT_DIR/$(echo $dir | tail -c +18)" 2>/dev/null || : # May already exist with non-user permissions
 done
 grep -Eo '\$STATE_DIR[^:]+:' "$HERE_LX1A"/landscape.docker-compose.yaml | awk -F: '{print $1}' | grep -E '/[^(/|.)]+$' | while read dir; do
-    mkdir -p "$STATE_DIR/$(echo $dir | tail -c +12)"
+    mkdir -p "$STATE_DIR/$(echo $dir | tail -c +12)" 2>/dev/null || : # May already exist with non-user permissions
 done
 mkdir -p "$STATE_DIR"/logtfy
 mkdir -p "$STATE_DIR"/prometheus/config
@@ -34,53 +23,60 @@ mkdir -p "$STATE_DIR"/registry/data
 mkdir -p "$STATE_DIR"/registry/auth
 echo "Done."
 
-printTitle "Generate Required Config Files"
-cat "$HERE_LX1A"/files/logtfy.json | envsubst >"$STATE_DIR"/logtfy/config.json
-if [ ! -f ""$STATE_DIR"/authelia/config/configuration.yml" ]; then
+printTitle "Re/generate various state files"
+IGNORE_AUTHELIA_IGNORED_LINES=true
+if [ -f "$STATE_DIR/authelia/config/configuration.yml" ]; then
+    read -p 'Should the "ignored" lines in the Authelia config still be ignored? [y]: ' IGNORE_AUTHELIA_IGNORED_LINES_RESPONSE
+    if [ "$IGNORE_AUTHELIA_IGNORED_LINES_RESPONSE" == 'n' ] || [ "$IGNORE_AUTHELIA_IGNORED_LINES_RESPONSE" == 'N' ]; then
+        IGNORE_AUTHELIA_IGNORED_LINES=false
+    fi
+fi
+if [ "$IGNORE_AUTHELIA_IGNORED_LINES" == true ]; then
     sed '/# IGNORE INITIALLY$/ s/^/# /' "$HERE_LX1A"/files/authelia.config.yaml | envsubst >"$STATE_DIR"/authelia/config/configuration.yml
-    echo "- Generated Authelia config does not include lines that end with \"# IGNORE INITIALLY\"."
+    echo "Note that the generated Authelia config does not include lines that end with \"# IGNORE INITIALLY\"."
 else
     cat "$HERE_LX1A"/files/authelia.config.yaml | envsubst >"$STATE_DIR"/authelia/config/configuration.yml
 fi
 if [ -f "$HERE_LX1A"/private.authelia.config.yaml ]; then
-    printTitle "Merge Private Authelia Config with Main Authelia Config"
     cat "$HERE_LX1A"/private.authelia.config.yaml | envsubst >"$STATE_DIR"/authelia/config/private.authelia.config.yaml
     mergeYaml "$STATE_DIR"/authelia/config/configuration.yml "$STATE_DIR"/authelia/config/private.authelia.config.yaml
-    echo "Done."
+    echo "Merged Private Authelia Config with Main Authelia Config."
 fi
 echo "$AUTHELIA_USERS_DATABASE" >"$STATE_DIR"/authelia/config/users_database.yml
 if [ ! -f "$STATE_DIR"/traefik/acme.json ]; then
     echo '{}' >"$STATE_DIR"/traefik/acme.json
-    echo "- Empty \"acme.json\" created."
+    echo "Created an empty \"acme.json\"."
 fi
 chmod 600 "$STATE_DIR"/traefik/acme.json
 cat "$HERE_LX1A"/files/traefik.dynamic-configuration.yaml | envsubst >"$STATE_DIR"/traefik/dynamic-configuration.yaml
-cat "$HERE_LX1A"/files/prometheus.yaml | envsubst >"$STATE_DIR"/prometheus/config/prometheus.yaml
 cat "$HERE_LX1A"/files/crowdsec.acquis.yaml | envsubst >"$STATE_DIR"/crowdsec/acquis.yaml
 cat "$HERE_LX1A"/files/crowdsec.notifications-http.yaml | envsubst >"$STATE_DIR"/crowdsec/notifications-http.yaml
 cat "$HERE_LX1A"/files/crowdsec.profiles.yaml | envsubst >"$STATE_DIR"/crowdsec/profiles.yaml
 cat "$HERE_LX1A"/files/opencanary.json | envsubst >"$STATE_DIR"/opencanary/opencanary.json
+# TODO: Ensure the ports used by OpenCanary are not firewalled
 if [ ! -f "$STATE_DIR"/filebrowser/database/filebrowser.db ]; then
     touch "$STATE_DIR"/filebrowser/database/filebrowser.db
-    echo "- New \"filebrowser.db\" created."
+    echo "Initialized \"filebrowser.db\"."
 fi
 cat "$HERE_LX1A"/files/filebrowser.json | envsubst >"$STATE_DIR"/filebrowser/config/settings.json
 cat "$HERE_LX1A"/files/ntfy.server.yml | envsubst >"$STATE_DIR"/ntfy/etc/server.yml
 cp "$HERE_LX1A"/files/immich.hwaccel.ml.yml "$STATE_DIR"/immich/hwaccel.ml.yml
 cp "$HERE_LX1A"/files/immich.hwaccel.transcoding.yml "$STATE_DIR"/immich/hwaccel.transcoding.yml
-cp "$HERE_LX1A"/files/plausible.logs.xml "$STATE_DIR"/plausible/config/logs.xml
-cp "$HERE_LX1A"/files/plausible.ipv4-only.xml "$STATE_DIR"/plausible/config/ipv4-only.xml
-cat "$HERE_LX1A"/files/mosquitto.conf | envsubst | sudo dd status=none of="$STATE_DIR"/mosquitto/config/mosquitto.conf
-echo "$MOSQUITTO_PRIVATE_KEY" | sudo dd status=none of="$STATE_DIR"/mosquitto/config/private_key.pem
-echo "$MOSQUITTO_CERTIFICATE" | sudo dd status=none of="$STATE_DIR"/mosquitto/config/certificate.pem
-echo "$MOSQUITTO_CREDENTIALS" | sudo dd status=none of="$STATE_DIR"/mosquitto/config/password_file
+if ! ls "$STATE_DIR"/mosquitto/config 2>/dev/null | grep -q mosquitto.conf; then
+    echo "Creating Mosquitto config..."
+    cat "$HERE_LX1A"/files/mosquitto.conf | envsubst | $SUDO_COMMAND dd status=none of="$STATE_DIR"/mosquitto/config/mosquitto.conf
+    $SUDO_COMMAND bash -c "echo \"$MOSQUITTO_PRIVATE_KEY\" | dd status=none of=\"$STATE_DIR\"/mosquitto/config/private_key.pem && \
+    echo \"$MOSQUITTO_CERTIFICATE\" | dd status=none of="$STATE_DIR"/mosquitto/config/certificate.pem && \
+    echo \"$MOSQUITTO_CREDENTIALS\" | dd status=none of="$STATE_DIR"/mosquitto/config/password_file && \
+    chmod o+rx '$STATE_DIR'/mosquitto/config"
+    # TODO: Ensure the ports used by Mosquitto are not firewalled (at least the mqtt-tls service, others -- non-TLS and websocket -- are not actively used)
+fi
 echo "$WEBDAV_HTPASSWD" >"$STATE_DIR"/webdav/config/htpasswd
 if [ ! -f "$STATE_DIR"/traefik/mtls/cacert.pem ] || [ ! -f "$STATE_DIR"/traefik/mtls/cakey.pem ]; then
     openssl genrsa -out "$STATE_DIR"/traefik/mtls/cakey.pem 4096
     openssl req -new -x509 -key "$STATE_DIR"/traefik/mtls/cakey.pem -out "$STATE_DIR"/traefik/mtls/cacert.pem -days 358000 -subj "/CN=$SERVICES_DOMAIN"
     echo "Generating mTLS client cert file..."
     openssl pkcs12 -export -out "$STATE_DIR"/traefik/mtls/mtls-client.p12 -inkey "$STATE_DIR"/traefik/mtls/cakey.pem -in "$STATE_DIR"/traefik/mtls/cacert.pem
-    echo "- New mTLS key + cert created."
 fi
 bash "$HERE_LX1A"/files/frpc.generate.sh
 mv "$HERE_LX1A"/files/frpc.ini "$STATE_DIR"/frpc
@@ -88,7 +84,7 @@ if [ ! -d "$STATE_DIR"/crowdsec/dashboard-db/metabase.db ]; then
     wget -q https://crowdsec-statics-assets.s3-eu-west-1.amazonaws.com/metabase_sqlite.zip -O "$STATE_DIR"/crowdsec/dashboard-db/metabase.db.zip
     unzip -q "$STATE_DIR"/crowdsec/dashboard-db/metabase.db.zip -d "$STATE_DIR"/crowdsec/dashboard-db/
     rm "$STATE_DIR"/crowdsec/dashboard-db/metabase.db.zip
-    echo "- Crowdsec dashboard initialized with email \"crowdsec@crowdsec.net\" and password \"!!Cr0wdS3c_M3t4b4s3??\""
+    echo "Initialized Crowdsec dashboard with email \"crowdsec@crowdsec.net\" and password \"!!Cr0wdS3c_M3t4b4s3??\"."
 fi
 if [ ! -f "$STATE_DIR"/immich/oauth_info.txt ]; then
     PRINT_IMMICH_OAUTH_INFO=true
@@ -98,66 +94,79 @@ echo "    - issuerUrl: https://auth.$SERVICES_DOMAIN/.well-known/openid-configur
     - clientSecret: $IMMICH_OAUTH_CLIENT_SECRET
     - autoLaunch: true" >"$STATE_DIR"/immich/oauth_info.txt
 if [ -n "$PRINT_IMMICH_OAUTH_INFO" ]; then
-    echo "- Immich OAuth info for reference (must be set manually in the GUI):"
+    echo "Note Immich OAuth info for reference (must be set manually in the GUI):"
     cat "$STATE_DIR"/immich/oauth_info.txt
 fi
-sudo chown -R root:root "$STATE_DIR"/homeassistant
-sudo chown 999:999 $STATE_DIR/plausible/data
-sudo chown root:root $STATE_DIR/plausible/event_data
-sudo chown root:root $STATE_DIR/plausible/event_logs
-sudo chown 65534:65534 "$STATE_DIR/prometheus/data"
+if [ "$(stat -c '%U:%G' "$STATE_DIR/homeassistant")" != "root:root" ]; then
+    echo "chown-ing HomeAssistant files..."
+    $SUDO_COMMAND bash -c "chown -R root:root '$STATE_DIR/homeassistant' && chmod o+r -R '$STATE_DIR/homeassistant'"
+fi
+if [ "$(stat -c '%U:%G' "$STATE_DIR/jitsi")" != "root:root" ]; then
+    echo "chown-ing Jitsi directories..."
+    $SUDO_COMMAND bash -c "chown root:root '$STATE_DIR/jitsi' && chown root:root '$STATE_DIR'/jitsi/*"
+fi
+if [ "$(stat -c '%u:%g' "$STATE_DIR/plausible/data")" != "999:999" ]; then
+    echo "chown-ing Plausible directories..."
+    $SUDO_COMMAND bash -c "chown 999:999 '$STATE_DIR/plausible/data' && chown root:root '$STATE_DIR/plausible/event_data' && \
+    chown root:root '$STATE_DIR/plausible/event_logs' && cp '$HERE_LX1A/files/plausible.logs.xml' '$STATE_DIR/plausible/config/logs.xml' && \
+    cp '$HERE_LX1A/files/plausible.ipv4-only.xml' '$STATE_DIR/plausible/config/ipv4-only.xml'"
+fi
+if [ "$(stat -c '%u:%g' "$STATE_DIR/prometheus/config")" != "65534:65534" ]; then
+    echo "Creating Prometheus config..."
+    cat "$HERE_LX1A"/files/prometheus.yaml | envsubst | $SUDO_COMMAND tee "$STATE_DIR"/prometheus/config/prometheus.yaml
+    $SUDO_COMMAND chown -R 65534:65534 "$STATE_DIR/prometheus/config"
+fi
+if [ "$(stat -c '%u:%g' "$STATE_DIR/prometheus/data")" != "65534:65534" ]; then
+    echo "chown-ing Prometheus directory..."
+    $SUDO_COMMAND chown -R 65534:65534 "$STATE_DIR/prometheus/data"
+fi
 
 if [ ! -f "$STATE_DIR"/registry/auth/.htpasswd ]; then
+    echo "Docker registry needs a password:"
     htpasswd -Bc "$STATE_DIR"/registry/auth/.htpasswd "$USER"
 fi
-echo "Done."
 
-printTitle "Generate Docker Compose File"
 cat "$HERE_LX1A"/landscape.docker-compose.yaml | envsubst >"$STATE_DIR"/landscape.docker-compose.yaml
-echo "Done."
 
-if [ ! -f "$STATE_DIR"/homeassistant/configuration.yaml ] || [ -z "$(grep -Eo '^http' "$STATE_DIR"/homeassistant/configuration.yaml)" ]; then
-    printTitle "Modify Auto-Generated Configuration for Home Assistant"
+if ! grep -Eq '^http' "$STATE_DIR"/homeassistant/configuration.yaml 2>/dev/null; then
+    echo "Modifing auto-generated configuration for Home Assistant..."
     docker compose -p landscape -f "$STATE_DIR"/landscape.docker-compose.yaml up -d homeassistant
-    echo "Waiting for HA config file to be generated..."
-    while [ ! -f "$STATE_DIR"/homeassistant/configuration.yaml ]; do
-        sleep 1
-    done
-    cat "$HERE_LX1A"/files/homeassistant.config.http.yaml | sudo dd status=none of="$STATE_DIR"/homeassistant/configuration.yaml oflag=append conv=notrunc
+    sleep 10
+    cat "$HERE_LX1A"/files/homeassistant.config.http.yaml | $SUDO_COMMAND dd status=none of="$STATE_DIR"/homeassistant/configuration.yaml oflag=append conv=notrunc
+    $SUDO_COMMAND bash -c "chmod o+rx '$STATE_DIR'/homeassistant && chmod o+r '$STATE_DIR'/homeassistant/configuration.yaml"
     docker compose -p landscape -f "$STATE_DIR"/landscape.docker-compose.yaml down homeassistant
-    echo "Done."
 fi
 
 if [ ! -d "$STATE_DIR"/crowdsec/config/postoverflows/s01-whitelist ]; then
-    printTitle "Ensure Crowdsec Config is Initialized"
+    echo "Ensuring Crowdsec config is initialized..."
     docker compose -p landscape -f "$STATE_DIR"/landscape.docker-compose.yaml up -d crowdsec
-    echo "Waiting for Crowdsec to start..."
     sleep 10 # Hopefully enough time for any initialization to occur
     docker compose -p landscape -f "$STATE_DIR"/landscape.docker-compose.yaml down crowdsec
-    echo "Done."
 fi
 if [ -z "$CROWDSEC_BOUNCER_KEY" ]; then
-    printTitle "Generate Crowdsec Bouncer Key"
+    echo "Generating Crowdsec Bouncer key..."
     docker compose -p landscape -f "$STATE_DIR"/landscape.docker-compose.yaml up -d crowdsec
-    echo "Waiting for Crowdsec to start..."
     sleep 10
     docker exec crowdsec cscli bouncers remove crowdsecBouncer 2>/dev/null || :
     export CROWDSEC_BOUNCER_KEY="$(docker exec crowdsec cscli bouncers add crowdsecBouncer | head -3 | tail -1 | awk '{print $1}')"
     echo "export CROWDSEC_BOUNCER_KEY='$CROWDSEC_BOUNCER_KEY'" >>"$STATE_DIR"/generated.VARS.sh
     docker compose -p landscape -f "$STATE_DIR"/landscape.docker-compose.yaml down crowdsec
-    echo "Done."
 fi
 sed -i 's/use_wal: false/use_wal: true/' "$STATE_DIR"/crowdsec/config/config.yaml
-sudo mkdir -p "$STATE_DIR"/crowdsec/config/postoverflows/s01-whitelist
-cat "$HERE_LX1A"/files/crowdsec.navidrome.whitelist.yaml | envsubst | sudo sudo dd status=none of="$STATE_DIR"/crowdsec/config/postoverflows/s01-whitelist/navidrome.whitelist.yaml
-cat "$HERE_LX1A"/files/crowdsec.immich.whitelist.yaml | envsubst | sudo sudo dd status=none of="$STATE_DIR"/crowdsec/config/postoverflows/s01-whitelist/immich.whitelist.yaml
-cat "$HERE_LX1A"/files/crowdsec.plausible.whitelist.yaml | envsubst | sudo sudo dd status=none of="$STATE_DIR"/crowdsec/config/postoverflows/s01-whitelist/plausible.whitelist.yaml
-cat "$HERE_LX1A"/files/crowdsec.homeassistant.whitelist.yaml | envsubst | sudo sudo dd status=none of="$STATE_DIR"/crowdsec/config/postoverflows/s01-whitelist/homeassistant.whitelist.yaml
+if [ ! -d "$STATE_DIR"/crowdsec/config/postoverflows/s01-whitelist ]; then
+    echo "Creating Crowdsec whitelists..."
+    CS_TEMP_DIR="$(mktemp -d)"
+    cat "$HERE_LX1A"/files/crowdsec.navidrome.whitelist.yaml | envsubst | dd status=none of="$CS_TEMP_DIR"/navidrome.whitelist.yaml
+    cat "$HERE_LX1A"/files/crowdsec.immich.whitelist.yaml | envsubst | dd status=none of="$CS_TEMP_DIR"/immich.whitelist.yaml
+    cat "$HERE_LX1A"/files/crowdsec.plausible.whitelist.yaml | envsubst | dd status=none of="$CS_TEMP_DIR"/plausible.whitelist.yaml
+    cat "$HERE_LX1A"/files/crowdsec.homeassistant.whitelist.yaml | envsubst | dd status=none of="$CS_TEMP_DIR"/homeassistant.whitelist.yaml
+    $SUDO_COMMAND bash -c "mkdir -p '$STATE_DIR/crowdsec/config/postoverflows/s01-whitelist' && mv '$CS_TEMP_DIR'/* '$STATE_DIR/crowdsec/config/postoverflows/s01-whitelist'"
+    rm -r "$CS_TEMP_DIR"
+fi
 
 if [ -z "$NTFY_SERVICE_USER_TOKEN" ]; then
-    printTitle "Create Write-Only Ntfy Service Account + Token and Ntfy Admin Account"
+    echo "Creating write-only Ntfy service account with token + Ntfy admin account..."
     docker compose -p landscape -f "$STATE_DIR"/landscape.docker-compose.yaml up -d ntfy
-    echo "Waiting for Ntfy to start..."
     sleep 10 # Hopefully enough time for any initialization to occur
     SERVICES_USER="${MAIN_NODE_HOSTNAME_LOWERCASE}_services"
     SERVICES_TOPIC="${SERVICES_USER}_*"
@@ -173,52 +182,45 @@ if [ -z "$NTFY_SERVICE_USER_TOKEN" ]; then
     docker exec ntfy sh -c "ntfy access $USER \"*\" rw"
     docker exec ntfy sh -c "ntfy user change-role $USER admin"
     docker compose -p landscape -f "$STATE_DIR"/landscape.docker-compose.yaml down ntfy
-    echo "Done."
 fi
-
-printTitle "Regenerate Docker Compose File to Pick Up any Changes"
-cat "$HERE_LX1A"/landscape.docker-compose.yaml | envsubst >"$STATE_DIR"/landscape.docker-compose.yaml
+cat "$HERE_LX1A"/files/logtfy.json | envsubst >"$STATE_DIR"/logtfy/config.json
 echo "Done."
 
+printTitle "Generate Docker Compose file"
+cat "$HERE_LX1A"/landscape.docker-compose.yaml | envsubst >"$STATE_DIR"/landscape.docker-compose.yaml
 if [ -f "$HERE_LX1A"/landscape.private.docker-compose.yaml ]; then
-    printTitle "Merge Private Docker Compose File with Generated Docker Compose File"
     cat "$HERE_LX1A"/landscape.private.docker-compose.yaml | envsubst >"$STATE_DIR"/landscape.private.docker-compose.yaml
     mergeYaml "$STATE_DIR"/landscape.docker-compose.yaml "$HERE_LX1A"/landscape.private.docker-compose.yaml
-    echo "Done."
+    echo "Merged private Docker Compose file."
 fi
+echo "Done."
 
-printTitle "Generate and Start the Systemd Service"
+printTitle "Install and start the Landscape service"
 generateComposeService landscape 1000 >"$STATE_DIR"/landscape.service
 awk -v SCRIPT_DIR="$STATE_DIR" '{gsub("path_to_here", SCRIPT_DIR); print}' "$STATE_DIR"/landscape.service >"$STATE_DIR"/landscape.service.temp
 awk -v MY_UID="$(id -u)" '{gsub("1000", MY_UID); print}' "$STATE_DIR"/landscape.service.temp >"$STATE_DIR"/landscape.service
 rm "$STATE_DIR"/landscape.service.temp
-sudo mv "$STATE_DIR"/landscape.service /etc/systemd/system/landscape.service
-sudo chcon -t systemd_unit_file_t /etc/systemd/system/landscape.service # Without this, SELinux prevents Systemd from seeing the file
-sudo systemctl daemon-reload
-sudo systemctl enable landscape.service
-sudo systemctl stop landscape.service || :
-sleep 5
-sudo systemctl start landscape.service
+$SUDO_COMMAND bash -c "mv "$STATE_DIR"/landscape.service /etc/systemd/system/landscape.service && \
+    chcon -t systemd_unit_file_t /etc/systemd/system/landscape.service && \
+    systemctl daemon-reload && systemctl enable landscape.service && \
+    (systemctl stop landscape.service || :) && sleep 5 && systemctl start landscape.service"
 echo "Done."
 
-printTitle "Generate Docker Compose and Systemd Files for FRPC and Start the Service"
+printTitle "Install and start the FRPC service"
 cat "$HERE_LX1A"/frpc.docker-compose.yaml | envsubst >"$STATE_DIR"/frpc.docker-compose.yaml
 
 generateComposeService frpc 1000 >"$STATE_DIR"/frpc.service
 awk -v SCRIPT_DIR="$STATE_DIR" '{gsub("path_to_here", SCRIPT_DIR); print}' "$STATE_DIR"/frpc.service >"$STATE_DIR"/frpc.service.temp
 awk -v MY_UID="$(id -u)" '{gsub("1000", MY_UID); print}' "$STATE_DIR"/frpc.service.temp >"$STATE_DIR"/frpc.service
 rm "$STATE_DIR"/frpc.service.temp
-sudo mv "$STATE_DIR"/frpc.service /etc/systemd/system/frpc.service
-sudo chcon -t systemd_unit_file_t /etc/systemd/system/frpc.service
-sudo systemctl daemon-reload
-sudo systemctl enable frpc.service
-sudo systemctl start frpc.service
+$SUDO_COMMAND bash -c "mv "$STATE_DIR"/frpc.service /etc/systemd/system/frpc.service && \
+    chcon -t systemd_unit_file_t /etc/systemd/system/frpc.service && \
+    systemctl daemon-reload && systemctl enable frpc.service && \
+    systemctl start frpc.service"
 echo "Note: FRPC will not be automatically restarted due to the risk of failing to reconnect. You must restart it manually."
 echo "Done."
 
 printTitle "Finished"
 echo "Note:
-- You may still need to run install_remote.sh.
-- Some image tags are hardcoded - you may need to update these manually.
 - Some services may need manual setup in their respective GUIs."
 printLine -

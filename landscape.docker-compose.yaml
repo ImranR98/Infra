@@ -68,7 +68,7 @@ services:
         restart: unless-stopped
         container_name: monerod
         volumes:
-            - $MAIN_PARENT_DIR/.bitmonero:/home/monero/.bitmonero
+            - $MONEROD_BITMONERO_DIR:/home/monero/.bitmonero
         ports:
             - 18080:18080
             - 18089:18089
@@ -1096,6 +1096,7 @@ services:
             - "traefik.enable=true"
             - "traefik.http.routers.fmd.rule=Host(`fmd.$SERVICES_DOMAIN`)"
             - "traefik.http.routers.fmd.entrypoints=websecure"
+            - "traefik.http.routers.fmd.middlewares=authelia@docker"
             - "traefik.http.routers.fmd.tls.certresolver=le"
             - "traefik.http.routers.fmd.tls=true"
             - "traefik.http.services.fmd.loadbalancer.server.port=8080"

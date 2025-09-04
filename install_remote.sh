@@ -11,14 +11,17 @@ fi
 if [ "$UPDATE_ONLY_NON_FRPC" != true ]; then
     printTitle "Install Docker"
     ssh -A -t "$PROXY_SSH_STRING" bash -l <<-EOF
+    set -e
 sudo install -m 0755 -d /etc/apt/keyrings
-curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg || :
 sudo chmod a+r /etc/apt/keyrings/docker.gpg
 if [ -z "\$VERSION_CODENAME" ]; then
-    VERSION_CODENAME="\$(cat /etc/lsb-release | grep CODENAME | awk -F= '{print \$2}')"
+    VERSION_CODENAME="\$(cat /etc/os-release | grep CODENAME | awk -F= '{print \$2}')"
 fi
+OS=ubuntu
+if [ -n "\$(grep 'Debian' /etc/os-release)" ]; then OS=debian; fi
 echo \
-    "deb [arch="\$(dpkg --print-architecture)" signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
+    "deb [arch="\$(dpkg --print-architecture)" signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/\$OS \
   "$(. /etc/os-release && echo "\$VERSION_CODENAME")" stable" |
 sudo tee /etc/apt/sources.list.d/docker.list >/dev/null
 sudo apt-get update -y
@@ -63,7 +66,7 @@ rm "$HERE_M3U8"/files/logtfy.remote.temp.json
 docker pull imranrdev/logtfy
 echo "Done."
 
-printTitle "Generate Docker Compose and Systemd Files and Start the Service"
+printTitle "Generate Docker Compose and Systemd files and start the service"
 generateComposeService landscape-remote 1000 >"$HERE_M3U8"/files/landscape-remote.service
 cat "$HERE_M3U8"/landscape-remote.docker-compose.yaml | envsubst >"$HERE_M3U8"/files/landscape-remote.docker-compose.yaml
 scp "$HERE_M3U8"/files/landscape-remote.install.sh "$PROXY_SSH_STRING":~/landscape-remote-services/landscape-remote.install.sh
@@ -82,8 +85,9 @@ echo "Done."
 if [ "$UPDATE_ONLY_NON_FRPC" != true ]; then
     if "$HERE_M3U8"/files/check_root_luks.sh >/dev/null 2>&1; then
         printTitle "Install FRPC-Preboot and Dracut-Crypt-SSH so that root volume can be decrypted remotely."
-        bash "$HERE_M3U8"/files/dracut-crypt-ssh.install.sh
+        $SUDO_COMMAND bash "$HERE_M3U8"/files/dracut-crypt-ssh.install.sh "$USER"
         bash "$HERE_M3U8"/files/frpc-preboot.install.sh
         rm "$HERE_M3U8"/files/frpc-preboot.ini
+        echo "Done."
     fi
 fi

@@ -11,5 +11,6 @@ working_dir="$(pwd)"
 cd "$temp_dir"
 git clone https://github.com/ImranR98/dracut-frpc.git
 cd dracut-frpc
+export RUN_TOOLBOX_STEPS_WITH_ASSUMPTIONS=true
 bash ./setup.sh "$HERE_A7H2"/frpc-preboot.ini
 cd "$working_dir"

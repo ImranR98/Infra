@@ -1,7 +1,10 @@
 #!/bin/bash
 
 # Get the root filesystem source device and clean up any appended subvol/path
-root_source=$(findmnt -n -o SOURCE / | sed 's/\[.*//')  # Remove [subvol] or [/path] suffixes
+root_source=$(findmnt -n -o SOURCE /sysroot | sed 's/\[.*//')  # Remove [subvol] or [/path] suffixes
+if [[ -z "$root_source" ]]; then
+    root_source=$(findmnt -n -o SOURCE / | sed 's/\[.*//')
+fi
 if [[ -z "$root_source" ]]; then
     echo "Error: Could not determine root device." >&2
     exit 1

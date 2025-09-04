@@ -51,9 +51,9 @@ access_control:
     - domain: music.$SERVICES_DOMAIN # IGNORE INITIALLY
       policy: bypass # IGNORE INITIALLY
     - domain: immich.$SERVICES_DOMAIN # IGNORE INITIALLY
-      policy: bypass
-    - domain: gpt.$SERVICES_DOMAIN
       policy: bypass # IGNORE INITIALLY
+    - domain: gpt.$SERVICES_DOMAIN
+      policy: bypass
     - domain: auth.$SERVICES_DOMAIN
       policy: bypass
     - domain: webdav.$SERVICES_DOMAIN
@@ -63,6 +63,8 @@ access_control:
     - domain: opodsync.$SERVICES_DOMAIN # IGNORE INITIALLY
       policy: bypass # IGNORE INITIALLY
     - domain: docker.$SERVICES_DOMAIN
+      policy: bypass
+    - domain: fmd.$SERVICES_DOMAIN
       policy: bypass
     - domain: ytdl.$SERVICES_DOMAIN
       policy: one_factor
@@ -122,6 +124,7 @@ identity_providers:
           - 'profile'
           - 'email'
         userinfo_signed_response_alg: 'none'
+        token_endpoint_auth_method: 'client_secret_post'
       - client_id: 'open-webui'
         client_name: 'Open WebUI'
         client_secret: '$AUTHELIA_OPEN_WEBUI_CLIENT_SECRET'

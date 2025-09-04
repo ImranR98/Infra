@@ -51,7 +51,8 @@ Docker-based setup for my self-hosted apps/services.
 ## Usage
 
 1. Set up a server with outbound internet access.
-    - Most of the code is distro-agnostic but a few lines are not. We assume the server is running Fedora 42.
+    - Most of the code is distro-agnostic but a few lines are not. We assume the server is running [secureblue](https://secureblue.dev/) (should also work with other Fedora Atomic OSes and Workstation).
+    - You must pre-install Docker and Docker compose
     - We assume the server is running an x86-64 CPU and an AMD GPU with ROCm support.
     - The server must be powerful enough to run all apps defined in `landscape.docker-compose.yaml`.
     - If the server has a LUKS-encrypted drive (optional), a way to decrypt it remotely via SSH will be installed as part of the setup process.

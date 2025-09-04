@@ -27,7 +27,7 @@ if [ "$MYFRPVER" != "$THEIRFRPVER" ]; then
     chmod +x "$HERE_2G4U"/files/check_root_luks.sh
     if "$HERE_2G4U"/files/check_root_luks.sh >/dev/null 2>&1; then
         printTitle "Install FRPC-Preboot and Dracut-Crypt-SSH so that root volume can be decrypted remotely."
-        bash "$HERE_2G4U"/files/dracut-crypt-ssh.install.sh
+        $SUDO_COMMAND bash "$HERE_2G4U"/files/dracut-crypt-ssh.install.sh "$USER"
         bash "$HERE_2G4U"/files/frpc-preboot.install.sh
         rm "$HERE_2G4U"/files/frpc-preboot.ini
     fi
