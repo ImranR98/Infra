@@ -58,6 +58,8 @@ access_control:
       policy: bypass
     - domain: webdav.$SERVICES_DOMAIN
       policy: bypass
+    - domain: baikal.$SERVICES_DOMAIN # IGNORE INITIALLY
+      policy: bypass # IGNORE INITIALLY
     - domain: plausible.$SERVICES_DOMAIN # IGNORE INITIALLY
       policy: bypass # IGNORE INITIALLY
     - domain: opodsync.$SERVICES_DOMAIN # IGNORE INITIALLY
