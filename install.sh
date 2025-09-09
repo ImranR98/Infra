@@ -21,7 +21,6 @@ mkdir -p "$STATE_DIR"/frpc
 mkdir -p "$STATE_DIR"/beszel
 mkdir -p "$STATE_DIR"/registry/data
 mkdir -p "$STATE_DIR"/registry/auth
-mkdir -p "$STATE_DIR"/baikal/Specific/db
 echo "Done."
 
 printTitle "Re/generate various state files"
@@ -111,14 +110,6 @@ if [ "$(stat -c '%u:%g' "$STATE_DIR/plausible/data")" != "999:999" ]; then
     $SUDO_COMMAND bash -c "chown 999:999 '$STATE_DIR/plausible/data' && chown root:root '$STATE_DIR/plausible/event_data' && \
     chown root:root '$STATE_DIR/plausible/event_logs' && cp '$HERE_LX1A/files/plausible.logs.xml' '$STATE_DIR/plausible/config/logs.xml' && \
     cp '$HERE_LX1A/files/plausible.ipv4-only.xml' '$STATE_DIR/plausible/config/ipv4-only.xml'"
-fi
-if [ "$(stat -c '%u:%g' "$STATE_DIR/config")" != "101:101" ]; then
-    echo "chown-ing Baikal config directory..."
-    $SUDO_COMMAND bash -c "chown -R 101:101 '$STATE_DIR/baikal/config'"
-fi
-if [ "$(stat -c '%u:%g' "$STATE_DIR/Specific")" != "101:101" ]; then
-    echo "chown-ing Baikal config directory..."
-    $SUDO_COMMAND bash -c "chown -R 101:101 '$STATE_DIR/baikal/Specific'"
 fi
 if [ "$(stat -c '%u:%g' "$STATE_DIR/prometheus/config")" != "65534:65534" ]; then
     echo "Creating Prometheus config..."

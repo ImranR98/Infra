@@ -919,12 +919,11 @@ services:
             - "traefik.http.services.webdav.loadbalancer.server.port=8080"
 
     # CalDAV/CardDAV Server
-    baikal:
-        image: ckulka/baikal:nginx
-        container_name: baikal
+    nextcloud:
+        image: nextcloud
+        container_name: nextcloud
         volumes:
-            - $STATE_DIR/baikal/Specific:/var/www/baikal/Specific
-            - $STATE_DIR/baikal/config:/var/www/baikal/config
+            - $STATE_DIR/nextcloud/data:/var/www/html
         networks:
             - traefik
         depends_on:
@@ -932,12 +931,12 @@ services:
         restart: unless-stopped
         labels:
             - "traefik.enable=true"
-            - "traefik.http.routers.baikal.rule=Host(`baikal.$SERVICES_DOMAIN`)"
-            - "traefik.http.routers.baikal.entrypoints=websecure"
-            - "traefik.http.routers.baikal.middlewares=authelia@docker"
-            - "traefik.http.routers.baikal.tls.certresolver=le"
-            - "traefik.http.routers.baikal.tls=true"
-            - "traefik.http.services.baikal.loadbalancer.server.port=80"
+            - "traefik.http.routers.nextcloud.rule=Host(`nextcloud.$SERVICES_DOMAIN`)"
+            - "traefik.http.routers.nextcloud.entrypoints=websecure"
+            - "traefik.http.routers.nextcloud.middlewares=authelia@docker"
+            - "traefik.http.routers.nextcloud.tls.certresolver=le"
+            - "traefik.http.routers.nextcloud.tls=true"
+            - "traefik.http.services.nextcloud.loadbalancer.server.port=80"
 
     # Link Sharing
     shlink:
