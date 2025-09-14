@@ -5,8 +5,8 @@ landscape-remote.docker-compose.yaml
 landscape-remote.service
 frps-tokens.txt
 frps.service
-frpc.ini
-frpc-preboot.ini
+frpc.toml
+frpc-preboot.toml
 temp_code.txt
 strelaysrv.service
 strelaysrv.docker-compose.yaml

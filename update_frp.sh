@@ -29,7 +29,7 @@ if [ "$MYFRPVER" != "$THEIRFRPVER" ]; then
         printTitle "Install FRPC-Preboot and Dracut-Crypt-SSH so that root volume can be decrypted remotely."
         $SUDO_COMMAND bash "$HERE_2G4U"/files/dracut-crypt-ssh.install.sh "$USER"
         bash "$HERE_2G4U"/files/frpc-preboot.install.sh
-        rm "$HERE_2G4U"/files/frpc-preboot.ini
+        rm "$HERE_2G4U"/files/frpc-preboot.toml
     fi
 
 else

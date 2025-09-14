@@ -1,0 +1,13 @@
+serverAddr = "$PROXY_HOST"
+serverPort = 7000
+auth.additionalScopes = ["HeartBeats", "NewWorkConns"]
+user = "${MAIN_NODE_HOSTNAME_LOWERCASE}-preboot"
+metadatas.token = "$META_TOKEN"
+
+[[proxies]]
+name = "ssh-preboot"
+type = "tcp"
+localIP = "127.0.0.1"
+localPort = 22
+remotePort = 8887
+transport.useEncryption = true

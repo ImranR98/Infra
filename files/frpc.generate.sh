@@ -16,7 +16,7 @@ NEW_RANDOM_TOKEN="$(echo $RANDOM | sha512sum | awk '{print $1}')$(echo $RANDOM |
 syncRemoteEnvFileIfUndefined "$PROXY_SSH_STRING" "$PROXY_HOME/landscape-remote-services/state/frps-tokens.txt" "$FRPC_USERNAME" "$NEW_RANDOM_TOKEN" "$HERE_QC6O"/temp_code.txt
 CHAR_COUNT=$(( "$(echo "$FRPC_USERNAME" | wc -c)" + 1))
 TOKEN="$(grep -Eo "^$FRPC_USERNAME=.+" "$HERE_QC6O"/temp_code.txt | tail -c +$CHAR_COUNT)"
-awk -v TOKEN="$TOKEN" '{gsub("put_token_here", TOKEN); print}' "$HERE_QC6O/$FRPC_FILENAME.template.ini" | envsubst | dd status=none of="$HERE_QC6O/$FRPC_FILENAME.ini"
+awk -v TOKEN="$TOKEN" '{gsub("put_token_here", TOKEN); print}' "$HERE_QC6O/$FRPC_FILENAME.template.toml" | envsubst | dd status=none of="$HERE_QC6O/$FRPC_FILENAME.toml"
 rm "$HERE_QC6O"/temp_code.txt
 
 if [ "$TOKEN" = "$NEW_RANDOM_TOKEN" ]; then

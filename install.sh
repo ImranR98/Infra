@@ -79,7 +79,7 @@ if [ ! -f "$STATE_DIR"/traefik/mtls/cacert.pem ] || [ ! -f "$STATE_DIR"/traefik/
     openssl pkcs12 -export -out "$STATE_DIR"/traefik/mtls/mtls-client.p12 -inkey "$STATE_DIR"/traefik/mtls/cakey.pem -in "$STATE_DIR"/traefik/mtls/cacert.pem
 fi
 bash "$HERE_LX1A"/files/frpc.generate.sh
-mv "$HERE_LX1A"/files/frpc.ini "$STATE_DIR"/frpc
+mv "$HERE_LX1A"/files/frpc.toml "$STATE_DIR"/frpc
 if [ ! -d "$STATE_DIR"/crowdsec/dashboard-db/metabase.db ]; then
     wget -q https://crowdsec-statics-assets.s3-eu-west-1.amazonaws.com/metabase_sqlite.zip -O "$STATE_DIR"/crowdsec/dashboard-db/metabase.db.zip
     unzip -q "$STATE_DIR"/crowdsec/dashboard-db/metabase.db.zip -d "$STATE_DIR"/crowdsec/dashboard-db/

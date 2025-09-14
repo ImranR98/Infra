@@ -87,7 +87,7 @@ if [ "$UPDATE_ONLY_NON_FRPC" != true ]; then
         printTitle "Install FRPC-Preboot and Dracut-Crypt-SSH so that root volume can be decrypted remotely."
         $SUDO_COMMAND bash "$HERE_M3U8"/files/dracut-crypt-ssh.install.sh "$USER"
         bash "$HERE_M3U8"/files/frpc-preboot.install.sh
-        rm "$HERE_M3U8"/files/frpc-preboot.ini
+        rm "$HERE_M3U8"/files/frpc-preboot.toml
         echo "Done."
     fi
 fi
