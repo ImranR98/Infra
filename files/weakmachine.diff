@@ -1,0 +1,84 @@
+diff --git a/landscape.docker-compose.yaml b/landscape.docker-compose.yaml
+index f908526..1711690 100755
+--- a/landscape.docker-compose.yaml
++++ b/landscape.docker-compose.yaml
+@@ -62,24 +62,24 @@ services:
+         user: "1000:1000"
+         restart: on-failure
+ 
+-    # Monero node
+-    monerod:
+-        image: sethsimmons/simple-monerod:latest
+-        restart: unless-stopped
+-        container_name: monerod
+-        volumes:
+-            - $MONEROD_BITMONERO_DIR:/home/monero/.bitmonero
+-        ports:
+-            - 18080:18080
+-            - 18089:18089
+-        command:
+-            - "--rpc-restricted-bind-ip=0.0.0.0"
+-            - "--rpc-restricted-bind-port=18089"
+-            - "--no-igd"
+-            - "--no-zmq"
+-            - "--enable-dns-blocklist"
+-            - "--prune-blockchain"
+-            - "--rpc-login=$MONEROD_RPC_LOGIN"
++    # # Monero node
++    # monerod:
++    #     image: sethsimmons/simple-monerod:latest
++    #     restart: unless-stopped
++    #     container_name: monerod
++    #     volumes:
++    #         - $MONEROD_BITMONERO_DIR:/home/monero/.bitmonero
++    #     ports:
++    #         - 18080:18080
++    #         - 18089:18089
++    #     command:
++    #         - "--rpc-restricted-bind-ip=0.0.0.0"
++    #         - "--rpc-restricted-bind-port=18089"
++    #         - "--no-igd"
++    #         - "--no-zmq"
++    #         - "--enable-dns-blocklist"
++    #         - "--prune-blockchain"
++    #         - "--rpc-login=$MONEROD_RPC_LOGIN"
+ 
+     # Logtfy - Simple monitoring/alerts
+     logtfy:
+@@ -668,10 +668,10 @@ services:
+         container_name: immich-machine-learning
+         # For hardware acceleration, add one of -[armnn, cuda, openvino] to the image tag.
+         # Example tag: release-cuda
+-        image: ghcr.io/immich-app/immich-machine-learning:release-rocm
+-        extends: # uncomment this section for hardware acceleration - see https://immich.app/docs/features/ml-hardware-acceleration
+-            file: $STATE_DIR/immich/hwaccel.ml.yml
+-            service: rocm # set to one of [armnn, cuda, rocm, openvino, openvino-wsl, rknn] for accelerated inference - use the `-wsl` version for WSL2 where applicable
++        image: ghcr.io/immich-app/immich-machine-learning:release
++        # extends: # uncomment this section for hardware acceleration - see https://immich.app/docs/features/ml-hardware-acceleration
++        #     file: $STATE_DIR/immich/hwaccel.ml.yml
++        #     service: rocm # set to one of [armnn, cuda, rocm, openvino, openvino-wsl, rknn] for accelerated inference - use the `-wsl` version for WSL2 where applicable
+         volumes:
+             - immich-model-cache:/cache
+         environment:
+@@ -824,7 +824,7 @@ services:
+ 
+     # LLMs
+     ollama:
+-        image: ollama/ollama:rocm
++        image: ollama/ollama
+         container_name: ollama
+         volumes:
+             - ollama:/root/.ollama
+@@ -832,9 +832,9 @@ services:
+             - traefik
+         tty: true
+         restart: unless-stopped
+-        devices:
+-            - "/dev/kfd:/dev/kfd"    # Required for AMD GPU support
+-            - "/dev/dri:/dev/dri"    # Required for AMD GPU support
++        # devices:
++        #     - "/dev/kfd:/dev/kfd"    # Required for AMD GPU support
++        #     - "/dev/dri:/dev/dri"    # Required for AMD GPU support
+     ollama-webui:
+         image: ghcr.io/open-webui/open-webui:main
+         container_name: ollama-webui
