@@ -2,7 +2,7 @@ serverAddr = "$PROXY_HOST"
 serverPort = 7000
 auth.additionalScopes = ["HeartBeats", "NewWorkConns"]
 user = "${MAIN_NODE_HOSTNAME_LOWERCASE}-preboot"
-metadatas.token = "$META_TOKEN"
+metadatas.token = "put_token_here"
 
 [[proxies]]
 name = "ssh-preboot"
