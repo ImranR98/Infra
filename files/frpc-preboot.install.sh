@@ -13,4 +13,5 @@ git clone https://github.com/ImranR98/dracut-frpc.git
 cd dracut-frpc
 export RUN_TOOLBOX_STEPS_WITH_ASSUMPTIONS=true
 bash ./setup.sh "$HERE_A7H2"/frpc-preboot.toml
+rm -rf "$temp_dir"
 cd "$working_dir"
