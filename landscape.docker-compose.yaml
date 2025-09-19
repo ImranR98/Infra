@@ -104,7 +104,8 @@ services:
         volumes:
             - $STATE_DIR/authelia/config:/config
         networks:
-            - traefik
+            traefik:
+                ipv4_address: 172.19.0.4
         labels:
             - "traefik.enable=true"
             - "traefik.http.routers.authelia.rule=Host(`auth.$SERVICES_DOMAIN`)"
@@ -160,8 +161,8 @@ services:
             - "--entrypoints.web.http.redirections.entrypoint.permanent=true"
             - "--entryPoints.websecure=true"
             - "--entryPoints.websecure.address=:443"
-            - "--entryPoints.websecure.forwardedHeaders.trustedIPs=172.19.0.0/16,192.168.0.0/16"
-            - "--entryPoints.websecure.proxyProtocol.trustedIPs=172.19.0.0/16,192.168.0.0/16"
+            - "--entryPoints.websecure.forwardedHeaders.trustedIPs=172.19.0.4/32"
+            - "--entryPoints.websecure.proxyProtocol.trustedIPs=172.19.0.1/32"
             - "--entryPoints.websecure.http.middlewares=crowdsec-bouncer@file"
             - "--certificatesresolvers.le.acme.email=$DOMAIN_OWNER_EMAIL"
             - "--certificatesresolvers.le.acme.storage=./acme.json"
@@ -187,7 +188,8 @@ services:
             - "traefik.http.routers.api.middlewares=authelia@docker,geoblock@file"
         restart: unless-stopped
         networks:
-            - traefik
+            traefik:
+                ipv4_address: 172.19.0.7
     crowdsec:
         image: crowdsecurity/crowdsec:latest
         container_name: crowdsec
@@ -794,7 +796,7 @@ services:
             # This impacts which IP address is logged (X-Forwarded-For or REMOTE_ADDR).
             # This also impacts external authentication methods;
             # see https://freshrss.github.io/FreshRSS/en/admins/09_AccessControl.html
-            TRUSTED_PROXY: 172.19.0.0/16
+            TRUSTED_PROXY: 172.19.0.7/32
             # Optional auto-install parameters (the Web interface install is recommended instead):
             # ⚠️ Parameters below are only used at the very first run (so far).
             # So if changes are made (or in .env file), first delete the service and volumes.
