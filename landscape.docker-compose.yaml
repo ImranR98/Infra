@@ -1,3 +1,9 @@
+x-logging: 
+    &logging
+    options:
+        max-size: 10m
+        max-file: 5
+
 services:
     # Watchtower - Container Updater
     watchtower:
@@ -10,6 +16,7 @@ services:
             WATCHTOWER_POLL_INTERVAL: 7200
         volumes:
             - /var/run/docker.sock:/var/run/docker.sock
+        logging: *logging
 
     # Syncthing
     syncthing:
@@ -22,6 +29,7 @@ services:
             - /home/$USER:/var/syncthing
         network_mode: host
         restart: on-failure
+        logging: *logging
 
     # MDSCL-Camera
     media-date-standardize-copy-loop-camera:
@@ -35,6 +43,7 @@ services:
             - "$MAIN_PARENT_DIR/Main/Media/Camera:/destination"
         user: "1000:1000"
         restart: on-failure
+        logging: *logging
 
     # MDSCL-Screenshots
     media-date-standardize-copy-loop-screenshots:
@@ -48,6 +57,7 @@ services:
             - "$MAIN_PARENT_DIR/Main/Media/Screenshots:/destination"
         user: "1000:1000"
         restart: on-failure
+        logging: *logging
 
     # MDSCL-ScreenRecordings
     media-date-standardize-copy-loop-screenrecs:
@@ -61,6 +71,7 @@ services:
             - "$MAIN_PARENT_DIR/Main/Media/Screenshots:/destination"
         user: "1000:1000"
         restart: on-failure
+        logging: *logging
 
     # Monero node
     monerod:
@@ -80,6 +91,7 @@ services:
             - "--enable-dns-blocklist"
             - "--prune-blockchain"
             - "--rpc-login=$MONEROD_RPC_LOGIN"
+        logging: *logging
 
     # Logtfy - Simple monitoring/alerts
     logtfy:
@@ -93,6 +105,7 @@ services:
             - $STATE_DIR/logtfy/config.json:/logtfy/config.json
             - logtfy_tmp:/tmp/logtfy
             - $STATE_DIR/traefik_logs:/traefik_logs
+        logging: *logging
 
     # Authelia - 2FA Authentication
     authelia:
@@ -104,8 +117,7 @@ services:
         volumes:
             - $STATE_DIR/authelia/config:/config
         networks:
-            traefik:
-                ipv4_address: 172.19.0.4
+            - traefik
         labels:
             - "traefik.enable=true"
             - "traefik.http.routers.authelia.rule=Host(`auth.$SERVICES_DOMAIN`)"
@@ -122,6 +134,7 @@ services:
         expose:
             - 9091
         restart: unless-stopped
+        logging: *logging
     authelia-db:
         image: redis:alpine
         container_name: authelia-db
@@ -133,6 +146,7 @@ services:
         expose:
             - 6379
         restart: unless-stopped
+        logging: *logging
 
     # Traefik - Reverse Proxy
     traefik:
@@ -161,7 +175,7 @@ services:
             - "--entrypoints.web.http.redirections.entrypoint.permanent=true"
             - "--entryPoints.websecure=true"
             - "--entryPoints.websecure.address=:443"
-            - "--entryPoints.websecure.forwardedHeaders.trustedIPs=172.19.0.4/32"
+            # - "--entryPoints.websecure.forwardedHeaders.trustedIPs=172.19.0.0/16"
             - "--entryPoints.websecure.proxyProtocol.trustedIPs=172.19.0.1/32"
             - "--entryPoints.websecure.http.middlewares=crowdsec-bouncer@file"
             - "--certificatesresolvers.le.acme.email=$DOMAIN_OWNER_EMAIL"
@@ -188,8 +202,9 @@ services:
             - "traefik.http.routers.api.middlewares=authelia@docker,geoblock@file"
         restart: unless-stopped
         networks:
-            traefik:
-                ipv4_address: 172.19.0.7
+            - traefik
+        logging: *logging
+
     crowdsec:
         image: crowdsecurity/crowdsec:latest
         container_name: crowdsec
@@ -208,6 +223,7 @@ services:
         networks:
             - traefik
         restart: unless-stopped
+        logging: *logging
     crowdsec-bouncer:
         image: docker.io/fbonalair/traefik-crowdsec-bouncer:latest
         container_name: crowdsec-bouncer
@@ -219,6 +235,7 @@ services:
         depends_on:
             - crowdsec
         restart: unless-stopped
+        logging: *logging
     crowdsec-dashboard:
         image: metabase/metabase
         container_name: crowdsec-dashboard
@@ -241,6 +258,7 @@ services:
             - "traefik.http.routers.crowdsec-dashboard.tls=true"
             - "traefik.http.routers.crowdsec-dashboard.middlewares=authelia@docker,geoblock@file"
             - "traefik.http.services.crowdsec-dashboard.loadbalancer.server.port=3000"
+        logging: *logging
 
     # Grafana + Prometheus - Monitoring
     prometheus:
@@ -262,6 +280,8 @@ services:
             - "traefik.http.routers.prometheus.service=prometheus"
             - "traefik.http.services.prometheus.loadbalancer.server.port=9090"
         restart: unless-stopped
+        logging: *logging
+
     grafana: # Add the Prometheus datasource (https://prometheus:9090) then import this dashboard: https://grafana.com/grafana/dashboards/17346-traefik-official-standalone-dashboard/
         image: grafana/grafana
         container_name: grafana
@@ -286,6 +306,7 @@ services:
             - "traefik.http.services.grafana.loadbalancer.server.port=3000"
             - "traefik.docker.network=traefik"
         restart: unless-stopped
+        logging: *logging
 
     # Beszel - Local resource monitoring
     beszel:
@@ -309,6 +330,7 @@ services:
             - "traefik.http.routers.beszel.tls=true"
             - "traefik.http.routers.beszel.middlewares=authelia@docker,geoblock@file"
             - "traefik.http.services.beszel.loadbalancer.server.port=8090"
+        logging: *logging
     beszel-agent:
         image: henrygd/beszel-agent:latest
         container_name: beszel-agent
@@ -319,6 +341,7 @@ services:
         environment:
             PORT: 45876
             # ${BESZEL_ENV_VARS} # DO NOT REMOVE, THIS IS REPLACED BY envsubst
+        logging: *logging
 
     # OpenCanary - Honeypot
     opencanary:
@@ -336,6 +359,7 @@ services:
             - "5000:5000"
             - "8082:8082"
             - "9418:9418"
+        logging: *logging
 
     # Plausible - Web Analytics
     # TODO: Change default DB password
@@ -355,6 +379,7 @@ services:
         networks:
             - traefik
         user: 1000:1000
+        logging: *logging
     plausible_events_db:
         image: clickhouse/clickhouse-server:203.0.113.10-alpine
         restart: unless-stopped
@@ -377,6 +402,7 @@ services:
                     "wget --no-verbose --tries=1 -O - http://127.0.0.1:8123/ping || exit 1",
                 ]
             start_period: 1m
+        logging: *logging
     plausible:
         image: ghcr.io/plausible/community-edition:v2.1.4
         restart: unless-stopped
@@ -409,6 +435,7 @@ services:
             - "traefik.http.routers.plausible.tls=true"
             - "traefik.http.services.plausible.loadbalancer.server.port=8000"
             - "traefik.http.routers.plausible.middlewares=authelia@docker"
+        logging: *logging
 
     registry:
         container_name: registry
@@ -435,6 +462,7 @@ services:
             - "traefik.http.services.registry.loadbalancer.server.port=5000"
         networks:
             - traefik
+        logging: *logging
 
     # File Browser
     filebrowser:
@@ -464,7 +492,7 @@ services:
             interval: 30s
             timeout: 20s
             retries: 3
-
+        logging: *logging
     
     # Send - File Sharing
     send:
@@ -503,6 +531,7 @@ services:
             - "traefik.http.services.send.loadbalancer.server.port=80"
         networks:
             - traefik
+        logging: *logging
     send-db:
         container_name: send-db
         image: "redis:alpine"
@@ -511,6 +540,7 @@ services:
             - $STATE_DIR/send/db:/data
         networks:
             - traefik
+        logging: *logging
 
     # Jellyfin - TV Streaming
     jellyfin:
@@ -536,6 +566,7 @@ services:
             - 127.0.0.1:8096:8096
         networks:
             - traefik
+        logging: *logging
 
     # Ntfy - Push Notifications
     ntfy:
@@ -561,6 +592,7 @@ services:
             - "traefik.http.services.ntfy.loadbalancer.server.port=80"
         networks:
             - traefik
+        logging: *logging
 
     # PixelNtfy - Tracking Pixels
     pixelntfy:
@@ -584,6 +616,7 @@ services:
             - ANALYTICS_SCRIPT_ELEMENT=<script defer data-domain="pixelntfy.$SERVICES_DOMAIN" src="https://plausible.$SERVICES_DOMAIN/js/script.js"></script>
         networks:
             - traefik
+        logging: *logging
 
     # D$CPLN - Monthly/Weekly Budget
     dscpln:
@@ -612,6 +645,7 @@ services:
         networks:
             - traefik
         restart: unless-stopped
+        logging: *logging
 
     # ISBN Lookup
     isbn-lookup:
@@ -632,6 +666,7 @@ services:
             - ANALYTICS_SCRIPT_ELEMENT=<script defer data-domain="isbn.$SERVICES_DOMAIN" src="https://plausible.$SERVICES_DOMAIN/js/script.js"></script>
         networks:
             - traefik
+        logging: *logging
 
     # Immich - Gallery
     immich-server:
@@ -666,6 +701,7 @@ services:
             - "traefik.http.routers.immich.tls=true"
             - "traefik.http.routers.immich.middlewares=authelia@docker,geoblock@file"
             - "traefik.http.services.immich.loadbalancer.server.port=2283"
+        logging: *logging
     immich-machine-learning:
         container_name: immich-machine-learning
         # For hardware acceleration, add one of -[armnn, cuda, openvino] to the image tag.
@@ -686,12 +722,14 @@ services:
         restart: always
         networks:
             - traefik
+        logging: *logging
     immich-redis:
         container_name: immich-redis
         image: registry.hub.docker.com/library/redis:6.2-alpine
         restart: always
         networks:
             - traefik
+        logging: *logging
     immich-database:
         container_name: immich-postgres
         image: registry.hub.docker.com/tensorchord/pgvecto-rs:pg14-v0.2.0
@@ -704,6 +742,7 @@ services:
         restart: always
         networks:
             - traefik
+        logging: *logging
 
     # Service Uptime
     uptime:
@@ -727,6 +766,7 @@ services:
             - "traefik.http.services.uptime.loadbalancer.server.port=3001"
         networks:
             - traefik
+        logging: *logging
 
     # Navidrome - Music Streaming
     navidrome:
@@ -749,6 +789,7 @@ services:
             - "traefik.http.services.navidrome.loadbalancer.server.port=4533"
         networks:
             - traefik
+        logging: *logging
 
     # oPodSync - Podcast Sync
     opodsync:
@@ -770,6 +811,7 @@ services:
             - "traefik.http.services.opodsync.loadbalancer.server.port=8080"
         networks:
             - traefik
+        logging: *logging
 
     freshrss:
         image: freshrss/freshrss:latest
@@ -777,9 +819,6 @@ services:
         restart: unless-stopped
         depends_on:
             - traefik
-        logging:
-            options:
-                max-size: 10m
         volumes:
             - $STATE_DIR/freshrss/data:/var/www/FreshRSS/data
             - $STATE_DIR/freshrss/extensions:/var/www/FreshRSS/extensions
@@ -796,7 +835,7 @@ services:
             # This impacts which IP address is logged (X-Forwarded-For or REMOTE_ADDR).
             # This also impacts external authentication methods;
             # see https://freshrss.github.io/FreshRSS/en/admins/09_AccessControl.html
-            TRUSTED_PROXY: 172.19.0.7/32
+            TRUSTED_PROXY: 172.19.0.0/16
             # Optional auto-install parameters (the Web interface install is recommended instead):
             # ⚠️ Parameters below are only used at the very first run (so far).
             # So if changes are made (or in .env file), first delete the service and volumes.
@@ -822,6 +861,7 @@ services:
             - "traefik.http.services.freshrss.loadbalancer.server.port=80"
         networks:
             - traefik
+        logging: *logging
 
     # Home Assistant + MQTT
     homeassistant:
@@ -843,6 +883,7 @@ services:
             - "traefik.http.routers.homeassistant.tls=true"
             - "traefik.http.routers.homeassistant.middlewares=authelia@docker,geoblock@file"
             - "traefik.http.services.homeassistant.loadbalancer.server.port=8123"
+        logging: *logging
     mosquitto:
         image: eclipse-mosquitto:openssl
         container_name: mosquitto
@@ -857,6 +898,7 @@ services:
         restart: unless-stopped
         networks:
             - traefik
+        logging: *logging
     wyoming-whisper:
         image: rhasspy/wyoming-whisper
         container_name: wyoming-whisper
@@ -866,6 +908,7 @@ services:
         restart: unless-stopped
         networks:
             - traefik
+        logging: *logging
     wyoming-piper:
         image: rhasspy/wyoming-piper
         container_name: wyoming-piper
@@ -875,6 +918,7 @@ services:
         restart: unless-stopped
         networks:
             - traefik
+        logging: *logging
 
     # LLMs
     ollama:
@@ -889,6 +933,7 @@ services:
         devices:
             - "/dev/kfd:/dev/kfd"    # Required for AMD GPU support
             - "/dev/dri:/dev/dri"    # Required for AMD GPU support
+        logging: *logging
     ollama-webui:
         image: ghcr.io/open-webui/open-webui:main
         container_name: ollama-webui
@@ -922,6 +967,7 @@ services:
             - "traefik.http.routers.ollama-webui.tls=true"
             - "traefik.http.routers.ollama-webui.middlewares=authelia@docker,geoblock@file"
             - "traefik.http.services.ollama-webui.loadbalancer.server.port=8080"
+        logging: *logging
 
     # MeTube - YouTube Downloader
     metube:
@@ -942,6 +988,7 @@ services:
             - "traefik.http.routers.metube.tls.certresolver=le"
             - "traefik.http.routers.metube.tls=true"
             - "traefik.http.services.metube.loadbalancer.server.port=8081"
+        logging: *logging
 
     # WebDAV Server
     webdav:
@@ -971,6 +1018,7 @@ services:
             - "traefik.http.routers.webdav.tls.certresolver=le"
             - "traefik.http.routers.webdav.tls=true"
             - "traefik.http.services.webdav.loadbalancer.server.port=8080"
+        logging: *logging
 
     # CalDAV/CardDAV Server
     nextcloud:
@@ -991,6 +1039,7 @@ services:
             - "traefik.http.routers.nextcloud.tls.certresolver=le"
             - "traefik.http.routers.nextcloud.tls=true"
             - "traefik.http.services.nextcloud.loadbalancer.server.port=80"
+        logging: *logging
 
     # Link Sharing
     shlink:
@@ -1019,6 +1068,7 @@ services:
             - "traefik.http.routers.shlink.tls.certresolver=le"
             - "traefik.http.routers.shlink.tls=true"
             - "traefik.http.services.shlink.loadbalancer.server.port=8080"
+        logging: *logging
     shlink_db:
         image: postgres:17-alpine
         container_name: shlink_db
@@ -1033,6 +1083,7 @@ services:
         networks:
             - traefik
         user: 1000:1000
+        logging: *logging
     shlink-web-client:
         image: shlinkio/shlink-web-client:stable
         container_name: shlink-web-client
@@ -1054,6 +1105,7 @@ services:
             - "traefik.http.routers.shlink-web-client.tls.certresolver=le"
             - "traefik.http.routers.shlink-web-client.tls=true"
             - "traefik.http.services.shlink-web-client.loadbalancer.server.port=8080"
+        logging: *logging
 
     # Jitsi Meet - Video calling
     # TODO: The following should be done automatically in install.sh (currently must be done manually)
@@ -1088,6 +1140,7 @@ services:
             - traefik
         depends_on:
             - jitsi-jvb
+        logging: *logging
     jitsi-prosody: # prosodyctl --config /config/prosody.cfg.lua register TheDesiredUsername meet.jitsi TheDesiredPassword
         image: jitsi/prosody:stable
         container_name: jitsi-prosody
@@ -1117,6 +1170,7 @@ services:
             traefik:
                 aliases:
                     - xmpp.meet.jitsi
+        logging: *logging
     jitsi-jicofo:
         image: jitsi/jicofo:stable
         container_name: jitsi-jicofo
@@ -1133,6 +1187,7 @@ services:
             - jitsi-prosody
         networks:
             - traefik
+        logging: *logging
     jitsi-jvb:
         image: jitsi/jvb:stable
         container_name: jitsi-jvb
@@ -1152,6 +1207,7 @@ services:
             - jitsi-prosody
         networks:
             - traefik
+        logging: *logging
 
     # Find My Device Server
     fmd:
@@ -1174,6 +1230,7 @@ services:
             - "traefik.http.routers.fmd.tls.certresolver=le"
             - "traefik.http.routers.fmd.tls=true"
             - "traefik.http.services.fmd.loadbalancer.server.port=8080"
+        logging: *logging
 
 networks:
     traefik:
