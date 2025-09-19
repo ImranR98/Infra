@@ -64,6 +64,8 @@ access_control:
       policy: bypass # IGNORE INITIALLY
     - domain: opodsync.$SERVICES_DOMAIN # IGNORE INITIALLY
       policy: bypass # IGNORE INITIALLY
+    - domain: rss.$SERVICES_DOMAIN
+      policy: bypass
     - domain: docker.$SERVICES_DOMAIN
       policy: bypass
     - domain: fmd.$SERVICES_DOMAIN

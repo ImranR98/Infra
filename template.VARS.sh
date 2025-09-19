@@ -90,3 +90,6 @@ export JITSI_MEET_JIBRI_RECORDER_PASSWORD='abcd' # openssl rand -hex 16
 export JITSI_MEET_JIBRI_XMPP_PASSWORD='abcd' # openssl rand -hex 16
 
 export FMD_REGISTRATIONTOKEN='abcd' # openssl rand -hex 32
+
+export FRESHRSS_ADMIN_API_PASSWORD="freshrss" # openssl rand -hex 32
+export FRESHRSS_ADMIN_PASSWORD="$FRESHRSS_ADMIN_API_PASSWORD"

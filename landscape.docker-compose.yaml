@@ -764,8 +764,60 @@ services:
             - "traefik.http.routers.opodsync.entrypoints=websecure"
             - "traefik.http.routers.opodsync.tls.certresolver=le"
             - "traefik.http.routers.opodsync.tls=true"
-            - "traefik.http.routers.opodsync.middlewares=geoblock@file"
+            - "traefik.http.routers.opodsync.middlewares=authelia@docker,geoblock@file"
             - "traefik.http.services.opodsync.loadbalancer.server.port=8080"
+        networks:
+            - traefik
+
+    freshrss:
+        image: freshrss/freshrss:latest
+        container_name: freshrss
+        restart: unless-stopped
+        depends_on:
+            - traefik
+        logging:
+            options:
+                max-size: 10m
+        volumes:
+            - $STATE_DIR/freshrss/data:/var/www/FreshRSS/data
+            - $STATE_DIR/freshrss/extensions:/var/www/FreshRSS/extensions
+        environment:
+            # A timezone http://php.net/timezones (default is UTC)
+            TZ: US/Eastern
+            # Cron job to refresh feeds at specified minutes
+            CRON_MIN: '2,32'
+            # Optional 'development' for additional logs; default is 'production'
+            FRESHRSS_ENV: development
+            # Optional parameter, remove for automatic settings, set to 0 to disable,
+            # or (if you use a proxy) to a space-separated list of trusted IP ranges
+            # compatible with https://httpd.apache.org/docs/current/mod/mod_remoteip.html#remoteipinternalproxy
+            # This impacts which IP address is logged (X-Forwarded-For or REMOTE_ADDR).
+            # This also impacts external authentication methods;
+            # see https://freshrss.github.io/FreshRSS/en/admins/09_AccessControl.html
+            TRUSTED_PROXY: 172.19.0.0/16
+            # Optional auto-install parameters (the Web interface install is recommended instead):
+            # ⚠️ Parameters below are only used at the very first run (so far).
+            # So if changes are made (or in .env file), first delete the service and volumes.
+            # ℹ️ All the --db-* parameters can be omitted if using built-in SQLite database.
+            FRESHRSS_INSTALL: |-
+                --api-enabled
+                --base-url https://rss.$SERVICES_DOMAIN
+                --default-user admin
+                --language en
+            FRESHRSS_USER: |-
+                --api-password $FRESHRSS_ADMIN_API_PASSWORD
+                --email $DOMAIN_OWNER_EMAIL
+                --language en
+                --password $FRESHRSS_ADMIN_PASSWORD
+                --user admin
+        labels:
+            - "traefik.enable=true"
+            - "traefik.http.routers.freshrss.rule=Host(`rss.$SERVICES_DOMAIN`)"
+            - "traefik.http.routers.freshrss.entrypoints=websecure"
+            - "traefik.http.routers.freshrss.tls.certresolver=le"
+            - "traefik.http.routers.freshrss.tls=true"
+            - "traefik.http.routers.freshrss.middlewares=authelia@docker,geoblock@file"
+            - "traefik.http.services.freshrss.loadbalancer.server.port=80"
         networks:
             - traefik
 
