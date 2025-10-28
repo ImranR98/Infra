@@ -11,11 +11,14 @@ services:
         privileged: true
         restart: unless-stopped
         image: containrrr/watchtower
+        networks:
+            - dockerproxy
         environment:
             WATCHTOWER_CLEANUP: "true"
             WATCHTOWER_POLL_INTERVAL: 7200
-        volumes:
-            - /var/run/docker.sock:/var/run/docker.sock
+            DOCKER_HOST: "tcp://dockerproxy:2375"
+        depends_on:
+            - dockerproxy
         logging: *logging
 
     # Syncthing
@@ -99,8 +102,13 @@ services:
         container_name: logtfy
         hostname: $MAIN_NODE_HOSTNAME
         restart: unless-stopped
+        depends_on:
+            - dockerproxy
+        networks:
+            - dockerproxy
+        environment:
+            DOCKER_HOST: "tcp://dockerproxy:2375"
         volumes:
-            - /var/run/docker.sock:/var/run/docker.sock
             - /var/log/journal:/var/log/journal:ro
             - $STATE_DIR/logtfy/config.json:/logtfy/config.json
             - logtfy_tmp:/tmp/logtfy
@@ -148,12 +156,39 @@ services:
         restart: unless-stopped
         logging: *logging
 
+    # https://github.com/wollomatic/socket-proxy
+    dockerproxy:
+        container_name: dockerproxy
+        image: wollomatic/socket-proxy:1
+        command:
+            - '-loglevel=debug' # set to debug for far more logging
+            - '-allowfrom=traefik'
+            - '-listenip=0.0.0.0'
+            - '-allowGET=/v1\..{1,2}/(version|containers/.*|events.*)'
+            - '-shutdowngracetime=5'
+            - '-watchdoginterval=600'
+            - '-stoponwatchdog'
+        restart: unless-stopped
+        read_only: true
+        mem_limit: 64M
+        cap_drop:
+        - ALL
+        security_opt:
+        - no-new-privileges
+        user: 65534:964 # replace 964 with the output of "grep docker /etc/group | awk -F: '{print $3}'"
+        volumes:
+            - /var/run/docker.sock:/var/run/docker.sock:ro
+        networks:
+            - dockerproxy
+        logging: *logging
+
     # Traefik - Reverse Proxy
     traefik:
         image: traefik:latest
         container_name: traefik
         depends_on:
             - authelia
+            - dockerproxy
         command:
             - "--api=true"
             - "--api.dashboard=true"
@@ -183,11 +218,12 @@ services:
             - "--certificatesresolvers.le.acme.tlschallenge=true"
             - "--experimental.plugins.geoblock.modulename=github.com/PascalMinder/geoblock"
             - "--experimental.plugins.geoblock.version=v0.2.8"
+            - "--providers.docker.endpoint=tcp://dockerproxy:2375"
+            - "--providers.docker.network=traefik"
         ports:
             - "80:80"
             - "443:443"
         volumes:
-            - /var/run/docker.sock:/var/run/docker.sock
             - $STATE_DIR/traefik/acme.json:/acme.json
             - $STATE_DIR/traefik/dynamic-configuration.yaml:/etc/traefik/dynamic-configuration.yaml
             - $STATE_DIR/traefik/mtls:/etc/traefik/mtls/
@@ -203,6 +239,7 @@ services:
         restart: unless-stopped
         networks:
             - traefik
+            - dockerproxy
         logging: *logging
 
     crowdsec:
@@ -1237,6 +1274,8 @@ networks:
         ipam:
             config:
                 - subnet: 172.19.0.0/16
+    dockerproxy:
+        internal: true
 
 volumes:
     logtfy_tmp: {}
