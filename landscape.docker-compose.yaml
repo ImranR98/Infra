@@ -84,8 +84,8 @@ services:
         volumes:
             - $MONEROD_BITMONERO_DIR:/home/monero/.bitmonero
         ports:
-            - 18080:18080
-            - 18089:18089
+            - 127.0.0.1:18080:18080
+            - 127.0.0.1:18089:18089
         command:
             - "--rpc-restricted-bind-ip=0.0.0.0"
             - "--rpc-restricted-bind-port=18089"
@@ -221,8 +221,8 @@ services:
             - "--providers.docker.endpoint=tcp://dockerproxy:2375"
             - "--providers.docker.network=traefik"
         ports:
-            - "80:80"
-            - "443:443"
+            - "127.0.0.1:80:80"
+            - "127.0.0.1:443:443"
         volumes:
             - $STATE_DIR/traefik/acme.json:/acme.json
             - $STATE_DIR/traefik/dynamic-configuration.yaml:/etc/traefik/dynamic-configuration.yaml
