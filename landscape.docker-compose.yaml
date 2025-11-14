@@ -62,7 +62,7 @@ services:
         container_name: watchtower
         privileged: true
         restart: unless-stopped
-        image: containrrr/watchtower
+        image: nickfedor/watchtower
         volumes:
             - dockerproxy_priv:/socket/:ro
         depends_on:
