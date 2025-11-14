@@ -616,7 +616,8 @@ services:
             - traefik
         user: "1000:1000"
         volumes:
-            - "$MAIN_PARENT_DIR/Main/External Media:/media"
+            - "$MAIN_PARENT_DIR/Main/Media/TV:/media/TV"
+            - "$MAIN_PARENT_DIR/Main/Media/YouTube:/media/YouTube"
             - $STATE_DIR/jellyfin/config:/config
             - $STATE_DIR/jellyfin/cache:/cache
         labels:
@@ -844,7 +845,7 @@ services:
         restart: unless-stopped
         volumes:
             - "$STATE_DIR/navidrome/data:/data"
-            - "$MAIN_PARENT_DIR/Main/External Media/Music:/music:ro"
+            - "$MAIN_PARENT_DIR/Main/Media/Music:/music:ro"
         labels:
             - "traefik.enable=true"
             - "traefik.http.routers.navidrome.rule=Host(`music.$SERVICES_DOMAIN`)"
