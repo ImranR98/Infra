@@ -64,8 +64,6 @@ export WEBDAV_HTPASSWD='user:abc'   # touch htpasswd && htpasswd -B htpasswd use
 
 export PIXELNTFY_TOPIC_SUFFIX='abc' # echo $RANDOM | sha256sum | awk '{print $1}' | head -c 32
 
-export LOGTFY_SYNCTHING_EXCLUDED_DEVICE_IDS=''
-
 export GEOBLOCK_CONFIG_SUBSET='
           blackListMode: false
           countries:
