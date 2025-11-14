@@ -746,7 +746,12 @@ services:
         volumes:
             - $STATE_DIR/immich/upload:/usr/src/app/upload
             - /etc/localtime:/etc/localtime:ro
-            - "$MAIN_PARENT_DIR/Main/Media:/mnt/media/ext-media:ro"
+            - "$MAIN_PARENT_DIR/Main/Media/Camera:/mnt/media/ext-media/Camera:ro"
+            - "$MAIN_PARENT_DIR/Main/Media/Creative:/mnt/media/ext-media/Creative:ro"
+            - "$MAIN_PARENT_DIR/Main/Media/Drawings:/mnt/media/ext-media/Drawings:ro"
+            - "$MAIN_PARENT_DIR/Main/Media/Game Media:/mnt/media/ext-media/Game Media:ro"
+            - "$MAIN_PARENT_DIR/Main/Media/Recordings:/mnt/media/ext-media/Recordings:ro"
+            - "$MAIN_PARENT_DIR/Main/Media/Screenshots:/mnt/media/ext-media/Screenshots:ro"            
         environment:
             - UPLOAD_LOCATION=$STATE_DIR/immich-upload
             - DB_HOSTNAME=immich-database
