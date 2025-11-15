@@ -39,6 +39,7 @@ services:
             - '-allowGET=/v1\..{2}/(containers/.*|images/.*)'
             - '-allowPOST=/v1\..{2}/(containers/.*|images/.*|networks/.*)'
             - '-allowDELETE=/v1\..{2}/(containers/.*|images/.*)'
+            - "-allowHEAD=/_ping"
             - "-shutdowngracetime=5"
             - "-watchdoginterval=600"
             - "-stoponwatchdog"
