@@ -215,6 +215,7 @@ services:
         depends_on:
             - authelia
             - dockerproxy
+            - crowdsec
         command:
             - "--api=true"
             - "--api.dashboard=true"
@@ -238,12 +239,14 @@ services:
             - "--entryPoints.websecure.address=:443"
             # - "--entryPoints.websecure.forwardedHeaders.trustedIPs=172.19.0.0/16"
             - "--entryPoints.websecure.proxyProtocol.trustedIPs=172.19.0.1/32"
-            - "--entryPoints.websecure.http.middlewares=crowdsec-bouncer@file"
+            - "--entryPoints.websecure.http.middlewares=crowdsec@docker"
             - "--certificatesresolvers.le.acme.email=$DOMAIN_OWNER_EMAIL"
             - "--certificatesresolvers.le.acme.storage=./acme.json"
             - "--certificatesresolvers.le.acme.tlschallenge=true"
             - "--experimental.plugins.geoblock.modulename=github.com/PascalMinder/geoblock"
             - "--experimental.plugins.geoblock.version=v0.3.3"
+            - "--experimental.plugins.bouncer.modulename=github.com/maxlerebourg/crowdsec-bouncer-traefik-plugin"
+            - "--experimental.plugins.bouncer.version=v1.4.6"
             - "--providers.docker.endpoint=unix:///socket/docker.sock"
             - "--providers.docker.network=traefik"
         ports:
@@ -263,6 +266,10 @@ services:
             - "traefik.http.routers.api.tls.certresolver=le"
             - "traefik.http.routers.api.tls=true"
             - "traefik.http.routers.api.middlewares=authelia@docker,geoblock@file"
+            - "traefik.http.middlewares.crowdsec.plugin.bouncer.enabled=true"
+            - "traefik.http.middlewares.crowdsec.plugin.bouncer.crowdseclapikey=$CROWDSEC_BOUNCER_KEY"
+            - "traefik.http.middlewares.crowdsec.plugin.bouncer.crowdsecappsecenabled=true"
+            - "traefik.http.middlewares.crowdsec.plugin.bouncer.forwardedheaderstrustedips=172.19.0.1"
         restart: unless-stopped
         networks:
             - traefik
@@ -273,9 +280,8 @@ services:
         container_name: crowdsec
         environment:
             GID: "${GID-1000}"
-            COLLECTIONS: "crowdsecurity/linux crowdsecurity/traefik"
-        depends_on:
-            - traefik
+            COLLECTIONS: "crowdsecurity/linux crowdsecurity/traefik crowdsecurity/appsec-virtual-patching crowdsecurity/appsec-generic-rules"
+            BOUNCER_KEY_TRAEFIK: "$CROWDSEC_BOUNCER_KEY"
         volumes:
             - $STATE_DIR/crowdsec/acquis.yaml:/etc/crowdsec/acquis.yaml:ro
             - $STATE_DIR/crowdsec/db:/var/lib/crowdsec/data/
@@ -287,23 +293,12 @@ services:
             - traefik
         restart: unless-stopped
         logging: *logging
-    crowdsec-bouncer:
-        image: docker.io/fbonalair/traefik-crowdsec-bouncer:latest
-        container_name: crowdsec-bouncer
-        environment:
-            CROWDSEC_BOUNCER_API_KEY: $CROWDSEC_BOUNCER_KEY
-            CROWDSEC_AGENT_HOST: crowdsec:8080
-        networks:
-            - traefik
-        depends_on:
-            - crowdsec
-        restart: unless-stopped
-        logging: *logging
     crowdsec-dashboard:
         image: metabase/metabase
         container_name: crowdsec-dashboard
         depends_on:
             - crowdsec
+            - traefik
         restart: unless-stopped
         environment:
             MB_DB_FILE: /data/metabase.db

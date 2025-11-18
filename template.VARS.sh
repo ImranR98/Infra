@@ -42,6 +42,8 @@ export AUTHELIA_JWKS_KEY="-----BEGIN PRIVATE KEY-----
           abc
           -----END PRIVATE KEY-----"                      #openssl genrsa -out private.pem 2048 # openssl rsa -in private.pem -outform PEM -pubout -out public.pem
 
+export CROWDSEC_BOUNCER_KEY='ABCD'
+
 export OPENCANARY_NTFY_OFFICIAL_TOPIC="abc123"
 
 export MONEROD_RPC_LOGIN="admin:abc"
