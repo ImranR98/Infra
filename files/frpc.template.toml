@@ -54,11 +54,3 @@ localPort = 10000
 remotePort = 10000
 transport.proxyProtocolVersion = "v2"
 transport.useEncryption = true
-
-[[proxies]]
-name = "jitsi-tcp"
-type = "tcp"
-localIP = "127.0.0.1"
-localPort = 4443
-remotePort = 4443
-transport.useEncryption = true
