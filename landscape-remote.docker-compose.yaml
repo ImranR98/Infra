@@ -1,3 +1,8 @@
+x-logging: &logging
+    options:
+        max-size: 10m
+        max-file: 5
+
 services:
 
     frps-with-multiuser:
@@ -7,6 +12,7 @@ services:
         volumes:
             - ./frps-tokens.txt:/workdir/service-data/frps-tokens.txt
         network_mode: host
+        logging: *logging
 
     logtfy:
         image: imranrdev/logtfy:latest
@@ -18,6 +24,7 @@ services:
           - /var/log/journal:/var/log/journal:ro
           - ./logtfy.json:/logtfy/config.json
           - logtfy_tmp:/tmp/logtfy
+        logging: *logging
 
     strelaysrv:
         image: imranrdev/strelaysrv-docker:latest
@@ -31,6 +38,7 @@ services:
         ports:
             - 22067:22067
             - 22070:22070
+        logging: *logging
 
 volumes:
     logtfy_tmp: {}
