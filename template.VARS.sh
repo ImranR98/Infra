@@ -62,8 +62,6 @@ export PLAUSIBLE_TOTP_VAULT_KEY="abc" # openssl rand -base64 32
 
 export STRELAYSRV_PROVIDED_BY_TEXT="example.org"
 
-export WEBDAV_HTPASSWD='user:abc'   # touch htpasswd && htpasswd -B htpasswd user
-
 export PIXELNTFY_TOPIC_SUFFIX='abc' # echo $RANDOM | sha256sum | awk '{print $1}' | head -c 32
 
 export GEOBLOCK_CONFIG_SUBSET='

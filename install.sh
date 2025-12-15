@@ -71,7 +71,6 @@ if ! ls "$STATE_DIR"/mosquitto/config 2>/dev/null | grep -q mosquitto.conf; then
     chmod o+rx '$STATE_DIR'/mosquitto/config"
     # TODO: Ensure the ports used by Mosquitto are not firewalled (at least the mqtt-tls service, others -- non-TLS and websocket -- are not actively used)
 fi
-echo "$WEBDAV_HTPASSWD" >"$STATE_DIR"/webdav/config/htpasswd
 if [ ! -f "$STATE_DIR"/traefik/mtls/cacert.pem ] || [ ! -f "$STATE_DIR"/traefik/mtls/cakey.pem ]; then
     openssl genrsa -out "$STATE_DIR"/traefik/mtls/cakey.pem 4096
     openssl req -new -x509 -key "$STATE_DIR"/traefik/mtls/cakey.pem -out "$STATE_DIR"/traefik/mtls/cacert.pem -days 358000 -subj "/CN=$SERVICES_DOMAIN"
