@@ -83,6 +83,8 @@ services:
             - PGID=1000
         volumes:
             - /home/$USER:/var/syncthing
+            - /home/deck/Synced_Game_Installs:/var/deck/Synced_Game_Installs
+            - /home/deck/Synced_Portable_Games:/var/deck/Synced_Portable_Games
         network_mode: host
         restart: on-failure
         logging: *logging
