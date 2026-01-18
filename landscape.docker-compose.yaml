@@ -28,6 +28,8 @@ services:
         volumes:
             - /var/run/docker.sock:/var/run/docker.sock:ro
             - dockerproxy:/socket/
+        labels:
+            - "com.centurylinklabs.watchtower.enable=false"
         logging: *logging
 
     # https://github.com/wollomatic/socket-proxy for Watchtower and other read-write needs
@@ -56,6 +58,8 @@ services:
         volumes:
             - /var/run/docker.sock:/var/run/docker.sock:ro
             - dockerproxy_priv:/socket/
+        labels:
+            - "com.centurylinklabs.watchtower.enable=false"
         logging: *logging
 
     # Watchtower - Container Updater
