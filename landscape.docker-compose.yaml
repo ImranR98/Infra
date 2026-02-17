@@ -87,8 +87,6 @@ services:
             - PGID=1000
         volumes:
             - /home/$USER:/var/syncthing
-            - /home/deck/Synced_Game_Installs:/var/deck/Synced_Game_Installs
-            - /home/deck/Synced_Portable_Games:/var/deck/Synced_Portable_Games
         network_mode: host
         restart: on-failure
         logging: *logging
@@ -1174,6 +1172,23 @@ services:
             - "traefik.http.routers.fmd.tls.certresolver=le"
             - "traefik.http.routers.fmd.tls=true"
             - "traefik.http.services.fmd.loadbalancer.server.port=8080"
+        logging: *logging
+
+    obtainium_apps:
+        container_name: obtainium_apps
+        image: imranrdev/apps.obtainium.example.org
+        depends_on:
+            - traefik
+        labels:
+            - "traefik.enable=true"
+            - "traefik.http.routers.obtainium_apps.rule=Host(`example.org`)"
+            - "traefik.http.routers.obtainium_apps.entrypoints=websecure"
+            - "traefik.http.routers.obtainium_apps.tls.certresolver=le"
+            - "traefik.http.routers.obtainium_apps.tls=true"
+            - "traefik.http.services.obtainium_apps.loadbalancer.server.port=8080"
+        networks:
+            - traefik
+        restart: unless-stopped
         logging: *logging
 
 networks:
