@@ -248,9 +248,9 @@ services:
             - "--certificatesresolvers.le.acme.storage=./acme.json"
             - "--certificatesresolvers.le.acme.tlschallenge=true"
             - "--experimental.plugins.geoblock.modulename=github.com/PascalMinder/geoblock"
-            - "--experimental.plugins.geoblock.version=v0.3.3"
+            - "--experimental.plugins.geoblock.version=v0.3.6"
             - "--experimental.plugins.bouncer.modulename=github.com/maxlerebourg/crowdsec-bouncer-traefik-plugin"
-            - "--experimental.plugins.bouncer.version=v1.4.6"
+            - "--experimental.plugins.bouncer.version=v1.5.1"
             - "--providers.docker.endpoint=unix:///socket/docker.sock"
             - "--providers.docker.network=traefik"
         ports:
@@ -780,7 +780,7 @@ services:
         container_name: immich-machine-learning
         # For hardware acceleration, add one of -[armnn, cuda, openvino] to the image tag.
         # Example tag: release-cuda
-        image: ghcr.io/immich-app/immich-machine-learning:release-rocm
+        image: ghcr.io/immich-app/immich-machine-learning:v2.2.3-rocm # TODO: https://github.com/immich-app/immich/issues/24734
         extends: # uncomment this section for hardware acceleration - see https://immich.app/docs/features/ml-hardware-acceleration
             file: $STATE_DIR/immich/hwaccel.ml.yml
             service: rocm # set to one of [armnn, cuda, rocm, openvino, openvino-wsl, rknn] for accelerated inference - use the `-wsl` version for WSL2 where applicable
