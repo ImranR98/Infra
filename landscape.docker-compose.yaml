@@ -716,6 +716,27 @@ services:
         restart: unless-stopped
         logging: *logging
 
+    #IKOM - IKOM
+    ikom:
+        container_name: ikom
+        image: imranrdev/order-manager
+        depends_on:
+            - traefik
+        labels:
+            - "traefik.enable=true"
+            - "traefik.http.routers.ikom.rule=Host(`ikom.$SERVICES_DOMAIN`)"
+            - "traefik.http.routers.ikom.entrypoints=websecure"
+            - "traefik.http.routers.ikom.tls.certresolver=le"
+            - "traefik.http.routers.ikom.tls=true"
+            - "traefik.http.routers.ikom.middlewares=authelia@docker"
+            - "traefik.http.services.ikom.loadbalancer.server.port=3000"
+        volumes:
+            - "$STATE_DIR/ikom:/app/data"
+        networks:
+            - traefik
+        restart: unless-stopped
+        logging: *logging
+
     # ISBN Lookup
     isbn-lookup:
         container_name: isbn-lookup

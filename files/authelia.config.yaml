@@ -17,6 +17,7 @@ authentication_backend:
     path: /config/users_database.yml
 
 access_control:
+  default_policy: 'deny'
   rules:
     - domain: tv.$SERVICES_DOMAIN # IGNORE INITIALLY
       policy: bypass # IGNORE INITIALLY
@@ -68,16 +69,26 @@ access_control:
       policy: bypass
     - domain: fmd.$SERVICES_DOMAIN
       policy: bypass
-    - domain: ytdl.$SERVICES_DOMAIN
-      policy: one_factor
     - domain: ln.$SERVICES_DOMAIN
       policy: bypass
     - domain: meet.$SERVICES_DOMAIN
       policy: bypass
+    - domain: ytdl.$SERVICES_DOMAIN
+      policy: one_factor
+      subject:
+      - ['group:family']
+    - domain: ikom.$SERVICES_DOMAIN
+      policy: one_factor
+      subject:
+      - ['group:family']
     - domain: '*.$SERVICES_TOP_DOMAIN'
       policy: two_factor
+      subject:
+      - ['group:admins']
     - domain: '*'
       policy: two_factor
+      subject:
+      - ['group:admins']
 
 session:
   secret: ${AUTHELIA_SESSION_SECRET}
