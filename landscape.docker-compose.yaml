@@ -248,7 +248,7 @@ services:
             - "--certificatesresolvers.le.acme.storage=./acme.json"
             - "--certificatesresolvers.le.acme.tlschallenge=true"
             - "--experimental.plugins.geoblock.modulename=github.com/PascalMinder/geoblock"
-            - "--experimental.plugins.geoblock.version=v0.3.6"
+            - "--experimental.plugins.geoblock.version=v0.3.7"
             - "--experimental.plugins.bouncer.modulename=github.com/maxlerebourg/crowdsec-bouncer-traefik-plugin"
             - "--experimental.plugins.bouncer.version=v1.5.1"
             - "--providers.docker.endpoint=unix:///socket/docker.sock"
@@ -801,10 +801,10 @@ services:
         container_name: immich-machine-learning
         # For hardware acceleration, add one of -[armnn, cuda, openvino] to the image tag.
         # Example tag: release-cuda
-        image: ghcr.io/immich-app/immich-machine-learning:v2.2.3-rocm # TODO: https://github.com/immich-app/immich/issues/24734
-        extends: # uncomment this section for hardware acceleration - see https://immich.app/docs/features/ml-hardware-acceleration
-            file: $STATE_DIR/immich/hwaccel.ml.yml
-            service: rocm # set to one of [armnn, cuda, rocm, openvino, openvino-wsl, rknn] for accelerated inference - use the `-wsl` version for WSL2 where applicable
+        image: ghcr.io/immich-app/immich-machine-learning:release # TODO: https://github.com/immich-app/immich/issues/27387
+        # extends: # uncomment this section for hardware acceleration - see https://immich.app/docs/features/ml-hardware-acceleration
+        #     file: $STATE_DIR/immich/hwaccel.ml.yml
+        #     service: rocm # set to one of [armnn, cuda, rocm, openvino, openvino-wsl, rknn] for accelerated inference - use the `-wsl` version for WSL2 where applicable
         volumes:
             - immich-model-cache:/cache
         environment:
@@ -820,20 +820,24 @@ services:
         logging: *logging
     immich-redis:
         container_name: immich-redis
-        image: registry.hub.docker.com/library/redis:6.2-alpine
+        image: docker.io/valkey/valkey:9@sha256:3b55fbaa0cd93cf0d9d961f405e4dfcc70efe325e2d84da207a0a8e6d8fde4f9
+        healthcheck:
+            test: redis-cli ping || exit 1
         restart: always
         networks:
             - traefik
         logging: *logging
     immich-database:
         container_name: immich-postgres
-        image: registry.hub.docker.com/tensorchord/pgvecto-rs:pg14-v0.2.0
+        image: ghcr.io/immich-app/postgres:14-vectorchord0.4.3-pgvectors0.2.0@sha256:bcf63357191b76a916ae5eb93464d65c07511da41e3bf7a8416db519b40b1c23
         environment:
             POSTGRES_PASSWORD: $IMMICH_DB_PASSWORD
             POSTGRES_USER: postgres
             POSTGRES_DB: immich
+            POSTGRES_INITDB_ARGS: '--data-checksums'
         volumes:
             - $STATE_DIR/immich/postgres:/var/lib/postgresql/data
+        shm_size: 128mb
         restart: always
         networks:
             - traefik
