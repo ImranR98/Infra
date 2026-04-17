@@ -163,6 +163,11 @@ services:
             - "--enable-dns-blocklist"
             - "--prune-blockchain"
             - "--rpc-login=$MONEROD_RPC_LOGIN"
+        healthcheck: # https://github.com/sethforprivacy/simple-monerod-docker/issues/205
+            test: ["CMD-SHELL", "curl -s --head http://127.0.0.1:18081/get_height | grep 401"]
+            interval: 30s
+            timeout: 5s
+            retries: 3
         logging: *logging
 
     # Logtfy - Simple monitoring/alerts
