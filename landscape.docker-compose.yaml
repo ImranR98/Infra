@@ -17,6 +17,7 @@ services:
             - "-stoponwatchdog"
             - "-proxysocketendpoint=/socket/docker.sock"
             - "-proxysocketendpointfilemode=0600"
+            - "-allowhealthcheck"
         restart: unless-stopped
         read_only: true
         mem_limit: 64M
@@ -30,6 +31,11 @@ services:
             - dockerproxy:/socket/
         labels:
             - "com.centurylinklabs.watchtower.enable=false"
+        healthcheck:
+            test: ["CMD", "./healthcheck"]
+            interval: 10s
+            timeout: 5s
+            retries: 2
         logging: *logging
 
     # https://github.com/wollomatic/socket-proxy for Watchtower and other read-write needs
@@ -47,6 +53,7 @@ services:
             - "-stoponwatchdog"
             - "-proxysocketendpoint=/socket/docker.sock"
             - "-proxysocketendpointfilemode=0600"
+            - "-allowhealthcheck"
         restart: unless-stopped
         read_only: true
         mem_limit: 64M
@@ -59,7 +66,12 @@ services:
             - /var/run/docker.sock:/var/run/docker.sock:ro
             - dockerproxy_priv:/socket/
         labels:
-            - "com.centurylinklabs.watchtower.enable=false"
+            - "com.centurylinklabs.watchtower.enable=false"  
+        healthcheck:
+            test: ["CMD", "./healthcheck"]
+            interval: 10s
+            timeout: 5s
+            retries: 2
         logging: *logging
 
     # Watchtower - Container Updater
@@ -210,6 +222,9 @@ services:
         expose:
             - 6379
         restart: unless-stopped
+        healthcheck:
+            test: ["CMD-SHELL", "redis-cli ping || exit 1"]
+            start_period: 1m
         logging: *logging
 
     # Traefik - Reverse Proxy
