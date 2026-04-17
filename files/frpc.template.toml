@@ -4,6 +4,11 @@ auth.additionalScopes = ["HeartBeats", "NewWorkConns"]
 user = "$MAIN_NODE_HOSTNAME_LOWERCASE"
 metadatas.token = "put_token_here"
 
+webServer.addr = "127.0.0.1"
+webServer.port = 7400
+webServer.user = "frpc"
+webServer.password = "put_password_here"
+
 [[proxies]]
 name = "ssh"
 type = "tcp"
