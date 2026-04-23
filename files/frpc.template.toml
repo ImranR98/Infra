@@ -34,12 +34,3 @@ localPort = 443
 remotePort = 443
 transport.proxyProtocolVersion = "v2"
 transport.useEncryption = true
-
-[[proxies]]
-name = "jitsi-udp"
-type = "udp"
-localIP = "127.0.0.1"
-localPort = 10000
-remotePort = 10000
-transport.proxyProtocolVersion = "v2"
-transport.useEncryption = true
