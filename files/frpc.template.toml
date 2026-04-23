@@ -36,22 +36,6 @@ transport.proxyProtocolVersion = "v2"
 transport.useEncryption = true
 
 [[proxies]]
-name = "p2p"
-type = "tcp"
-localIP = "127.0.0.1"
-localPort = 18080
-remotePort = 18080
-transport.useEncryption = true
-
-[[proxies]]
-name = "rpc"
-type = "tcp"
-localIP = "127.0.0.1"
-localPort = 18089
-remotePort = 18089
-transport.useEncryption = true
-
-[[proxies]]
 name = "jitsi-udp"
 type = "udp"
 localIP = "127.0.0.1"

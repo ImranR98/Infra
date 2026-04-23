@@ -46,9 +46,6 @@ export CROWDSEC_BOUNCER_KEY='ABCD'
 
 export OPENCANARY_NTFY_OFFICIAL_TOPIC="abc123"
 
-export MONEROD_RPC_LOGIN="admin:abc"
-export MONEROD_BITMONERO_DIR="$MAIN_PARENT_DIR"
-
 export MOSQUITTO_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----
 abc
 -----END PRIVATE KEY-----" # openssl req  -nodes -new -x509  -keyout private_key.pem -out certificate.pem -subj "/C=CA/ST=Toronto/L=Toronto/O=$SERVICES_TOP_DOMAIN/OU=Main/CN=$SERVICES_TOP_DOMAIN"
