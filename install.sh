@@ -12,22 +12,13 @@ for cmd in docker yq envsubst; do
         FAILED=true
     fi
 done
-for var in STATE_DIR MAIN_PARENT_DIR SERVICES_DOMAIN DOMAIN_OWNER_EMAIL AUTHELIA_USERS_DATABASE PLAUSIBLE_SECRET_KEY; do
-    if [ -z "${!var:-}" ]; then
-        echo "Required variable is empty or not set: $var" >&2
-        FAILED=true
-    fi
-done
-if [ "$FAILED" = true ]; then
-    exit 1
-fi
 echo "All checks passed."
 printLine -
 
 printTitle "Create Required Directories"
 tmpfile="$(mktemp)"
 envsubst < "$HERE"/compose.yaml > "$tmpfile"
-for prefix in "$STATE_DIR" "$MAIN_PARENT_DIR"; do
+for prefix in "$STATE_DIR"; do
     yq '.services[] | .volumes[] | select(type == "string")' "$tmpfile" 2>/dev/null | \
         while IFS=: read -r host_path _; do
             case "$host_path" in

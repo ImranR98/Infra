@@ -197,7 +197,7 @@ services:
         volumes:
             - $STATE_DIR/plausible/db:/var/lib/postgresql/data
         environment:
-            - POSTGRES_PASSWORD=$PLAUSIBLE_DB_PASSWORD
+            - POSTGRES_PASSWORD=postgres
         healthcheck:
             test: ["CMD-SHELL", "pg_isready -U postgres"]
             start_period: 1m
@@ -332,9 +332,8 @@ services:
             - "traefik.http.routers.pixelntfy.tls=true"
             - "traefik.http.services.pixelntfy.loadbalancer.server.port=80"
         environment:
-            - NTFY_TOPIC=${MAIN_NODE_HOSTNAME_LOWERCASE}_services_${PIXELNTFY_TOPIC_SUFFIX}
+            - NTFY_TOPIC=${NODE_NAME_LOWERCASE}_services_${PIXELNTFY_TOPIC_SUFFIX}
             - NTFY_SERVER_URL=https://ntfy.sh
-            - NTFY_TOKEN=$NTFY_SERVICE_USER_TOKEN
             - PORT=80
             - ANALYTICS_SCRIPT_ELEMENT=<script defer data-domain="pixelntfy.$SERVICES_DOMAIN" src="https://plausible.$SERVICES_DOMAIN/js/script.js"></script>
         networks:

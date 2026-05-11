@@ -50,11 +50,11 @@ access_control:
       subject:
       - ['group:family']
     - domain: '*.$SERVICES_DOMAIN'
-      policy: two_factor
+      policy: one_factor
       subject:
       - ['group:admins']
     - domain: '*'
-      policy: two_factor
+      policy: one_factor
       subject:
       - ['group:admins']
 

@@ -35,13 +35,10 @@ Docker-based setup for self-hosted apps/services.
     - You must pre-install Docker and Docker compose.
 2. Clone this repo on the server and create a copy of `template.VARS.sh` named `VARS.sh` (or `VARS.staging.sh` or `VARS.production.sh`). Fill in the values as appropriate.
 3. Modify any of the source files in a fork of this repo, as appropriate to fit your needs.
-4. Ensure the server contains the following directories as defined in your `VARS.sh` file:
-    1. `MAIN_PARENT_DIR`: Your data, used by the apps.
-        - This is typically just your home directory.
-    2. `STATE_DIR`: Persistent internal storage/state for all apps.
-        - Set to `./state/` by default.
-        - Running services exclusively rely on this folder and/or named Docker volumes to store their internal data.
-        - The folder and everything in it is auto-generated and should not be modified.
+4. Ensure the server contains the `STATE_DIR` (persistent internal storage/state for all apps) as defined in your `VARS.sh` file:
+    - Set to `./state/` by default.
+    - Running services exclusively rely on this folder and/or named Docker volumes to store their internal data.
+    - The folder and everything in it is auto-generated and should not be modified.
 5. Purchase a domain for your apps, and set up DNS rules for each app subdomain, all pointing to the server's IP.
     - For a list of all required subdomains, run: `source prep_env.sh; findDomainsInSetup`
 6. Run `install.sh` on the server to install all apps/services.
