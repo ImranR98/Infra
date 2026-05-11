@@ -1,13 +1,21 @@
 #!/bin/bash
-set -e
+set -euo pipefail
 
 # Updates Traefik plugins (only supports GitHub-based plugins)
 
+if ! command -v yq >/dev/null 2>&1; then
+    echo "yq is required but not installed. Install it from https://github.com/mikefarah/yq" >&2
+    exit 1
+fi
+
 PLUGIN_LINES="$(yq '.services.traefik.command' landscape.docker-compose.yaml)"
 
-for l in $(echo "$PLUGIN_LINES" | grep -o '\.plugins\..*\.modulename=[^"]*'); do
+while IFS= read -r l; do
     PLUGIN_URL="$(echo "$l" | awk -F= '{print $NF}')"
-    if [[ ! "$PLUGIN_URL" =~ 'github.com/' ]]; then echo "UNSUPPORTED PLUGIN: $PLUGIN_URL"; continue; fi
+    if ! echo "$PLUGIN_URL" | grep -q 'github.com/'; then
+        echo "UNSUPPORTED PLUGIN: $PLUGIN_URL"
+        continue
+    fi
     PLUGIN_NAME="$(echo "$l" | awk -F. '{print $3}')"
     PLUGIN_CURRENT_VERSION="$(echo "$PLUGIN_LINES" | grep -o "\.plugins\.$PLUGIN_NAME\.version=[^\"]*" | awk -F= '{print $NF}')"
     PLUGIN_LATEST_VERSION="$(curl -s "https://api.github.com/repos$(echo "$PLUGIN_URL" | sed 's|github\.com/||')/releases/latest" | grep -oE 'tag/[^"]+' | head -1 | cut -d/ -f2)"
@@ -17,4 +25,4 @@ for l in $(echo "$PLUGIN_LINES" | grep -o '\.plugins\..*\.modulename=[^"]*'); do
     else
         echo "Plugin $PLUGIN_NAME already on latest ($PLUGIN_LATEST_VERSION)"
     fi
-done
+done < <(echo "$PLUGIN_LINES" | grep -o '\.plugins\..*\.modulename=[^"]*')

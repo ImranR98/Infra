@@ -70,7 +70,7 @@ session:
 regulation:
   max_retries: 3
   find_time: 120
-  ban_time: 300
+  ban_time: 900
 
 storage:
   encryption_key: '$AUTHELIA_DB_ENCRYPTION_KEY'

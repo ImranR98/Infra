@@ -1,5 +1,5 @@
 #!/bin/bash
-set -e
+set -euo pipefail
 
 HERE_OD5F="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 source "$HERE_OD5F"/prep_env.sh
@@ -12,7 +12,7 @@ NEWSPHASH="$(docker images wollomatic/socket-proxy:1 --format '{{.ID}}')"
 
 if [ "$OLDSPHASH" != "$NEWSPHASH" ]; then
     read -p "New image pulled. Press enter to restart landscape..." NOTHING
-	systemctl restart landscape
+    systemctl restart landscape
 else
     echo "Note that this script will only detect updates if the tag \"wollomatic/socket-proxy:1\" (major version 1) has not changed."
 fi

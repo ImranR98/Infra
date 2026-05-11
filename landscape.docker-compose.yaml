@@ -77,7 +77,6 @@ services:
     # Watchtower - Container Updater
     watchtower:
         container_name: watchtower
-        privileged: true
         restart: unless-stopped
         image: nickfedor/watchtower
         volumes:
@@ -112,7 +111,7 @@ services:
     authelia:
         image: authelia/authelia
         container_name: authelia
-        user: "1000:1000"
+        user: "$MY_UID:$MY_UID"
         depends_on:
             - authelia-db
         volumes:
@@ -139,7 +138,7 @@ services:
     authelia-db:
         image: redis:alpine
         container_name: authelia-db
-        user: "1000:1000"
+        user: "$MY_UID:$MY_UID"
         volumes:
             - $STATE_DIR/authelia/db:/data
         networks:
@@ -215,13 +214,13 @@ services:
         volumes:
             - $STATE_DIR/plausible/db:/var/lib/postgresql/data
         environment:
-            - POSTGRES_PASSWORD=postgres
+            - POSTGRES_PASSWORD=$PLAUSIBLE_DB_PASSWORD
         healthcheck:
             test: ["CMD-SHELL", "pg_isready -U postgres"]
             start_period: 1m
         networks:
             - traefik
-        user: 1000:1000
+        user: $MY_UID:$MY_UID
         logging: *logging
     plausible_events_db:
         image: clickhouse/clickhouse-server:24.12-alpine
@@ -449,7 +448,7 @@ services:
             - "traefik.http.routers.sb25.tls=true"
             - "traefik.http.services.sb25.loadbalancer.server.port=3000"
         environment:
-            - AUTH_TOKEN=***REMOVED***
+            - AUTH_TOKEN=$SB25_AUTH_TOKEN
         networks:
             - traefik
         restart: unless-stopped

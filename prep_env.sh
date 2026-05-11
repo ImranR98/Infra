@@ -2,7 +2,7 @@
 
 HERE_L3D9="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 
-if ! which docker 2>&1 >/dev/null; then
+if ! command -v docker >/dev/null 2>&1; then
     echo "Docker not found. Please install it." >&2
     exit 1
 fi
@@ -53,9 +53,11 @@ WantedBy=multi-user.target"
 }
 
 printLine() {
-    linechar="="
-    if [ -n "$1" ]; then linechar="$1"; fi
-    printf "%0.s"$linechar"" $(seq 1 "$(tput cols 2>/dev/null || :)")
+    local linechar="${1:-=}"
+    local cols
+    cols=$(tput cols 2>/dev/null) || cols=80
+    # shellcheck disable=SC2046
+    printf "%0.s${linechar}" $(seq 1 "$cols")
     echo ""
 }
 
