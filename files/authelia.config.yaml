@@ -37,8 +37,8 @@ access_control:
       - '^/[^/]+\.png$'
       - '^/__heartbeat__/?$'
       policy: bypass
-    - domain: plausible.$SERVICES_DOMAIN
-      policy: bypass
+    - domain: plausible.$SERVICES_DOMAIN # IGNORE INITIALLY
+      policy: bypass # IGNORE INITIALLY
     - domain: auth.$SERVICES_DOMAIN
       policy: bypass
     - domain: ytdl.$SERVICES_DOMAIN
@@ -49,7 +49,7 @@ access_control:
       policy: one_factor
       subject:
       - ['group:family']
-    - domain: '*.$SERVICES_TOP_DOMAIN'
+    - domain: '*.$SERVICES_DOMAIN'
       policy: two_factor
       subject:
       - ['group:admins']

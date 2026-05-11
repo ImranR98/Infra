@@ -1,8 +1,8 @@
 #!/bin/bash
 set -euo pipefail
 
-HERE_OD5F="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
-source "$HERE_OD5F"/prep_env.sh
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
+source "$HERE"/prep_env.sh
 
 printTitle "Pull Latest 'wollomatic/socket-proxy:1' and Restart Landscape if Needed"
 

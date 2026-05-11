@@ -18,9 +18,6 @@ export MAIN_PARENT_DIR="$HERE/mock-data"
 # The subdomain under which all services are hosted (e.g. "services.example.org")
 export SERVICES_DOMAIN="staging.example.org"
 
-# The top-level domain (used for wildcard Authelia rules)
-export SERVICES_TOP_DOMAIN="example.org"
-
 # Email for Let's Encrypt certificate registration
 export DOMAIN_OWNER_EMAIL="contact@example.org"
 

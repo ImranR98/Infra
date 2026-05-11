@@ -78,6 +78,7 @@ services:
     watchtower:
         container_name: watchtower
         restart: unless-stopped
+        mem_limit: 128M
         image: nickfedor/watchtower
         volumes:
             - dockerproxy_priv:/socket/:ro
@@ -86,24 +87,6 @@ services:
         environment:
             WATCHTOWER_CLEANUP: "true"
             WATCHTOWER_POLL_INTERVAL: 7200
-            DOCKER_HOST: "unix:///socket/docker.sock"
-        logging: *logging
-
-    # Logtfy - Simple monitoring/alerts
-    logtfy:
-        image: imranrdev/logtfy:latest
-        container_name: logtfy
-        hostname: $MAIN_NODE_HOSTNAME
-        restart: unless-stopped
-        volumes:
-            - /var/log/journal:/var/log/journal:ro
-            - $STATE_DIR/logtfy/config.json:/logtfy/config.json
-            - logtfy_tmp:/tmp/logtfy
-            - $STATE_DIR/traefik_logs:/traefik_logs
-            - dockerproxy:/socket/:ro
-        depends_on:
-            - dockerproxy
-        environment:
             DOCKER_HOST: "unix:///socket/docker.sock"
         logging: *logging
 
@@ -134,7 +117,9 @@ services:
         expose:
             - 9091
         restart: unless-stopped
+        mem_limit: 256M
         logging: *logging
+
     authelia-db:
         image: redis:alpine
         container_name: authelia-db
@@ -146,6 +131,7 @@ services:
         expose:
             - 6379
         restart: unless-stopped
+        mem_limit: 128M
         healthcheck:
             test: ["CMD-SHELL", "redis-cli ping || exit 1"]
             start_period: 1m
@@ -179,7 +165,7 @@ services:
             - "--entryPoints.websecure.address=:443"
             - "--entryPoints.websecure.proxyProtocol.trustedIPs=172.19.0.1/32"
             - "--certificatesresolvers.le.acme.email=$DOMAIN_OWNER_EMAIL"
-            - "--certificatesresolvers.le.acme.storage=./acme.json"
+            - "--certificatesresolvers.le.acme.storage=/acme.json"
             - "--certificatesresolvers.le.acme.tlschallenge=true"
             - "--experimental.plugins.geoblock.modulename=github.com/PascalMinder/geoblock"
             - "--experimental.plugins.geoblock.version=v0.3.7"
@@ -202,6 +188,7 @@ services:
             - "traefik.http.routers.api.tls=true"
             - "traefik.http.routers.api.middlewares=authelia@docker,geoblock@file"
         restart: unless-stopped
+        mem_limit: 256M
         networks:
             - traefik
         logging: *logging
@@ -211,6 +198,7 @@ services:
         image: postgres:16-alpine
         container_name: plausible_db
         restart: unless-stopped
+        mem_limit: 512M
         volumes:
             - $STATE_DIR/plausible/db:/var/lib/postgresql/data
         environment:
@@ -225,6 +213,7 @@ services:
     plausible_events_db:
         image: clickhouse/clickhouse-server:24.12-alpine
         restart: unless-stopped
+        mem_limit: 1G
         container_name: plausible_events_db
         networks:
             - traefik
@@ -250,6 +239,7 @@ services:
     plausible:
         image: ghcr.io/plausible/community-edition:v3
         restart: unless-stopped
+        mem_limit: 512M
         container_name: plausible
         command: sh -c "sleep 10 && /entrypoint.sh db createdb && /entrypoint.sh db migrate && /entrypoint.sh run"
         depends_on:
@@ -286,6 +276,7 @@ services:
         container_name: send
         image: registry.gitlab.com/timvisee/send:latest
         restart: unless-stopped
+        mem_limit: 256M
         depends_on:
             - traefik
             - send-db
@@ -323,6 +314,7 @@ services:
         container_name: send-db
         image: "redis:alpine"
         restart: unless-stopped
+        mem_limit: 128M
         volumes:
             - $STATE_DIR/send/db:/data
         networks:
@@ -333,6 +325,7 @@ services:
     pixelntfy:
         container_name: pixelntfy
         image: imranrdev/pixel-ntfy
+        mem_limit: 128M
         depends_on:
             - traefik
         labels:
@@ -345,7 +338,7 @@ services:
             - "traefik.http.services.pixelntfy.loadbalancer.server.port=80"
         environment:
             - NTFY_TOPIC=${MAIN_NODE_HOSTNAME_LOWERCASE}_services_${PIXELNTFY_TOPIC_SUFFIX}
-            - NTFY_SERVER_URL=https://ntfy.$SERVICES_DOMAIN
+            - NTFY_SERVER_URL=https://ntfy.sh
             - NTFY_TOKEN=$NTFY_SERVICE_USER_TOKEN
             - PORT=80
             - ANALYTICS_SCRIPT_ELEMENT=<script defer data-domain="pixelntfy.$SERVICES_DOMAIN" src="https://plausible.$SERVICES_DOMAIN/js/script.js"></script>
@@ -357,6 +350,7 @@ services:
     isbn-lookup:
         container_name: isbn-lookup
         image: imranrdev/isbn-lookup
+        mem_limit: 128M
         depends_on:
             - traefik
         labels:
@@ -385,6 +379,7 @@ services:
         depends_on:
             - traefik
         restart: unless-stopped
+        mem_limit: 256M
         labels:
             - "traefik.enable=true"
             - "traefik.http.routers.metube.rule=Host(`ytdl.$SERVICES_DOMAIN`)"
@@ -411,6 +406,7 @@ services:
         networks:
             - traefik
         restart: unless-stopped
+        mem_limit: 128M
         logging: *logging
 
     # IKOM - IKOM
@@ -432,6 +428,7 @@ services:
         networks:
             - traefik
         restart: unless-stopped
+        mem_limit: 256M
         logging: *logging
 
     # SB25 - private birthday page
@@ -452,6 +449,7 @@ services:
         networks:
             - traefik
         restart: unless-stopped
+        mem_limit: 128M
         logging: *logging
 
 networks:
@@ -461,7 +459,6 @@ networks:
                 - subnet: 172.19.0.0/16
 
 volumes:
-    logtfy_tmp: {}
     dockerproxy:
         driver: local
         driver_opts:
