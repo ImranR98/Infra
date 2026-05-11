@@ -9,7 +9,7 @@ services:
         container_name: dockerproxy
         image: wollomatic/socket-proxy:1
         command:
-            - "-loglevel=debug" # set to debug for far more logging
+            - "-loglevel=debug"
             - '-allowGET=(/v1\..{1,2})?/(version|containers/.*|events.*)'
             - "-allowHEAD=/_ping"
             - "-shutdowngracetime=5"
@@ -25,7 +25,7 @@ services:
             - ALL
         security_opt:
             - no-new-privileges
-        user: 65534:964 # replace 964 with the output of "grep docker /etc/group | awk -F: '{print $3}'"
+        user: 65534:964
         volumes:
             - /var/run/docker.sock:/var/run/docker.sock:ro
             - dockerproxy:/socket/
@@ -43,7 +43,7 @@ services:
         container_name: dockerproxy_priv
         image: wollomatic/socket-proxy:1
         command:
-            - "-loglevel=debug" # set to debug for far more logging
+            - "-loglevel=debug"
             - '-allowGET=/v1\..{2}/(containers/.*|images/.*)'
             - '-allowPOST=/v1\..{2}/(containers/.*|images/.*|networks/.*)'
             - '-allowDELETE=/v1\..{2}/(containers/.*|images/.*)'
@@ -61,12 +61,12 @@ services:
             - ALL
         security_opt:
             - no-new-privileges
-        user: 65534:964 # replace 964 with the output of "grep docker /etc/group | awk -F: '{print $3}'"
+        user: 65534:964
         volumes:
             - /var/run/docker.sock:/var/run/docker.sock:ro
             - dockerproxy_priv:/socket/
         labels:
-            - "com.centurylinklabs.watchtower.enable=false"  
+            - "com.centurylinklabs.watchtower.enable=false"
         healthcheck:
             test: ["CMD", "./healthcheck"]
             interval: 10s
@@ -88,61 +88,6 @@ services:
             WATCHTOWER_CLEANUP: "true"
             WATCHTOWER_POLL_INTERVAL: 7200
             DOCKER_HOST: "unix:///socket/docker.sock"
-        logging: *logging
-
-    # Syncthing
-    syncthing:
-        image: syncthing/syncthing
-        container_name: syncthing
-        environment:
-            - PUID=1000
-            - PGID=1000
-        volumes:
-            - /home/$USER:/var/syncthing
-        network_mode: host
-        restart: on-failure
-        logging: *logging
-
-    # MDSCL-Camera
-    media-date-standardize-copy-loop-camera:
-        image: imranrdev/media-date-standardize-copy-loop
-        container_name: media-date-standardize-copy-loop-camera
-        environment:
-            - NTFY_URL=https://ntfy.$SERVICES_DOMAIN/${MAIN_NODE_HOSTNAME_LOWERCASE}_services_mdscl_errors
-            - NTFY_TOKEN=$NTFY_SERVICE_USER_TOKEN
-        volumes:
-            - "$MAIN_PARENT_DIR/deviceSync/DCIM/Camera:/source"
-            - "$MAIN_PARENT_DIR/Main/Media/Camera:/destination"
-        user: "1000:1000"
-        restart: on-failure
-        logging: *logging
-
-    # MDSCL-Screenshots
-    media-date-standardize-copy-loop-screenshots:
-        image: imranrdev/media-date-standardize-copy-loop
-        container_name: media-date-standardize-copy-loop-screenshots
-        environment:
-            - NTFY_URL=https://ntfy.$SERVICES_DOMAIN/${MAIN_NODE_HOSTNAME_LOWERCASE}_services_mdscl_errors
-            - NTFY_TOKEN=$NTFY_SERVICE_USER_TOKEN
-        volumes:
-            - "$MAIN_PARENT_DIR/deviceSync/Screenshots:/source"
-            - "$MAIN_PARENT_DIR/Main/Media/Screenshots:/destination"
-        user: "1000:1000"
-        restart: on-failure
-        logging: *logging
-
-    # MDSCL-ScreenRecordings
-    media-date-standardize-copy-loop-screenrecs:
-        image: imranrdev/media-date-standardize-copy-loop
-        container_name: media-date-standardize-copy-loop-screenrecs
-        environment:
-            - NTFY_URL=https://ntfy.$SERVICES_DOMAIN/${MAIN_NODE_HOSTNAME_LOWERCASE}_services_mdscl_errors
-            - NTFY_TOKEN=$NTFY_SERVICE_USER_TOKEN
-        volumes:
-            - "$MAIN_PARENT_DIR/deviceSync/Screen Recordings:/source"
-            - "$MAIN_PARENT_DIR/Main/Media/Screenshots:/destination"
-        user: "1000:1000"
-        restart: on-failure
         logging: *logging
 
     # Logtfy - Simple monitoring/alerts
@@ -182,10 +127,10 @@ services:
             - "traefik.http.routers.authelia.tls=true"
             - "traefik.http.routers.authelia.middlewares=authelia@docker,geoblock@file"
             - "traefik.http.middlewares.authelia.forwardAuth.address=http://authelia:9091/api/verify?rd=https%3A%2F%2Fauth.$SERVICES_DOMAIN%2F"
-            # - "traefik.http.middlewares.authelia.forwardAuth.trustForwardHeader=true"
+            - "traefik.http.middlewares.authelia.forwardAuth.trustForwardHeader=true"
             - "traefik.http.middlewares.authelia.forwardAuth.authResponseHeaders=Remote-User,Remote-Groups,Remote-Name,Remote-Email"
             - "traefik.http.middlewares.authelia-basic.forwardAuth.address=http://authelia:9091/api/verify?auth=basic"
-            # - "traefik.http.middlewares.authelia-basic.forwardAuth.trustForwardHeader=true"
+            - "traefik.http.middlewares.authelia-basic.forwardAuth.trustForwardHeader=true"
             - "traefik.http.middlewares.authelia-basic.forwardAuth.authResponseHeaders=Remote-User,Remote-Groups,Remote-Name,Remote-Email"
         expose:
             - 9091
@@ -214,7 +159,6 @@ services:
         depends_on:
             - authelia
             - dockerproxy
-            - crowdsec
         command:
             - "--api=true"
             - "--api.dashboard=true"
@@ -234,26 +178,20 @@ services:
             - "--entrypoints.web.http.redirections.entrypoint.permanent=true"
             - "--entryPoints.websecure=true"
             - "--entryPoints.websecure.address=:443"
-            # - "--entryPoints.websecure.forwardedHeaders.trustedIPs=172.19.0.0/16"
             - "--entryPoints.websecure.proxyProtocol.trustedIPs=172.19.0.1/32"
-            - "--entryPoints.websecure.http.middlewares=crowdsec@docker"
             - "--certificatesresolvers.le.acme.email=$DOMAIN_OWNER_EMAIL"
             - "--certificatesresolvers.le.acme.storage=./acme.json"
             - "--certificatesresolvers.le.acme.tlschallenge=true"
             - "--experimental.plugins.geoblock.modulename=github.com/PascalMinder/geoblock"
             - "--experimental.plugins.geoblock.version=v0.3.7"
-            - "--experimental.plugins.bouncer.modulename=github.com/maxlerebourg/crowdsec-bouncer-traefik-plugin"
-            - "--experimental.plugins.bouncer.version=v1.6.0"
             - "--providers.docker.endpoint=unix:///socket/docker.sock"
             - "--providers.docker.network=traefik"
-            - "--entrypoints.websecure.transport.respondingtimeouts.readtimeout=300" # For Gokapi
         ports:
             - "127.0.0.1:80:80"
             - "127.0.0.1:443:443"
         volumes:
             - $STATE_DIR/traefik/acme.json:/acme.json
             - $STATE_DIR/traefik/dynamic-configuration.yaml:/etc/traefik/dynamic-configuration.yaml
-            - $STATE_DIR/traefik/mtls:/etc/traefik/mtls/
             - $STATE_DIR/traefik_logs:/var/log/traefik/
             - dockerproxy:/socket/:ro
         labels:
@@ -264,564 +202,257 @@ services:
             - "traefik.http.routers.api.tls.certresolver=le"
             - "traefik.http.routers.api.tls=true"
             - "traefik.http.routers.api.middlewares=authelia@docker,geoblock@file"
-            - "traefik.http.middlewares.crowdsec.plugin.bouncer.enabled=true"
-            - "traefik.http.middlewares.crowdsec.plugin.bouncer.crowdseclapikey=$CROWDSEC_BOUNCER_KEY"
-            - "traefik.http.middlewares.crowdsec.plugin.bouncer.crowdsecappsecenabled=true"
-            - "traefik.http.middlewares.crowdsec.plugin.bouncer.forwardedheaderstrustedips=172.19.0.1"
         restart: unless-stopped
         networks:
             - traefik
         logging: *logging
 
-    crowdsec:
-        image: crowdsecurity/crowdsec:latest
-        container_name: crowdsec
-        environment:
-            GID: "${GID-1000}"
-            COLLECTIONS: "crowdsecurity/linux crowdsecurity/traefik crowdsecurity/appsec-virtual-patching crowdsecurity/appsec-generic-rules"
-            BOUNCER_KEY_TRAEFIK: "$CROWDSEC_BOUNCER_KEY"
+    # Plausible - Web Analytics
+    plausible_db:
+        image: postgres:16-alpine
+        container_name: plausible_db
+        restart: unless-stopped
         volumes:
-            - $STATE_DIR/crowdsec/acquis.yaml:/etc/crowdsec/acquis.yaml:ro
-            - $STATE_DIR/crowdsec/db:/var/lib/crowdsec/data/
-            - $STATE_DIR/crowdsec/config:/etc/crowdsec/
-            - $STATE_DIR/traefik_logs:/var/log/traefik/:ro
-            - $STATE_DIR/crowdsec/profiles.yaml:/etc/crowdsec/profiles.yaml:ro
-            - $STATE_DIR/crowdsec/notifications-http.yaml:/etc/crowdsec/notifications/http.yaml:ro
+            - $STATE_DIR/plausible/db:/var/lib/postgresql/data
+        environment:
+            - POSTGRES_PASSWORD=postgres
+        healthcheck:
+            test: ["CMD-SHELL", "pg_isready -U postgres"]
+            start_period: 1m
         networks:
             - traefik
-        restart: unless-stopped
+        user: 1000:1000
         logging: *logging
-    crowdsec-dashboard:
-        image: metabase/metabase
-        container_name: crowdsec-dashboard
-        depends_on:
-            - crowdsec
-            - traefik
+    plausible_events_db:
+        image: clickhouse/clickhouse-server:24.12-alpine
         restart: unless-stopped
-        environment:
-            MB_DB_FILE: /data/metabase.db
-            MGID: "${GID-1000}"
+        container_name: plausible_events_db
         networks:
             - traefik
         volumes:
-            - $STATE_DIR/crowdsec/dashboard-db:/data # Bootstrap dashboard DB from https://crowdsec-statics-assets.s3-eu-west-1.amazonaws.com/metabase_sqlite.zip
-            - $STATE_DIR/crowdsec/db:/metabase-data/
-        labels:
-            - "traefik.enable=true"
-            - "traefik.http.routers.crowdsec-dashboard.rule=Host(`crowdsec.$SERVICES_DOMAIN`)"
-            - "traefik.http.routers.crowdsec-dashboard.entrypoints=websecure"
-            - "traefik.http.routers.crowdsec-dashboard.tls.certresolver=le"
-            - "traefik.http.routers.crowdsec-dashboard.tls=true"
-            - "traefik.http.routers.crowdsec-dashboard.middlewares=authelia@docker,geoblock@file"
-            - "traefik.http.services.crowdsec-dashboard.loadbalancer.server.port=3000"
+            - $STATE_DIR/plausible/event_data:/var/lib/clickhouse
+            - $STATE_DIR/plausible/event_logs:/var/log/clickhouse-server
+            - $STATE_DIR/plausible/config/logs.xml:/etc/clickhouse-server/config.d/logs.xml:ro
+            - $STATE_DIR/plausible/config/ipv4-only.xml:/etc/clickhouse-server/config.d/ipv4-only.xml:ro
+        environment:
+            - CLICKHOUSE_SKIP_USER_SETUP=1
+        ulimits:
+            nofile:
+                soft: 262144
+                hard: 262144
+        healthcheck:
+            test:
+                [
+                    "CMD-SHELL",
+                    "wget --no-verbose --tries=1 -O - http://127.0.0.1:8123/ping || exit 1",
+                ]
+            start_period: 1m
         logging: *logging
-
-    # Beszel - Local resource monitoring
-    beszel:
-        image: henrygd/beszel:latest
-        container_name: beszel
+    plausible:
+        image: ghcr.io/plausible/community-edition:v3
         restart: unless-stopped
+        container_name: plausible
+        command: sh -c "sleep 10 && /entrypoint.sh db createdb && /entrypoint.sh db migrate && /entrypoint.sh run"
         depends_on:
             traefik:
                 condition: service_started
-        extra_hosts:
-            - host.docker.internal:host-gateway
-        volumes:
-            - $STATE_DIR/beszel:/beszel_data
+            plausible_db:
+                condition: service_healthy
+            plausible_events_db:
+                condition: service_healthy
         networks:
             - traefik
+        volumes:
+            - $STATE_DIR/plausible/data:/var/lib/plausible
+        ulimits:
+            nofile:
+                soft: 65535
+                hard: 65535
+        environment:
+            - BASE_URL=https://plausible.$SERVICES_DOMAIN
+            - SECRET_KEY_BASE=$PLAUSIBLE_SECRET_KEY
+            - TOTP_VAULT_KEY=$PLAUSIBLE_TOTP_VAULT_KEY
         labels:
             - "traefik.enable=true"
-            - "traefik.http.routers.beszel.rule=Host(`beszel.$SERVICES_DOMAIN`)"
-            - "traefik.http.routers.beszel.entrypoints=websecure"
-            - "traefik.http.routers.beszel.tls.certresolver=le"
-            - "traefik.http.routers.beszel.tls=true"
-            - "traefik.http.routers.beszel.middlewares=authelia@docker,geoblock@file"
-            - "traefik.http.services.beszel.loadbalancer.server.port=8090"
-        logging: *logging
-    beszel-agent:
-        image: henrygd/beszel-agent:latest
-        container_name: beszel-agent
-        restart: unless-stopped
-        network_mode: host
-        depends_on:
-            - dockerproxy
-        environment:
-            PORT: 45876
-            DOCKER_HOST: "unix:///socket/docker.sock"
-            LOG_LEVEL: "debug"
-            # ${BESZEL_ENV_VARS} # DO NOT REMOVE, THIS IS REPLACED BY envsubst
-        volumes:
-            - dockerproxy:/socket/:ro
+            - "traefik.http.routers.plausible.rule=Host(`plausible.$SERVICES_DOMAIN`)"
+            - "traefik.http.routers.plausible.entrypoints=websecure"
+            - "traefik.http.routers.plausible.tls.certresolver=le"
+            - "traefik.http.routers.plausible.tls=true"
+            - "traefik.http.services.plausible.loadbalancer.server.port=8000"
+            - "traefik.http.routers.plausible.middlewares=authelia@docker"
         logging: *logging
 
-    # OpenCanary - Honeypot
-    opencanary:
-        container_name: opencanary
-        image: thinkst/opencanary
-        restart: unless-stopped
-        volumes:
-            - $STATE_DIR/opencanary/opencanary.json:/root/.opencanary.conf
-            # - /var/log/samba-audit.log:/var/log/samba-audit.log
-        networks:
-            - traefik
-        ports:
-            - "21:21"
-            - "3306:3306"
-            - "5000:5000"
-            - "8082:8082"
-            - "9418:9418"
-        logging: *logging
-
-    # Gokapi - File Sharing
-    gokapi:
-        container_name: gokapi
-        image: f0rc3/gokapi:latest
+    # Send - File Sharing
+    send:
+        container_name: send
+        image: registry.gitlab.com/timvisee/send:latest
         restart: unless-stopped
         depends_on:
             - traefik
+            - send-db
         volumes:
-            - $STATE_DIR/gokapi/data:/app/data
-            - $STATE_DIR/gokapi/config:/app/config
+            - $STATE_DIR/send/uploads:/uploads
         environment:
-            - TZ=UTC
+            - VIRTUAL_HOST=share.$SERVICES_DOMAIN
+            - VIRTUAL_PORT=80
+            - DHPARAM_GENERATION=false
+            - NODE_ENV=production
+            - BASE_URL=https://share.$SERVICES_DOMAIN
+            - PORT=80
+            - REDIS_HOST=send-db
+            - FILE_DIR=/uploads
+            - MAX_FILES_PER_ARCHIVE=512
+            - MAX_FILE_SIZE=137438953472
+            - MAX_EXPIRE_SECONDS=31536000
+            - MAX_DOWNLOADS=1000000000
+            - DOWNLOAD_COUNTS=10,1,2,5,10,15,25,50,100,1000,1000000000
+            - EXPIRE_TIMES_SECONDS=3600,86400,604800,2592000,31536000
+            - DEFAULT_DOWNLOADS=100
+            - DEFAULT_EXPIRE_SECONDS=2592000
         labels:
             - "traefik.enable=true"
-            - "traefik.http.routers.send.rule=Host(`send.$SERVICES_DOMAIN`)"
+            - "traefik.http.routers.send.rule=Host(`share.$SERVICES_DOMAIN`)"
             - "traefik.http.routers.send.entrypoints=websecure"
             - "traefik.http.routers.send.middlewares=authelia@docker"
             - "traefik.http.routers.send.tls.certresolver=le"
             - "traefik.http.routers.send.tls=true"
-            - "traefik.http.services.send.loadbalancer.server.port=53842"
+            - "traefik.http.services.send.loadbalancer.server.port=80"
         networks:
             - traefik
         logging: *logging
-
-    # File Browser
-    # filebrowser:
-    #     container_name: filebrowser
-    #     image: filebrowser/filebrowser
-    #     restart: unless-stopped
-    #     depends_on:
-    #         - traefik
-    #     user: "1000:1000"
-    #     volumes:
-    #         - $MAIN_PARENT_DIR:/srv
-    #         - $STATE_DIR/filebrowser/database:/database
-    #         - $STATE_DIR/filebrowser/config:/config
-    #     labels:
-    #         - "traefik.enable=true"
-    #         - "traefik.http.routers.filebrowser.rule=Host(`files.$SERVICES_DOMAIN`)"
-    #         - "traefik.http.routers.filebrowser.entrypoints=websecure"
-    #         - "traefik.http.routers.filebrowser.tls.certresolver=le"
-    #         - "traefik.http.routers.filebrowser.tls=true"
-    #         - "traefik.http.routers.filebrowser.tls.options=mtls@file"
-    #         - "traefik.http.routers.filebrowser.middlewares=authelia@docker,geoblock@file"
-    #         - "traefik.http.services.filebrowser.loadbalancer.server.port=80"
-    #     networks:
-    #         - traefik
-    #     healthcheck:
-    #         test: ["CMD", "sh", "-c", "wget -qO - http://localhost:80/health | grep -q OK"]
-    #         interval: 30s
-    #         timeout: 20s
-    #         retries: 3
-    #     logging: *logging
-
-    # Jellyfin - TV Streaming
-    jellyfin:
-        container_name: jellyfin
-        image: jellyfin/jellyfin
-        depends_on:
-            - traefik
-        user: "1000:1000"
-        volumes:
-            - "$MAIN_PARENT_DIR/Main/Media/TV:/media/TV"
-            - "$MAIN_PARENT_DIR/Main/Media/YouTube:/media/YouTube"
-            - $STATE_DIR/jellyfin/config:/config
-            - $STATE_DIR/jellyfin/cache:/cache
-            - /mnt/ssd2/jellyfin_less_important_media:/media/TempShows
-        labels:
-            - "traefik.enable=true"
-            - "traefik.http.routers.jellyfin.rule=Host(`tv.$SERVICES_DOMAIN`)"
-            - "traefik.http.routers.jellyfin.entrypoints=websecure"
-            - "traefik.http.routers.jellyfin.tls.certresolver=le"
-            - "traefik.http.routers.jellyfin.tls=true"
-            - "traefik.http.routers.jellyfin.middlewares=authelia@docker,geoblock@file"
-            - "traefik.http.middlewares.jellyfin.ratelimit.average=50"
-            - "traefik.http.middlewares.jellyfin.ratelimit.burst=25"
-        ports:
-            - 127.0.0.1:8096:8096
-        networks:
-            - traefik
-        logging: *logging
-
-    # Ntfy - Push Notifications
-    ntfy:
-        image: binwiederhier/ntfy
-        container_name: ntfy
-        user: "1000:1000"
-        depends_on:
-            - traefik
-        command:
-            - "serve"
-            - "-d"
-        volumes:
-            - $STATE_DIR/ntfy/cache:/var/cache/ntfy
-            - $STATE_DIR/ntfy/etc:/etc/ntfy
+    send-db:
+        container_name: send-db
+        image: "redis:alpine"
         restart: unless-stopped
-        labels:
-            - "traefik.enable=true"
-            - "traefik.http.routers.ntfy.rule=Host(`ntfy.$SERVICES_DOMAIN`)"
-            - "traefik.http.routers.ntfy.entrypoints=websecure"
-            - "traefik.http.routers.ntfy.tls.certresolver=le"
-            - "traefik.http.routers.ntfy.tls=true"
-            - "traefik.http.routers.ntfy.middlewares=authelia@docker,geoblock@file"
-            - "traefik.http.services.ntfy.loadbalancer.server.port=80"
+        volumes:
+            - $STATE_DIR/send/db:/data
         networks:
             - traefik
         logging: *logging
 
-    # D$CPLN - Monthly/Weekly Budget
-    dscpln:
-        container_name: dscpln
-        image: imranrdev/dscpln
+    # PixelNtfy - Tracking Pixels
+    pixelntfy:
+        container_name: pixelntfy
+        image: imranrdev/pixel-ntfy
         depends_on:
             - traefik
-            - ntfy
         labels:
             - "traefik.enable=true"
-            - "traefik.http.routers.dscpln.rule=Host(`dscpln.$SERVICES_DOMAIN`)"
-            - "traefik.http.routers.dscpln.entrypoints=websecure"
-            - "traefik.http.routers.dscpln.tls.certresolver=le"
-            - "traefik.http.routers.dscpln.tls=true"
-            - "traefik.http.routers.dscpln.middlewares=authelia@docker,geoblock@file"
-            - "traefik.http.services.dscpln.loadbalancer.server.port=3300"
-        volumes:
-            - "$MAIN_PARENT_DIR/Main/Notes/Transactions:/Transactions"
+            - "traefik.http.routers.pixelntfy.rule=Host(`pixelntfy.$SERVICES_DOMAIN`)"
+            - "traefik.http.routers.pixelntfy.entrypoints=websecure"
+            - "traefik.http.routers.pixelntfy.middlewares=authelia@docker"
+            - "traefik.http.routers.pixelntfy.tls.certresolver=le"
+            - "traefik.http.routers.pixelntfy.tls=true"
+            - "traefik.http.services.pixelntfy.loadbalancer.server.port=80"
         environment:
-            - "TEXTFILE_DATA_PROVIDER_DATA_PATH=/Transactions/Acc 2026.md"
-            - MONTHLY_LIMIT_NTFY_URL=https://ntfy.$SERVICES_DOMAIN/${MAIN_NODE_HOSTNAME_LOWERCASE}_services_dscpln
-            - WEEKLY_LIMIT_NTFY_URL=https://ntfy.$SERVICES_DOMAIN/${MAIN_NODE_HOSTNAME_LOWERCASE}_services_dscpln
+            - NTFY_TOPIC=${MAIN_NODE_HOSTNAME_LOWERCASE}_services_${PIXELNTFY_TOPIC_SUFFIX}
+            - NTFY_SERVER_URL=https://ntfy.$SERVICES_DOMAIN
             - NTFY_TOKEN=$NTFY_SERVICE_USER_TOKEN
-            - TEXTFILE_BUDGET_INIT_AMT=2400
-            - TEXTFILE_FIRST_WEEK_BIAS_INIT_AMT=1400
+            - PORT=80
+            - ANALYTICS_SCRIPT_ELEMENT=<script defer data-domain="pixelntfy.$SERVICES_DOMAIN" src="https://plausible.$SERVICES_DOMAIN/js/script.js"></script>
         networks:
             - traefik
-        restart: unless-stopped
         logging: *logging
 
-    # Immich - Gallery
-    immich-server:
-        container_name: immich-server
-        image: ghcr.io/immich-app/immich-server:release
-        extends: # uncomment this section for hardware acceleration - see https://immich.app/docs/features/hardware-transcoding
-            file: $STATE_DIR/immich/hwaccel.transcoding.yml
-            service: vaapi # set to one of [nvenc, quicksync, rkmpp, vaapi, vaapi-wsl] for accelerated transcoding
-        user: 1000:1000
-        volumes:
-            - $STATE_DIR/immich/upload:/usr/src/app/upload
-            - /etc/localtime:/etc/localtime:ro
-            - "$MAIN_PARENT_DIR/Main/Media/Camera:/mnt/media/ext-media/Camera:ro"
-            - "$MAIN_PARENT_DIR/Main/Media/Creative:/mnt/media/ext-media/Creative:ro"
-            - "$MAIN_PARENT_DIR/Main/Media/Drawings:/mnt/media/ext-media/Drawings:ro"
-            - "$MAIN_PARENT_DIR/Main/Media/Game Media:/mnt/media/ext-media/Game Media:ro"
-            - "$MAIN_PARENT_DIR/Main/Media/Recordings:/mnt/media/ext-media/Recordings:ro"
-            - "$MAIN_PARENT_DIR/Main/Media/Screenshots:/mnt/media/ext-media/Screenshots:ro"            
+    # ISBN Lookup
+    isbn-lookup:
+        container_name: isbn-lookup
+        image: imranrdev/isbn-lookup
+        depends_on:
+            - traefik
+        labels:
+            - "traefik.enable=true"
+            - "traefik.http.routers.isbn-lookup.rule=Host(`isbn.$SERVICES_DOMAIN`)"
+            - "traefik.http.routers.isbn-lookup.entrypoints=websecure"
+            - "traefik.http.routers.isbn-lookup.middlewares=authelia@docker"
+            - "traefik.http.routers.isbn-lookup.tls.certresolver=le"
+            - "traefik.http.routers.isbn-lookup.tls=true"
+            - "traefik.http.services.isbn-lookup.loadbalancer.server.port=80"
         environment:
-            - UPLOAD_LOCATION=$STATE_DIR/immich-upload
-            - DB_HOSTNAME=immich-database
-            - REDIS_HOSTNAME=immich-redis
-            - DB_PASSWORD=$IMMICH_DB_PASSWORD
-            - DB_USERNAME=postgres
-            - DB_DATABASE_NAME=immich
-        depends_on:
-            - immich-redis
-            - immich-database
-        restart: always
+            - PORT=80
+            - ANALYTICS_SCRIPT_ELEMENT=<script defer data-domain="isbn.$SERVICES_DOMAIN" src="https://plausible.$SERVICES_DOMAIN/js/script.js"></script>
         networks:
+            - traefik
+        logging: *logging
+
+    # MeTube - YouTube Downloader
+    metube:
+        image: ghcr.io/alexta69/metube:latest
+        container_name: metube
+        volumes:
+            - $STATE_DIR/metube:/downloads
+        networks:
+            - traefik
+        depends_on:
+            - traefik
+        restart: unless-stopped
+        labels:
+            - "traefik.enable=true"
+            - "traefik.http.routers.metube.rule=Host(`ytdl.$SERVICES_DOMAIN`)"
+            - "traefik.http.routers.metube.entrypoints=websecure"
+            - "traefik.http.routers.metube.middlewares=authelia@docker"
+            - "traefik.http.routers.metube.tls.certresolver=le"
+            - "traefik.http.routers.metube.tls=true"
+            - "traefik.http.services.metube.loadbalancer.server.port=8081"
+        logging: *logging
+
+    # Obtainium Apps
+    obtainium_apps:
+        container_name: obtainium_apps
+        image: imranrdev/apps.obtainium.example.org
+        depends_on:
             - traefik
         labels:
             - "traefik.enable=true"
-            - "traefik.http.routers.immich.rule=Host(`immich.$SERVICES_DOMAIN`)"
-            - "traefik.http.routers.immich.entrypoints=websecure"
-            - "traefik.http.routers.immich.tls.certresolver=le"
-            - "traefik.http.routers.immich.tls=true"
-            - "traefik.http.routers.immich.middlewares=authelia@docker,geoblock@file"
-            - "traefik.http.services.immich.loadbalancer.server.port=2283"
+            - "traefik.http.routers.obtainium_apps.rule=Host(`example.org`)"
+            - "traefik.http.routers.obtainium_apps.entrypoints=websecure"
+            - "traefik.http.routers.obtainium_apps.tls.certresolver=le"
+            - "traefik.http.routers.obtainium_apps.tls=true"
+            - "traefik.http.services.obtainium_apps.loadbalancer.server.port=8080"
+        networks:
+            - traefik
+        restart: unless-stopped
         logging: *logging
-    immich-machine-learning:
-        container_name: immich-machine-learning
-        # For hardware acceleration, add one of -[armnn, cuda, openvino] to the image tag.
-        # Example tag: release-cuda
-        image: ghcr.io/immich-app/immich-machine-learning:release-rocm
-        extends: # uncomment this section for hardware acceleration - see https://immich.app/docs/features/ml-hardware-acceleration
-            file: $STATE_DIR/immich/hwaccel.ml.yml
-            service: rocm # set to one of [armnn, cuda, rocm, openvino, openvino-wsl, rknn] for accelerated inference - use the `-wsl` version for WSL2 where applicable
+
+    # IKOM - IKOM
+    ikom:
+        container_name: ikom
+        image: imranrdev/order-manager
+        depends_on:
+            - traefik
+        labels:
+            - "traefik.enable=true"
+            - "traefik.http.routers.ikom.rule=Host(`ikom.$SERVICES_DOMAIN`)"
+            - "traefik.http.routers.ikom.entrypoints=websecure"
+            - "traefik.http.routers.ikom.tls.certresolver=le"
+            - "traefik.http.routers.ikom.tls=true"
+            - "traefik.http.routers.ikom.middlewares=authelia@docker"
+            - "traefik.http.services.ikom.loadbalancer.server.port=3000"
         volumes:
-            - immich-model-cache:/cache
+            - "$STATE_DIR/ikom:/app/data"
+        networks:
+            - traefik
+        restart: unless-stopped
+        logging: *logging
+
+    # SB25 - private birthday page
+    sb25:
+        container_name: sb25
+        image: sb25
+        depends_on:
+            - traefik
+        labels:
+            - "traefik.enable=true"
+            - "traefik.http.routers.sb25.rule=Host(`sb25.$SERVICES_DOMAIN`)"
+            - "traefik.http.routers.sb25.entrypoints=websecure"
+            - "traefik.http.routers.sb25.tls.certresolver=le"
+            - "traefik.http.routers.sb25.tls=true"
+            - "traefik.http.services.sb25.loadbalancer.server.port=3000"
         environment:
-            - UPLOAD_LOCATION=$STATE_DIR/immich-upload
-            - DB_HOSTNAME=immich-database
-            - REDIS_HOSTNAME=immich-redis
-            - DB_PASSWORD=$IMMICH_DB_PASSWORD
-            - DB_USERNAME=postgres
-            - DB_DATABASE_NAME=immich
-        restart: always
+            - AUTH_TOKEN=***REMOVED***
         networks:
-            - traefik
-        logging: *logging
-    immich-redis:
-        container_name: immich-redis
-        image: docker.io/valkey/valkey:9@sha256:3b55fbaa0cd93cf0d9d961f405e4dfcc70efe325e2d84da207a0a8e6d8fde4f9
-        healthcheck:
-            test: redis-cli ping || exit 1
-        restart: always
-        networks:
-            - traefik
-        logging: *logging
-    immich-database:
-        container_name: immich-postgres
-        image: ghcr.io/immich-app/postgres:14-vectorchord0.4.3-pgvectors0.2.0@sha256:bcf63357191b76a916ae5eb93464d65c07511da41e3bf7a8416db519b40b1c23
-        environment:
-            POSTGRES_PASSWORD: $IMMICH_DB_PASSWORD
-            POSTGRES_USER: postgres
-            POSTGRES_DB: immich
-            POSTGRES_INITDB_ARGS: '--data-checksums'
-        volumes:
-            - $STATE_DIR/immich/postgres:/var/lib/postgresql/data
-        shm_size: 128mb
-        restart: always
-        networks:
-            - traefik
-        logging: *logging
-
-    # Navidrome - Music Streaming
-    navidrome:
-        container_name: navidrome
-        image: deluan/navidrome:latest
-        user: 1000:1000
-        depends_on:
             - traefik
         restart: unless-stopped
-        volumes:
-            - "$STATE_DIR/navidrome/data:/data"
-            - "$MAIN_PARENT_DIR/Main/Media/Music:/music:ro"
-        labels:
-            - "traefik.enable=true"
-            - "traefik.http.routers.navidrome.rule=Host(`music.$SERVICES_DOMAIN`)"
-            - "traefik.http.routers.navidrome.entrypoints=websecure"
-            - "traefik.http.routers.navidrome.tls.certresolver=le"
-            - "traefik.http.routers.navidrome.tls=true"
-            - "traefik.http.routers.navidrome.middlewares=authelia@docker,geoblock@file"
-            - "traefik.http.services.navidrome.loadbalancer.server.port=4533"
-        networks:
-            - traefik
-        logging: *logging
-
-    # oPodSync - Podcast Sync
-    opodsync:
-        container_name: opodsync
-        image: ganeshlab/opodsync:latest
-        user: 1000:1000
-        depends_on:
-            - traefik
-        restart: unless-stopped
-        volumes:
-            - "$STATE_DIR/opodsync:/var/www/server/data"
-        labels:
-            - "traefik.enable=true"
-            - "traefik.http.routers.opodsync.rule=Host(`opodsync.$SERVICES_DOMAIN`)"
-            - "traefik.http.routers.opodsync.entrypoints=websecure"
-            - "traefik.http.routers.opodsync.tls.certresolver=le"
-            - "traefik.http.routers.opodsync.tls=true"
-            - "traefik.http.routers.opodsync.middlewares=authelia@docker,geoblock@file"
-            - "traefik.http.services.opodsync.loadbalancer.server.port=8080"
-        networks:
-            - traefik
-        logging: *logging
-
-    freshrss:
-        image: freshrss/freshrss:latest
-        container_name: freshrss
-        restart: unless-stopped
-        depends_on:
-            - traefik
-        volumes:
-            - $STATE_DIR/freshrss/data:/var/www/FreshRSS/data
-            - $STATE_DIR/freshrss/extensions:/var/www/FreshRSS/extensions
-        environment:
-            # A timezone http://php.net/timezones (default is UTC)
-            TZ: US/Eastern
-            # Cron job to refresh feeds at specified minutes
-            CRON_MIN: "2,32"
-            # Optional 'development' for additional logs; default is 'production'
-            FRESHRSS_ENV: development
-            # Optional parameter, remove for automatic settings, set to 0 to disable,
-            # or (if you use a proxy) to a space-separated list of trusted IP ranges
-            # compatible with https://httpd.apache.org/docs/current/mod/mod_remoteip.html#remoteipinternalproxy
-            # This impacts which IP address is logged (X-Forwarded-For or REMOTE_ADDR).
-            # This also impacts external authentication methods;
-            # see https://freshrss.github.io/FreshRSS/en/admins/09_AccessControl.html
-            TRUSTED_PROXY: 172.19.0.0/16
-            # Optional auto-install parameters (the Web interface install is recommended instead):
-            # ⚠️ Parameters below are only used at the very first run (so far).
-            # So if changes are made (or in .env file), first delete the service and volumes.
-            # ℹ️ All the --db-* parameters can be omitted if using built-in SQLite database.
-            FRESHRSS_INSTALL: |-
-                --api-enabled
-                --base-url https://rss.$SERVICES_DOMAIN
-                --default-user admin
-                --language en
-            FRESHRSS_USER: |-
-                --api-password $FRESHRSS_ADMIN_API_PASSWORD
-                --email $DOMAIN_OWNER_EMAIL
-                --language en
-                --password $FRESHRSS_ADMIN_PASSWORD
-                --user admin
-        labels:
-            - "traefik.enable=true"
-            - "traefik.http.routers.freshrss.rule=Host(`rss.$SERVICES_DOMAIN`)"
-            - "traefik.http.routers.freshrss.entrypoints=websecure"
-            - "traefik.http.routers.freshrss.tls.certresolver=le"
-            - "traefik.http.routers.freshrss.tls=true"
-            - "traefik.http.routers.freshrss.middlewares=authelia@docker,geoblock@file"
-            - "traefik.http.services.freshrss.loadbalancer.server.port=80"
-        networks:
-            - traefik
-        logging: *logging
-
-    # Home Assistant + MQTT
-    homeassistant:
-        container_name: homeassistant
-        image: ghcr.io/home-assistant/home-assistant:stable
-        volumes:
-            - $STATE_DIR/homeassistant:/config/
-            - /etc/localtime:/etc/localtime:ro
-            - /run/dbus:/run/dbus:ro
-        restart: unless-stopped
-        privileged: true
-        networks:
-            - traefik
-        labels:
-            - "traefik.enable=true"
-            - "traefik.http.routers.homeassistant.rule=Host(`ha.$SERVICES_DOMAIN`)"
-            - "traefik.http.routers.homeassistant.entrypoints=websecure"
-            - "traefik.http.routers.homeassistant.tls.certresolver=le"
-            - "traefik.http.routers.homeassistant.tls=true"
-            - "traefik.http.routers.homeassistant.middlewares=authelia@docker,geoblock@file"
-            - "traefik.http.services.homeassistant.loadbalancer.server.port=8123"
-        logging: *logging
-    mosquitto:
-        image: eclipse-mosquitto:openssl
-        container_name: mosquitto
-        ports:
-            - 8883:8883
-            - 9001:9001
-        volumes:
-            - $STATE_DIR/mosquitto/config:/mosquitto/config
-            - $STATE_DIR/mosquitto/data:/mosquitto/data
-            - $STATE_DIR/mosquitto/log:/mosquitto/log
-        command: mosquitto -c /mosquitto/config/mosquitto.conf
-        restart: unless-stopped
-        networks:
-            - traefik
-        logging: *logging
-
-    # LLMs
-    ollama:
-        image: ollama/ollama:rocm
-        container_name: ollama
-        volumes:
-            - ollama:/root/.ollama
-        networks:
-            - traefik
-        tty: true
-        restart: unless-stopped
-        devices:
-            - "/dev/kfd:/dev/kfd" # Required for AMD GPU support
-            - "/dev/dri:/dev/dri" # Required for AMD GPU support
-        logging: *logging
-    ollama-webui:
-        image: ghcr.io/open-webui/open-webui:main
-        container_name: ollama-webui
-        environment:
-            - OLLAMA_BASE_URL=http://ollama:11434
-            - WEBUI_URL=https://gpt.${SERVICES_DOMAIN}
-            - ENABLE_OAUTH_SIGNUP=true
-            - OAUTH_MERGE_ACCOUNTS_BY_EMAIL=true
-            - OAUTH_CLIENT_ID=open-webui
-            - OAUTH_CLIENT_SECRET=${OPEN_WEBUI_OAUTH_CLIENT_SECRET}
-            - OPENID_PROVIDER_URL=https://auth.${SERVICES_DOMAIN}/.well-known/openid-configuration
-            - OAUTH_PROVIDER_NAME=Authelia
-            - OAUTH_SCOPES=openid email profile groups
-            - ENABLE_OAUTH_ROLE_MANAGEMENT=true
-            - OAUTH_ALLOWED_ROLES=admins,dev,family
-            - OAUTH_ADMIN_ROLES=admins
-            - OAUTH_ROLES_CLAIM=groups
-        volumes:
-            - ollama-webui:/app/backend/data
-        networks:
-            - traefik
-        depends_on:
-            - ollama
-            - traefik
-        restart: unless-stopped
-        labels:
-            - "traefik.enable=true"
-            - "traefik.http.routers.ollama-webui.rule=Host(`gpt.$SERVICES_DOMAIN`)"
-            - "traefik.http.routers.ollama-webui.entrypoints=websecure"
-            - "traefik.http.routers.ollama-webui.tls.certresolver=le"
-            - "traefik.http.routers.ollama-webui.tls=true"
-            - "traefik.http.routers.ollama-webui.middlewares=authelia@docker,geoblock@file"
-            - "traefik.http.services.ollama-webui.loadbalancer.server.port=8080"
-        logging: *logging
-
-    # CalDAV/CardDAV Server
-    nextcloud:
-        image: nextcloud
-        container_name: nextcloud
-        volumes:
-            - $STATE_DIR/nextcloud/data:/var/www/html
-        networks:
-            - traefik
-        depends_on:
-            - traefik
-        restart: unless-stopped
-        labels:
-            - "traefik.enable=true"
-            - "traefik.http.routers.nextcloud.rule=Host(`nextcloud.$SERVICES_DOMAIN`)"
-            - "traefik.http.routers.nextcloud.entrypoints=websecure"
-            - "traefik.http.routers.nextcloud.middlewares=authelia@docker"
-            - "traefik.http.routers.nextcloud.tls.certresolver=le"
-            - "traefik.http.routers.nextcloud.tls=true"
-            - "traefik.http.services.nextcloud.loadbalancer.server.port=80"
-        deploy:
-            resources:
-                limits:
-                    cpus: '0.1'
-        logging: *logging
-
-    # Find My Device Server
-    fmd:
-        image: registry.gitlab.com/fmd-foss/fmd-server:latest
-        container_name: fmd
-        volumes:
-            - $STATE_DIR/fmd/db:/var/lib/fmd-server/db/
-        networks:
-            - traefik
-        depends_on:
-            - traefik
-        restart: unless-stopped
-        environment:
-            - FMD_REGISTRATIONTOKEN=$FMD_REGISTRATIONTOKEN
-        labels:
-            - "traefik.enable=true"
-            - "traefik.http.routers.fmd.rule=Host(`fmd.$SERVICES_DOMAIN`)"
-            - "traefik.http.routers.fmd.entrypoints=websecure"
-            - "traefik.http.routers.fmd.middlewares=authelia@docker"
-            - "traefik.http.routers.fmd.tls.certresolver=le"
-            - "traefik.http.routers.fmd.tls=true"
-            - "traefik.http.services.fmd.loadbalancer.server.port=8080"
         logging: *logging
 
 networks:
@@ -832,10 +463,6 @@ networks:
 
 volumes:
     logtfy_tmp: {}
-    ollama: {}
-    ollama-webui: {} # Decided not to bind mount this
-    navidrome-cache: {}
-    immich-model-cache: {}
     dockerproxy:
         driver: local
         driver_opts:

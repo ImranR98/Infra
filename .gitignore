@@ -3,12 +3,5 @@ state_dir/
 VARS.*.sh
 temp.sh
 migrate.sh
-landscape.private.docker-compose.yaml
-private.authelia.config.yaml
-
 # A minimal version of mock-data has been checked in - any further changes should be local only 
 mock-data/
-
-# Ignore Syncthing-related files
-.stfolder/
-.stignore

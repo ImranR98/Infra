@@ -15,11 +15,3 @@ http:
           allowUnknownCountries: false
           unknownCountryApiResponse: "nil"
           $GEOBLOCK_CONFIG_SUBSET
-
-tls:
-  options:
-    mtls:
-      clientAuth:
-        caFiles:
-          - /etc/traefik/mtls/cacert.pem
-        clientAuthType: RequireAndVerifyClientCert
