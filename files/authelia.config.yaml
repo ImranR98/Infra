@@ -39,7 +39,7 @@ access_control:
       policy: bypass
     - domain: plausible.$SERVICES_DOMAIN # IGNORE INITIALLY
       policy: bypass # IGNORE INITIALLY
-    - domain: auth.$SERVICES_DOMAIN
+    - domain: luna.$SERVICES_DOMAIN
       policy: bypass
     - domain: ytdl.$SERVICES_DOMAIN
       policy: one_factor
@@ -62,7 +62,7 @@ session:
   secret: ${AUTHELIA_SESSION_SECRET}
   cookies:
     - domain: ${SERVICES_DOMAIN}
-      authelia_url: https://auth.${SERVICES_DOMAIN}
+      authelia_url: https://luna.${SERVICES_DOMAIN}
   redis:
     host: authelia-db
     port: 6379

@@ -22,7 +22,7 @@ export SERVICES_DOMAIN="staging.example.org"
 export DOMAIN_OWNER_EMAIL="contact@example.org"
 
 # --- Notifications ---
-# Auth token for the ntfy service user that landscape services use to push notifications
+# Auth token for the ntfy service user that Luna services use to push notifications
 export NTFY_SERVICE_USER_TOKEN=""
 
 # --- Authelia ---
@@ -60,6 +60,10 @@ export PIXELNTFY_TOPIC_SUFFIX='abc'
 # --- SB25 Birthday Page ---
 # Auth token for the sb25 service (generate a random hex string)
 export SB25_AUTH_TOKEN="change_me"
+
+# --- strelaysrv Relay Server ---
+# The "provided-by" text displayed on the Syncthing relay server
+export STRELAYSRV_PROVIDED_BY="$DOMAIN_OWNER_EMAIL"
 
 # --- Geoblock (Traefik middleware) ---
 # YAML subset for the geoblock plugin configuration (indentation matters)

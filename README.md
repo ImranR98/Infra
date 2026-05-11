@@ -1,4 +1,4 @@
-# Landscape
+# Luna
 
 Docker-based setup for self-hosted apps/services.
 
@@ -12,7 +12,7 @@ Docker-based setup for self-hosted apps/services.
 
 ## Files
 
-- Services are defined in `landscape.docker-compose.yaml`.
+- Services are defined in `compose.yaml`.
 - All environment-specific configuration and/or sensitive information is stored in environment-specific Git-ignored variable files.
     - `template.VARS.sh`: Example file used as a starting point for a user to define their own `VARS.sh` containing environment-specific variables and secrets.
     - For the install script to run, at least one of the following user-defined files must exist (listed in order of preference):

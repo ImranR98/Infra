@@ -29,7 +29,7 @@ if [ -f "$STATE_DIR"/generated.VARS.sh ]; then
 fi
 
 findDomainsInSetup() {
-    cat "$HERE"/landscape.docker-compose.yaml | grep Host | awk -F '`' '{print $2}' | sort | uniq | envsubst
+    cat "$HERE"/compose.yaml | grep Host | awk -F '`' '{print $2}' | sort | uniq | envsubst
 }
 
 generateComposeService() {
@@ -46,7 +46,7 @@ StartLimitIntervalSec=0
 [Service]
 User=$USER_ID
 Type=idle
-ExecStart=/usr/bin/docker compose -p $SERVICE_NAME -f $COMPOSE_DIR/$SERVICE_NAME.docker-compose.yaml up
+ExecStart=/usr/bin/docker compose -p $SERVICE_NAME -f $COMPOSE_DIR/compose.yaml up
 Restart=always
 RestartSec=30
 

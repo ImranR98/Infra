@@ -26,7 +26,7 @@ printLine -
 
 printTitle "Create Required Directories"
 tmpfile="$(mktemp)"
-envsubst < "$HERE"/landscape.docker-compose.yaml > "$tmpfile"
+envsubst < "$HERE"/compose.yaml > "$tmpfile"
 for prefix in "$STATE_DIR" "$MAIN_PARENT_DIR"; do
     yq '.services[] | .volumes[] | select(type == "string")' "$tmpfile" 2>/dev/null | \
         while IFS=: read -r host_path _; do
@@ -71,15 +71,15 @@ envsubst < "$HERE"/files/traefik.dynamic-configuration.yaml > "$STATE_DIR"/traef
 echo "Done."
 
 printTitle "Generate Docker Compose file"
-envsubst < "$HERE"/landscape.docker-compose.yaml > "$STATE_DIR"/landscape.docker-compose.yaml
+envsubst < "$HERE"/compose.yaml > "$STATE_DIR"/compose.yaml
 echo "Done."
 
-printTitle "Install and start the Landscape service"
-generateComposeService landscape "$MY_UID" "$STATE_DIR" >"$STATE_DIR"/landscape.service
-$SUDO_COMMAND bash -c "mv '$STATE_DIR'/landscape.service /etc/systemd/system/landscape.service && \
-    chcon -t systemd_unit_file_t /etc/systemd/system/landscape.service 2>/dev/null || true && \
-    systemctl daemon-reload && systemctl enable landscape.service && \
-    systemctl stop landscape.service 2>/dev/null || true && sleep 5 && systemctl start landscape.service"
+printTitle "Install and start the Luna service"
+generateComposeService luna "$MY_UID" "$STATE_DIR" >"$STATE_DIR"/luna.service
+$SUDO_COMMAND bash -c "mv '$STATE_DIR'/luna.service /etc/systemd/system/luna.service && \
+    chcon -t systemd_unit_file_t /etc/systemd/system/luna.service 2>/dev/null || true && \
+    systemctl daemon-reload && systemctl enable luna.service && \
+    systemctl stop luna.service 2>/dev/null || true && sleep 5 && systemctl start luna.service"
 echo "Done."
 
 printTitle "Finished"

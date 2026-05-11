@@ -10,7 +10,7 @@ set -euo pipefail
         fi
     done
 
-    PLUGIN_LINES="$(yq '.services.traefik.command' landscape.docker-compose.yaml)"
+    PLUGIN_LINES="$(yq '.services.traefik.command' compose.yaml)"
 
     while IFS= read -r l; do
         PLUGIN_URL="$(echo "$l" | awk -F= '{print $NF}')"
@@ -22,7 +22,7 @@ set -euo pipefail
         PLUGIN_CURRENT_VERSION="$(echo "$PLUGIN_LINES" | grep -o "\.plugins\.$PLUGIN_NAME\.version=[^\"]*" | awk -F= '{print $NF}')"
         PLUGIN_LATEST_VERSION="$(curl -s "https://api.github.com/repos$(echo "$PLUGIN_URL" | sed 's|github\.com/||')/releases/latest" | jq -r '.tag_name')"
     if [ "$PLUGIN_CURRENT_VERSION" != "$PLUGIN_LATEST_VERSION" ]; then
-        sed -i "s/\.plugins\.$PLUGIN_NAME\.version=$PLUGIN_CURRENT_VERSION/.plugins.$PLUGIN_NAME.version=$PLUGIN_LATEST_VERSION/g" landscape.docker-compose.yaml
+        sed -i "s/\.plugins\.$PLUGIN_NAME\.version=$PLUGIN_CURRENT_VERSION/.plugins.$PLUGIN_NAME.version=$PLUGIN_LATEST_VERSION/g" compose.yaml
         echo "Plugin $PLUGIN_NAME updated to $PLUGIN_LATEST_VERSION (you need to restart Traefik for this to take effect)"
     else
         echo "Plugin $PLUGIN_NAME already on latest ($PLUGIN_LATEST_VERSION)"
