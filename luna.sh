@@ -13,7 +13,7 @@ if [ -f "$HERE/VARS.sh" ]; then
     source "$HERE/VARS.sh"
     export MY_UID="$UID"
 elif [ -n "${1:-}" ] && [ "${1:-}" != "prereqs" ] && [ "${1:-}" != "list-domains" ] && [ "${1:-}" != "old-images" ] && [ "${1:-}" != "update-socket-proxy" ] && [ "${1:-}" != "update-traefik-plugins" ]; then
-    echo "No VARS.sh found! Copy template.VARS.sh to VARS.sh and fill in the values." >&2
+    echo "No VARS.sh found. Copy template.VARS.sh to VARS.sh and fill in the values." >&2
     exit 1
 fi
 
@@ -48,7 +48,7 @@ case "${1:-}" in
         fi
         if [ "$IGNORE_AUTHELIA_IGNORED_LINES" = true ]; then
             sed '/# IGNORE INITIALLY$/ s/^/# /' "$HERE"/templates/authelia.config.yaml | envsubst >"$STATE_DIR"/authelia/config/configuration.yml
-            echo "Note that the generated Authelia config does not include lines that end with \"# IGNORE INITIALLY\"."
+            echo "Note: the generated Authelia config does not include lines that end with \"# IGNORE INITIALLY\"."
         else
             envsubst < "$HERE"/templates/authelia.config.yaml >"$STATE_DIR"/authelia/config/configuration.yml
         fi
@@ -92,8 +92,7 @@ EOF
         echo "Done."
 
         echo "=== Finished ==="
-        echo "Note:
-        - Some services may need manual setup in their respective GUIs."
+        echo "Note: Some services may need manual setup in their respective GUIs."
         echo ""
         ;;
 
@@ -152,7 +151,7 @@ EOF
         while IFS= read -r l; do
             PLUGIN_URL="$(echo "$l" | awk -F= '{print $NF}')"
             if ! echo "$PLUGIN_URL" | grep -q 'github.com/'; then
-                echo "UNSUPPORTED PLUGIN: $PLUGIN_URL"
+                echo "UNSUPPORTED PLUGIN: $PLUGIN_URL" >&2
                 continue
             fi
             PLUGIN_NAME="$(echo "$l" | awk -F. '{print $3}')"
@@ -160,9 +159,9 @@ EOF
             PLUGIN_LATEST_VERSION="$(curl -s "https://api.github.com/repos$(echo "$PLUGIN_URL" | sed 's|github\.com/||')/releases/latest" | jq -r '.tag_name')"
             if [ "$PLUGIN_CURRENT_VERSION" != "$PLUGIN_LATEST_VERSION" ]; then
                 sed -i "s/\.plugins\.$PLUGIN_NAME\.version=$PLUGIN_CURRENT_VERSION/.plugins.$PLUGIN_NAME.version=$PLUGIN_LATEST_VERSION/g" "$HERE/compose.yaml"
-                echo "Plugin $PLUGIN_NAME updated to $PLUGIN_LATEST_VERSION (you need to restart Traefik for this to take effect)"
+                echo "Plugin $PLUGIN_NAME updated to $PLUGIN_LATEST_VERSION (you need to restart Traefik for this to take effect)."
             else
-                echo "Plugin $PLUGIN_NAME already on latest ($PLUGIN_LATEST_VERSION)"
+                echo "Plugin $PLUGIN_NAME already the latest ($PLUGIN_LATEST_VERSION)."
             fi
         done < <(echo "$PLUGIN_LINES" | grep -o '\.plugins\..*\.modulename=[^"]*')
         ;;
