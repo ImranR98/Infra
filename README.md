@@ -26,7 +26,6 @@ Docker-based setup for self-hosted apps/services.
     - `fixed.VARS.sh`: Hardcoded variables used by various scripts.
     - `prep_env.sh`: Helper script used by various other scripts.
     - Everything in `files/`: Various files used to configure/initialize apps and/or used by the install scripts.
-    - Everything in `mock_data/`: Data used to demo some services in a staging environment.
 
 ## Usage
 

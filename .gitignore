@@ -3,5 +3,3 @@ state_dir/
 VARS.*.sh
 temp.sh
 migrate.sh
-# A minimal version of mock-data has been checked in - any further changes should be local only 
-mock-data/
