@@ -12,7 +12,7 @@ x-socket-proxy: &socket-proxy
         - ALL
     security_opt:
         - no-new-privileges
-    user: 65534:964
+    user: "65534:$DOCKER_GID"
     healthcheck:
         test: ["CMD", "./healthcheck"]
         interval: 10s

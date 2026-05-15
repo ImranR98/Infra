@@ -16,6 +16,7 @@ if [ -f "$HERE/VARS.sh" ]; then
     else
         export MY_UID="$UID"
     fi
+    export DOCKER_GID="$(grep docker /etc/group | awk -F: '{print $3}')"
 elif [ -n "${1:-}" ] && [ "${1:-}" != "prereqs" ] && [ "${1:-}" != "list-domains" ] && [ "${1:-}" != "old-images" ] && [ "${1:-}" != "update-socket-proxy" ] && [ "${1:-}" != "update-traefik-plugins" ]; then
     echo "No VARS.sh found. Copy template.VARS.sh to VARS.sh and fill in the values." >&2
     exit 1
