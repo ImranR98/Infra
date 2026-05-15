@@ -79,16 +79,7 @@ envsubst < templates/authelia.config.yaml | grep -Eo 'domain:.+# IGNORE INITIALL
 
 ## CLI Commands
 
-| Command | Description |
-|---------|-------------|
-| `./luna.sh prereqs` | Install prerequisites |
-| `./luna.sh install` | Install/update all services |
-| `./luna.sh restart <service>` | Restart a single service |
-| `./luna.sh list-domains` | List all required subdomains |
-| `./luna.sh backup-state` | Back up state directory and VARS.sh |
-| `./luna.sh old-images` | List Docker images older than 60 days |
-| `./luna.sh update-socket-proxy` | Pull latest socket-proxy, restart Luna if updated |
-| `./luna.sh update-traefik-plugins` | Update Traefik plugin versions |
+Run `./luna.sh` to see all CLI commands.
 
 ## Maintenance
 
