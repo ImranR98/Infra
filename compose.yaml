@@ -409,8 +409,7 @@ services:
     # SB25 - private birthday page
     sb25:
         container_name: sb25
-        image: imranrdev/sb25
-        user: "1000:1000"
+        image: sb25
         depends_on:
             - traefik
         labels:
@@ -432,7 +431,6 @@ services:
     strelaysrv:
         image: imranrdev/strelaysrv-docker:latest
         container_name: strelaysrv
-        user: "1000:1000"
         restart: unless-stopped
         volumes:
             - strelaysrv:/keys
