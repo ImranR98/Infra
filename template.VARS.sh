@@ -50,6 +50,11 @@ export SB25_AUTH_TOKEN="change_me"
 # The "provided-by" text displayed on the Syncthing relay server
 export STRELAYSRV_PROVIDED_BY="$DOMAIN_OWNER_EMAIL"
 
+# --- Logtfy ---
+# Authorization header for ntfy (format: "Bearer <token>")
+# Generate a token on your ntfy server under Settings > Access tokens
+export NTFY_SERVICE_USER_TOKEN='change_me'
+
 # --- Geoblock (Traefik middleware) ---
 # YAML subset for the geoblock plugin configuration (indentation matters)
 export GEOBLOCK_CONFIG_SUBSET='

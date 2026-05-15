@@ -1,0 +1,34 @@
+{
+    "ntfyConfig": {
+        "configs": [
+            {
+                "id": "ntfy_home",
+                "host": "https://ntfy.$SERVICES_DOMAIN",
+                "authHeader": "Bearer $NTFY_SERVICE_USER_TOKEN",
+                "topicPrefix": "${HOSTNAME}_services_"
+            }
+        ],
+        "defaultConfig": "ntfy_home",
+        "fallbackConfig": "ntfy_official"
+    },
+    "modulesEnabledByDefault": false,
+    "catchModuleCrashes": false,
+    "allowModuleFailCount": 3,
+    "moduleCustomization": [
+        {
+            "module": "ssh_logins",
+            "ntfyTopic": "logtfy",
+            "enabled": true
+        },
+        {
+            "module": "authelia_logins",
+            "ntfyTopic": "logtfy",
+            "enabled": true
+        },
+        {
+            "module": "watchtower_updates",
+            "ntfyTopic": "logtfy",
+            "enabled": true
+        }
+    ]
+}

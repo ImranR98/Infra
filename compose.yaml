@@ -439,6 +439,23 @@ services:
         mem_limit: 128M
         logging: *logging
 
+    # Logtfy - Log Monitoring and ntfy Alerting
+    logtfy:
+        image: imranrdev/logtfy
+        container_name: logtfy
+        hostname: $HOSTNAME
+        restart: unless-stopped
+        mem_limit: 256M
+        depends_on:
+            - dockerproxy
+        volumes:
+            - $STATE_DIR/logtfy/config.json:/logtfy/config.json:ro
+            - /var/log/journal:/var/log/journal:ro
+            - dockerproxy:/socket/:ro
+        environment:
+            - DOCKER_HOST=unix:///socket/docker.sock
+        logging: *logging
+
     # strelaysrv - Syncthing Relay Server
     strelaysrv:
         image: syncthing/relaysrv:latest
