@@ -32,10 +32,9 @@ VARS.sh
 
 ### 1. Prerequisites
 
-- Linux server (tested on Fedora Atomic/secureblue)
+- Ubuntu server (or anything with `sudo`, `apt`, and `systemd`)
 - A domain with DNS A/AAAA records pointing subdomains to your server
-- Inbound access on **ports 80** (HTTP) and **443** (HTTPS) for web traffic
-- Inbound access on **ports 22067/22070** (optional, only if using the Syncthing relay server)
+- Inbound access on **ports 80** (HTTP) and **443** (HTTPS) for web traffic, and **ports 22067/22070** for the Syncthing relay server
 
 Install prerequisites:
 ```
@@ -49,7 +48,7 @@ cp template.VARS.sh VARS.sh
 ```
 
 Edit `VARS.sh` with your values:
-- `NODE_NAME`, `SERVICES_DOMAIN`, `DOMAIN_OWNER_EMAIL`
+- `SERVICES_DOMAIN`, `DOMAIN_OWNER_EMAIL`
 - Authelia encryption keys and secrets
 - Plausible keys, PixelNtfy topic, etc.
 

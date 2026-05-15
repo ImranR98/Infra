@@ -17,26 +17,7 @@ printTitle() {
     printLine
 }
 
-generateComposeService() {
-    echo "[Unit]
-Description=$1 start
-StartLimitIntervalSec=0
 
-[Service]
-User=$2
-Type=idle
-ExecStart=/usr/bin/docker compose -p $1 -f $3/compose.yaml up
-Restart=always
-RestartSec=30
-
-[Install]
-WantedBy=multi-user.target"
-}
-
-export SUDO_COMMAND="sudo"
-if command -v run0 >/dev/null 2>&1; then
-    export SUDO_COMMAND="run0"
-fi
 
 if [ -f "$HERE/VARS.sh" ]; then
     while IFS= read -r var; do
@@ -47,7 +28,6 @@ if [ -f "$HERE/VARS.sh" ]; then
     done < <(grep -Eo '^export [^=]+' "$HERE"/template.VARS.sh | sed 's/^export //')
     source "$HERE/VARS.sh"
     export MY_UID="$UID"
-    export NODE_NAME_LOWERCASE="${NODE_NAME,,}"
 elif [ "${1:-}" != "prereqs" ]; then
     echo "No VARS.sh found! Copy template.VARS.sh to VARS.sh and fill in the values." >&2
     exit 1
@@ -117,8 +97,22 @@ case "${1:-}" in
         echo "Done."
 
         printTitle "Install and start the Luna service"
-        generateComposeService luna "$MY_UID" "$STATE_DIR" >"$STATE_DIR"/luna.service
-        $SUDO_COMMAND bash -c "mv '$STATE_DIR'/luna.service /etc/systemd/system/luna.service && \
+        cat > "$STATE_DIR"/luna.service << EOF
+[Unit]
+Description=luna start
+StartLimitIntervalSec=0
+
+[Service]
+User=$MY_UID
+Type=idle
+ExecStart=/usr/bin/docker compose -p luna -f $STATE_DIR/compose.yaml up
+Restart=always
+RestartSec=30
+
+[Install]
+WantedBy=multi-user.target
+EOF
+        sudo bash -c "mv '$STATE_DIR'/luna.service /etc/systemd/system/luna.service && \
             chcon -t systemd_unit_file_t /etc/systemd/system/luna.service 2>/dev/null || true && \
             systemctl daemon-reload && systemctl enable luna.service && \
             systemctl stop luna.service 2>/dev/null || true && sleep 5 && systemctl start luna.service"
@@ -162,9 +156,9 @@ case "${1:-}" in
 
         if [ "$OLDSPHASH" != "$NEWSPHASH" ]; then
             read -p "New image pulled. Press enter to restart luna..." NOTHING
-            $SUDO_COMMAND systemctl restart luna
+            sudo systemctl restart luna
         else
-            echo "Note that this script will only detect updates if the tag \"wollomatic/socket-proxy:1\" (major version 1) has not changed."
+            echo "wollomatic/socket-proxy:1 is already the latest (only the :1 tag is tracked)."
         fi
         ;;
 
@@ -216,139 +210,31 @@ case "${1:-}" in
         ;;
 
     prereqs)
-        echo "================================================"
-        echo "Detecting package manager"
-        echo "================================================"
-
-        if command -v apt-get >/dev/null 2>&1; then
-            PKG_MANAGER="apt"
-            PKG_INSTALL="$SUDO_COMMAND apt-get install -y"
-            PKG_UPDATE="$SUDO_COMMAND apt-get update -qq"
-            echo "Detected: apt (Debian/Ubuntu)"
-        elif command -v dnf >/dev/null 2>&1; then
-            PKG_MANAGER="dnf"
-            PKG_INSTALL="$SUDO_COMMAND dnf install -y"
-            PKG_UPDATE="$SUDO_COMMAND dnf check-update"
-            echo "Detected: dnf (Fedora/RHEL)"
-        elif command -v pacman >/dev/null 2>&1; then
-            PKG_MANAGER="pacman"
-            PKG_INSTALL="$SUDO_COMMAND pacman -S --noconfirm"
-            PKG_UPDATE="$SUDO_COMMAND pacman -Sy"
-            echo "Detected: pacman (Arch)"
-        elif command -v zypper >/dev/null 2>&1; then
-            PKG_MANAGER="zypper"
-            PKG_INSTALL="$SUDO_COMMAND zypper install -y"
-            PKG_UPDATE="$SUDO_COMMAND zypper refresh"
-            echo "Detected: zypper (openSUSE)"
-        elif command -v apk >/dev/null 2>&1; then
-            PKG_MANAGER="apk"
-            PKG_INSTALL="$SUDO_COMMAND apk add"
-            PKG_UPDATE="$SUDO_COMMAND apk update"
-            echo "Detected: apk (Alpine)"
-        elif command -v brew >/dev/null 2>&1; then
-            PKG_MANAGER="brew"
-            PKG_INSTALL="brew install"
-            PKG_UPDATE="brew update"
-            echo "Detected: brew (macOS)"
-        else
-            echo "Unsupported package manager." >&2
-            echo "Install prerequisites manually: docker, yq (mikefarah/yq), envsubst (gettext), jq, curl" >&2
-            exit 1
-        fi
-
-        get_pkg_name() {
-            case "$1" in
-                envsubst)
-                    case "$PKG_MANAGER" in
-                        apt) echo "gettext-base" ;;
-                        zypper) echo "gettext-tools" ;;
-                        *) echo "gettext" ;;
-                    esac
-                    ;;
-                *) echo "$1" ;;
-            esac
-        }
-
-        echo ""
-        echo "================================================"
-        echo "Installing prerequisites"
-        echo "================================================"
-
-        install_docker() {
-            case "$PKG_MANAGER" in
-                apt)
-                    $PKG_UPDATE
-                    $PKG_INSTALL docker.io docker-compose-v2 && return 0
-                    $PKG_INSTALL docker-ce docker-ce-cli docker-compose-plugin && return 0
-                    ;;
-                dnf|pacman|zypper|apk)
-                    $PKG_INSTALL docker docker-compose && return 0
-                    ;;
-                brew)
-                    brew install docker docker-compose && return 0
-                    ;;
-            esac
-            return 1
-        }
+        sudo apt-get update -qq
 
         if ! command -v docker >/dev/null 2>&1 || ! docker compose version >/dev/null 2>&1; then
             printf "Installing Docker and Docker Compose..."
-            if install_docker; then
-                echo " done"
-                $SUDO_COMMAND systemctl enable docker 2>/dev/null || true
-                $SUDO_COMMAND systemctl start docker 2>/dev/null || true
-            else
-                echo ""
-                echo "Docker auto-install failed. Install manually:" >&2
-                echo "  https://docs.docker.com/engine/install/" >&2
-            fi
+            sudo apt-get install -y docker.io docker-compose-v2 && echo " done" || { echo ""; echo "Docker install failed. Install manually: https://docs.docker.com/engine/install/" >&2; }
+            sudo systemctl enable docker 2>/dev/null || true
+            sudo systemctl start docker 2>/dev/null || true
         else
             echo "Docker already installed."
         fi
 
-        if ! command -v brew >/dev/null 2>&1; then
-            for p in /home/linuxbrew/.linuxbrew/bin/brew /opt/homebrew/bin/brew /usr/local/bin/brew; do
-                if [ -f "$p" ]; then
-                    eval "$("$p" shellenv)"
-                    break
-                fi
-            done
-        fi
-
-        if ! command -v brew >/dev/null 2>&1; then
-            echo "Installing Homebrew..."
-            NONINTERACTIVE=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)" || true
-            for p in /home/linuxbrew/.linuxbrew/bin/brew /opt/homebrew/bin/brew /usr/local/bin/brew; do
-                if [ -f "$p" ]; then
-                    eval "$("$p" shellenv)"
-                    break
-                fi
-            done
-            if command -v brew >/dev/null 2>&1; then echo "Homebrew installed."; else echo "Homebrew install failed." >&2; fi
-        else
-            echo "Homebrew already available."
-        fi
-
-        if ! command -v yq >/dev/null 2>&1; then
-            printf "Installing yq..."
-            brew install yq && echo " done" || echo " failed"
-        else
-            echo "yq already installed."
-        fi
-
-        for tool in envsubst jq curl; do
+        for tool in yq envsubst jq curl; do
             if ! command -v "$tool" >/dev/null 2>&1; then
                 printf "Installing %s..." "$tool"
-                $PKG_INSTALL "$(get_pkg_name "$tool")" && echo " done" || echo " failed"
+                case "$tool" in
+                    envsubst) pkg="gettext-base" ;;
+                    *) pkg="$tool" ;;
+                esac
+                sudo apt-get install -y "$pkg" && echo " done" || echo " failed"
             else
                 echo "$tool already installed."
             fi
         done
 
         echo ""
-        echo "================================================"
-        echo "Verification"
-        echo "================================================"
         ALL_OK=true
         for cmd in docker yq envsubst jq curl; do
             if command -v "$cmd" >/dev/null 2>&1; then
@@ -358,13 +244,11 @@ case "${1:-}" in
                 ALL_OK=false
             fi
         done
-        if command -v docker >/dev/null 2>&1; then
-            if docker compose version >/dev/null 2>&1; then
-                echo "  [OK] docker compose"
-            else
-                echo "  [MISSING] docker compose plugin"
-                ALL_OK=false
-            fi
+        if command -v docker >/dev/null 2>&1 && docker compose version >/dev/null 2>&1; then
+            echo "  [OK] docker compose"
+        else
+            echo "  [MISSING] docker compose"
+            ALL_OK=false
         fi
         if [ "$ALL_OK" = true ]; then
             echo ""

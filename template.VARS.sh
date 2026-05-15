@@ -2,14 +2,8 @@
 
 # NOTE: Indentation must be retained in multiline variables
 
-HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
-
-# --- Node / Server Identity ---
-# Hostname of the main server node
-export NODE_NAME="controlplane"
-
 # Directory for auto-generated persistent state (Docker volume bind targets, config, DBs)
-export STATE_DIR="$HERE/state"
+export STATE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)/state"
 
 # --- Domains ---
 # The subdomain under which all services are hosted (e.g. "services.example.org")
@@ -45,6 +39,8 @@ export PLAUSIBLE_SECRET_KEY="abc" # openssl rand -base64 48
 export PLAUSIBLE_TOTP_VAULT_KEY="abc" # openssl rand -base64 32
 
 # --- PixelNtfy ---
+# Prefix for the PixelNtfy ntfy topic (usually lowercase server name)
+export PIXELNTFY_TOPIC_PREFIX="controlplane"
 # Suffix appended to the PixelNtfy ntfy topic for uniqueness
 export PIXELNTFY_TOPIC_SUFFIX='abc'
 
