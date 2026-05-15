@@ -8,28 +8,32 @@ if ! command -v docker >/dev/null 2>&1; then
     exit 1
 fi
 
-if [ -f "$HERE"/VARS.production.sh ]; then
-    MAIN_VARS_FILE="$HERE"/VARS.production.sh
-elif [ -f "$HERE"/VARS.staging.sh ]; then
-    MAIN_VARS_FILE="$HERE"/VARS.staging.sh
-elif [ -f "$HERE"/VARS.sh ]; then
-    MAIN_VARS_FILE="$HERE"/VARS.sh
-else
-    echo "No VARS.sh file found!" >&2
+MAIN_VARS_FILE="$HERE"/VARS.sh
+if [ ! -f "$MAIN_VARS_FILE" ]; then
+    echo "No VARS.sh file found! Copy template.VARS.sh to VARS.sh and fill in the values." >&2
     exit 1
 fi
-if ! diff <(grep -Eo '^export [^=]+' "$MAIN_VARS_FILE") <(grep -Eo '^export [^=]+' "$HERE"/template.VARS.sh); then
-    echo "Your VARS file does not match the template: $MAIN_VARS_FILE" >&2
-    exit 1
-fi
+while IFS= read -r var; do
+    if ! grep -q "^export $var=" "$MAIN_VARS_FILE"; then
+        echo "Your VARS file is missing required variable: $var" >&2
+        echo "File: $MAIN_VARS_FILE" >&2
+        exit 1
+    fi
+done < <(grep -Eo '^export [^=]+' "$HERE"/template.VARS.sh | sed 's/^export //')
+
 source "$MAIN_VARS_FILE"
-source "$HERE"/fixed.VARS.sh
+export MY_UID="$UID"
+export NODE_NAME_LOWERCASE="${NODE_NAME,,}"
+export SUDO_COMMAND="sudo"
+if command -v run0 >/dev/null 2>&1; then
+    export SUDO_COMMAND="run0"
+fi
 if [ -f "$STATE_DIR"/generated.VARS.sh ]; then
     source "$STATE_DIR"/generated.VARS.sh
 fi
 
 findDomainsInSetup() {
-    cat "$HERE"/compose.yaml | grep Host | awk -F '`' '{print $2}' | sort | uniq | envsubst
+    grep Host "$HERE"/compose.yaml | awk -F '`' '{print $2}' | sort | uniq | envsubst
 }
 
 generateComposeService() {

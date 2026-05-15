@@ -236,7 +236,7 @@ services:
         restart: unless-stopped
         mem_limit: 512M
         container_name: plausible
-        command: sh -c "sleep 10 && /entrypoint.sh db createdb && /entrypoint.sh db migrate && /entrypoint.sh run"
+        command: sh -c "for i in \$(seq 1 30); do /entrypoint.sh db createdb 2>/dev/null && break; sleep 2; done && /entrypoint.sh db migrate && /entrypoint.sh run"
         depends_on:
             traefik:
                 condition: service_started

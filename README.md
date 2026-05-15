@@ -1,49 +1,99 @@
 # Luna
 
-Docker-based setup for self-hosted apps/services.
+Docker-based self-hosted infrastructure running web services behind Traefik.
 
-## Overview
+## Architecture
 
-- A server runs several apps in Docker containers.
-- Services are accessed via Traefik, which provides TLS and various security features, including:
-    - [Authelia](https://www.authelia.com/)
-    - [Geoblock](https://plugins.traefik.io/plugins/62d6ce04832ba9805374d62c/geo-block) (for specific apps)
-- All apps are auto-updated by [Watchtower](https://containrrr.dev/watchtower/).
+- **Traefik** — reverse proxy with automatic TLS via Let's Encrypt, country-based geoblocking, and a dashboard (localhost-only, accessible via SSH tunnel).
+- **Authelia** — authentication and 2FA middleware protecting most services. Newly added services start behind Authelia and can be exposed directly after manual setup.
+- **Watchtower** — automatic container image updates.
+- **Docker socket proxy** — two instances isolate Docker socket access (read-only for Traefik, read-write for Watchtower).
+
+17 services are pre-configured including analytics (Plausible), file sharing (Send), media tools (MeTube), utilities (ISBN lookup, tracking pixels), and more.
 
 ## Files
 
-- Services are defined in `compose.yaml`.
-- All environment-specific configuration and/or sensitive information is stored in environment-specific Git-ignored variable files.
-    - `template.VARS.sh`: Example file used as a starting point for a user to define their own `VARS.sh` containing environment-specific variables and secrets.
-    - For the install script to run, at least one of the following user-defined files must exist (listed in order of preference):
-        - `VARS.production.sh`
-        - `VARS.staging.sh`
-        - `VARS.sh`
-- Setup scripts:
-    - `install.sh`: Script used to install and start services.
-    - `simple_restart.sh`: Restart a running service.
-- Other files:
-    - `fixed.VARS.sh`: Hardcoded variables used by various scripts.
-    - `prep_env.sh`: Helper script used by various other scripts.
-    - Everything in `files/`: Various files used to configure/initialize apps and/or used by the install scripts.
+```
+compose.yaml                Service definitions (uses envsubst variables)
+template.VARS.sh            Template for user configuration and secrets
+luna.sh                     CLI entry point
+prep_env.sh                 Helper library (sourced by luna.sh)
+templates/
+  authelia.config.yaml      Authelia configuration template
+  traefik.dynamic-configuration.yaml  Traefik geoblock config
+  plausible.ipv4-only.xml   ClickHouse IPv4-only config
+  plausible.logs.xml        ClickHouse logging config
+```
 
-## Usage
+User-created file (gitignored):
+```
+VARS.sh
+```
 
-1. Set up a server with outbound internet access.
-    - Most of the code is distro-agnostic but a few lines are not. We assume the server is running [secureblue](https://secureblue.dev/) (should also work with other Fedora Atomic OSes and Workstation).
-    - You must pre-install Docker and Docker compose.
-2. Clone this repo on the server and create a copy of `template.VARS.sh` named `VARS.sh` (or `VARS.staging.sh` or `VARS.production.sh`). Fill in the values as appropriate.
-3. Modify any of the source files in a fork of this repo, as appropriate to fit your needs.
-4. Ensure the server contains the `STATE_DIR` (persistent internal storage/state for all apps) as defined in your `VARS.sh` file:
-    - Set to `./state/` by default.
-    - Running services exclusively rely on this folder and/or named Docker volumes to store their internal data.
-    - The folder and everything in it is auto-generated and should not be modified.
-5. Purchase a domain for your apps, and set up DNS rules for each app subdomain, all pointing to the server's IP.
-    - For a list of all required subdomains, run: `source prep_env.sh; findDomainsInSetup`
-6. Run `install.sh` on the server to install all apps/services.
-7. Some apps require manual initialization after they have been installed.
-    - It is dangerous to publicly expose these apps without initializing them, since they may allow for unauthorized access.
-    - For this reason, certain apps are temporarily protected with Authelia authentication middleware upon initial install, even when those apps would not usually be protected in their final post-initialization state (due to having their own authentication, or having specific client needs that are not compatible with Authelia).
-    - At this stage, you must manually complete the setup process for each of these apps. For a list of these apps' domains, run the following command: `source prep_env.sh; envsubst < files/authelia.config.yaml | grep -Eo 'domain:.+# IGNORE INITIALLY' | awk '{print $2}'`
-    - Once finished, re-run `install.sh`. This time, the Authelia middleware will not apply to those apps.
-8. Setup is complete.
+## Setup
+
+### 1. Prerequisites
+
+- Linux server (tested on Fedora Atomic/secureblue)
+- A domain with DNS A/AAAA records pointing subdomains to your server
+- Inbound access on **ports 80** (HTTP) and **443** (HTTPS) for web traffic
+- Inbound access on **ports 22067/22070** (optional, only if using the Syncthing relay server)
+
+Install prerequisites:
+```
+./luna.sh prereqs
+```
+
+### 2. Configure
+
+```
+cp template.VARS.sh VARS.sh
+```
+
+Edit `VARS.sh` with your values:
+- `NODE_NAME`, `SERVICES_DOMAIN`, `DOMAIN_OWNER_EMAIL`
+- Authelia encryption keys and secrets
+- Plausible keys, PixelNtfy topic, etc.
+
+### 3. DNS
+
+List all required subdomains:
+```
+source prep_env.sh; findDomainsInSetup
+```
+
+Create DNS records for each.
+
+### 4. Install
+
+```
+./luna.sh install
+```
+
+This creates the state directory structure, generates all config files, substitutes environment variables, and installs/starts the `luna` systemd service.
+
+### 5. Post-install
+
+Some services require manual initialization before they can be exposed publicly. When you re-run `./luna.sh install`, it asks whether to keep Authelia in front of these services. List them:
+
+```
+source prep_env.sh; envsubst < templates/authelia.config.yaml | grep -Eo 'domain:.+# IGNORE INITIALLY' | awk '{print $2}'
+```
+
+## CLI Commands
+
+| Command | Description |
+|---------|-------------|
+| `./luna.sh prereqs` | Install prerequisites |
+| `./luna.sh install` | Install/update all services |
+| `./luna.sh restart <service>` | Restart a single service |
+| `./luna.sh backupState` | Back up state directory and VARS.sh |
+| `./luna.sh old-images` | List Docker images older than 60 days |
+| `./luna.sh update-socket-proxy` | Pull latest socket-proxy, restart Luna if updated |
+| `./luna.sh update-traefik-plugins` | Update Traefik plugin versions |
+
+## Maintenance
+
+- All containers are managed by the `luna` systemd service: `systemctl [start|stop|restart|status] luna`
+- Traefik dashboard: `ssh -L 8080:localhost:8080 user@your-server` then open `http://localhost:8080`
+- State and data live in `$STATE_DIR` (default: `./state/`). This directory is auto-generated and should not be manually modified.
