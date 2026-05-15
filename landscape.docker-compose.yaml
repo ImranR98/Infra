@@ -372,33 +372,6 @@ services:
             - "9418:9418"
         logging: *logging
 
-    registry:
-        container_name: registry
-        image: registry
-        restart: unless-stopped
-        depends_on:
-            - traefik
-        user: 1000:1000
-        environment:
-            - REGISTRY_AUTH=htpasswd
-            - REGISTRY_AUTH_HTPASSWD_REALM=Registry Realm
-            - REGISTRY_AUTH_HTPASSWD_PATH=/auth/.htpasswd
-            - REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY=/data
-        volumes:
-            - $STATE_DIR/registry/auth:/auth
-            - $STATE_DIR/registry/data:/data
-        labels:
-            - "traefik.enable=true"
-            - "traefik.http.routers.registry.rule=Host(`docker.$SERVICES_DOMAIN`)"
-            - "traefik.http.routers.registry.entrypoints=websecure"
-            - "traefik.http.routers.registry.tls.certresolver=le"
-            - "traefik.http.routers.registry.tls=true"
-            - "traefik.http.routers.registry.middlewares=authelia@docker,geoblock@file"
-            - "traefik.http.services.registry.loadbalancer.server.port=5000"
-        networks:
-            - traefik
-        logging: *logging
-
     # File Browser
     # filebrowser:
     #     container_name: filebrowser

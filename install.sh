@@ -17,8 +17,6 @@ mkdir -p "$STATE_DIR"/filebrowser/config
 mkdir -p "$STATE_DIR"/filebrowser/database
 mkdir -p "$STATE_DIR"/frpc
 mkdir -p "$STATE_DIR"/beszel
-mkdir -p "$STATE_DIR"/registry/data
-mkdir -p "$STATE_DIR"/registry/auth
 echo "Done."
 
 printTitle "Re/generate various state files"
@@ -101,11 +99,6 @@ fi
 if [ "$(stat -c '%U:%G' "$STATE_DIR/jitsi")" != "root:root" ]; then
     echo "chown-ing Jitsi directories..."
     $SUDO_COMMAND bash -c "chown root:root '$STATE_DIR/jitsi' && chown root:root '$STATE_DIR'/jitsi/*"
-fi
-
-if [ ! -f "$STATE_DIR"/registry/auth/.htpasswd ]; then
-    echo "Docker registry needs a password:"
-    htpasswd -Bc "$STATE_DIR"/registry/auth/.htpasswd "$USER"
 fi
 
 cat "$HERE_LX1A"/landscape.docker-compose.yaml | envsubst >"$STATE_DIR"/landscape.docker-compose.yaml
