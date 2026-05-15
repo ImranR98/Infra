@@ -1,4 +1,4 @@
 state/
 VARS.sh
-luna-backup-*.tar
+backup/
 ~*

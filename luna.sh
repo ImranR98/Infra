@@ -179,14 +179,16 @@ EOF
         fi
 
         TIMESTAMP=$(date +%Y%m%d_%H%M%S)
-        OUTPUT="$HERE/luna-backup-$TIMESTAMP.tar"
+        BACKUP_DIR="$HERE/backup"
+        mkdir -p "$BACKUP_DIR"
+        OUTPUT="$BACKUP_DIR/luna-backup-$TIMESTAMP.tar"
 
         echo "Backing up $STATE_DIR and VARS.sh..."
         docker run --rm -v "$STATE_DIR":/backup/state:ro -v "$HERE/VARS.sh":/backup/VARS.sh:ro \
             alpine sh -c 'apk add --no-cache tar >/dev/null 2>&1 && exec tar cf - --ignore-failed-read --warning=no-file-changed --warning=no-file-removed -C /backup .' > "$OUTPUT"
         if [ -s "$OUTPUT" ]; then
             echo "Backup created: $OUTPUT"
-            find "$HERE" -maxdepth 1 -name 'luna-backup-*.tar' ! -name "$(basename "$OUTPUT")" -delete
+            find "$BACKUP_DIR" -maxdepth 1 -name 'luna-backup-*.tar' ! -name "$(basename "$OUTPUT")" -delete
             echo "Note: The backup contains VARS.sh which includes secrets. Store it securely."
         else
             echo "Backup failed" >&2
