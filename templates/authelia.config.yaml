@@ -10,7 +10,7 @@ log:
   level: debug
 
 totp:
-  issuer: ${SERVICES_DOMAIN}
+  issuer: $SERVICES_DOMAIN
 
 authentication_backend:
   file:
@@ -19,8 +19,6 @@ authentication_backend:
 access_control:
   default_policy: 'deny'
   rules:
-    - domain: luna.$SERVICES_DOMAIN
-      policy: bypass
     - domain: pixelntfy.$SERVICES_DOMAIN
       policy: bypass
     - domain: isbn.$SERVICES_DOMAIN
@@ -51,10 +49,10 @@ access_control:
       policy: one_factor
 
 session:
-  secret: ${AUTHELIA_SESSION_SECRET}
+  secret: $AUTHELIA_SESSION_SECRET
   cookies:
-    - domain: ${SERVICES_DOMAIN}
-      authelia_url: https://luna.${SERVICES_DOMAIN}
+    - domain: $SERVICES_DOMAIN
+      authelia_url: https://luna.$SERVICES_DOMAIN
   redis:
     host: authelia-db
     port: 6379

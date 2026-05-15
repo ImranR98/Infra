@@ -35,18 +35,16 @@ case "${1:-}" in
                         ;;
                 esac
             done
-        mkdir -p "$STATE_DIR/traefik_logs"
         echo "Done."
 
         echo "=== Re/generate various state files ==="
-        IGNORE_AUTHELIA_IGNORED_LINES=true
         if [ -f "$STATE_DIR/authelia/config/configuration.yml" ]; then
-            read -p 'Should the "ignored" lines in the Authelia config still be ignored? [y]: ' IGNORE_AUTHELIA_IGNORED_LINES_RESPONSE
-            if [ "$IGNORE_AUTHELIA_IGNORED_LINES_RESPONSE" = 'n' ] || [ "$IGNORE_AUTHELIA_IGNORED_LINES_RESPONSE" = 'N' ]; then
-                IGNORE_AUTHELIA_IGNORED_LINES=false
-            fi
+            PROTECT_INIT_ROUTES=${PROTECT_INIT_ROUTES:-false}
+        else
+            PROTECT_INIT_ROUTES=${PROTECT_INIT_ROUTES:-true}
         fi
-        if [ "$IGNORE_AUTHELIA_IGNORED_LINES" = true ]; then
+        echo "PROTECT_INIT_ROUTES=$PROTECT_INIT_ROUTES"
+        if [ "$PROTECT_INIT_ROUTES" = true ]; then
             sed '/# IGNORE INITIALLY$/ s/^/# /' "$HERE"/templates/authelia.config.yaml | envsubst >"$STATE_DIR"/authelia/config/configuration.yml
             echo "Note: the generated Authelia config does not include lines that end with \"# IGNORE INITIALLY\"."
         else

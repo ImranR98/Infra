@@ -96,13 +96,10 @@ services:
             - "traefik.http.routers.authelia.entryPoints=websecure"
             - "traefik.http.routers.authelia.tls.certresolver=le"
             - "traefik.http.routers.authelia.tls=true"
-            - "traefik.http.routers.authelia.middlewares=authelia@docker,geoblock@file"
+            - "traefik.http.routers.authelia.middlewares=geoblock@file"
             - "traefik.http.middlewares.authelia.forwardAuth.address=http://authelia:9091/api/verify?rd=https%3A%2F%2Fluna.$SERVICES_DOMAIN%2F"
             - "traefik.http.middlewares.authelia.forwardAuth.trustForwardHeader=true"
             - "traefik.http.middlewares.authelia.forwardAuth.authResponseHeaders=Remote-User,Remote-Groups,Remote-Name,Remote-Email"
-            - "traefik.http.middlewares.authelia-basic.forwardAuth.address=http://authelia:9091/api/verify?auth=basic"
-            - "traefik.http.middlewares.authelia-basic.forwardAuth.trustForwardHeader=true"
-            - "traefik.http.middlewares.authelia-basic.forwardAuth.authResponseHeaders=Remote-User,Remote-Groups,Remote-Name,Remote-Email"
         expose:
             - 9091
         restart: unless-stopped
@@ -167,7 +164,7 @@ services:
         volumes:
             - $STATE_DIR/traefik/acme.json:/acme.json
             - $STATE_DIR/traefik/dynamic-configuration.yaml:/etc/traefik/dynamic-configuration.yaml
-            - $STATE_DIR/traefik_logs:/var/log/traefik/
+            - $STATE_DIR/traefik/logs:/var/log/traefik/
             - dockerproxy:/socket/:ro
         labels:
             - "traefik.enable=true"
@@ -266,8 +263,6 @@ services:
         volumes:
             - $STATE_DIR/send/uploads:/uploads
         environment:
-            - VIRTUAL_HOST=share.$SERVICES_DOMAIN
-            - VIRTUAL_PORT=80
             - DHPARAM_GENERATION=false
             - NODE_ENV=production
             - BASE_URL=https://share.$SERVICES_DOMAIN
@@ -302,6 +297,9 @@ services:
             - $STATE_DIR/send/db:/data
         networks:
             - traefik
+        healthcheck:
+            test: ["CMD-SHELL", "redis-cli ping || exit 1"]
+            start_period: 1m
         logging: *logging
 
     # PixelNtfy - Tracking Pixels
@@ -320,7 +318,7 @@ services:
             - "traefik.http.routers.pixelntfy.tls=true"
             - "traefik.http.services.pixelntfy.loadbalancer.server.port=80"
         environment:
-            - NTFY_TOPIC=${PIXELNTFY_TOPIC}
+            - NTFY_TOPIC=$PIXELNTFY_TOPIC
             - NTFY_SERVER_URL=https://ntfy.sh
             - PORT=80
             - ANALYTICS_SCRIPT_ELEMENT=<script defer data-domain="pixelntfy.$SERVICES_DOMAIN" src="https://plausible.$SERVICES_DOMAIN/js/script.js"></script>
@@ -438,7 +436,7 @@ services:
     strelaysrv:
         image: imranrdev/strelaysrv-docker:latest
         container_name: strelaysrv
-        restart: always
+        restart: unless-stopped
         volumes:
             - strelaysrv:/keys
         command:
