@@ -8,8 +8,6 @@ frps.service
 frpc.toml
 frpc-preboot.toml
 temp_code.txt
-strelaysrv.service
-strelaysrv.docker-compose.yaml
 logtfy.remote.json
 logtfy.remote.temp.json
 logtfy.remote.docker-compose.temp.yaml

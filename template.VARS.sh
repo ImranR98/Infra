@@ -54,8 +54,6 @@ abc
 -----END CERTIFICATE-----"
 export MOSQUITTO_CREDENTIALS='admin:abc'
 
-export STRELAYSRV_PROVIDED_BY_TEXT="example.org"
-
 export GEOBLOCK_CONFIG_SUBSET='
           blackListMode: false
           countries:

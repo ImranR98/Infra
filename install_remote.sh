@@ -45,16 +45,6 @@ EOF
     echo "Done."
 fi
 
-printTitle "Prepare strelaysrv dependencies"
-bash "$HERE_M3U8"/files/strelaysrv.create-image.sh
-docker image save imranrdev/strelaysrv-docker:latest -o /tmp/strelaysrv-docker.tar
-docker rmi imranrdev/strelaysrv-docker:latest 2>/dev/null || :
-scp /tmp/strelaysrv-docker.tar "$PROXY_SSH_STRING":~/landscape-remote-services/strelaysrv-docker.tar
-rm /tmp/strelaysrv-docker.tar
-ssh -A -t "$PROXY_SSH_STRING" "docker rmi imranrdev/strelaysrv-docker:latest 2>/dev/null || :"
-ssh -A -t "$PROXY_SSH_STRING" "docker image load -i '$PROXY_HOME/landscape-remote-services/strelaysrv-docker.tar'"
-echo "Done."
-
 printTitle "Prepare Logtfy dependencies"
 cat "$HERE_M3U8"/files/logtfy.json | envsubst >"$HERE_M3U8"/files/logtfy.remote.temp.json
 jq '.moduleCustomization |= map(select(.module == "ssh_logins" or .module == "port_checker"))
@@ -78,7 +68,6 @@ if [ "$UPDATE_ONLY_NON_FRPC" != true ]; then
     ssh -A -t "$PROXY_SSH_STRING" "bash '$PROXY_HOME/landscape-remote-services/landscape-remote.install.sh'"
 else
     ssh -A -t "$PROXY_SSH_STRING" "bash '$PROXY_HOME/landscape-remote-services/landscape-remote.install.sh' logtfy"
-    ssh -A -t "$PROXY_SSH_STRING" "bash '$PROXY_HOME/landscape-remote-services/landscape-remote.install.sh' strelaysrv"
 fi
 echo "Done."
 

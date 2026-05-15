@@ -14,8 +14,7 @@ Docker-based setup for my self-hosted apps/services.
     - [mTLS](https://doc.traefik.io/traefik/https/tls/#client-authentication-mtls) (for specific apps)
 - The home server has no public IP/ports, so requests to it are tunneled through a small cloud-based proxy server.
     - Request proxying is done with [FRP](https://github.com/fatedier/frp).
-    - This has the additional benefit of hiding the home server's IP as all app domain/subdomain DNS entries point to the cloud proxy. 
-- The cloud-based proxy also runs a few additional apps itself where appropriate (for example, [Syncthing Relay Server](https://docs.syncthing.net/users/strelaysrv.html)).
+    - This has the additional benefit of hiding the home server's IP as all app domain/subdomain DNS entries point to the cloud proxy.
 
 ## Diagram
 

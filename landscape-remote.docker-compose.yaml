@@ -26,20 +26,5 @@ services:
           - logtfy_tmp:/tmp/logtfy
         logging: *logging
 
-    strelaysrv:
-        image: imranrdev/strelaysrv-docker:latest
-        container_name: strelaysrv
-        restart: always
-        volumes:
-            - strelaysrv:/keys
-        command:
-            - "-global-rate=5000000"
-            - "-provided-by=$STRELAYSRV_PROVIDED_BY_TEXT"
-        ports:
-            - 22067:22067
-            - 22070:22070
-        logging: *logging
-
 volumes:
     logtfy_tmp: {}
-    strelaysrv: {}
