@@ -182,7 +182,9 @@ EOF
         OUTPUT="$HERE/luna-backup-$TIMESTAMP.tar"
 
         echo "Backing up $STATE_DIR and VARS.sh..."
-        if docker run --rm -v "$STATE_DIR":/backup/state:ro -v "$HERE/VARS.sh":/backup/VARS.sh:ro alpine sh -c 'apk add --no-cache tar >/dev/null 2>&1 && exec tar cf - --ignore-failed-read --warning=no-file-changed --warning=no-file-removed -C /backup . 2>/dev/null' > "$OUTPUT"; then
+        docker run --rm -v "$STATE_DIR":/backup/state:ro -v "$HERE/VARS.sh":/backup/VARS.sh:ro \
+            alpine sh -c 'apk add --no-cache tar >/dev/null 2>&1 && exec tar cf - --ignore-failed-read --warning=no-file-changed --warning=no-file-removed -C /backup .' > "$OUTPUT"
+        if [ -s "$OUTPUT" ]; then
             echo "Backup created: $OUTPUT"
             find "$HERE" -maxdepth 1 -name 'luna-backup-*.tar' ! -name "$(basename "$OUTPUT")" -delete
             echo "Note: The backup contains VARS.sh which includes secrets. Store it securely."
