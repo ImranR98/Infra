@@ -212,6 +212,14 @@ services:
                 ]
             start_period: 1m
         logging: *logging
+    plausible-init:
+        image: alpine
+        container_name: plausible-init
+        restart: no
+        volumes:
+            - $STATE_DIR/plausible/data:/var/lib/plausible
+        command: chown -R 999:999 /var/lib/plausible
+
     plausible:
         image: ghcr.io/plausible/community-edition:v3
         restart: unless-stopped
@@ -219,6 +227,8 @@ services:
         container_name: plausible
         command: sh -c "for i in \$(seq 1 30); do /entrypoint.sh db createdb 2>/dev/null && break; sleep 2; done && /entrypoint.sh db migrate && /entrypoint.sh run"
         depends_on:
+            plausible-init:
+                condition: service_completed_successfully
             traefik:
                 condition: service_started
             plausible_db:
