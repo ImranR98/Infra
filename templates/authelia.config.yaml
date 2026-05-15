@@ -47,18 +47,8 @@ access_control:
       policy: bypass
     - domain: plausible.$SERVICES_DOMAIN # IGNORE INITIALLY
       policy: bypass # IGNORE INITIALLY
-    - domain: ytdl.$SERVICES_DOMAIN
-      policy: one_factor
-      subject:
-      - ['group:family']
-    - domain: ikom.$SERVICES_DOMAIN
-      policy: one_factor
-      subject:
-      - ['group:family']
     - domain: '*'
       policy: one_factor
-      subject:
-      - ['group:admins']
 
 session:
   secret: ${AUTHELIA_SESSION_SECRET}
