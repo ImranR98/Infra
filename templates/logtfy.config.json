@@ -18,7 +18,8 @@
         {
             "module": "ssh_logins",
             "ntfyTopic": "logtfy",
-            "enabled": true
+            "enabled": true,
+            "parserArg": "ssh"
         },
         {
             "module": "authelia_logins",
