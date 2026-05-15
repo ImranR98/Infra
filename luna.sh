@@ -31,8 +31,10 @@ case "${1:-}" in
                 name="$(basename "$host_path")"
                 if [[ "$name" =~ \.[a-zA-Z0-9]{1,5}$ ]]; then
                     mkdir -p "$(dirname "$host_path")" 2>/dev/null || :
+                    [ "$UID" -eq 0 ] && chown "$MY_UID:$MY_UID" "$(dirname "$host_path")" 2>/dev/null || :
                 else
                     mkdir -p "$host_path" 2>/dev/null || :
+                    [ "$UID" -eq 0 ] && chown "$MY_UID:$MY_UID" "$host_path" 2>/dev/null || :
                 fi
             done
         echo "Done."
