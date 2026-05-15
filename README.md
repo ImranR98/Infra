@@ -5,9 +5,9 @@ Docker-based self-hosted infrastructure running web services behind Traefik.
 ## Architecture
 
 - **Traefik** — reverse proxy with automatic TLS via Let's Encrypt, country-based geoblocking, and a dashboard (localhost-only, accessible via SSH tunnel).
-- **Authelia** — authentication and 2FA middleware protecting most services. Newly added services start behind Authelia and can be exposed directly after manual setup.
+- **Authelia** — authentication and 2FA middleware applied at the Traefik entrypoint level. All HTTPS traffic is verified by Authelia; services are exposed by adding bypass rules in Authelia's access control config.
 - **Watchtower** — automatic container image updates.
-- **Docker socket proxy** — two instances isolate Docker socket access (read-only for Traefik, read-write for Watchtower).
+- **Docker socket proxy** — two instances isolate Docker socket access with different permission levels (read-only for Traefik, read-write for Watchtower).
 
 Services include analytics (Plausible), file sharing (Send), media tools (MeTube), utilities (ISBN lookup, tracking pixels), and more.
 
@@ -19,7 +19,7 @@ template.VARS.sh            Template for user configuration and secrets
 luna.sh                     CLI entry point
 templates/
   authelia.config.yaml      Authelia configuration template
-  traefik.dynamic-configuration.yaml  Traefik geoblock config
+  traefik.dynamic-configuration.yaml  Traefik dynamic config (middlewares)
   plausible.clickhouse-config.xml  ClickHouse config
 ```
 
@@ -71,11 +71,7 @@ This creates the state directory structure, generates all config files, substitu
 
 ### 5. Post-install
 
-Some services require manual initialization before they can be exposed publicly. When you re-run `./luna.sh install`, it asks whether to keep Authelia in front of these services. List them:
-
-```
-envsubst < templates/authelia.config.yaml | grep -Eo 'domain:.+# IGNORE INITIALLY' | awk '{print $2}'
-```
+By default, all services are behind Authelia authentication. The first time you run `install`, lines ending with `# IGNORE INITIALLY` in the Authelia config are commented out — this keeps new services protected until you've done initial setup. After doing so, re-run `install` to expose it without authentication.
 
 ## CLI Commands
 

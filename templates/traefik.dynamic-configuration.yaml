@@ -1,5 +1,14 @@
 http:
   middlewares:
+    authelia:
+      forwardAuth:
+        address: http://authelia:9091/api/verify?rd=https://luna.$SERVICES_DOMAIN/
+        trustForwardHeader: true
+        authResponseHeaders:
+          - Remote-User
+          - Remote-Groups
+          - Remote-Name
+          - Remote-Email
     geoblock:
       plugin:
         geoblock:

@@ -97,9 +97,6 @@ services:
             - "traefik.http.routers.authelia.tls.certresolver=le"
             - "traefik.http.routers.authelia.tls=true"
             - "traefik.http.routers.authelia.middlewares=geoblock@file"
-            - "traefik.http.middlewares.authelia.forwardAuth.address=http://authelia:9091/api/verify?rd=https%3A%2F%2Fluna.$SERVICES_DOMAIN%2F"
-            - "traefik.http.middlewares.authelia.forwardAuth.trustForwardHeader=true"
-            - "traefik.http.middlewares.authelia.forwardAuth.authResponseHeaders=Remote-User,Remote-Groups,Remote-Name,Remote-Email"
         expose:
             - 9091
         restart: unless-stopped
@@ -136,7 +133,7 @@ services:
             - "--api.insecure=true"
             - "--global.sendAnonymousUsage=false"
             - "--global.checkNewVersion=true"
-            - "--log.level=DEBUG"
+            - "--log.level=INFO"
             - "--accesslog=true"
             - "--accesslog.filePath=/var/log/traefik/access.log"
             - "--providers.docker=true"
@@ -157,6 +154,7 @@ services:
             - "--experimental.plugins.geoblock.version=v0.3.7"
             - "--providers.docker.endpoint=unix:///socket/docker.sock"
             - "--providers.docker.network=traefik"
+            - "--entryPoints.websecure.http.middlewares=authelia@file"
         ports:
             - "127.0.0.1:80:80"
             - "127.0.0.1:443:443"
@@ -189,7 +187,7 @@ services:
             start_period: 1m
         networks:
             - traefik
-        user: $MY_UID:$MY_UID
+        user: "$MY_UID:$MY_UID"
         logging: *logging
     plausible_events_db:
         image: clickhouse/clickhouse-server:24.12-alpine
@@ -248,7 +246,6 @@ services:
             - "traefik.http.routers.plausible.tls.certresolver=le"
             - "traefik.http.routers.plausible.tls=true"
             - "traefik.http.services.plausible.loadbalancer.server.port=8000"
-            - "traefik.http.routers.plausible.middlewares=authelia@docker"
         logging: *logging
 
     # Send - File Sharing
@@ -281,7 +278,6 @@ services:
             - "traefik.enable=true"
             - "traefik.http.routers.send.rule=Host(`share.$SERVICES_DOMAIN`)"
             - "traefik.http.routers.send.entrypoints=websecure"
-            - "traefik.http.routers.send.middlewares=authelia@docker"
             - "traefik.http.routers.send.tls.certresolver=le"
             - "traefik.http.routers.send.tls=true"
             - "traefik.http.services.send.loadbalancer.server.port=80"
@@ -313,7 +309,6 @@ services:
             - "traefik.enable=true"
             - "traefik.http.routers.pixelntfy.rule=Host(`pixelntfy.$SERVICES_DOMAIN`)"
             - "traefik.http.routers.pixelntfy.entrypoints=websecure"
-            - "traefik.http.routers.pixelntfy.middlewares=authelia@docker"
             - "traefik.http.routers.pixelntfy.tls.certresolver=le"
             - "traefik.http.routers.pixelntfy.tls=true"
             - "traefik.http.services.pixelntfy.loadbalancer.server.port=80"
@@ -337,7 +332,6 @@ services:
             - "traefik.enable=true"
             - "traefik.http.routers.isbn-lookup.rule=Host(`isbn.$SERVICES_DOMAIN`)"
             - "traefik.http.routers.isbn-lookup.entrypoints=websecure"
-            - "traefik.http.routers.isbn-lookup.middlewares=authelia@docker"
             - "traefik.http.routers.isbn-lookup.tls.certresolver=le"
             - "traefik.http.routers.isbn-lookup.tls=true"
             - "traefik.http.services.isbn-lookup.loadbalancer.server.port=80"
@@ -364,7 +358,6 @@ services:
             - "traefik.enable=true"
             - "traefik.http.routers.metube.rule=Host(`ytdl.$SERVICES_DOMAIN`)"
             - "traefik.http.routers.metube.entrypoints=websecure"
-            - "traefik.http.routers.metube.middlewares=authelia@docker"
             - "traefik.http.routers.metube.tls.certresolver=le"
             - "traefik.http.routers.metube.tls=true"
             - "traefik.http.services.metube.loadbalancer.server.port=8081"
@@ -401,7 +394,6 @@ services:
             - "traefik.http.routers.ikom.entrypoints=websecure"
             - "traefik.http.routers.ikom.tls.certresolver=le"
             - "traefik.http.routers.ikom.tls=true"
-            - "traefik.http.routers.ikom.middlewares=authelia@docker"
             - "traefik.http.services.ikom.loadbalancer.server.port=3000"
         volumes:
             - "$STATE_DIR/ikom:/app/data"

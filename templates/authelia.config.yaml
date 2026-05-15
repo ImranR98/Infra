@@ -7,7 +7,7 @@
 jwt_secret: $AUTHELIA_JWT_SECRET
 
 log:
-  level: debug
+  level: info
 
 totp:
   issuer: $SERVICES_DOMAIN
@@ -19,6 +19,8 @@ authentication_backend:
 access_control:
   default_policy: 'deny'
   rules:
+    - domain: luna.$SERVICES_DOMAIN
+      policy: bypass
     - domain: pixelntfy.$SERVICES_DOMAIN
       policy: bypass
     - domain: isbn.$SERVICES_DOMAIN
