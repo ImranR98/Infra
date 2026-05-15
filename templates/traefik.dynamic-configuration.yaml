@@ -3,6 +3,7 @@ http:
     authelia:
       forwardAuth:
         address: http://authelia:9091/api/verify?rd=https://luna.$SERVICES_DOMAIN/
+        maxResponseBodySize: 1048576
         trustForwardHeader: true
         authResponseHeaders:
           - Remote-User
