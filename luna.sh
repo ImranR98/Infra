@@ -22,11 +22,11 @@ case "${1:-}" in
         echo "=== Create Required Directories ==="
         tmpfile="$(mktemp)"
         envsubst < "$HERE"/compose.yaml > "$tmpfile"
-        yq '.services[] | .volumes[] | select(type == "string")' "$tmpfile" 2>/dev/null | \
+        yq '.services[] | .volumes[] | select(tag == "!!str")' "$tmpfile" 2>/dev/null | \
             while IFS=: read -r host_path _; do
                 case "$host_path" in
                     "$STATE_DIR"/*)
-                        local name="$(basename "$host_path")"
+                        name="$(basename "$host_path")"
                         if [[ "$name" =~ \.[a-zA-Z0-9]{1,5}$ ]]; then
                             mkdir -p "$(dirname "$host_path")" 2>/dev/null || :
                         else
