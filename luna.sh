@@ -48,6 +48,9 @@ if [ -f "$HERE/VARS.sh" ]; then
     source "$HERE/VARS.sh"
     export MY_UID="$UID"
     export NODE_NAME_LOWERCASE="${NODE_NAME,,}"
+elif [ "${1:-}" != "prereqs" ]; then
+    echo "No VARS.sh found! Copy template.VARS.sh to VARS.sh and fill in the values." >&2
+    exit 1
 fi
 
 case "${1:-}" in
