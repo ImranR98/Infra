@@ -7,7 +7,7 @@
 jwt_secret: $AUTHELIA_JWT_SECRET
 
 log:
-  level: info
+  level: debug
 
 totp:
   issuer: $SERVICES_DOMAIN

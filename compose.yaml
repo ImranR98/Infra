@@ -133,7 +133,7 @@ services:
             - "--api.insecure=true"
             - "--global.sendAnonymousUsage=false"
             - "--global.checkNewVersion=true"
-            - "--log.level=INFO"
+            - "--log.level=DEBUG"
             - "--accesslog=true"
             - "--accesslog.filePath=/var/log/traefik/access.log"
             - "--providers.docker=true"
