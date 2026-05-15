@@ -17,7 +17,7 @@ authentication_backend:
     path: /config/users_database.yml
 
 access_control:
-  default_policy: 'deny'
+  default_policy: 'one_factor'
   rules:
     - domain: luna.$SERVICES_DOMAIN
       policy: bypass
@@ -47,8 +47,6 @@ access_control:
       policy: bypass
     - domain: plausible.$SERVICES_DOMAIN # IGNORE INITIALLY
       policy: bypass # IGNORE INITIALLY
-    - domain: '*'
-      policy: one_factor
 
 session:
   secret: $AUTHELIA_SESSION_SECRET
