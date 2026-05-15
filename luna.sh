@@ -80,6 +80,7 @@ StartLimitIntervalSec=0
 User=$UID
 Type=simple
 ExecStart=/usr/bin/docker compose -p luna -f $STATE_DIR/compose.yaml up
+ExecStop=/usr/bin/docker compose -p luna -f $STATE_DIR/compose.yaml down
 Restart=always
 RestartSec=30
 
