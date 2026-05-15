@@ -21,21 +21,18 @@ case "${1:-}" in
         printTitle "Create Required Directories"
         tmpfile="$(mktemp)"
         envsubst < "$HERE"/compose.yaml > "$tmpfile"
-        for prefix in "$STATE_DIR"; do
-            yq '.services[] | .volumes[] | select(type == "string")' "$tmpfile" 2>/dev/null | \
-                while IFS=: read -r host_path _; do
-                    case "$host_path" in
-                        "$prefix"/*)
-                            if [[ "$(basename "$host_path")" == *.* ]]; then
-                                mkdir -p "$(dirname "$host_path")" 2>/dev/null || :
-                            else
-                                mkdir -p "$host_path" 2>/dev/null || :
-                            fi
-                            ;;
-                    esac
-                done
-        done
-        rm -f "$tmpfile"
+        yq '.services[] | .volumes[] | select(type == "string")' "$tmpfile" 2>/dev/null | \
+            while IFS=: read -r host_path _; do
+                case "$host_path" in
+                    "$STATE_DIR"/*)
+                        if [[ "$(basename "$host_path")" == *.* ]]; then
+                            mkdir -p "$(dirname "$host_path")" 2>/dev/null || :
+                        else
+                            mkdir -p "$host_path" 2>/dev/null || :
+                        fi
+                        ;;
+                esac
+            done
         mkdir -p "$STATE_DIR/traefik_logs"
         echo "Done."
 
@@ -65,7 +62,8 @@ case "${1:-}" in
         echo "Done."
 
         printTitle "Generate Docker Compose file"
-        envsubst < "$HERE"/compose.yaml > "$STATE_DIR"/compose.yaml
+        cp "$tmpfile" "$STATE_DIR"/compose.yaml
+        rm -f "$tmpfile"
         echo "Done."
 
         printTitle "Install and start the Luna service"

@@ -9,7 +9,7 @@ Docker-based self-hosted infrastructure running web services behind Traefik.
 - **Watchtower** — automatic container image updates.
 - **Docker socket proxy** — two instances isolate Docker socket access (read-only for Traefik, read-write for Watchtower).
 
-17 services are pre-configured including analytics (Plausible), file sharing (Send), media tools (MeTube), utilities (ISBN lookup, tracking pixels), and more.
+Services include analytics (Plausible), file sharing (Send), media tools (MeTube), utilities (ISBN lookup, tracking pixels), and more.
 
 ## Files
 

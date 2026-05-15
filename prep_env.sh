@@ -28,9 +28,6 @@ export SUDO_COMMAND="sudo"
 if command -v run0 >/dev/null 2>&1; then
     export SUDO_COMMAND="run0"
 fi
-if [ -f "$STATE_DIR"/generated.VARS.sh ]; then
-    source "$STATE_DIR"/generated.VARS.sh
-fi
 
 findDomainsInSetup() {
     grep Host "$HERE"/compose.yaml | awk -F '`' '{print $2}' | sort | uniq | envsubst
