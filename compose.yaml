@@ -156,8 +156,8 @@ services:
             - "--providers.docker.network=traefik"
             - "--entryPoints.websecure.http.middlewares=authelia@file"
         ports:
-            - "127.0.0.1:80:80"
-            - "127.0.0.1:443:443"
+            - "80:80"
+            - "443:443"
             - "127.0.0.1:8080:8080" # Traefik dashboard. To view remotely, tunnel: ssh -L 8080:localhost:8080 user@your-server
         volumes:
             - $STATE_DIR/traefik/acme.json:/acme.json
