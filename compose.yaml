@@ -154,7 +154,6 @@ services:
             - "--experimental.plugins.geoblock.version=v0.3.7"
             - "--providers.docker.endpoint=unix:///socket/docker.sock"
             - "--providers.docker.network=traefik"
-            - "--entryPoints.websecure.http.encodeQuerySemicolons=false"
             - "--entryPoints.websecure.http.middlewares=authelia@file"
         ports:
             - "80:80"
