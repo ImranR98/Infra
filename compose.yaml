@@ -409,7 +409,7 @@ services:
     # SB25 - private birthday page
     sb25:
         container_name: sb25
-        image: sb25
+        image: imranrdev/sb25
         depends_on:
             - traefik
         labels:
@@ -429,11 +429,11 @@ services:
 
     # strelaysrv - Syncthing Relay Server
     strelaysrv:
-        image: imranrdev/strelaysrv-docker:latest
+        image: syncthing/relaysrv:latest
         container_name: strelaysrv
         restart: unless-stopped
         volumes:
-            - strelaysrv:/keys
+            - strelaysrv:/var/strelaysrv
         command:
             - "-global-rate=5000000"
             - "-provided-by=$STRELAYSRV_PROVIDED_BY"
