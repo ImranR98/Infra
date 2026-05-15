@@ -422,84 +422,6 @@ services:
             - "9418:9418"
         logging: *logging
 
-    # Plausible - Web Analytics
-    # TODO: Change default DB password
-    plausible_db:
-        # Plausible v2.1.1 was tested against PostgreSQL versions 15 and 16
-        # https://github.com/plausible/analytics/blob/v2.1.1/.github/workflows/elixir.yml#L21-L32
-        image: postgres:16-alpine
-        container_name: plausible_db
-        restart: unless-stopped
-        volumes:
-            - $STATE_DIR/plausible/db:/var/lib/postgresql/data
-        environment:
-            - POSTGRES_PASSWORD=postgres
-        healthcheck:
-            test: ["CMD-SHELL", "pg_isready -U postgres"]
-            start_period: 1m
-        networks:
-            - traefik
-        user: 1000:1000
-        logging: *logging
-    plausible_events_db:
-        image: clickhouse/clickhouse-server:24.12-alpine
-        restart: unless-stopped
-        container_name: plausible_events_db
-        networks:
-            - traefik
-        volumes:
-            - $STATE_DIR/plausible/event_data:/var/lib/clickhouse
-            - $STATE_DIR/plausible/event_logs:/var/log/clickhouse-server
-            - $STATE_DIR/plausible/config/logs.xml:/etc/clickhouse-server/config.d/logs.xml:ro
-            - $STATE_DIR/plausible/config/ipv4-only.xml:/etc/clickhouse-server/config.d/ipv4-only.xml:ro
-        environment:
-            - CLICKHOUSE_SKIP_USER_SETUP=1
-        ulimits:
-            nofile:
-                soft: 262144
-                hard: 262144
-        healthcheck:
-            test:
-                [
-                    "CMD-SHELL",
-                    "wget --no-verbose --tries=1 -O - http://127.0.0.1:8123/ping || exit 1",
-                ]
-            start_period: 1m
-        logging: *logging
-    plausible:
-        image: ghcr.io/plausible/community-edition:v3
-        restart: unless-stopped
-        container_name: plausible
-        command: sh -c "sleep 10 && /entrypoint.sh db createdb && /entrypoint.sh db migrate && /entrypoint.sh run"
-        depends_on:
-            traefik:
-                condition: service_started
-            plausible_db:
-                condition: service_healthy
-            plausible_events_db:
-                condition: service_healthy
-        networks:
-            - traefik
-        volumes:
-            - $STATE_DIR/plausible/data:/var/lib/plausible
-        ulimits:
-            nofile:
-                soft: 65535
-                hard: 65535
-        environment:
-            - BASE_URL=https://plausible.$SERVICES_DOMAIN
-            - SECRET_KEY_BASE=$PLAUSIBLE_SECRET_KEY
-            - TOTP_VAULT_KEY=$PLAUSIBLE_TOTP_VAULT_KEY
-        labels:
-            - "traefik.enable=true"
-            - "traefik.http.routers.plausible.rule=Host(`plausible.$SERVICES_DOMAIN`)"
-            - "traefik.http.routers.plausible.entrypoints=websecure"
-            - "traefik.http.routers.plausible.tls.certresolver=le"
-            - "traefik.http.routers.plausible.tls=true"
-            - "traefik.http.services.plausible.loadbalancer.server.port=8000"
-            - "traefik.http.routers.plausible.middlewares=authelia@docker"
-        logging: *logging
-
     registry:
         container_name: registry
         image: registry
@@ -557,54 +479,6 @@ services:
     #         retries: 3
     #     logging: *logging
 
-    # Send - File Sharing
-    send:
-        container_name: send
-        image: registry.gitlab.com/timvisee/send:latest
-        restart: unless-stopped
-        depends_on:
-            - traefik
-            - send-db
-        volumes:
-            - $STATE_DIR/send/uploads:/uploads
-        environment:
-            - VIRTUAL_HOST=share.$SERVICES_DOMAIN
-            - VIRTUAL_PORT=80
-            - DHPARAM_GENERATION=false
-            - NODE_ENV=production
-            - BASE_URL=https://share.$SERVICES_DOMAIN
-            - PORT=80
-            - REDIS_HOST=send-db
-            - FILE_DIR=/uploads
-            - MAX_FILES_PER_ARCHIVE=512
-            - MAX_FILE_SIZE=137438953472 # 128 GB
-            - MAX_EXPIRE_SECONDS=31536000 # 365 days
-            - MAX_DOWNLOADS=1000000000 # 1 billion
-            - DOWNLOAD_COUNTS=10,1,2,5,10,15,25,50,100,1000,1000000000
-            - EXPIRE_TIMES_SECONDS=3600,86400,604800,2592000,31536000
-            - DEFAULT_DOWNLOADS=100
-            - DEFAULT_EXPIRE_SECONDS=2592000
-        labels:
-            - "traefik.enable=true"
-            - "traefik.http.routers.send.rule=Host(`share.$SERVICES_DOMAIN`)"
-            - "traefik.http.routers.send.entrypoints=websecure"
-            - "traefik.http.routers.send.middlewares=authelia@docker"
-            - "traefik.http.routers.send.tls.certresolver=le"
-            - "traefik.http.routers.send.tls=true"
-            - "traefik.http.services.send.loadbalancer.server.port=80"
-        networks:
-            - traefik
-        logging: *logging
-    send-db:
-        container_name: send-db
-        image: "redis:alpine"
-        restart: unless-stopped
-        volumes:
-            - $STATE_DIR/send/db:/data
-        networks:
-            - traefik
-        logging: *logging
-
     # Jellyfin - TV Streaming
     jellyfin:
         container_name: jellyfin
@@ -658,30 +532,6 @@ services:
             - traefik
         logging: *logging
 
-    # PixelNtfy - Tracking Pixels
-    pixelntfy:
-        container_name: pixelntfy
-        image: imranrdev/pixel-ntfy
-        depends_on:
-            - traefik
-        labels:
-            - "traefik.enable=true"
-            - "traefik.http.routers.pixelntfy.rule=Host(`pixelntfy.$SERVICES_DOMAIN`)"
-            - "traefik.http.routers.pixelntfy.entrypoints=websecure"
-            - "traefik.http.routers.pixelntfy.middlewares=authelia@docker"
-            - "traefik.http.routers.pixelntfy.tls.certresolver=le"
-            - "traefik.http.routers.pixelntfy.tls=true"
-            - "traefik.http.services.pixelntfy.loadbalancer.server.port=80"
-        environment:
-            - NTFY_TOPIC=${MAIN_NODE_HOSTNAME_LOWERCASE}_services_${PIXELNTFY_TOPIC_SUFFIX}
-            - NTFY_SERVER_URL=https://ntfy.$SERVICES_DOMAIN
-            - NTFY_TOKEN=$NTFY_SERVICE_USER_TOKEN
-            - PORT=80
-            - ANALYTICS_SCRIPT_ELEMENT=<script defer data-domain="pixelntfy.$SERVICES_DOMAIN" src="https://plausible.$SERVICES_DOMAIN/js/script.js"></script>
-        networks:
-            - traefik
-        logging: *logging
-
     # D$CPLN - Monthly/Weekly Budget
     dscpln:
         container_name: dscpln
@@ -709,27 +559,6 @@ services:
         networks:
             - traefik
         restart: unless-stopped
-        logging: *logging
-
-    # ISBN Lookup
-    isbn-lookup:
-        container_name: isbn-lookup
-        image: imranrdev/isbn-lookup
-        depends_on:
-            - traefik
-        labels:
-            - "traefik.enable=true"
-            - "traefik.http.routers.isbn-lookup.rule=Host(`isbn.$SERVICES_DOMAIN`)"
-            - "traefik.http.routers.isbn-lookup.entrypoints=websecure"
-            - "traefik.http.routers.isbn-lookup.middlewares=authelia@docker"
-            - "traefik.http.routers.isbn-lookup.tls.certresolver=le"
-            - "traefik.http.routers.isbn-lookup.tls=true"
-            - "traefik.http.services.isbn-lookup.loadbalancer.server.port=80"
-        environment:
-            - PORT=80
-            - ANALYTICS_SCRIPT_ELEMENT=<script defer data-domain="isbn.$SERVICES_DOMAIN" src="https://plausible.$SERVICES_DOMAIN/js/script.js"></script>
-        networks:
-            - traefik
         logging: *logging
 
     # Immich - Gallery
@@ -1042,27 +871,6 @@ services:
             - "traefik.http.services.ollama-webui.loadbalancer.server.port=8080"
         logging: *logging
 
-    # MeTube - YouTube Downloader
-    metube:
-        image: ghcr.io/alexta69/metube:latest
-        container_name: metube
-        volumes:
-            - $STATE_DIR/metube:/downloads
-        networks:
-            - traefik
-        depends_on:
-            - traefik
-        restart: unless-stopped
-        labels:
-            - "traefik.enable=true"
-            - "traefik.http.routers.metube.rule=Host(`ytdl.$SERVICES_DOMAIN`)"
-            - "traefik.http.routers.metube.entrypoints=websecure"
-            - "traefik.http.routers.metube.middlewares=authelia@docker"
-            - "traefik.http.routers.metube.tls.certresolver=le"
-            - "traefik.http.routers.metube.tls=true"
-            - "traefik.http.services.metube.loadbalancer.server.port=8081"
-        logging: *logging
-
     # CalDAV/CardDAV Server
     nextcloud:
         image: nextcloud
@@ -1175,23 +983,6 @@ services:
             - "traefik.http.routers.fmd.tls.certresolver=le"
             - "traefik.http.routers.fmd.tls=true"
             - "traefik.http.services.fmd.loadbalancer.server.port=8080"
-        logging: *logging
-
-    obtainium_apps:
-        container_name: obtainium_apps
-        image: imranrdev/apps.obtainium.example.org
-        depends_on:
-            - traefik
-        labels:
-            - "traefik.enable=true"
-            - "traefik.http.routers.obtainium_apps.rule=Host(`example.org`)"
-            - "traefik.http.routers.obtainium_apps.entrypoints=websecure"
-            - "traefik.http.routers.obtainium_apps.tls.certresolver=le"
-            - "traefik.http.routers.obtainium_apps.tls=true"
-            - "traefik.http.services.obtainium_apps.loadbalancer.server.port=8080"
-        networks:
-            - traefik
-        restart: unless-stopped
         logging: *logging
 
 networks:

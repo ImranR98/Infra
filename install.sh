@@ -16,7 +16,6 @@ mkdir -p "$STATE_DIR"/prometheus/config
 mkdir -p "$STATE_DIR"/opencanary
 mkdir -p "$STATE_DIR"/filebrowser/config
 mkdir -p "$STATE_DIR"/filebrowser/database
-mkdir -p "$STATE_DIR"/plausible/config
 mkdir -p "$STATE_DIR"/frpc
 mkdir -p "$STATE_DIR"/beszel
 mkdir -p "$STATE_DIR"/registry/data
@@ -104,12 +103,6 @@ if [ "$(stat -c '%U:%G' "$STATE_DIR/jitsi")" != "root:root" ]; then
     echo "chown-ing Jitsi directories..."
     $SUDO_COMMAND bash -c "chown root:root '$STATE_DIR/jitsi' && chown root:root '$STATE_DIR'/jitsi/*"
 fi
-if [ "$(stat -c '%u:%g' "$STATE_DIR/plausible/data")" != "999:999" ]; then
-    echo "chown-ing Plausible directories..."
-    $SUDO_COMMAND bash -c "chown 999:999 '$STATE_DIR/plausible/data' && chown root:root '$STATE_DIR/plausible/event_data' && \
-    chown root:root '$STATE_DIR/plausible/event_logs' && cp '$HERE_LX1A/files/plausible.logs.xml' '$STATE_DIR/plausible/config/logs.xml' && \
-    cp '$HERE_LX1A/files/plausible.ipv4-only.xml' '$STATE_DIR/plausible/config/ipv4-only.xml'"
-fi
 if [ "$(stat -c '%u:%g' "$STATE_DIR/prometheus/config")" != "65534:65534" ]; then
     echo "Creating Prometheus config..."
     cat "$HERE_LX1A"/files/prometheus.yaml | envsubst | $SUDO_COMMAND tee "$STATE_DIR"/prometheus/config/prometheus.yaml
@@ -157,7 +150,6 @@ if [ ! -d "$STATE_DIR"/crowdsec/config/postoverflows/s01-whitelist ]; then
     CS_TEMP_DIR="$(mktemp -d)"
     cat "$HERE_LX1A"/files/crowdsec.navidrome.whitelist.yaml | envsubst | dd status=none of="$CS_TEMP_DIR"/navidrome.whitelist.yaml
     cat "$HERE_LX1A"/files/crowdsec.immich.whitelist.yaml | envsubst | dd status=none of="$CS_TEMP_DIR"/immich.whitelist.yaml
-    cat "$HERE_LX1A"/files/crowdsec.plausible.whitelist.yaml | envsubst | dd status=none of="$CS_TEMP_DIR"/plausible.whitelist.yaml
     cat "$HERE_LX1A"/files/crowdsec.homeassistant.whitelist.yaml | envsubst | dd status=none of="$CS_TEMP_DIR"/homeassistant.whitelist.yaml
     $SUDO_COMMAND bash -c "mkdir -p '$STATE_DIR/crowdsec/config/postoverflows/s01-whitelist' && mv '$CS_TEMP_DIR'/* '$STATE_DIR/crowdsec/config/postoverflows/s01-whitelist'"
     rm -r "$CS_TEMP_DIR"
@@ -172,7 +164,6 @@ if [ -z "$NTFY_SERVICE_USER_TOKEN" ]; then
     docker exec ntfy ntfy user del "$SERVICES_USER" 2>/dev/null || :
     docker exec ntfy sh -c "NTFY_PASSWORD=\"$NTFY_SERVICES_PASSWORD\" ntfy user add \"$SERVICES_USER\""
     docker exec ntfy ntfy access "$SERVICES_USER" "$SERVICES_TOPIC" wo
-    docker exec ntfy ntfy access "$SERVICES_USER" "$PIXELNTFY_TOPIC_SUFFIX" wo
     export NTFY_SERVICE_USER_TOKEN="$(docker exec ntfy ntfy token add "$SERVICES_USER" 2>&1 | awk '{print $2}')"
     echo "export NTFY_SERVICE_USER_TOKEN='$NTFY_SERVICE_USER_TOKEN'" >>"$STATE_DIR"/generated.VARS.sh
     read -s -p "Enter password for Ntfy admin user: " NTFY_ADMIN_PASSWORD

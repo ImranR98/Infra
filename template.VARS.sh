@@ -54,12 +54,7 @@ abc
 -----END CERTIFICATE-----"
 export MOSQUITTO_CREDENTIALS='admin:abc'
 
-export PLAUSIBLE_SECRET_KEY="abc"     # openssl rand -base64 48
-export PLAUSIBLE_TOTP_VAULT_KEY="abc" # openssl rand -base64 32
-
 export STRELAYSRV_PROVIDED_BY_TEXT="example.org"
-
-export PIXELNTFY_TOPIC_SUFFIX='abc' # echo $RANDOM | sha256sum | awk '{print $1}' | head -c 32
 
 export GEOBLOCK_CONFIG_SUBSET='
           blackListMode: false
