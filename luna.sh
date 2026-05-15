@@ -179,12 +179,18 @@ EOF
         fi
 
         TIMESTAMP=$(date +%Y%m%d_%H%M%S)
-        OUTPUT="$HERE/luna-backup-$TIMESTAMP.tar.gz"
+        OUTPUT="$HERE/luna-backup-$TIMESTAMP.tar"
 
         echo "Backing up $STATE_DIR and VARS.sh..."
-        docker run --rm -v "$STATE_DIR":/backup/state:ro -v "$HERE/VARS.sh":/backup/VARS.sh:ro alpine tar czf - -C /backup . > "$OUTPUT"
-        echo "Backup created: $OUTPUT"
-        echo "Note: The backup contains VARS.sh which includes secrets. Store it securely."
+        if docker run --rm -v "$STATE_DIR":/backup/state:ro -v "$HERE/VARS.sh":/backup/VARS.sh:ro alpine tar cf - --ignore-failed-read -C /backup . > "$OUTPUT"; then
+            echo "Backup created: $OUTPUT"
+            find "$HERE" -maxdepth 1 -name 'luna-backup-*.tar' ! -name "$(basename "$OUTPUT")" -delete
+            echo "Note: The backup contains VARS.sh which includes secrets. Store it securely."
+        else
+            echo "Backup failed" >&2
+            rm -f "$OUTPUT"
+            exit 1
+        fi
         ;;
 
     prereqs)
