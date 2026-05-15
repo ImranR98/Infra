@@ -12,21 +12,22 @@ if [ "$UPDATE_ONLY_NON_FRPC" != true ]; then
     printTitle "Install Docker"
     ssh -A -t "$PROXY_SSH_STRING" bash -l <<-EOF
     set -e
-sudo install -m 0755 -d /etc/apt/keyrings
-curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg || :
-sudo chmod a+r /etc/apt/keyrings/docker.gpg
-if [ -z "\$VERSION_CODENAME" ]; then
-    VERSION_CODENAME="\$(cat /etc/os-release | grep CODENAME | awk -F= '{print \$2}')"
-fi
-OS=ubuntu
-if [ -n "\$(grep 'Debian' /etc/os-release)" ]; then OS=debian; fi
-echo \
-    "deb [arch="\$(dpkg --print-architecture)" signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/\$OS \
-  "$(. /etc/os-release && echo "\$VERSION_CODENAME")" stable" |
-sudo tee /etc/apt/sources.list.d/docker.list >/dev/null
-sudo apt-get update -y
-sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
-sudo usermod -aG docker \$USER
+	sudo apt-get update -qq
+    if ! command -v docker >/dev/null 2>&1 || ! docker compose version >/dev/null 2>&1; then
+        printf "Installing Docker and Docker Compose..."
+        sudo apt-get install -y docker.io docker-compose-v2 && echo " done" || { echo ""; echo "Docker install failed. Install manually: https://docs.docker.com/engine/install/" >&2; }
+        sudo systemctl enable docker 2>/dev/null || true
+        sudo systemctl start docker 2>/dev/null || true
+    else
+        echo "Docker already installed."
+    fi
+    if command -v docker >/dev/null 2>&1 && docker compose version >/dev/null 2>&1; then
+        echo "  [OK] docker"
+        echo "  [OK] docker compose"
+    else
+        echo "  [MISSING] docker or docker compose"
+        exit 1
+    fi
 EOF
     echo "Done."
 

@@ -96,10 +96,6 @@ if [ "$(stat -c '%U:%G' "$STATE_DIR/homeassistant")" != "root:root" ]; then
     echo "chown-ing HomeAssistant files..."
     $SUDO_COMMAND bash -c "chown -R root:root '$STATE_DIR/homeassistant' && chmod o+r -R '$STATE_DIR/homeassistant'"
 fi
-if [ "$(stat -c '%U:%G' "$STATE_DIR/jitsi")" != "root:root" ]; then
-    echo "chown-ing Jitsi directories..."
-    $SUDO_COMMAND bash -c "chown root:root '$STATE_DIR/jitsi' && chown root:root '$STATE_DIR'/jitsi/*"
-fi
 
 cat "$HERE_LX1A"/landscape.docker-compose.yaml | envsubst >"$STATE_DIR"/landscape.docker-compose.yaml
 

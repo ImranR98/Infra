@@ -70,13 +70,6 @@ export SHLINK_DB_PASSWORD="abc" # echo $RANDOM | sha256sum | awk '{print $1}'
 export SHLINK_API_KEY="abc" # echo $RANDOM | sha256sum | awk '{print $1}'
 export GEOLITE_LICENSE_KEY="" # Optional, see Shlink docs
 
-export JITSI_MEET_JICOFO_AUTH_PASSWORD='abcd' # openssl rand -hex 16
-export JITSI_MEET_JVB_AUTH_PASSWORD='abcd' # openssl rand -hex 16
-export JITSI_MEET_JIGASI_XMPP_PASSWORD='abcd' # openssl rand -hex 16
-export JITSI_MEET_JIGASI_TRANSCRIBER_PASSWORD='abcd' # openssl rand -hex 16
-export JITSI_MEET_JIBRI_RECORDER_PASSWORD='abcd' # openssl rand -hex 16
-export JITSI_MEET_JIBRI_XMPP_PASSWORD='abcd' # openssl rand -hex 16
-
 export FMD_REGISTRATIONTOKEN='abcd' # openssl rand -hex 32
 
 export FRESHRSS_ADMIN_API_PASSWORD="freshrss" # openssl rand -hex 32
