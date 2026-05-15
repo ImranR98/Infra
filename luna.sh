@@ -188,7 +188,11 @@ EOF
             alpine sh -c 'apk add --no-cache tar >/dev/null 2>&1 && exec tar cf - --ignore-failed-read --warning=no-file-changed --warning=no-file-removed -C /backup .' > "$OUTPUT"
         if [ -s "$OUTPUT" ]; then
             echo "Backup created: $OUTPUT"
-            find "$BACKUP_DIR" -maxdepth 1 -name 'luna-backup-*.tar' ! -name "$(basename "$OUTPUT")" -delete
+            for f in "$BACKUP_DIR"/luna-backup-*.tar; do
+                [ ! -e "$f" ] && continue
+                [ "$f" = "$OUTPUT" ] && continue
+                rm -f "$f"
+            done
             echo "Note: The backup contains VARS.sh which includes secrets. Store it securely."
         else
             echo "Backup failed" >&2
