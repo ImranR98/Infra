@@ -11,7 +11,11 @@ if [ -f "$HERE/VARS.sh" ]; then
         fi
     done < <(grep -Eo '^export [^=]+' "$HERE"/template.VARS.sh | sed 's/^export //')
     source "$HERE/VARS.sh"
-    export MY_UID="$UID"
+    if [ "$UID" -eq 0 ]; then
+        export MY_UID=1000
+    else
+        export MY_UID="$UID"
+    fi
 elif [ -n "${1:-}" ] && [ "${1:-}" != "prereqs" ] && [ "${1:-}" != "list-domains" ] && [ "${1:-}" != "old-images" ] && [ "${1:-}" != "update-socket-proxy" ] && [ "${1:-}" != "update-traefik-plugins" ]; then
     echo "No VARS.sh found. Copy template.VARS.sh to VARS.sh and fill in the values." >&2
     exit 1
@@ -22,22 +26,14 @@ case "${1:-}" in
         echo "=== Create Required Directories ==="
         tmpfile="$(mktemp)"
         envsubst < "$HERE"/compose.yaml > "$tmpfile"
-        if yq --version 2>/dev/null | grep -qi mikefarah; then
-            yq '.services[] | select(.volumes != null) | .volumes[] | select(tag == "!!str")' "$tmpfile" 2>/dev/null
-        else
-            yq '.services[] | select(.volumes != null) | .volumes[] | select(type == "string")' "$tmpfile" 2>/dev/null
-        fi | \
+        sed -n "s|^[[:space:]]*- \"\?$STATE_DIR/\([^:]*\):.*$|$STATE_DIR/\1|p" "$tmpfile" | \
             while IFS=: read -r host_path _; do
-                case "$host_path" in
-                    "$STATE_DIR"/*)
-                        name="$(basename "$host_path")"
-                        if [[ "$name" =~ \.[a-zA-Z0-9]{1,5}$ ]]; then
-                            mkdir -p "$(dirname "$host_path")" 2>/dev/null || :
-                        else
-                            mkdir -p "$host_path" 2>/dev/null || :
-                        fi
-                        ;;
-                esac
+                name="$(basename "$host_path")"
+                if [[ "$name" =~ \.[a-zA-Z0-9]{1,5}$ ]]; then
+                    mkdir -p "$(dirname "$host_path")" 2>/dev/null || :
+                else
+                    mkdir -p "$host_path" 2>/dev/null || :
+                fi
             done
         echo "Done."
 
