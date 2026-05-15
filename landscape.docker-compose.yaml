@@ -724,26 +724,6 @@ services:
         networks:
             - traefik
         logging: *logging
-    wyoming-whisper:
-        image: rhasspy/wyoming-whisper
-        container_name: wyoming-whisper
-        volumes:
-            - $STATE_DIR/homeassistant/wyoming-whisper-data:/data
-        command: "--model small-int8"
-        restart: unless-stopped
-        networks:
-            - traefik
-        logging: *logging
-    wyoming-piper:
-        image: rhasspy/wyoming-piper
-        container_name: wyoming-piper
-        volumes:
-            - $STATE_DIR/homeassistant/wyoming-piper-data:/data
-        command: "--voice en_US-lessac-medium"
-        restart: unless-stopped
-        networks:
-            - traefik
-        logging: *logging
 
     # LLMs
     ollama:
