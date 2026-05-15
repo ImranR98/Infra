@@ -409,7 +409,7 @@ services:
     # SB25 - private birthday page
     sb25:
         container_name: sb25
-        image: sb25
+        image: imranrdev/sb25
         user: "1000:1000"
         depends_on:
             - traefik
