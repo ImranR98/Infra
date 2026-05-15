@@ -39,10 +39,8 @@ export PLAUSIBLE_SECRET_KEY="abc" # openssl rand -base64 48
 export PLAUSIBLE_TOTP_VAULT_KEY="abc" # openssl rand -base64 32
 
 # --- PixelNtfy ---
-# Prefix for the PixelNtfy ntfy topic (usually lowercase server name)
-export PIXELNTFY_TOPIC_PREFIX="controlplane"
-# Suffix appended to the PixelNtfy ntfy topic for uniqueness
-export PIXELNTFY_TOPIC_SUFFIX='abc'
+# ntfy topic for PixelNtfy (should be long and unique)
+export PIXELNTFY_TOPIC="abcd"
 
 # --- SB25 Birthday Page ---
 # Auth token for the sb25 service (generate a random string)

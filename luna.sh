@@ -3,22 +3,6 @@ set -euo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 
-printLine() {
-    local linechar="${1:-=}"
-    local cols
-    cols=$(tput cols 2>/dev/null) || cols=80
-    printf '%*s' "$cols" '' | tr ' ' "$linechar"
-    echo ""
-}
-
-printTitle() {
-    printLine
-    echo "$1"
-    printLine
-}
-
-
-
 if [ -f "$HERE/VARS.sh" ]; then
     while IFS= read -r var; do
         if ! grep -q "^export $var=" "$HERE/VARS.sh"; then
@@ -28,25 +12,14 @@ if [ -f "$HERE/VARS.sh" ]; then
     done < <(grep -Eo '^export [^=]+' "$HERE"/template.VARS.sh | sed 's/^export //')
     source "$HERE/VARS.sh"
     export MY_UID="$UID"
-elif [ "${1:-}" != "prereqs" ]; then
+elif [ -n "${1:-}" ] && [ "${1:-}" != "prereqs" ] && [ "${1:-}" != "list-domains" ] && [ "${1:-}" != "old-images" ] && [ "${1:-}" != "update-socket-proxy" ] && [ "${1:-}" != "update-traefik-plugins" ]; then
     echo "No VARS.sh found! Copy template.VARS.sh to VARS.sh and fill in the values." >&2
     exit 1
 fi
 
 case "${1:-}" in
     install)
-        printTitle "Pre-install Sanity Checks"
-        FAILED=false
-        for cmd in docker yq envsubst; do
-            if ! command -v "$cmd" >/dev/null 2>&1; then
-                echo "Required command not found: $cmd" >&2
-                FAILED=true
-            fi
-        done
-        echo "All checks passed."
-        printLine -
-
-        printTitle "Create Required Directories"
+        echo "=== Create Required Directories ==="
         tmpfile="$(mktemp)"
         envsubst < "$HERE"/compose.yaml > "$tmpfile"
         yq '.services[] | .volumes[] | select(type == "string")' "$tmpfile" 2>/dev/null | \
@@ -65,7 +38,7 @@ case "${1:-}" in
         mkdir -p "$STATE_DIR/traefik_logs"
         echo "Done."
 
-        printTitle "Re/generate various state files"
+        echo "=== Re/generate various state files ==="
         IGNORE_AUTHELIA_IGNORED_LINES=true
         if [ -f "$STATE_DIR/authelia/config/configuration.yml" ]; then
             read -p 'Should the "ignored" lines in the Authelia config still be ignored? [y]: ' IGNORE_AUTHELIA_IGNORED_LINES_RESPONSE
@@ -91,12 +64,12 @@ case "${1:-}" in
 
         echo "Done."
 
-        printTitle "Generate Docker Compose file"
+        echo "=== Generate Docker Compose file ==="
         cp "$tmpfile" "$STATE_DIR"/compose.yaml
         rm -f "$tmpfile"
         echo "Done."
 
-        printTitle "Install and start the Luna service"
+        echo "=== Install and start the Luna service ==="
         cat > "$STATE_DIR"/luna.service << EOF
 [Unit]
 Description=luna start
@@ -118,10 +91,10 @@ EOF
             systemctl stop luna.service 2>/dev/null || true && sleep 5 && systemctl start luna.service"
         echo "Done."
 
-        printTitle "Finished"
+        echo "=== Finished ==="
         echo "Note:
         - Some services may need manual setup in their respective GUIs."
-        printLine -
+        echo ""
         ;;
 
     restart)
@@ -148,7 +121,7 @@ EOF
         ;;
 
     update-socket-proxy)
-        printTitle "Pull Latest 'wollomatic/socket-proxy:1' and Restart Luna if Needed"
+        echo "=== Pull Latest 'wollomatic/socket-proxy:1' and Restart Luna if Needed ==="
 
         OLDSPHASH="$(docker images wollomatic/socket-proxy:1 --format '{{.ID}}')"
         docker pull wollomatic/socket-proxy:1

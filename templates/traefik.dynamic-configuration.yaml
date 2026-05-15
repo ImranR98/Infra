@@ -9,7 +9,7 @@ http:
           logAllowedRequests: true
           logApiRequests: true
           api: "https://get.geojs.io/v1/ip/country/{ip}"
-          apiTimeoutMs: 750                                 # optional
+          apiTimeoutMs: 750
           cacheSize: 15
           forceMonthlyUpdate: true
           allowUnknownCountries: false

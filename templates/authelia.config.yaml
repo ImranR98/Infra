@@ -19,9 +19,17 @@ authentication_backend:
 access_control:
   default_policy: 'deny'
   rules:
+    - domain: luna.$SERVICES_DOMAIN
+      policy: bypass
     - domain: pixelntfy.$SERVICES_DOMAIN
       policy: bypass
     - domain: isbn.$SERVICES_DOMAIN
+      policy: bypass
+    - domain: ikom.$SERVICES_DOMAIN
+      policy: bypass
+    - domain: sb25.$SERVICES_DOMAIN
+      policy: bypass
+    - domain: example.org
       policy: bypass
     - domain: share.$SERVICES_DOMAIN
       resources:
@@ -39,8 +47,6 @@ access_control:
       policy: bypass
     - domain: plausible.$SERVICES_DOMAIN # IGNORE INITIALLY
       policy: bypass # IGNORE INITIALLY
-    - domain: luna.$SERVICES_DOMAIN
-      policy: bypass
     - domain: ytdl.$SERVICES_DOMAIN
       policy: one_factor
       subject:
@@ -49,10 +55,6 @@ access_control:
       policy: one_factor
       subject:
       - ['group:family']
-    - domain: '*.$SERVICES_DOMAIN'
-      policy: one_factor
-      subject:
-      - ['group:admins']
     - domain: '*'
       policy: one_factor
       subject:

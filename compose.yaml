@@ -320,7 +320,7 @@ services:
             - "traefik.http.routers.pixelntfy.tls=true"
             - "traefik.http.services.pixelntfy.loadbalancer.server.port=80"
         environment:
-            - NTFY_TOPIC=${PIXELNTFY_TOPIC_PREFIX}_services_${PIXELNTFY_TOPIC_SUFFIX}
+            - NTFY_TOPIC=${PIXELNTFY_TOPIC}
             - NTFY_SERVER_URL=https://ntfy.sh
             - PORT=80
             - ANALYTICS_SCRIPT_ELEMENT=<script defer data-domain="pixelntfy.$SERVICES_DOMAIN" src="https://plausible.$SERVICES_DOMAIN/js/script.js"></script>
