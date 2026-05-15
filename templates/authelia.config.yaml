@@ -43,8 +43,6 @@ access_control:
       - '^/[^/]+\.png$'
       - '^/__heartbeat__/?$'
       policy: bypass
-    - domain: example.org
-      policy: bypass
     - domain: plausible.$SERVICES_DOMAIN # IGNORE INITIALLY
       policy: bypass # IGNORE INITIALLY
 
@@ -53,8 +51,7 @@ session:
   cookies:
     - domain: $SERVICES_DOMAIN
       authelia_url: https://luna.$SERVICES_DOMAIN
-    - domain: example.org
-      authelia_url: https://luna.$SERVICES_DOMAIN
+
   redis:
     host: authelia-db
     port: 6379

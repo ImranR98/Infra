@@ -96,7 +96,7 @@ services:
             - "traefik.http.routers.authelia.entryPoints=websecure"
             - "traefik.http.routers.authelia.tls.certresolver=le"
             - "traefik.http.routers.authelia.tls=true"
-            - "traefik.http.routers.authelia.middlewares=geoblock@file"
+            - "traefik.http.routers.authelia.middlewares=authelia@file,geoblock@file"
         expose:
             - 9091
         restart: unless-stopped
@@ -154,7 +154,6 @@ services:
             - "--experimental.plugins.geoblock.version=v0.3.7"
             - "--providers.docker.endpoint=unix:///socket/docker.sock"
             - "--providers.docker.network=traefik"
-            - "--entryPoints.websecure.http.middlewares=authelia@file"
         ports:
             - "80:80"
             - "443:443"
@@ -253,6 +252,7 @@ services:
             - "traefik.http.routers.plausible.entrypoints=websecure"
             - "traefik.http.routers.plausible.tls.certresolver=le"
             - "traefik.http.routers.plausible.tls=true"
+            - "traefik.http.routers.plausible.middlewares=authelia@file"
             - "traefik.http.services.plausible.loadbalancer.server.port=8000"
         logging: *logging
 
@@ -288,6 +288,7 @@ services:
             - "traefik.http.routers.send.entrypoints=websecure"
             - "traefik.http.routers.send.tls.certresolver=le"
             - "traefik.http.routers.send.tls=true"
+            - "traefik.http.routers.send.middlewares=authelia@file"
             - "traefik.http.services.send.loadbalancer.server.port=80"
         networks:
             - traefik
@@ -320,6 +321,7 @@ services:
             - "traefik.http.routers.pixelntfy.entrypoints=websecure"
             - "traefik.http.routers.pixelntfy.tls.certresolver=le"
             - "traefik.http.routers.pixelntfy.tls=true"
+            - "traefik.http.routers.pixelntfy.middlewares=authelia@file"
             - "traefik.http.services.pixelntfy.loadbalancer.server.port=80"
         environment:
             - NTFY_TOPIC=$PIXELNTFY_TOPIC
@@ -344,6 +346,7 @@ services:
             - "traefik.http.routers.isbn-lookup.entrypoints=websecure"
             - "traefik.http.routers.isbn-lookup.tls.certresolver=le"
             - "traefik.http.routers.isbn-lookup.tls=true"
+            - "traefik.http.routers.isbn-lookup.middlewares=authelia@file"
             - "traefik.http.services.isbn-lookup.loadbalancer.server.port=80"
         environment:
             - PORT=80
@@ -370,6 +373,7 @@ services:
             - "traefik.http.routers.metube.entrypoints=websecure"
             - "traefik.http.routers.metube.tls.certresolver=le"
             - "traefik.http.routers.metube.tls=true"
+            - "traefik.http.routers.metube.middlewares=authelia@file"
             - "traefik.http.services.metube.loadbalancer.server.port=8081"
         logging: *logging
 
@@ -404,6 +408,7 @@ services:
             - "traefik.http.routers.ikom.entrypoints=websecure"
             - "traefik.http.routers.ikom.tls.certresolver=le"
             - "traefik.http.routers.ikom.tls=true"
+            - "traefik.http.routers.ikom.middlewares=authelia@file"
             - "traefik.http.services.ikom.loadbalancer.server.port=3000"
         volumes:
             - "$STATE_DIR/ikom:/app/data"
@@ -425,6 +430,7 @@ services:
             - "traefik.http.routers.sb25.entrypoints=websecure"
             - "traefik.http.routers.sb25.tls.certresolver=le"
             - "traefik.http.routers.sb25.tls=true"
+            - "traefik.http.routers.sb25.middlewares=authelia@file"
             - "traefik.http.services.sb25.loadbalancer.server.port=3000"
         environment:
             - AUTH_TOKEN=$SB25_AUTH_TOKEN
