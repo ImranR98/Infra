@@ -146,7 +146,6 @@ services:
             - "--entrypoints.web.http.redirections.entrypoint.permanent=true"
             - "--entryPoints.websecure=true"
             - "--entryPoints.websecure.address=:443"
-            - "--entryPoints.websecure.proxyProtocol.trustedIPs=172.19.0.1/32"
             - "--certificatesresolvers.le.acme.email=$DOMAIN_OWNER_EMAIL"
             - "--certificatesresolvers.le.acme.storage=/acme.json"
             - "--certificatesresolvers.le.acme.tlschallenge=true"
