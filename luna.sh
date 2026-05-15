@@ -75,7 +75,7 @@ StartLimitIntervalSec=0
 
 [Service]
 User=$MY_UID
-Type=idle
+Type=simple
 ExecStart=/usr/bin/docker compose -p luna -f $STATE_DIR/compose.yaml up
 Restart=always
 RestartSec=30
@@ -133,7 +133,7 @@ EOF
         ;;
 
     list-domains)
-        grep Host "$HERE"/compose.yaml | awk -F '`' '{print $2}' | sort | uniq | envsubst
+        sed -n 's/.*Host(`\([^`]*\)`).*/\1/p' "$HERE"/compose.yaml | sort -u | envsubst
         ;;
 
     update-traefik-plugins)
@@ -191,6 +191,7 @@ EOF
             echo "Docker already installed."
         fi
 
+        ALL_OK=true
         for tool in yq envsubst jq curl; do
             if ! command -v "$tool" >/dev/null 2>&1; then
                 printf "Installing %s..." "$tool"
@@ -198,28 +199,26 @@ EOF
                     envsubst) pkg="gettext-base" ;;
                     *) pkg="$tool" ;;
                 esac
-                sudo apt-get install -y "$pkg" && echo " done" || echo " failed"
+                sudo apt-get install -y "$pkg" && echo " done" || { echo " failed"; ALL_OK=false; }
             else
                 echo "$tool already installed."
             fi
-        done
-
-        echo ""
-        ALL_OK=true
-        for cmd in docker yq envsubst jq curl; do
-            if command -v "$cmd" >/dev/null 2>&1; then
-                echo "  [OK] $cmd"
+            if command -v "$tool" >/dev/null 2>&1; then
+                echo "  [OK] $tool"
             else
-                echo "  [MISSING] $cmd"
+                echo "  [MISSING] $tool"
                 ALL_OK=false
             fi
         done
+
         if command -v docker >/dev/null 2>&1 && docker compose version >/dev/null 2>&1; then
+            echo "  [OK] docker"
             echo "  [OK] docker compose"
         else
-            echo "  [MISSING] docker compose"
+            echo "  [MISSING] docker or docker compose"
             ALL_OK=false
         fi
+
         if [ "$ALL_OK" = true ]; then
             echo ""
             echo "All prerequisites installed."

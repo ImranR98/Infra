@@ -79,6 +79,7 @@ Run `./luna.sh` to see all CLI commands.
 
 ## Maintenance
 
-- All containers are managed by the `luna` systemd service: `systemctl [start|stop|restart|status] luna`
+- All containers are managed by the `luna` systemd service: `systemctl [start\|stop\|restart\|status] luna`
 - Traefik dashboard: `ssh -L 8080:localhost:8080 user@your-server` then open `http://localhost:8080`
 - State and data live in `$STATE_DIR` (default: `./state/`). This directory is auto-generated and should not be manually modified.
+- Back up state and secrets with `./luna.sh backup-state`

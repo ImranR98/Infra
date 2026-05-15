@@ -164,8 +164,6 @@ services:
             - $STATE_DIR/traefik/dynamic-configuration.yaml:/etc/traefik/dynamic-configuration.yaml
             - $STATE_DIR/traefik/logs:/var/log/traefik/
             - dockerproxy:/socket/:ro
-        labels:
-            - "traefik.enable=true"
         restart: unless-stopped
         mem_limit: 256M
         networks:
@@ -458,4 +456,3 @@ volumes:
             type: tmpfs
             device: tmpfs
             o: size=1k,uid=65534,gid=0,mode=0700,noexec
-    strelaysrv:
