@@ -300,6 +300,7 @@ services:
     pixelntfy:
         container_name: pixelntfy
         image: imranrdev/pixel-ntfy
+        user: "1000:1000"
         mem_limit: 128M
         depends_on:
             - traefik
@@ -323,6 +324,7 @@ services:
     isbn-lookup:
         container_name: isbn-lookup
         image: imranrdev/isbn-lookup
+        user: "1000:1000"
         mem_limit: 128M
         depends_on:
             - traefik
@@ -344,6 +346,7 @@ services:
     metube:
         image: ghcr.io/alexta69/metube:latest
         container_name: metube
+        user: "1000:1000"
         volumes:
             - $STATE_DIR/metube:/downloads
         networks:
@@ -365,6 +368,7 @@ services:
     obtainium_apps:
         container_name: obtainium_apps
         image: imranrdev/apps.obtainium.example.org
+        user: "1000:1000"
         depends_on:
             - traefik
         labels:
@@ -384,6 +388,7 @@ services:
     ikom:
         container_name: ikom
         image: imranrdev/order-manager
+        user: "1000:1000"
         depends_on:
             - traefik
         labels:
@@ -405,6 +410,7 @@ services:
     sb25:
         container_name: sb25
         image: sb25
+        user: "1000:1000"
         depends_on:
             - traefik
         labels:
@@ -426,6 +432,7 @@ services:
     strelaysrv:
         image: imranrdev/strelaysrv-docker:latest
         container_name: strelaysrv
+        user: "1000:1000"
         restart: unless-stopped
         volumes:
             - strelaysrv:/keys
