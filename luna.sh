@@ -74,7 +74,7 @@ Description=luna start
 StartLimitIntervalSec=0
 
 [Service]
-User=$MY_UID
+User=$UID
 Type=simple
 ExecStart=/usr/bin/docker compose -p luna -f $STATE_DIR/compose.yaml up
 Restart=always
