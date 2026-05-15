@@ -3,10 +3,55 @@ set -euo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 
+printLine() {
+    local linechar="${1:-=}"
+    local cols
+    cols=$(tput cols 2>/dev/null) || cols=80
+    printf '%*s' "$cols" '' | tr ' ' "$linechar"
+    echo ""
+}
+
+printTitle() {
+    printLine
+    echo "$1"
+    printLine
+}
+
+generateComposeService() {
+    echo "[Unit]
+Description=$1 start
+StartLimitIntervalSec=0
+
+[Service]
+User=$2
+Type=idle
+ExecStart=/usr/bin/docker compose -p $1 -f $3/compose.yaml up
+Restart=always
+RestartSec=30
+
+[Install]
+WantedBy=multi-user.target"
+}
+
+export SUDO_COMMAND="sudo"
+if command -v run0 >/dev/null 2>&1; then
+    export SUDO_COMMAND="run0"
+fi
+
+if [ -f "$HERE/VARS.sh" ]; then
+    while IFS= read -r var; do
+        if ! grep -q "^export $var=" "$HERE/VARS.sh"; then
+            echo "VARS.sh is missing required variable: $var" >&2
+            exit 1
+        fi
+    done < <(grep -Eo '^export [^=]+' "$HERE"/template.VARS.sh | sed 's/^export //')
+    source "$HERE/VARS.sh"
+    export MY_UID="$UID"
+    export NODE_NAME_LOWERCASE="${NODE_NAME,,}"
+fi
+
 case "${1:-}" in
     install)
-        source "$HERE"/prep_env.sh
-
         printTitle "Pre-install Sanity Checks"
         FAILED=false
         for cmd in docker yq envsubst; do
@@ -25,7 +70,8 @@ case "${1:-}" in
             while IFS=: read -r host_path _; do
                 case "$host_path" in
                     "$STATE_DIR"/*)
-                        if [[ "$(basename "$host_path")" == *.* ]]; then
+                        local name="$(basename "$host_path")"
+                        if [[ "$name" =~ \.[a-zA-Z0-9]{1,5}$ ]]; then
                             mkdir -p "$(dirname "$host_path")" 2>/dev/null || :
                         else
                             mkdir -p "$host_path" 2>/dev/null || :
@@ -58,6 +104,7 @@ case "${1:-}" in
         fi
         chmod 600 "$STATE_DIR"/traefik/acme.json
         envsubst < "$HERE"/templates/traefik.dynamic-configuration.yaml > "$STATE_DIR"/traefik/dynamic-configuration.yaml
+        cp "$HERE"/templates/plausible.clickhouse-config.xml "$STATE_DIR"/plausible/config/clickhouse-config.xml
 
         echo "Done."
 
@@ -81,8 +128,6 @@ case "${1:-}" in
         ;;
 
     restart)
-        source "$HERE"/prep_env.sh
-
         envsubst < "$HERE"/compose.yaml > "$STATE_DIR"/compose.yaml
 
         if [ -n "${2:-}" ]; then
@@ -106,8 +151,6 @@ case "${1:-}" in
         ;;
 
     update-socket-proxy)
-        source "$HERE"/prep_env.sh
-
         printTitle "Pull Latest 'wollomatic/socket-proxy:1' and Restart Luna if Needed"
 
         OLDSPHASH="$(docker images wollomatic/socket-proxy:1 --format '{{.ID}}')"
@@ -120,6 +163,10 @@ case "${1:-}" in
         else
             echo "Note that this script will only detect updates if the tag \"wollomatic/socket-proxy:1\" (major version 1) has not changed."
         fi
+        ;;
+
+    list-domains)
+        grep Host "$HERE"/compose.yaml | awk -F '`' '{print $2}' | sort | uniq | envsubst
         ;;
 
     update-traefik-plugins)
@@ -150,9 +197,7 @@ case "${1:-}" in
         done < <(echo "$PLUGIN_LINES" | grep -o '\.plugins\..*\.modulename=[^"]*')
         ;;
 
-    backupState)
-        source "$HERE"/prep_env.sh
-
+    backup-state)
         if [ ! -d "$STATE_DIR" ]; then
             echo "State directory not found: $STATE_DIR" >&2
             exit 1
@@ -168,39 +213,34 @@ case "${1:-}" in
         ;;
 
     prereqs)
-        SUDO_CMD="sudo"
-        if command -v run0 >/dev/null 2>&1; then
-            SUDO_CMD="run0"
-        fi
-
         echo "================================================"
         echo "Detecting package manager"
         echo "================================================"
 
         if command -v apt-get >/dev/null 2>&1; then
             PKG_MANAGER="apt"
-            PKG_INSTALL="$SUDO_CMD apt-get install -y"
-            PKG_UPDATE="$SUDO_CMD apt-get update -qq"
+            PKG_INSTALL="$SUDO_COMMAND apt-get install -y"
+            PKG_UPDATE="$SUDO_COMMAND apt-get update -qq"
             echo "Detected: apt (Debian/Ubuntu)"
         elif command -v dnf >/dev/null 2>&1; then
             PKG_MANAGER="dnf"
-            PKG_INSTALL="$SUDO_CMD dnf install -y"
-            PKG_UPDATE="$SUDO_CMD dnf check-update"
+            PKG_INSTALL="$SUDO_COMMAND dnf install -y"
+            PKG_UPDATE="$SUDO_COMMAND dnf check-update"
             echo "Detected: dnf (Fedora/RHEL)"
         elif command -v pacman >/dev/null 2>&1; then
             PKG_MANAGER="pacman"
-            PKG_INSTALL="$SUDO_CMD pacman -S --noconfirm"
-            PKG_UPDATE="$SUDO_CMD pacman -Sy"
+            PKG_INSTALL="$SUDO_COMMAND pacman -S --noconfirm"
+            PKG_UPDATE="$SUDO_COMMAND pacman -Sy"
             echo "Detected: pacman (Arch)"
         elif command -v zypper >/dev/null 2>&1; then
             PKG_MANAGER="zypper"
-            PKG_INSTALL="$SUDO_CMD zypper install -y"
-            PKG_UPDATE="$SUDO_CMD zypper refresh"
+            PKG_INSTALL="$SUDO_COMMAND zypper install -y"
+            PKG_UPDATE="$SUDO_COMMAND zypper refresh"
             echo "Detected: zypper (openSUSE)"
         elif command -v apk >/dev/null 2>&1; then
             PKG_MANAGER="apk"
-            PKG_INSTALL="$SUDO_CMD apk add"
-            PKG_UPDATE="$SUDO_CMD apk update"
+            PKG_INSTALL="$SUDO_COMMAND apk add"
+            PKG_UPDATE="$SUDO_COMMAND apk update"
             echo "Detected: apk (Alpine)"
         elif command -v brew >/dev/null 2>&1; then
             PKG_MANAGER="brew"
@@ -252,8 +292,8 @@ case "${1:-}" in
             printf "Installing Docker and Docker Compose..."
             if install_docker; then
                 echo " done"
-                $SUDO_CMD systemctl enable docker 2>/dev/null || true
-                $SUDO_CMD systemctl start docker 2>/dev/null || true
+                $SUDO_COMMAND systemctl enable docker 2>/dev/null || true
+                $SUDO_COMMAND systemctl start docker 2>/dev/null || true
             else
                 echo ""
                 echo "Docker auto-install failed. Install manually:" >&2
@@ -339,8 +379,9 @@ case "${1:-}" in
         echo "Commands:"
         echo "  prereqs                   Install prerequisites (docker, yq, envsubst, jq, curl)"
         echo "  install                   Install and start all services"
-        echo "  restart <service>         Restart a specific service"
-        echo "  backupState               Back up state directory and VARS.sh"
+        echo "  restart <service>         Restart a single service"
+        echo "  list-domains              List all required subdomains"
+        echo "  backup-state               Back up state directory and VARS.sh"
         echo "  old-images                List Docker images older than 60 days"
         echo "  update-socket-proxy       Pull latest socket-proxy and restart if needed"
         echo "  update-traefik-plugins    Update Traefik plugin versions"

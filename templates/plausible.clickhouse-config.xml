@@ -1,9 +1,9 @@
 <clickhouse>
+    <listen_host>0.0.0.0</listen_host>
     <logger>
         <level>warning</level>
         <console>true</console>
     </logger>
-
     <query_log replace="1">
         <database>system</database>
         <table>query_log</table>
@@ -16,18 +16,14 @@
             SETTINGS ttl_only_drop_parts=1
         </engine>
     </query_log>
-
     <metric_log>
         <partition_by>event_date</partition_by>
         <ttl>event_date + INTERVAL 30 DAY DELETE</ttl>
     </metric_log>
-
     <asynchronous_metric_log>
         <partition_by>event_date</partition_by>
         <ttl>event_date + INTERVAL 30 DAY DELETE</ttl>
     </asynchronous_metric_log>
-
-    <!-- Stops unnecessary logging -->
     <query_thread_log remove="remove" />
     <text_log remove="remove" />
     <trace_log remove="remove" />

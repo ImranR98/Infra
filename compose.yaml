@@ -204,8 +204,7 @@ services:
         volumes:
             - $STATE_DIR/plausible/event_data:/var/lib/clickhouse
             - $STATE_DIR/plausible/event_logs:/var/log/clickhouse-server
-            - $STATE_DIR/plausible/config/logs.xml:/etc/clickhouse-server/config.d/logs.xml:ro
-            - $STATE_DIR/plausible/config/ipv4-only.xml:/etc/clickhouse-server/config.d/ipv4-only.xml:ro
+            - $STATE_DIR/plausible/config/clickhouse-config.xml:/etc/clickhouse-server/config.d/clickhouse-config.xml:ro
         environment:
             - CLICKHOUSE_SKIP_USER_SETUP=1
         ulimits:

@@ -17,12 +17,10 @@ Services include analytics (Plausible), file sharing (Send), media tools (MeTube
 compose.yaml                Service definitions (uses envsubst variables)
 template.VARS.sh            Template for user configuration and secrets
 luna.sh                     CLI entry point
-prep_env.sh                 Helper library (sourced by luna.sh)
 templates/
   authelia.config.yaml      Authelia configuration template
   traefik.dynamic-configuration.yaml  Traefik geoblock config
-  plausible.ipv4-only.xml   ClickHouse IPv4-only config
-  plausible.logs.xml        ClickHouse logging config
+  plausible.clickhouse-config.xml  ClickHouse config
 ```
 
 User-created file (gitignored):
@@ -59,7 +57,7 @@ Edit `VARS.sh` with your values:
 
 List all required subdomains:
 ```
-source prep_env.sh; findDomainsInSetup
+./luna.sh list-domains
 ```
 
 Create DNS records for each.
@@ -77,7 +75,7 @@ This creates the state directory structure, generates all config files, substitu
 Some services require manual initialization before they can be exposed publicly. When you re-run `./luna.sh install`, it asks whether to keep Authelia in front of these services. List them:
 
 ```
-source prep_env.sh; envsubst < templates/authelia.config.yaml | grep -Eo 'domain:.+# IGNORE INITIALLY' | awk '{print $2}'
+envsubst < templates/authelia.config.yaml | grep -Eo 'domain:.+# IGNORE INITIALLY' | awk '{print $2}'
 ```
 
 ## CLI Commands
@@ -87,7 +85,8 @@ source prep_env.sh; envsubst < templates/authelia.config.yaml | grep -Eo 'domain
 | `./luna.sh prereqs` | Install prerequisites |
 | `./luna.sh install` | Install/update all services |
 | `./luna.sh restart <service>` | Restart a single service |
-| `./luna.sh backupState` | Back up state directory and VARS.sh |
+| `./luna.sh list-domains` | List all required subdomains |
+| `./luna.sh backup-state` | Back up state directory and VARS.sh |
 | `./luna.sh old-images` | List Docker images older than 60 days |
 | `./luna.sh update-socket-proxy` | Pull latest socket-proxy, restart Luna if updated |
 | `./luna.sh update-traefik-plugins` | Update Traefik plugin versions |
