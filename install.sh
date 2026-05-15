@@ -12,7 +12,6 @@ grep -Eo '\$STATE_DIR[^:]+:' "$HERE_LX1A"/landscape.docker-compose.yaml | awk -F
     mkdir -p "$STATE_DIR/$(echo $dir | tail -c +12)" 2>/dev/null || : # May already exist with non-user permissions
 done
 mkdir -p "$STATE_DIR"/logtfy
-mkdir -p "$STATE_DIR"/prometheus/config
 mkdir -p "$STATE_DIR"/opencanary
 mkdir -p "$STATE_DIR"/filebrowser/config
 mkdir -p "$STATE_DIR"/filebrowser/database
@@ -102,15 +101,6 @@ fi
 if [ "$(stat -c '%U:%G' "$STATE_DIR/jitsi")" != "root:root" ]; then
     echo "chown-ing Jitsi directories..."
     $SUDO_COMMAND bash -c "chown root:root '$STATE_DIR/jitsi' && chown root:root '$STATE_DIR'/jitsi/*"
-fi
-if [ "$(stat -c '%u:%g' "$STATE_DIR/prometheus/config")" != "65534:65534" ]; then
-    echo "Creating Prometheus config..."
-    cat "$HERE_LX1A"/files/prometheus.yaml | envsubst | $SUDO_COMMAND tee "$STATE_DIR"/prometheus/config/prometheus.yaml
-    $SUDO_COMMAND chown -R 65534:65534 "$STATE_DIR/prometheus/config"
-fi
-if [ "$(stat -c '%u:%g' "$STATE_DIR/prometheus/data")" != "65534:65534" ]; then
-    echo "chown-ing Prometheus directory..."
-    $SUDO_COMMAND chown -R 65534:65534 "$STATE_DIR/prometheus/data"
 fi
 
 if [ ! -f "$STATE_DIR"/registry/auth/.htpasswd ]; then

@@ -224,8 +224,6 @@ services:
             - "--log.level=DEBUG"
             - "--accesslog=true"
             - "--accesslog.filePath=/var/log/traefik/access.log"
-            - "--metrics.prometheus=true"
-            - "--metrics.prometheus.buckets=0.1,0.3,1.2,5.0"
             - "--providers.docker=true"
             - "--providers.docker.exposedByDefault=false"
             - "--providers.file.filename=/etc/traefik/dynamic-configuration.yaml"
@@ -315,54 +313,6 @@ services:
             - "traefik.http.routers.crowdsec-dashboard.tls=true"
             - "traefik.http.routers.crowdsec-dashboard.middlewares=authelia@docker,geoblock@file"
             - "traefik.http.services.crowdsec-dashboard.loadbalancer.server.port=3000"
-        logging: *logging
-
-    # Grafana + Prometheus - Monitoring
-    prometheus:
-        image: prom/prometheus
-        container_name: prometheus
-        depends_on:
-            - traefik
-        volumes:
-            - $STATE_DIR/prometheus/config:/config
-            - $STATE_DIR/prometheus/data:/prometheus
-        command:
-            - "--config.file=/config/prometheus.yaml"
-            - "--storage.tsdb.path=/prometheus"
-            - "--storage.tsdb.retention.size=512MB"
-        networks:
-            - traefik
-        labels:
-            - "traefik.http.routers.prometheus.rule=Host(`prometheus.localhost`)"
-            - "traefik.http.routers.prometheus.service=prometheus"
-            - "traefik.http.services.prometheus.loadbalancer.server.port=9090"
-        restart: unless-stopped
-        logging: *logging
-
-    grafana: # Add the Prometheus datasource (https://prometheus:9090) then import this dashboard: https://grafana.com/grafana/dashboards/17346-traefik-official-standalone-dashboard/
-        image: grafana/grafana
-        container_name: grafana
-        depends_on:
-            - prometheus
-        volumes:
-            - grafana_data:/var/lib/grafana
-            - $STATE_DIR/grafana/provisioning:/etc/grafana/provisioning/
-        user: 1000:1000
-        environment:
-            GF_INSTALL_PLUGINS: grafana-piechart-panel
-        networks:
-            - traefik
-        labels:
-            - "traefik.enable=true"
-            - "traefik.http.routers.grafana.rule=Host(`grafana.$SERVICES_DOMAIN`)"
-            - "traefik.http.routers.grafana.entrypoints=websecure"
-            - "traefik.http.routers.grafana.tls.certresolver=le"
-            - "traefik.http.routers.grafana.tls=true"
-            - "traefik.http.routers.grafana.service=grafana"
-            - "traefik.http.routers.grafana.middlewares=authelia@docker,geoblock@file"
-            - "traefik.http.services.grafana.loadbalancer.server.port=3000"
-            - "traefik.docker.network=traefik"
-        restart: unless-stopped
         logging: *logging
 
     # Beszel - Local resource monitoring
@@ -993,7 +943,6 @@ networks:
 
 volumes:
     logtfy_tmp: {}
-    grafana_data: {} # For some reason this causes crashes if it is a bind mount
     ollama: {}
     ollama-webui: {} # Decided not to bind mount this
     navidrome-cache: {}
