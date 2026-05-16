@@ -1,0 +1,13 @@
+serverAddr = "$PROXY_HOST"
+serverPort = 7000
+auth.additionalScopes = ["HeartBeats", "NewWorkConns"]
+user = "${FRPC_USER}-preboot"
+metadatas.token = "$FRPC_PREBOOT_TOKEN"
+
+[[proxies]]
+name = "ssh-preboot"
+type = "tcp"
+localIP = "127.0.0.1"
+localPort = 22
+remotePort = 8887
+transport.useEncryption = true

@@ -1,0 +1,2 @@
+sol=$FRPC_TOKEN
+sol-preboot=$FRPC_PREBOOT_TOKEN

@@ -2,6 +2,8 @@
 
 Docker-based self-hosted infrastructure running web services behind Traefik.
 
+Supports 3 deployment targets: **luna**, **lens**, and **sol**.
+
 ## Architecture
 
 - **Traefik** — reverse proxy with automatic TLS via Let's Encrypt, country-based geoblocking, and a dashboard (localhost-only, accessible via SSH tunnel).
@@ -14,13 +16,19 @@ Services include analytics (Plausible), file sharing (Send), media tools (MeTube
 ## Files
 
 ```
-compose.yaml                Service definitions (uses envsubst variables)
-template.VARS.sh            Template for user configuration and secrets
-luna.sh                     CLI entry point
+compose.sh                  CLI entry point (takes [<target>] <command>)
+compose/
+  luna.compose.yaml         Service definitions for luna
+  lens.compose.yaml         Service definitions for lens
+  sol.compose.yaml          Service definitions for sol
+vars/
+  VARS.luna.sh              Template for luna user configuration
+  VARS.lens.sh              Template for lens user configuration
+  VARS.sol.sh               Template for sol user configuration
 templates/
-  authelia.config.yaml      Authelia configuration template
-  traefik.dynamic-configuration.yaml  Traefik dynamic config (middlewares)
-  plausible.clickhouse-config.xml  ClickHouse config
+  luna/                     Template config files for luna services
+  lens/                     Template config files for lens services
+  sol/                      Template config files for sol services
 ```
 
 User-created file (gitignored):
@@ -38,13 +46,14 @@ VARS.sh
 
 Install prerequisites:
 ```
-./luna.sh prereqs
+./compose.sh prereqs
 ```
 
 ### 2. Configure
 
+Pick a target and copy its VARS template:
 ```
-cp template.VARS.sh VARS.sh
+cp vars/VARS.luna.sh VARS.sh
 ```
 
 Edit `VARS.sh` with your values:
@@ -54,9 +63,9 @@ Edit `VARS.sh` with your values:
 
 ### 3. DNS
 
-List all required subdomains:
+List all required subdomains for your target:
 ```
-./luna.sh list-domains
+./compose.sh luna list-domains
 ```
 
 Create DNS records for each.
@@ -64,10 +73,12 @@ Create DNS records for each.
 ### 4. Install
 
 ```
-./luna.sh install
+./compose.sh luna install
 ```
 
 This creates the state directory structure, generates all config files, substitutes environment variables, and installs/starts the `luna` systemd service.
+
+To target a different deployment, replace `luna` with `lens` or `sol`.
 
 ### 5. Post-install
 
@@ -75,11 +86,28 @@ By default, all services are behind Authelia authentication. The first time you 
 
 ## CLI Commands
 
-Run `./luna.sh` to see all CLI commands.
+```
+Usage: ./compose.sh [<target>] <command>
+
+Targets:
+  luna                      (default)
+  lens
+  sol
+
+Commands:
+  prereqs                   Install prerequisites (docker, yq, envsubst, jq, curl)
+  install                   Install and start all services
+  restart <service>         Restart a single service
+  list-domains              List all required subdomains
+  backup-state              Back up state directory and VARS.sh
+  old-images                List Docker images older than 60 days
+  update-socket-proxy       Pull latest socket-proxy and restart if needed
+  update-traefik-plugins    Update Traefik plugin versions
+```
 
 ## Maintenance
 
-- All containers are managed by the `luna` systemd service: `systemctl [start\|stop\|restart\|status] luna`
+- All containers are managed by a systemd service per target: `systemctl [start|stop|restart|status] luna`
 - Traefik dashboard: `ssh -L 8080:localhost:8080 user@your-server` then open `http://localhost:8080`
 - State and data live in `$STATE_DIR` (default: `./state/`). This directory is auto-generated and should not be manually modified.
-- Back up state and secrets with `./luna.sh backup-state`
+- Back up state and secrets with `./compose.sh backup-state`

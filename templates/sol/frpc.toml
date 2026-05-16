@@ -1,0 +1,36 @@
+serverAddr = "$PROXY_HOST"
+serverPort = 7000
+auth.additionalScopes = ["HeartBeats", "NewWorkConns"]
+user = "$FRPC_USER"
+metadatas.token = "$FRPC_TOKEN"
+
+webServer.addr = "127.0.0.1"
+webServer.port = 7400
+webServer.user = "frpc"
+webServer.password = "$FRPC_ADMIN_PASSWORD"
+
+[[proxies]]
+name = "ssh"
+type = "tcp"
+localIP = "127.0.0.1"
+localPort = 22
+remotePort = 8888
+transport.useEncryption = true
+
+[[proxies]]
+name = "http"
+type = "tcp"
+localIP = "127.0.0.1"
+localPort = 80
+remotePort = 80
+transport.proxyProtocolVersion = "v2"
+transport.useEncryption = true
+
+[[proxies]]
+name = "https"
+type = "tcp"
+localIP = "127.0.0.1"
+localPort = 443
+remotePort = 443
+transport.proxyProtocolVersion = "v2"
+transport.useEncryption = true
