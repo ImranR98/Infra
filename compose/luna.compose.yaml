@@ -183,7 +183,6 @@ services:
             start_period: 1m
         networks:
             - traefik
-        user: "$MY_UID:$MY_UID"
         logging: *logging
     plausible_events_db:
         image: clickhouse/clickhouse-server:24.12-alpine
