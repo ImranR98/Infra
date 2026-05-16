@@ -443,7 +443,7 @@ services:
     logtfy:
         image: imranrdev/logtfy
         container_name: logtfy
-        hostname: $HOSTNAME
+        hostname: $TARGET
         restart: unless-stopped
         mem_limit: 256M
         depends_on:

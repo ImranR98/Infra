@@ -16,7 +16,7 @@ services:
     logtfy:
         image: imranrdev/logtfy:latest
         container_name: logtfy
-        hostname: $HOSTNAME
+        hostname: $TARGET
         network_mode: host
         restart: unless-stopped
         mem_limit: 256M

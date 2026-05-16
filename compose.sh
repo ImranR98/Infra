@@ -38,8 +38,7 @@ if [ -f "$HERE/VARS.sh" ]; then
         export MY_UID="$UID"
     fi
     export DOCKER_GID="$(grep docker /etc/group | awk -F: '{print $3}')"
-    export HOSTNAME="$(hostname)"
-    export FRPC_USER="${HOSTNAME,,}"
+    export FRPC_USER="${TARGET,,}"
 elif [ -n "$COMMAND" ] && [ "$COMMAND" != "prereqs" ] && [ "$COMMAND" != "list-domains" ] && [ "$COMMAND" != "old-images" ] && [ "$COMMAND" != "update-socket-proxy" ] && [ "$COMMAND" != "update-traefik-plugins" ]; then
     echo "No VARS.sh found. Create VARS.sh with variables from vars/VARS.common.sh and vars/VARS.$TARGET.sh." >&2
     exit 1
