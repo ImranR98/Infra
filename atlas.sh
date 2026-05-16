@@ -3,6 +3,10 @@ set -euo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 
+get_sudo_cmd() {
+    if command -v run0 &>/dev/null; then echo "run0"; else echo "sudo"; fi
+}
+
 case "${1:-}" in
     luna|lens|sol)
         export TARGET="$1"
@@ -135,10 +139,13 @@ RestartSec=30
 [Install]
 WantedBy=multi-user.target
 EOF
-        sudo bash -c "mv '$STATE_DIR'/$TARGET.service /etc/systemd/system/$TARGET.service && \
-            chcon -t systemd_unit_file_t /etc/systemd/system/$TARGET.service 2>/dev/null || true && \
-            systemctl daemon-reload && systemctl enable $TARGET.service && \
-            systemctl stop $TARGET.service 2>/dev/null || true && sleep 5 && systemctl start $TARGET.service"
+        SU=$(get_sudo_cmd)
+        $SU bash -c "mv '$STATE_DIR'/$TARGET.service /etc/systemd/system/$TARGET.service"
+        command -v chcon &>/dev/null && $SU chcon -t systemd_unit_file_t /etc/systemd/system/$TARGET.service 2>/dev/null || true
+        $SU systemctl daemon-reload && $SU systemctl enable $TARGET.service
+        $SU systemctl stop $TARGET.service 2>/dev/null || true
+        sleep 5
+        $SU systemctl start $TARGET.service
         echo "Done."
 
         echo "=== Finished ==="
@@ -160,7 +167,7 @@ EOF
         echo "=== Check if root partition is LUKS-encrypted ==="
         if bash "$HERE"/scripts/check_root_luks.sh; then
             echo "LUKS detected. Installing preboot FRPC and dracut-crypt-ssh..."
-            sudo bash "$HERE"/scripts/dracut-crypt-ssh.install.sh "$USER"
+            $(get_sudo_cmd) bash "$HERE"/scripts/dracut-crypt-ssh.install.sh "$USER"
             bash "$HERE"/scripts/frpc-preboot.install.sh "$STATE_DIR"
             echo ""
             echo "Preboot FRPC installed. The initramfs has been rebuilt."
@@ -204,7 +211,7 @@ EOF
 
         if [ "$OLDSPHASH" != "$NEWSPHASH" ]; then
             read -p "New image pulled. Press enter to restart $TARGET..." NOTHING
-            sudo systemctl restart "$TARGET"
+            $(get_sudo_cmd) systemctl restart "$TARGET"
         else
             echo "wollomatic/socket-proxy:1 is already the latest (only the :1 tag is tracked)."
         fi
@@ -272,13 +279,21 @@ EOF
         ;;
 
     prereqs)
-        sudo apt-get update -qq
+        SU=$(get_sudo_cmd)
+        PKG_MGR=$(detect_pkgmgr)
+
+        case "$PKG_MGR" in
+            apt) $SU apt-get update -qq ;;
+            dnf) $SU dnf check-update -q || true ;;
+            rpm-ostree) $SU rpm-ostree refresh-md ;;
+        esac
 
         if ! command -v docker >/dev/null 2>&1 || ! docker compose version >/dev/null 2>&1; then
             printf "Installing Docker and Docker Compose..."
-            sudo apt-get install -y docker.io docker-compose-v2 && echo " done" || { echo ""; echo "Docker install failed. Install manually: https://docs.docker.com/engine/install/" >&2; }
-            sudo systemctl enable docker 2>/dev/null || true
-            sudo systemctl start docker 2>/dev/null || true
+            ensure_docker_repo "$PKG_MGR"
+            install_pkgs "$PKG_MGR" docker.io docker-compose-v2 && echo " done" || { echo ""; echo "Docker install failed. Install manually: https://docs.docker.com/engine/install/" >&2; }
+            $SU systemctl enable docker 2>/dev/null || true
+            $SU systemctl start docker 2>/dev/null || true
         else
             echo "Docker already installed."
         fi
@@ -291,7 +306,7 @@ EOF
                     envsubst) pkg="gettext-base" ;;
                     *) pkg="$tool" ;;
                 esac
-                sudo apt-get install -y "$pkg" && echo " done" || { echo " failed"; ALL_OK=false; }
+                install_pkgs "$PKG_MGR" "$pkg" && echo " done" || { echo " failed"; ALL_OK=false; }
             else
                 echo "$tool already installed."
             fi

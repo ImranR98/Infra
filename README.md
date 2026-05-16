@@ -1,27 +1,39 @@
-# Luna
+# Atlas
 
-Docker-based self-hosted infrastructure running web services behind Traefik.
+Docker-based self-hosted infrastructure with 3 deployment targets: **luna**, **lens**, and **sol**.
 
-Supports 3 deployment targets: **luna**, **lens**, and **sol**.
+```
+  sol (home, K3s)          lens (relay)           luna (cloud VPS)
+ ┌──────────────────┐   ┌──────────────┐   ┌─────────────────────┐
+ │   k3s (services)  │   │   frps       │   │  traefik + authelia  │
+ │   (separate repo) │──▶│   logtfy     │   │  plausible, send,    │
+ │   frpc (this repo)│   └──────────────┘   │  metube, isbn, ...   │
+ └──────────────────┘                       │  logtfy, strelaysrv  │
+                                            │  dockerproxy,        │
+                                            │  watchtower          │
+                                            └─────────────────────┘
+```
 
-## Architecture
+## Targets
 
-- **Traefik** — reverse proxy with automatic TLS via Let's Encrypt, country-based geoblocking, and a dashboard (localhost-only, accessible via SSH tunnel).
-- **Authelia** — authentication and 2FA middleware applied at the Traefik entrypoint level. All HTTPS traffic is verified by Authelia; services are exposed by adding bypass rules in Authelia's access control config.
-- **Watchtower** — automatic container image updates.
-- **Docker socket proxy** — two instances isolate Docker socket access with different permission levels (read-only for Traefik, read-write for Watchtower).
+| Target | Role | Services (in this repo) |
+|--------|------|------------------------|
+| **luna** | Cloud VPS — standalone compose stack | Traefik, Authelia, Plausible, Send, MeTube, PixelNtfy, ISBN lookup, logtfy, Syncthing relay, dockerproxy, watchtower |
+| **lens** | Relay server — FRP tunnel endpoint for Sol | FRP server (multi-user), logtfy |
+| **sol** | Home server — FRPC client tunnels back to Lens (services run on K3s in a separate repo) | FRP client |
 
-Services include analytics (Plausible), file sharing (Send), media tools (MeTube), utilities (ISBN lookup, tracking pixels), and more.
+Luna is a low-powered cloud VPS running its own compose stack behind Traefik with Authelia 2FA — it is independent from the Sol/Lens system. Sol is the high-powered home server where most services run (K3s, separate repo); this repo handles its FRPC tunnel back to Lens.
 
 ## Files
 
 ```
-compose.sh                  CLI entry point (takes [<target>] <command>)
+atlas.sh                    CLI entry point (takes <target> <command>)
 compose/
   luna.compose.yaml         Service definitions for luna
   lens.compose.yaml         Service definitions for lens
   sol.compose.yaml          Service definitions for sol
 vars/
+  VARS.common.sh            Shared variables across all targets
   VARS.luna.sh              Template for luna user configuration
   VARS.lens.sh              Template for lens user configuration
   VARS.sol.sh               Template for sol user configuration
@@ -29,6 +41,11 @@ templates/
   luna/                     Template config files for luna services
   lens/                     Template config files for lens services
   sol/                      Template config files for sol services
+scripts/
+  check_root_luks.sh        Check if root partition is LUKS-encrypted
+  dracut-crypt-ssh.install.sh  Install dracut-crypt-ssh for remote LUKS unlock
+  frpc-preboot.install.sh   Install preboot FRPC in initramfs
+state/                      Runtime state (auto-generated, gitignored)
 ```
 
 User-created file (gitignored):
@@ -36,67 +53,68 @@ User-created file (gitignored):
 VARS.sh
 ```
 
+## Prerequisites
+
+- A Linux server with `systemd` and one of: `apt`, `dnf`, or `rpm-ostree`
+- Required ports depend on the target (see the VARS template for your target)
+
+Install prerequisites (Docker, yq, envsubst, jq, curl):
+```
+./atlas.sh prereqs
+```
+
 ## Setup
 
-### 1. Prerequisites
-
-- Ubuntu server (or anything with `sudo`, `apt`, and `systemd`)
-- A domain with DNS A/AAAA records pointing subdomains to your server
-- Inbound access on **ports 80** (HTTP) and **443** (HTTPS) for web traffic, and **ports 22067/22070** for the Syncthing relay server
-
-Install prerequisites:
-```
-./compose.sh prereqs
-```
-
-### 2. Configure
+### 1. Configure
 
 Pick a target and copy its VARS template:
 ```
 cp vars/VARS.luna.sh VARS.sh
 ```
 
-Edit `VARS.sh` with your values:
-- `SERVICES_DOMAIN`, `DOMAIN_OWNER_EMAIL`
-- Authelia encryption keys and secrets
-- Plausible keys, PixelNtfy topic, etc.
+Edit `VARS.sh` with your values (each VARS template documents its required variables).
 
-### 3. DNS
+### 2. DNS
 
 List all required subdomains for your target:
 ```
-./compose.sh luna list-domains
+./atlas.sh luna list-domains
 ```
 
 Create DNS records for each.
 
-### 4. Install
+### 3. Install
 
 ```
-./compose.sh luna install
+./atlas.sh luna install
 ```
 
-This creates the state directory structure, generates all config files, substitutes environment variables, and installs/starts the `luna` systemd service.
+This creates the state directory structure, generates all config files, substitutes environment variables, and installs/starts the target's systemd service.
 
 To target a different deployment, replace `luna` with `lens` or `sol`.
 
-### 5. Post-install
+### 4. Post-install (luna only)
 
-By default, all services are behind Authelia authentication. The first time you run `install`, lines ending with `# IGNORE INITIALLY` in the Authelia config are commented out — this keeps new services protected until you've done initial setup. After doing so, re-run `install` to expose it without authentication.
+By default, all services are behind Authelia authentication. The first time you run `install` on luna, lines ending with `# IGNORE INITIALLY` in the Authelia config are commented out — this keeps new services protected until you've done initial setup. After doing so, re-run `install` to expose them without authentication.
+
+## Configuration
+
+VARS templates are at `vars/VARS.<target>.sh` with a shared base at `vars/VARS.common.sh`. Copy the target's template to `VARS.sh` and fill in the values — each template documents its required variables.
 
 ## CLI Commands
 
 ```
-Usage: ./compose.sh [<target>] <command>
+Usage: ./atlas.sh <target> <command>
 
 Targets:
-  luna                      (default)
+  luna
   lens
   sol
 
 Commands:
   prereqs                   Install prerequisites (docker, yq, envsubst, jq, curl)
   install                   Install and start all services
+  install-preboot           Install preboot FRPC in initramfs (for remote LUKS unlock)
   restart <service>         Restart a single service
   list-domains              List all required subdomains
   backup-state              Back up state directory and VARS.sh
@@ -107,7 +125,6 @@ Commands:
 
 ## Maintenance
 
-- All containers are managed by a systemd service per target: `systemctl [start|stop|restart|status] luna`
-- Traefik dashboard: `ssh -L 8080:localhost:8080 user@your-server` then open `http://localhost:8080`
-- State and data live in `$STATE_DIR` (default: `./state/`). This directory is auto-generated and should not be manually modified.
-- Back up state and secrets with `./compose.sh backup-state`
+- All containers are managed by a systemd service per target: `systemctl [start|stop|restart|status] <target>`
+- State and data live in `state/` (relative to the repo root). This directory is auto-generated and should not be manually modified.
+- Back up state and secrets with `./atlas.sh <target> backup-state`
