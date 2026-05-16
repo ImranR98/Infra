@@ -11,7 +11,7 @@
                 "id": "ntfy_official",
                 "host": "https://ntfy.sh",
                 "authHeader": null,
-                "topicPrefix": "${HOSTNAME}_services_3aea16d391fbc6dfefa5d80a_"
+                "topicPrefix": "${NTFY_FALLBACK_TOPIC}"
             }
         ],
         "defaultConfig": "ntfy_home",

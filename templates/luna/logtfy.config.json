@@ -6,6 +6,12 @@
                 "host": "https://ntfy.$SERVICES_DOMAIN",
                 "authHeader": "Bearer $NTFY_SERVICE_USER_TOKEN",
                 "topicPrefix": "${HOSTNAME}_services_"
+            },
+            {
+                "id": "ntfy_official",
+                "host": "https://ntfy.sh",
+                "authHeader": null,
+                "topicPrefix": "${NTFY_FALLBACK_TOPIC}"
             }
         ],
         "defaultConfig": "ntfy_home",
