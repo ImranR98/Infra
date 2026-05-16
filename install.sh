@@ -15,7 +15,6 @@ mkdir -p "$STATE_DIR"/logtfy
 mkdir -p "$STATE_DIR"/opencanary
 mkdir -p "$STATE_DIR"/filebrowser/config
 mkdir -p "$STATE_DIR"/filebrowser/database
-mkdir -p "$STATE_DIR"/frpc
 mkdir -p "$STATE_DIR"/beszel
 echo "Done."
 
@@ -73,8 +72,6 @@ if [ ! -f "$STATE_DIR"/traefik/mtls/cacert.pem ] || [ ! -f "$STATE_DIR"/traefik/
     echo "Generating mTLS client cert file..."
     openssl pkcs12 -export -out "$STATE_DIR"/traefik/mtls/mtls-client.p12 -inkey "$STATE_DIR"/traefik/mtls/cakey.pem -in "$STATE_DIR"/traefik/mtls/cacert.pem
 fi
-bash "$HERE_LX1A"/files/frpc.generate.sh
-mv "$HERE_LX1A"/files/frpc.toml "$STATE_DIR"/frpc
 if [ ! -d "$STATE_DIR"/crowdsec/dashboard-db/metabase.db ]; then
     wget -q https://crowdsec-statics-assets.s3-eu-west-1.amazonaws.com/metabase_sqlite.zip -O "$STATE_DIR"/crowdsec/dashboard-db/metabase.db.zip
     unzip -q "$STATE_DIR"/crowdsec/dashboard-db/metabase.db.zip -d "$STATE_DIR"/crowdsec/dashboard-db/
@@ -173,20 +170,6 @@ $SUDO_COMMAND bash -c "mv "$STATE_DIR"/landscape.service /etc/systemd/system/lan
     chcon -t systemd_unit_file_t /etc/systemd/system/landscape.service && \
     systemctl daemon-reload && systemctl enable landscape.service && \
     (systemctl stop landscape.service || :) && sleep 5 && systemctl start landscape.service"
-echo "Done."
-
-printTitle "Install and start the FRPC service"
-cat "$HERE_LX1A"/frpc.docker-compose.yaml | envsubst >"$STATE_DIR"/frpc.docker-compose.yaml
-
-generateComposeService frpc 1000 >"$STATE_DIR"/frpc.service
-awk -v SCRIPT_DIR="$STATE_DIR" '{gsub("path_to_here", SCRIPT_DIR); print}' "$STATE_DIR"/frpc.service >"$STATE_DIR"/frpc.service.temp
-awk -v MY_UID="$(id -u)" '{gsub("1000", MY_UID); print}' "$STATE_DIR"/frpc.service.temp >"$STATE_DIR"/frpc.service
-rm "$STATE_DIR"/frpc.service.temp
-$SUDO_COMMAND bash -c "mv "$STATE_DIR"/frpc.service /etc/systemd/system/frpc.service && \
-    chcon -t systemd_unit_file_t /etc/systemd/system/frpc.service && \
-    systemctl daemon-reload && systemctl enable frpc.service && \
-    systemctl start frpc.service"
-echo "Note: FRPC will not be automatically restarted due to the risk of failing to reconnect. You must restart it manually."
 echo "Done."
 
 printTitle "Finished"

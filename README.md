@@ -12,9 +12,6 @@ Docker-based setup for my self-hosted apps/services.
     - [CrowdSec](https://www.crowdsec.net/)
     - [Geoblock](https://plugins.traefik.io/plugins/62d6ce04832ba9805374d62c/geo-block) (for specific apps)
     - [mTLS](https://doc.traefik.io/traefik/https/tls/#client-authentication-mtls) (for specific apps)
-- The home server has no public IP/ports, so requests to it are tunneled through a small cloud-based proxy server.
-    - Request proxying is done with [FRP](https://github.com/fatedier/frp).
-    - This has the additional benefit of hiding the home server's IP as all app domain/subdomain DNS entries point to the cloud proxy.
 
 ## Diagram
 
@@ -24,10 +21,6 @@ Docker-based setup for my self-hosted apps/services.
 
 ## Files
 
-- Services are defined in Docker Compose files. Specifically:
-    - `landscape.docker-compose.yaml`: Defines all services that run on the server (except FRPC).
-    - `frpc.docker-compose.yaml`: Defines the FRPC service (this is separate because starting/stopping FRPC can be much riskier than for other services).
-    - `landscape-remote.docker-compose.yaml`: Defines all services that run on the remote proxy.
 - In order to have multiple instances of this setup (staging, production, etc.) and protect secret values from being checked in to Git, all environment-specific configuration and/or sensitive information is stored in environment-specific Git-ignored variable files.
     - `template.VARS.sh`: Example file used as a starting point for a user to define their own `VARS.sh` containing environment-specific variables and secrets.
     - For the install script to run, at least one of the following user-defined files must exist (listed in order of preference):
@@ -37,7 +30,6 @@ Docker-based setup for my self-hosted apps/services.
 - Setup scripts:
     - `install.sh` and `install_remote.sh`: Scripts used to install and start services on the server and remote proxy respectively.
     - `simple_restart.sh`: Restart a running service.
-    - `update_frp.sh`: Check for FRPC/FRPS updates and install them if needed (auto-updating these is too risky).
 - Other files:
     - `fixed.VARS.sh`: Hardcoded variables used by various scripts.
     - `prep_env.sh`: Helper script used by various other scripts.
@@ -81,5 +73,4 @@ Docker-based setup for my self-hosted apps/services.
     - At this stage, you must manually complete the setup process for each of these apps. For a list of these apps' domains, run the following command: `source prep_env.sh; cat files/authelia.config.yaml | envsubst | grep -Eo 'domain:.+# IGNORE INITIALLY' | awk '{print $2}'`
     - Once finished, re-run `install.sh`. This time, the Authelia middleware will not apply to those apps.
 8. Setup is complete.
-    - Remember to occasionally run `./update_frp.sh` to keep FRP up to date.
     - Remember to occasionally run and `./install_remote.sh updateNonProxy` to keep other services on the proxy server up to date (the proxy server does not run Watchtower).
