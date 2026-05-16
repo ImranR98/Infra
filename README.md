@@ -1,28 +1,25 @@
 # Atlas
 
-Docker-based self-hosted infrastructure with 3 deployment targets: **luna**, **lens**, and **sol**.
+Self-hosted infrastructure with 3 deployment targets: **luna**, **lens**, and **sol**.
 
 ```
-  sol (home, K3s)          lens (relay)           luna (cloud VPS)
- ┌──────────────────┐   ┌──────────────┐   ┌─────────────────────┐
- │   k3s (services)  │   │   frps       │   │  traefik + authelia  │
- │   (separate repo) │──▶│   logtfy     │   │  plausible, send,    │
- │   frpc (this repo)│   └──────────────┘   │  metube, isbn, ...   │
- └──────────────────┘                       │  logtfy, strelaysrv  │
-                                            │  dockerproxy,        │
-                                            │  watchtower          │
-                                            └─────────────────────┘
+  lens (small VPS)    sol (powerful home server)             luna (medium VPS)
+ ┌────────────┐      ┌───────────────────────────────┐      ┌──────────────────────┐
+ │   frps     │      │   several services (in K3s)   │      │   several services   │
+ │   logtfy   │────▶│   frpc                        │      └──────────────────────┘
+ └────────────┘      └───────────────────────────────┘      
+               
 ```
 
 ## Targets
 
-| Target | Role | Services (in this repo) |
+| Target | Role | Services |
 |--------|------|------------------------|
 | **luna** | Cloud VPS — standalone compose stack | Traefik, Authelia, Plausible, Send, MeTube, PixelNtfy, ISBN lookup, logtfy, Syncthing relay, dockerproxy, watchtower |
 | **lens** | Relay server — FRP tunnel endpoint for Sol | FRP server (multi-user), logtfy |
-| **sol** | Home server — FRPC client tunnels back to Lens (services run on K3s in a separate repo) | FRP client |
+| **sol** | Home server — FRPC client tunnels back to Lens (services run on K3s, not Docker Compose) | FRP client |
 
-Luna is a low-powered cloud VPS running its own compose stack behind Traefik with Authelia 2FA — it is independent from the Sol/Lens system. Sol is the high-powered home server where most services run (K3s, separate repo); this repo handles its FRPC tunnel back to Lens.
+Luna is a low-powered cloud VPS running its own compose stack behind Traefik with Authelia 2FA — it is independent from the Sol/Lens system. Sol is the high-powered home server where most services run (in a K3s cluster); it is exposed to the internet via an FRPC tunnel back to Lens.
 
 ## Files
 
