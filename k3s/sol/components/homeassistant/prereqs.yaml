@@ -1,0 +1,297 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: homeassistant-config-pvc
+  namespace: apps
+spec:
+  storageClassName: longhorn
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mosquitto-data-pvc
+  namespace: apps
+spec:
+  storageClassName: longhorn
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: wyoming-whisper-pvc
+  namespace: apps
+spec:
+  storageClassName: longhorn
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 4Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: wyoming-piper-pvc
+  namespace: apps
+spec:
+  storageClassName: longhorn
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 4Gi
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mosquitto-config
+  namespace: apps
+data:
+  mosquitto.conf: |
+    persistence true
+    persistence_location /mosquitto/data/
+    allow_anonymous false
+    password_file /mosquitto/config/password_file
+    listener 1883
+    listener 8883
+      cafile /mosquitto/certs/ca.crt
+      certfile /mosquitto/certs/tls.crt
+      keyfile /mosquitto/certs/tls.key
+      require_certificate false
+    listener 9001
+      protocol websockets
+    log_type all
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: mosquitto-password
+  namespace: apps
+type: Opaque
+stringData:
+  password_file: $MOSQUITTO_CREDENTIALS
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: mosquitto-tls
+  namespace: apps
+spec:
+  secretName: mosquitto-tls
+  duration: 2160h
+  renewBefore: 360h
+  issuerRef:
+    name: ca-issuer
+    kind: ClusterIssuer
+  dnsNames:
+    - mosquitto.apps.svc.cluster.local
+    - $MAIN_NODE_NAME_LOWERCASE
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mosquitto
+  namespace: apps
+  annotations:
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: mosquitto
+  template:
+    metadata:
+      labels:
+        app: mosquitto
+    spec:
+      securityContext:
+      containers:
+        - name: mosquitto
+          image: eclipse-mosquitto:2.0.22-openssl
+          securityContext:
+            allowPrivilegeEscalation: false
+          ports:
+            - containerPort: 1883
+            - containerPort: 8883
+              hostPort: 8883
+            - containerPort: 9001
+              hostPort: 9001
+          readinessProbe:
+            tcpSocket:
+              port: 1883
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+            initialDelaySeconds: 10
+          resources:
+            limits:
+              memory: 2Gi
+            requests:
+              memory: 128Mi
+          volumeMounts:
+            - name: mosquitto-data
+              mountPath: /mosquitto/data
+            - name: mosquitto-config
+              mountPath: /mosquitto/config/mosquitto.conf
+              subPath: mosquitto.conf
+            - name: mosquitto-password
+              mountPath: /mosquitto/config/password_file
+              subPath: password_file
+            - name: mosquitto-tls
+              mountPath: /mosquitto/certs
+              readOnly: true
+      volumes:
+        - name: mosquitto-data
+          persistentVolumeClaim:
+            claimName: mosquitto-data-pvc
+        - name: mosquitto-config
+          configMap:
+            name: mosquitto-config
+        - name: mosquitto-password
+          secret:
+            secretName: mosquitto-password
+            defaultMode: 0644
+        - name: mosquitto-tls
+          secret:
+            secretName: mosquitto-tls
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mosquitto
+  namespace: apps
+spec:
+  type: ClusterIP
+  selector:
+    app: mosquitto
+  ports:
+    - port: 1883
+      targetPort: 1883
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: wyoming-whisper
+  namespace: apps
+  annotations:
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: wyoming-whisper
+  template:
+    metadata:
+      labels:
+        app: wyoming-whisper
+    spec:
+      securityContext:
+      containers:
+        - name: wyoming-whisper
+          image: rhasspy/wyoming-whisper:3.1.0
+          securityContext:
+            allowPrivilegeEscalation: false
+          args: ["--model", "small-int8", "--language", "en"]
+          ports:
+            - containerPort: 10300
+          readinessProbe:
+            tcpSocket:
+              port: 10300
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+          resources:
+            limits:
+              memory: 2Gi
+            requests:
+              memory: 128Mi
+          volumeMounts:
+            - name: whisper-data
+              mountPath: /data
+      volumes:
+        - name: whisper-data
+          persistentVolumeClaim:
+            claimName: wyoming-whisper-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: wyoming-whisper
+  namespace: apps
+spec:
+  type: ClusterIP
+  selector:
+    app: wyoming-whisper
+  ports:
+    - port: 10300
+      targetPort: 10300
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: wyoming-piper
+  namespace: apps
+  annotations:
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: wyoming-piper
+  template:
+    metadata:
+      labels:
+        app: wyoming-piper
+    spec:
+      securityContext:
+      containers:
+        - name: wyoming-piper
+          image: rhasspy/wyoming-piper:2.2.2
+          securityContext:
+            allowPrivilegeEscalation: false
+          args: ["--voice", "en_US-lessac-medium"]
+          ports:
+            - containerPort: 10200
+          readinessProbe:
+            tcpSocket:
+              port: 10200
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+          resources:
+            limits:
+              memory: 2Gi
+            requests:
+              memory: 128Mi
+          volumeMounts:
+            - name: piper-data
+              mountPath: /data
+      volumes:
+        - name: piper-data
+          persistentVolumeClaim:
+            claimName: wyoming-piper-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: wyoming-piper
+  namespace: apps
+spec:
+  type: ClusterIP
+  selector:
+    app: wyoming-piper
+  ports:
+    - port: 10200
+      targetPort: 10200

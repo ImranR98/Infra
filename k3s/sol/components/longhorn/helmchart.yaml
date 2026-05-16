@@ -1,0 +1,27 @@
+apiVersion: helm.cattle.io/v1
+kind: HelmChart
+metadata:
+  name: longhorn-install
+  namespace: kube-system
+spec:
+  chart: longhorn
+  repo: https://charts.longhorn.io
+  failurePolicy: abort
+  targetNamespace: longhorn-system
+  createNamespace: true
+  version: 1.11.2
+  valuesContent: |-
+    persistence:
+      defaultClassReplicaCount: 1
+      reclaimPolicy: "Retain"
+    defaultSettings:
+      defaultReplicaCount: "1"
+      defaultDataPath: "/var/lib/rancher/longhorn"
+      storageMinimalAvailablePercentage: 5
+      storageOverProvisioningPercentage: "200"
+      replicaSoftAntiAffinity: true
+    resources:
+      limits:
+        memory: 2Gi
+      requests:
+        memory: 128Mi

@@ -1,0 +1,45 @@
+---
+apiVersion: helm.cattle.io/v1
+kind: HelmChart
+metadata:
+  name: jellyfin
+  namespace: apps
+spec:
+  chart: jellyfin
+  repo: https://jellyfin.github.io/jellyfin-helm
+  failurePolicy: abort
+  targetNamespace: apps
+  createNamespace: false
+  version: 3.2.0
+  valuesContent: |-
+    persistence:
+      config:
+        existingClaim: jellyfin-config-pvc
+      media:
+        enabled: false
+
+    volumes:
+      - name: tv
+        persistentVolumeClaim:
+          claimName: jellyfin-tv-pvc
+      - name: youtube
+        persistentVolumeClaim:
+          claimName: jellyfin-youtube-pvc
+
+    volumeMounts:
+      - name: tv
+        mountPath: /media/TV
+        readOnly: true
+      - name: youtube
+        mountPath: /media/YouTube
+        readOnly: true
+
+    resources:
+      limits:
+        memory: 2Gi
+      requests:
+        memory: 128Mi
+    podSecurityContext:
+      fsGroup: $MY_UID
+    containerSecurityContext:
+      allowPrivilegeEscalation: false

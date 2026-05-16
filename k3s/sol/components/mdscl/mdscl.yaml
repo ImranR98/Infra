@@ -1,0 +1,161 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mdscl-camera
+  namespace: syncthing
+  annotations:
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: mdscl-camera
+  template:
+    metadata:
+      labels:
+        app: mdscl-camera
+        app.kubernetes.io/component: mdscl
+    spec:
+      securityContext:
+        fsGroup: $MY_UID
+      containers:
+        - name: mdscl-camera
+          image: imranrdev/media-date-standardize-copy-loop:latest@sha256:d6e7368ab0846e01049fd62cc645e146bfc9c5a9804430dd4f43fc503ef373b3
+          securityContext:
+            runAsUser: $MY_UID
+            runAsGroup: $MY_UID
+            allowPrivilegeEscalation: false
+          env:
+            - name: NTFY_URL
+              value: "http://ntfy.base.svc.cluster.local:3000/${MAIN_NODE_NAME_LOWERCASE}_services_mdscl_errors"
+            - name: NTFY_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: mdscl-secret
+                  key: NTFY_SERVICE_USER_TOKEN
+          resources:
+            limits:
+              memory: 2Gi
+            requests:
+              memory: 128Mi
+          volumeMounts:
+            - name: mdscl-camera-src
+              mountPath: /mdscl/source
+            - name: mdscl-camera-dst
+              mountPath: /mdscl/destination
+      volumes:
+        - name: mdscl-camera-src
+          persistentVolumeClaim:
+            claimName: mdscl-camera-src-pvc
+        - name: mdscl-camera-dst
+          persistentVolumeClaim:
+            claimName: mdscl-camera-dst-pvc
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mdscl-screenshots
+  namespace: syncthing
+  annotations:
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: mdscl-screenshots
+  template:
+    metadata:
+      labels:
+        app: mdscl-screenshots
+        app.kubernetes.io/component: mdscl
+    spec:
+      securityContext:
+        fsGroup: $MY_UID
+      containers:
+        - name: mdscl-screenshots
+          image: imranrdev/media-date-standardize-copy-loop:latest@sha256:d6e7368ab0846e01049fd62cc645e146bfc9c5a9804430dd4f43fc503ef373b3
+          securityContext:
+            runAsUser: $MY_UID
+            runAsGroup: $MY_UID
+            allowPrivilegeEscalation: false
+          env:
+            - name: NTFY_URL
+              value: "http://ntfy.base.svc.cluster.local:3000/${MAIN_NODE_NAME_LOWERCASE}_services_mdscl_errors"
+            - name: NTFY_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: mdscl-secret
+                  key: NTFY_SERVICE_USER_TOKEN
+          resources:
+            limits:
+              memory: 2Gi
+            requests:
+              memory: 128Mi
+          volumeMounts:
+            - name: mdscl-screenshots-src
+              mountPath: /mdscl/source
+            - name: mdscl-screenshots-dst
+              mountPath: /mdscl/destination
+      volumes:
+        - name: mdscl-screenshots-src
+          persistentVolumeClaim:
+            claimName: mdscl-screenshots-src-pvc
+        - name: mdscl-screenshots-dst
+          persistentVolumeClaim:
+            claimName: mdscl-screenshots-dst-pvc
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mdscl-screenrecs
+  namespace: syncthing
+  annotations:
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: mdscl-screenrecs
+  template:
+    metadata:
+      labels:
+        app: mdscl-screenrecs
+        app.kubernetes.io/component: mdscl
+    spec:
+      securityContext:
+        fsGroup: $MY_UID
+      containers:
+        - name: mdscl-screenrecs
+          image: imranrdev/media-date-standardize-copy-loop:latest@sha256:d6e7368ab0846e01049fd62cc645e146bfc9c5a9804430dd4f43fc503ef373b3
+          securityContext:
+            runAsUser: $MY_UID
+            runAsGroup: $MY_UID
+            allowPrivilegeEscalation: false
+          env:
+            - name: NTFY_URL
+              value: "http://ntfy.base.svc.cluster.local:3000/${MAIN_NODE_NAME_LOWERCASE}_services_mdscl_errors"
+            - name: NTFY_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: mdscl-secret
+                  key: NTFY_SERVICE_USER_TOKEN
+          resources:
+            limits:
+              memory: 2Gi
+            requests:
+              memory: 128Mi
+          volumeMounts:
+            - name: mdscl-screenrecs-src
+              mountPath: /mdscl/source
+            - name: mdscl-screenrecs-dst
+              mountPath: /mdscl/destination
+      volumes:
+        - name: mdscl-screenrecs-src
+          persistentVolumeClaim:
+            claimName: mdscl-screenrecs-src-pvc
+        - name: mdscl-screenrecs-dst
+          persistentVolumeClaim:
+            claimName: mdscl-screenrecs-dst-pvc

@@ -1,0 +1,57 @@
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-homeassistant-services-ingress
+  namespace: apps
+spec:
+  podSelector:
+    matchLabels:
+      app: mosquitto
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/instance: homeassistant
+      ports:
+        - port: 1883
+  policyTypes:
+    - Ingress
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-homeassistant-whisper-ingress
+  namespace: apps
+spec:
+  podSelector:
+    matchLabels:
+      app: wyoming-whisper
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/instance: homeassistant
+      ports:
+        - port: 10300
+  policyTypes:
+    - Ingress
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-homeassistant-piper-ingress
+  namespace: apps
+spec:
+  podSelector:
+    matchLabels:
+      app: wyoming-piper
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/instance: homeassistant
+      ports:
+        - port: 10200
+  policyTypes:
+    - Ingress

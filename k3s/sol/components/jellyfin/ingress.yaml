@@ -1,0 +1,84 @@
+---
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: jellyfin-ratelimit
+  namespace: apps
+spec:
+  rateLimit:
+    average: 50
+    burst: 25
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: jellyfin-prod-tls
+  namespace: apps
+spec:
+  secretName: jellyfin-prod-tls
+  issuerRef:
+    name: letsencrypt-prod
+    kind: ClusterIssuer
+  dnsNames:
+    - tv.$SERVICES_DOMAIN
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: jellyfin-ingress
+  namespace: apps
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - match: Host(`tv.$SERVICES_DOMAIN`)
+      kind: Rule
+      middlewares:
+        - name: geoblock
+          namespace: base
+        - name: crowdsec-bouncer
+          namespace: base
+        - name: forwardauth-authelia
+          namespace: base
+        - name: jellyfin-ratelimit
+          namespace: apps
+      services:
+        - name: jellyfin
+          port: 8096
+  tls:
+    secretName: jellyfin-prod-tls
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: tv-localhost-tls
+  namespace: apps
+spec:
+  secretName: tv-localhost-tls
+  issuerRef:
+    name: ca-issuer
+    kind: ClusterIssuer
+  dnsNames:
+    - tv.localhost
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: tv-ingress-lan # For initial setup when behind Authelia (external URL won't work)
+  namespace: apps
+spec:
+  entryPoints:
+    - websecure
+  tls:
+    secretName: tv-localhost-tls
+  routes:
+    - match: Host(`tv.localhost`)
+      kind: Rule
+      middlewares:
+        - name: lan-whitelist
+          namespace: base
+        - name: forwardauth-authelia # initially-removed
+          namespace: base # initially-removed
+      services: # Above Authelia middleware fails, effectively blocking this route after initial mode
+        - name: jellyfin
+          port: 8096

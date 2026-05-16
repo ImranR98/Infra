@@ -1,0 +1,26 @@
+apiVersion: helm.cattle.io/v1
+kind: HelmChart
+metadata:
+  name: homeassistant
+  namespace: apps
+spec:
+  chart: home-assistant
+  repo: https://pajikos.github.io/home-assistant-helm-chart/
+  targetNamespace: apps
+  createNamespace: false
+  failurePolicy: abort
+  version: 0.3.57
+  valuesContent: |-
+    deploymentStrategy: Recreate
+    controller:
+      type: Deployment
+    image:
+      tag: stable
+    persistence:
+      enabled: true
+      existingClaim: homeassistant-config-pvc
+    resources:
+      limits:
+        memory: 2Gi
+      requests:
+        memory: 128Mi

@@ -1,0 +1,153 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: immich-db-pvc
+  namespace: apps
+spec:
+  storageClassName: longhorn
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 4Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: immich-library-pvc
+  namespace: apps
+spec:
+  storageClassName: longhorn
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 8Gi
+---
+# External media library — existing photos/videos on the host filesystem.
+# Immich can index these via the "External Library" feature (mounted at /external in the container).
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: immich-external-pv
+spec:
+  capacity:
+    storage: 4000Gi
+  volumeMode: Filesystem
+  accessModes:
+    - ReadWriteMany
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: nfs
+  csi:
+    driver: nfs.csi.k8s.io
+    volumeHandle: immich-external
+    volumeAttributes:
+      server: nfs-server.base.svc.cluster.local
+      share: /immich
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: immich-external-pvc
+  namespace: apps
+spec:
+  storageClassName: nfs
+  accessModes:
+    - ReadWriteMany
+  volumeName: immich-external-pv
+  resources:
+    requests:
+      storage: 4000Gi
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: immich-db-credentials
+  namespace: apps
+type: Opaque
+stringData:
+  IMMICH_DB_PASSWORD: "$IMMICH_DB_PASSWORD"
+---
+# PostgreSQL with VectorChord extension for Immich smart search
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: immich-postgresql
+  namespace: apps
+  annotations:
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: immich-postgresql
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: immich-postgresql
+    spec:
+      securityContext:
+        fsGroup: $MY_UID
+      containers:
+      - name: postgresql
+        image: ghcr.io/immich-app/postgres:18-vectorchord0.5.3-pgvector0.8.1
+        securityContext:
+          allowPrivilegeEscalation: false
+        readinessProbe:
+          exec:
+            command:
+              - pg_isready
+              - -U
+              - postgres
+          periodSeconds: 30
+          timeoutSeconds: 5
+          failureThreshold: 3
+          initialDelaySeconds: 15
+        env:
+        - name: POSTGRES_USER
+          value: "postgres"
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: immich-db-credentials
+              key: IMMICH_DB_PASSWORD
+        - name: POSTGRES_DB
+          value: "immich"
+        - name: PGDATA
+          value: /var/lib/postgresql/data/pgdata
+        - name: POSTGRES_INITDB_ARGS
+          value: "--data-checksums"
+        ports:
+        - containerPort: 5432
+        resources:
+          limits:
+            memory: 2Gi
+          requests:
+            memory: 128Mi
+        volumeMounts:
+        - name: data
+          mountPath: /var/lib/postgresql/data
+        - name: dshm
+          mountPath: /dev/shm
+      volumes:
+      - name: data
+        persistentVolumeClaim:
+          claimName: immich-db-pvc
+      - name: dshm
+        emptyDir:
+          medium: Memory
+          sizeLimit: 128Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: immich-postgresql
+  namespace: apps
+spec:
+  selector:
+    app: immich-postgresql
+  ports:
+    - protocol: TCP
+      port: 5432
+      targetPort: 5432

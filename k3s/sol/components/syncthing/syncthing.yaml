@@ -1,0 +1,48 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: syncthing
+  namespace: syncthing
+  annotations:
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: syncthing
+  template:
+    metadata:
+      labels:
+        app: syncthing
+    spec:
+      hostNetwork: true
+      securityContext:
+        fsGroup: $MY_UID
+      containers:
+        - name: syncthing
+          image: syncthing/syncthing:2.0.16
+          securityContext:
+            allowPrivilegeEscalation: false
+          env:
+            - name: STGUIADDRESS
+              value: "0.0.0.0:8384"
+          resources:
+            limits:
+              memory: 2Gi
+            requests:
+              memory: 128Mi
+          readinessProbe:
+            httpGet:
+              path: /rest/noauth/health
+              port: 8384
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+          volumeMounts:
+            - name: syncthing-home
+              mountPath: /var/syncthing
+      volumes:
+        - name: syncthing-home
+          persistentVolumeClaim:
+            claimName: syncthing-home-pvc

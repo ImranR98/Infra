@@ -1,0 +1,86 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: backup-volumes
+  namespace: longhorn-system
+data:
+  volumes: |
+    fmd-pvc
+    freshrss-data-pvc
+    freshrss-extensions-pvc
+    homeassistant-config-pvc
+    jellyfin-config-pvc
+    jellyfin-media
+    nextcloud-data-pvc
+    plausible-db-pvc
+    plausible-data-pvc
+    plausible-clickhouse-data-pvc
+    plausible-clickhouse-logs-pvc
+    shlink-pvc
+    uptime-kuma-pvc
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: backup-labeler
+  namespace: longhorn-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: backup-labeler
+rules:
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    resourceNames: ["backup-volumes"]
+    verbs: ["get"]
+  - apiGroups: [""]
+    resources: ["persistentvolumeclaims"]
+    verbs: ["get"]
+  - apiGroups: ["longhorn.io"]
+    resources: ["volumes"]
+    verbs: ["get", "patch", "update"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: backup-labeler
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: backup-labeler
+subjects:
+  - kind: ServiceAccount
+    name: backup-labeler
+    namespace: longhorn-system
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: backup-labeler
+  namespace: longhorn-system
+spec:
+  ttlSecondsAfterFinished: 1
+  template:
+    spec:
+      serviceAccountName: backup-labeler
+      restartPolicy: OnFailure
+      containers:
+        - name: labeler
+          image: bitnami/kubectl:latest@sha256:3220dcc839f55be732a29548043a1ddf635a0dd6c8781b0f2a0bcdc19029c7d3
+          command:
+            - /bin/bash
+            - -ec
+            - |
+              VOLUMES=$(kubectl get configmap backup-volumes -o jsonpath='{.data.volumes}')
+              for PVC in $VOLUMES; do
+                for NS in base apps monitoring; do
+                  PV=$(kubectl get pvc -n "$NS" "$PVC" -o jsonpath='{.spec.volumeName}' 2>/dev/null || true)
+                  if [ -n "$PV" ]; then
+                    kubectl label volume -n longhorn-system "$PV" \
+                      recurring-job-group.longhorn.io/auto-backup=enabled --overwrite 2>/dev/null || true
+                    break
+                  fi
+                done
+              done

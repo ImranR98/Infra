@@ -43,7 +43,7 @@ if [ -f "$HERE/VARS.sh" ]; then
     fi
     export DOCKER_GID="$(grep docker /etc/group | awk -F: '{print $3}')"
     export FRPC_USER="${TARGET,,}"
-elif [ -n "$COMMAND" ] && [ "$COMMAND" != "prereqs" ] && [ "$COMMAND" != "list-domains" ] && [ "$COMMAND" != "old-images" ] && [ "$COMMAND" != "update-socket-proxy" ] && [ "$COMMAND" != "update-traefik-plugins" ]; then
+elif [ -n "$COMMAND" ] && [ "$COMMAND" != "prereqs" ] && [ "$COMMAND" != "list-domains" ] && [ "$COMMAND" != "old-images" ] && [ "$COMMAND" != "update-socket-proxy" ] && [ "$COMMAND" != "update-traefik-plugins" ] && [ "$COMMAND" != "k3s" ]; then
     echo "No VARS.sh found. Create VARS.sh with variables from vars/VARS.common.sh and vars/VARS.$TARGET.sh." >&2
     exit 1
 fi
@@ -336,8 +336,17 @@ EOF
         fi
         ;;
 
+    k3s)
+        if [ ! -d "$HERE/k3s/$TARGET" ]; then
+            echo "No K3s manifests found for target '$TARGET'." >&2
+            exit 1
+        fi
+        make -C "$HERE/k3s/$TARGET" ${2:+"$2"}
+        ;;
+
     "")
         echo "Usage: $0 <target> <command>"
+
         echo ""
         echo "Targets:"
         echo "  luna"
@@ -348,6 +357,7 @@ EOF
         echo "  prereqs                   Install prerequisites (docker, yq, envsubst, jq, curl)"
         echo "  install                   Install and start all services"
         echo "  install-preboot           Install preboot FRPC in initramfs (for remote LUKS unlock)"
+        echo "  k3s [target]              Run K3s Make target (base, apps, validate, etc.)"
         echo "  restart <service>         Restart a single service"
         echo "  list-domains              List all required subdomains"
         echo "  backup-state              Back up state directory and VARS.sh"

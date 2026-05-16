@@ -1,0 +1,39 @@
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-longhorn-nfs-ingress
+  namespace: base
+spec:
+  podSelector:
+    matchLabels:
+      app: nfs-server
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              app: csi-nfs-node
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: longhorn-system
+          podSelector:
+            matchLabels:
+              app: longhorn-manager
+  policyTypes:
+    - Ingress
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: deny-nfs-egress
+  namespace: base
+spec:
+  podSelector:
+    matchLabels:
+      app: nfs-server
+  egress: []
+  policyTypes:
+    - Egress

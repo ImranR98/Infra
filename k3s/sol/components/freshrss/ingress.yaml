@@ -1,0 +1,38 @@
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: freshrss-prod-tls
+  namespace: apps
+spec:
+  secretName: freshrss-prod-tls
+  issuerRef:
+    name: letsencrypt-prod
+    kind: ClusterIssuer
+  dnsNames:
+    - rss.$SERVICES_DOMAIN
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: freshrss-ingress
+  namespace: apps
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - match: Host(`rss.$SERVICES_DOMAIN`)
+      kind: Rule
+      middlewares:
+        - name: geoblock
+          namespace: base
+        - name: crowdsec-bouncer
+          namespace: base
+        - name: forwardauth-authelia
+          namespace: base
+      services:
+        - name: freshrss
+          port: 80
+  tls:
+    secretName: freshrss-prod-tls
+

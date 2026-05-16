@@ -1,0 +1,63 @@
+apiVersion: helm.cattle.io/v1
+kind: HelmChart
+metadata:
+  name: open-webui
+  namespace: apps
+spec:
+  chart: open-webui
+  repo: https://helm.openwebui.com/
+  targetNamespace: apps
+  createNamespace: false
+  failurePolicy: abort
+  version: 14.4.0
+  valuesContent: |-
+    ollama:
+      enabled: false
+    ollamaUrls:
+      - http://ollama.apps.svc.cluster.local:11434
+    persistence:
+      enabled: true
+      existingClaim: openwebui-data-pvc
+      storageClass: longhorn
+    pipelines:
+      persistence:
+        storageClass: longhorn
+        size: 1Gi
+    extraEnvVars:
+      - name: ENABLE_OAUTH_SIGNUP
+        value: "true"
+      - name: OAUTH_MERGE_ACCOUNTS_BY_EMAIL
+        value: "true"
+      - name: OAUTH_PROVIDER_NAME
+        value: "Authelia"
+      - name: OPENID_PROVIDER_URL
+        value: "https://auth.$SERVICES_DOMAIN/.well-known/openid-configuration"
+      - name: OAUTH_CLIENT_ID
+        value: "open-webui"
+      - name: OAUTH_CLIENT_SECRET
+        value: "$AUTHELIA_OPENWEBUI_CLIENT_SECRET"
+      - name: OAUTH_SCOPES
+        value: "openid email profile groups"
+      - name: ENABLE_OAUTH_ROLE_MANAGEMENT
+        value: "true"
+      - name: OAUTH_ALLOWED_ROLES
+        value: "admins,dev,family"
+      - name: OAUTH_ADMIN_ROLES
+        value: "admins"
+      - name: OAUTH_ROLES_CLAIM
+        value: "groups"
+      - name: WEBUI_URL
+        value: "https://gpt.$SERVICES_DOMAIN"
+      - name: ENABLE_LOGIN_FORM
+        value: "false"
+      - name: OAUTH_CODE_CHALLENGE_METHOD
+        value: "S256"
+    resources:
+      limits:
+        memory: 2Gi
+      requests:
+        memory: 128Mi
+    podSecurityContext:
+      fsGroup: $MY_UID
+    containerSecurityContext:
+      allowPrivilegeEscalation: false

@@ -1,0 +1,29 @@
+apiVersion: helm.cattle.io/v1
+kind: HelmChart
+metadata:
+  name: ollama
+  namespace: apps
+spec:
+  chart: ollama
+  repo: https://helm.otwld.com/
+  targetNamespace: apps
+  createNamespace: false
+  failurePolicy: abort
+  version: 1.56.0
+  valuesContent: |-
+    image:
+      tag: latest
+    persistentVolume:
+      enabled: true
+      existingClaim: ollama-models-pvc
+    gpu:
+      enabled: false
+    resources:
+      limits:
+        memory: 2Gi
+      requests:
+        memory: 128Mi
+    podSecurityContext:
+      fsGroup: $MY_UID
+    containerSecurityContext:
+      allowPrivilegeEscalation: false

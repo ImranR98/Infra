@@ -1,0 +1,42 @@
+
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: dscpln-data-pv
+spec:
+  capacity:
+    storage: 4000Gi
+  volumeMode: Filesystem
+  accessModes:
+    - ReadWriteMany
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: nfs
+  csi:
+    driver: nfs.csi.k8s.io
+    volumeHandle: dscpln-data
+    volumeAttributes:
+      server: nfs-server.base.svc.cluster.local
+      share: /dscpln
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: dscpln-data-pvc
+  namespace: apps
+spec:
+  storageClassName: nfs
+  accessModes:
+    - ReadWriteMany
+  volumeName: dscpln-data-pv
+  resources:
+    requests:
+      storage: 4000Gi
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: dscpln-secret
+  namespace: apps
+type: Opaque
+stringData:
+  NTFY_SERVICE_USER_TOKEN: "$NTFY_SERVICE_USER_TOKEN"

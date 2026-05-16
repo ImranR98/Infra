@@ -1,0 +1,106 @@
+apiVersion: helm.cattle.io/v1
+kind: HelmChart
+metadata:
+  name: crowdsec
+  namespace: base
+spec:
+  chart: crowdsec
+  repo: https://crowdsecurity.github.io/helm-charts
+  failurePolicy: abort
+  targetNamespace: base
+  version: 0.23.0
+  valuesContent: |-
+    container_runtime: containerd
+
+    appsec:
+      enabled: true
+      acquisitions:
+        - source: appsec
+          listen_addr: "0.0.0.0:7422"
+          path: /
+          appsec_config: crowdsecurity/virtual-patching
+          labels:
+            type: appsec
+      env:
+        - name: COLLECTIONS
+          value: "crowdsecurity/appsec-virtual-patching crowdsecurity/appsec-generic-rules"
+      service:
+        type: ClusterIP
+    config:
+      profiles.yaml: |
+        name: default_ip_remediation
+        debug: true
+        filters:
+            - Alert.Remediation == true && Alert.GetScope() == "Ip"
+        decisions:
+            - type: ban
+              duration: 672h
+        notifications:
+            - http_default
+        on_success: break
+
+    agent:
+      resources:
+        limits:
+          memory: 2Gi
+        requests:
+          memory: 128Mi
+      podSecurityContext:
+        fsGroup: $MY_UID
+        seLinuxOptions:
+          type: spc_t
+      containerSecurityContext:
+        allowPrivilegeEscalation: false
+      acquisition:
+        - namespace: kube-system
+          podName: traefik-*
+          program: traefik
+          poll_without_inotify: true
+      env:
+        - name: COLLECTIONS
+          value: "crowdsecurity/linux crowdsecurity/traefik"
+
+    lapi:
+      replicas: 1
+      resources:
+        limits:
+          memory: 2Gi
+        requests:
+          memory: 128Mi
+      podSecurityContext:
+        fsGroup: $MY_UID
+      containerSecurityContext:
+        allowPrivilegeEscalation: false
+      dashboard:
+        enabled: false
+      env:
+        - name: BOUNCER_KEY_traefik
+          value: "$CROWDSEC_BOUNCER_KEY"
+      extraVolumes:
+        - name: crowdsec-lapi-configs
+          configMap:
+            name: crowdsec-lapi-configs
+      extraVolumeMounts:
+        - name: crowdsec-lapi-configs
+          mountPath: /etc/crowdsec/notifications/http.yaml
+          subPath: http.yaml
+        - name: crowdsec-lapi-configs
+          mountPath: /etc/crowdsec/navidrome.whitelist.yaml
+          subPath: navidrome.whitelist.yaml
+        - name: crowdsec-lapi-configs
+          mountPath: /etc/crowdsec/immich.whitelist.yaml
+          subPath: immich.whitelist.yaml
+        - name: crowdsec-lapi-configs
+          mountPath: /etc/crowdsec/plausible.whitelist.yaml
+          subPath: plausible.whitelist.yaml
+        - name: crowdsec-lapi-configs
+          mountPath: /etc/crowdsec/homeassistant.whitelist.yaml
+          subPath: homeassistant.whitelist.yaml
+      persistentVolume:
+        config:
+          enabled: false
+        data:
+          enabled: true
+          existingClaim: crowdsec-pvc
+      secrets:
+        csLapiSecret: "$CROWDSEC_LAPI_SECRET"

@@ -1,0 +1,43 @@
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-notification-ingress
+  namespace: base
+spec:
+  podSelector:
+    matchLabels:
+      app: ntfy
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              k8s-app: crowdsec
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: apps
+          podSelector:
+            matchLabels:
+              app: dscpln
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: monitoring
+          podSelector:
+            matchLabels:
+              app: logtfy
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: syncthing
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/component: mdscl
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: apps
+          podSelector:
+            matchLabels:
+              app: opencanary
+      ports:
+        - port: 3000
+  policyTypes:
+    - Ingress

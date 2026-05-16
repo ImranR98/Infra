@@ -1,0 +1,55 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: opencanary
+  namespace: apps
+  annotations:
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: opencanary
+  template:
+    metadata:
+      labels:
+        app: opencanary
+    spec:
+      securityContext:
+        fsGroup: $MY_UID
+      containers:
+        - name: opencanary
+          image: thinkst/opencanary:0.9.7
+          securityContext:
+            allowPrivilegeEscalation: false
+          resources:
+            limits:
+              memory: 2Gi
+            requests:
+              memory: 128Mi
+          readinessProbe:
+            tcpSocket:
+              port: 21
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+          ports:
+            - containerPort: 21
+              hostPort: 21
+            - containerPort: 3306
+              hostPort: 3306
+            - containerPort: 5000
+              hostPort: 5000
+            - containerPort: 8082
+              hostPort: 8082
+            - containerPort: 9418
+              hostPort: 9418
+          volumeMounts:
+            - name: config
+              mountPath: /etc/opencanaryd/opencanary.conf
+              subPath: opencanary.conf
+      volumes:
+        - name: config
+          secret:
+            secretName: opencanary-config

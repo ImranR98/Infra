@@ -1,0 +1,91 @@
+# Geoblock — allowlist-mode plugin that restricts access by country of origin.
+# Uses the free geojs.io API for IP geolocation lookups.
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: geoblock
+  namespace: base
+spec:
+  plugin:
+    geoblock:
+      silentStartUp: false
+      allowLocalRequests: true
+      logLocalRequests: false
+      logAllowedRequests: true
+      logApiRequests: true
+      api: "https://get.geojs.io/v1/ip/country/{ip}"
+      apiTimeoutMs: 750
+      cacheSize: 15
+      forceMonthlyUpdate: true
+      allowUnknownCountries: false
+      unknownCountryApiResponse: "nil"
+      blackListMode: false
+      countries:
+        - CA
+        - TZ
+        - US
+        - GB
+---
+# CrowdSec bouncer — checks IPs against CrowdSec's ban list in streaming mode.
+# Requires CrowdSec LAPI to be running (15.crowdsec.yaml).
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: crowdsec-bouncer
+  namespace: base
+spec:
+  plugin:
+    crowdsec-bouncer-traefik-plugin:
+      enabled: true
+      logLevel: INFO
+      crowdsecMode: stream
+      crowdsecLapiScheme: http
+      crowdsecLapiHost: crowdsec-service.base.svc.cluster.local:8080
+      crowdsecLapiKey: $CROWDSEC_BOUNCER_KEY
+      crowdsecappsecenabled: true
+      crowdsecAppsecScheme: http
+      crowdsecAppsecHost: crowdsec-appsec-service.base.svc.cluster.local:7422
+      crowdsecAppsecPath: "/"
+      forwardedheaderstrustedips: "127.0.0.1/32"
+---
+# Forward auth middleware for Authelia — used by all public IngressRoutes.
+# Sends unauthenticated requests to Authelia's /api/authz/forward-auth endpoint.
+# The response headers (Remote-User, Remote-Groups, etc.) are forwarded to backend services.
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: forwardauth-authelia
+  namespace: base
+spec:
+  forwardAuth:
+    address: 'http://authelia.base.svc.cluster.local/api/authz/forward-auth'
+    authResponseHeaders:
+      - 'Remote-User'
+      - 'Remote-Groups'
+      - 'Remote-Email'
+      - 'Remote-Name'
+---
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: forwardauth-authelia-basic
+  namespace: base
+spec:
+  forwardAuth:
+    address: 'http://authelia.base.svc.cluster.local/api/authz/basic-auth'
+    authResponseHeaders:
+      - 'Remote-User'
+      - 'Remote-Groups'
+      - 'Remote-Email'
+      - 'Remote-Name'
+---
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: basicauth-localhost
+  namespace: base
+spec:
+  basicAuth:
+    secret: localhost-auth-users
+
+

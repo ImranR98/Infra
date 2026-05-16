@@ -1,0 +1,22 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: fmd-pvc
+  namespace: apps
+spec:
+  storageClassName: longhorn
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: fmd-secret
+  namespace: apps
+type: Opaque
+stringData:
+  FMD_REGISTRATION_TOKEN: "$FMD_REGISTRATION_TOKEN"

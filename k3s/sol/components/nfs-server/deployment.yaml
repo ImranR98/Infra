@@ -1,0 +1,93 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nfs-server
+  namespace: base
+  annotations:
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: nfs-server
+  template:
+    metadata:
+      labels:
+        app: nfs-server
+    spec:
+      initContainers:
+        - name: nfs-modules
+          image: busybox:1.37.0-uclibc
+          command:
+            - modprobe
+            - nfs
+            - nfsd
+          securityContext:
+            privileged: true
+          volumeMounts:
+            - mountPath: /lib/modules
+              name: modules
+              readOnly: true
+      containers:
+        - name: nfs-server
+          image: ghcr.io/trexx/docker-nfs-server:v3.22.2-2
+          ports:
+            - name: nfsv4
+              containerPort: 2049
+              protocol: TCP
+          securityContext:
+            privileged: true
+          volumeMounts:
+            - mountPath: /exports
+              name: exports-root
+            - mountPath: /exports/longhorn-backup
+              name: longhorn-backup-storage
+            - mountPath: /exports/music
+              name: music-storage
+            - mountPath: /exports/jellyfin-tv
+              name: tv-storage
+            - mountPath: /exports/jellyfin-youtube
+              name: youtube-storage
+            - mountPath: /exports/dscpln
+              name: dscpln-storage
+            - mountPath: /exports/immich
+              name: immich-storage
+            - mountPath: /var/lib/nfs/etab
+              name: nfs-exports
+              subPath: etab
+              readOnly: true
+      volumes:
+        - name: modules
+          hostPath:
+            path: /lib/modules
+        - name: exports-root
+          emptyDir: {}
+        - name: nfs-exports
+          configMap:
+            name: nfs-etab
+        - name: longhorn-backup-storage
+          hostPath:
+            path: $LONGHORN_BACKUP_PATH
+            type: DirectoryOrCreate
+        - name: music-storage
+          hostPath:
+            path: $MEDIA_DIR_PATH/Music
+            type: DirectoryOrCreate
+        - name: tv-storage
+          hostPath:
+            path: $MEDIA_DIR_PATH/TV
+            type: DirectoryOrCreate
+        - name: youtube-storage
+          hostPath:
+            path: $MEDIA_DIR_PATH/YouTube
+            type: DirectoryOrCreate
+        - name: dscpln-storage
+          hostPath:
+            path: $DSCPLN_TRANSACTIONS_PATH
+            type: DirectoryOrCreate
+        - name: immich-storage
+          hostPath:
+            path: $MEDIA_DIR_PATH
+            type: DirectoryOrCreate

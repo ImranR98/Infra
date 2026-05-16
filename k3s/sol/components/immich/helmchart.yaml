@@ -1,0 +1,67 @@
+---
+apiVersion: helm.cattle.io/v1
+kind: HelmChart
+metadata:
+  name: immich
+  namespace: apps
+spec:
+  chart: oci://ghcr.io/immich-app/immich-charts/immich
+  failurePolicy: abort
+  targetNamespace: apps
+  createNamespace: false
+  version: 0.11.1
+  valuesContent: |-
+    # Database connection — PostgreSQL is deployed separately in 12.immich-prereqs.yaml.
+    # DB_HOSTNAME uses the short service name since both are in the 'immich' namespace.
+    # REDIS_HOSTNAME and IMMICH_MACHINE_LEARNING_URL are set automatically by chart defaults.
+    controllers:
+      main:
+        annotations:
+        containers:
+          main:
+            resources:
+              limits:
+                memory: 2Gi
+              requests:
+                memory: 128Mi
+            image:
+              repository: ghcr.io/immich-app/immich-server
+              tag: v2.7.5
+            env:
+              DB_HOSTNAME: "immich-postgresql"
+              DB_USERNAME: "postgres"
+              DB_DATABASE_NAME: "immich"
+              DB_PASSWORD: "$IMMICH_DB_PASSWORD"
+
+    defaultPodOptions:
+      securityContext:
+        runAsUser: $MY_UID
+        runAsGroup: $MY_UID
+        fsGroup: $MY_UID
+
+    immich:
+      machineLearning:
+        image:
+          repository: ghcr.io/immich-app/immich-machine-learning
+          tag: release
+      persistence:
+        library:
+          existingClaim: immich-library-pvc
+      # OAuth/OIDC with Authelia — configure via the Immich admin GUI after first login:
+      #   Issuer URL:     https://auth.$SERVICES_DOMAIN/.well-known/openid-configuration
+      #   Client ID:      immich
+      #   Client Secret:  <value of IMMICH_OAUTH_CLIENT_SECRET from secrets.sh>
+      #   Auto Register:  true
+
+    # External media library — mounted at /external inside the server container.
+    # Configure the external library path in the Immich admin GUI after first login.
+    server:
+      persistence:
+        external:
+          existingClaim: immich-external-pvc
+          globalMounts:
+            - path: /external
+              readOnly: false
+
+    valkey:
+      enabled: true

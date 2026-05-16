@@ -1,0 +1,22 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: beszel-pvc
+  namespace: monitoring
+spec:
+  storageClassName: longhorn
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 2Gi
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: beszel-secret
+  namespace: monitoring
+type: Opaque
+stringData:
+  BESZEL_SSH_KEY: "$BESZEL_SSH_KEY"

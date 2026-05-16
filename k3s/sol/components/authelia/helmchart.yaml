@@ -1,0 +1,198 @@
+---
+apiVersion: helm.cattle.io/v1
+kind: HelmChart
+metadata:
+  name: authelia
+  namespace: base
+spec:
+  chart: authelia
+  repo: https://charts.authelia.com
+  failurePolicy: abort
+  targetNamespace: base
+  createNamespace: false
+  version: 0.11.5
+  valuesContent: |-
+    # WARNING: This configuration contains variable references for secrets (e.g., $AUTHELIA_REDIS_PASSWORD).
+    # These are expanded by apply.sh using envsubst after sourcing secrets.sh.
+    # For initial deployment without bypass rules, use: make authelia APPLY_MODE=initial
+    # Bypass rules marked with "# initially-removed" are omitted from the initial overlay.
+
+    pod:
+      kind: DaemonSet
+      resources:
+        limits:
+          memory: 2Gi
+        requests:
+          memory: 128Mi
+      extraVolumeMounts:
+        - name: users-database
+          mountPath: "/config/users"
+          readOnly: true
+      extraVolumes:
+        - name: users-database
+          secret:
+            secretName: authelia-users
+            items:
+              - key: users-database.yaml
+                path: users-database.yaml
+    configMap:
+      authentication_backend:
+        ldap:
+          enabled: false
+        file:
+          enabled: true
+          password:
+            algorithm: sha512
+          path: /config/users/users-database.yaml
+        password_reset:
+          disable: true
+      session:
+        redis:
+          enabled: true
+          deploy: true
+          host: "authelia-redis-master.base.svc.cluster.local"
+          port: 6379
+          username: ""
+          password:
+            value: "$AUTHELIA_REDIS_PASSWORD"
+          database_index: 0
+          maximum_active_connections: 8
+          minimum_idle_connections: 0
+          tls:
+            enabled: false
+          high_availability:
+            enabled: false
+            sentinel_name: "mysentinel"
+            username: ""
+            password:
+              value: ""
+            nodes: []
+        cookies:
+          - subdomain: "auth"
+            domain: "$SERVICES_DOMAIN"
+            path: ""
+      storage:
+        encryption_key:
+          value: "$AUTHELIA_DB_ENCRYPTION_KEY"
+        local:
+          enabled: false
+        postgres:
+          enabled: true
+          deploy: true
+          address: "tcp://authelia-postgresql.base.svc.cluster.local:5432"
+          timeout: "5 seconds"
+          password:
+            value: "$AUTHELIA_DB_PASSWORD"
+          tls:
+            enabled: false
+      notifier:
+        filesystem:
+          enabled: true
+        smtp:
+          enabled: false
+      identity_providers:
+        oidc:
+          enabled: true
+          hmac_secret:
+            value: '$AUTHELIA_OIDC_HMAC_SECRET'
+          jwks:
+            - key:
+                value: |
+                  $AUTHELIA_JWKS_KEY
+          clients:
+          - client_id: 'immich'
+            client_name: 'immich'
+            client_secret: '$plaintext$$AUTHELIA_IMMICH_CLIENT_SECRET'
+            public: false
+            authorization_policy: 'two_factor'
+            redirect_uris:
+              - 'https://immich.$SERVICES_DOMAIN/auth/login'
+              - 'https://immich.$SERVICES_DOMAIN/user-settings'
+              - 'app.immich:/'
+              - 'app.immich:///oauth-callback'
+            scopes:
+              - 'openid'
+              - 'profile'
+              - 'email'
+            userinfo_signed_response_alg: 'none'
+            token_endpoint_auth_method: 'client_secret_post'
+          - client_id: 'open-webui'
+            client_name: 'Open WebUI'
+            client_secret: '$plaintext$$AUTHELIA_OPENWEBUI_CLIENT_SECRET'
+            public: false
+            authorization_policy: 'two_factor'
+            require_pkce: true
+            redirect_uris:
+              - 'https://gpt.$SERVICES_DOMAIN/oauth/oidc/callback'
+            scopes:
+              - 'openid'
+              - 'profile'
+              - 'groups'
+              - 'email'
+            response_types:
+              - 'code'
+            grant_types:
+              - 'authorization_code'
+            access_token_signed_response_alg: 'none'
+            userinfo_signed_response_alg: 'none'
+            token_endpoint_auth_method: 'client_secret_basic'
+      log:
+        level: debug
+      totp:
+        issuer: $SERVICES_DOMAIN
+      access_control:
+        default_policy: 'deny'
+        rules:
+          - domain: '*.$SERVICES_DOMAIN'
+            resources:
+            - '^/\.well-known/acme-challenge/.*$'
+            policy: bypass
+          - domain: tv.$SERVICES_DOMAIN # initially-removed
+            policy: bypass # initially-removed
+          - domain: helloworld.$SERVICES_DOMAIN
+            policy: bypass
+          - domain: isbn.$SERVICES_DOMAIN
+            policy: bypass
+          - domain: ha.$SERVICES_DOMAIN # initially-removed
+            policy: bypass # initially-removed
+          - domain: ntfy.$SERVICES_DOMAIN
+            policy: bypass
+          - domain: files.$SERVICES_DOMAIN # initially-removed
+            resources: # initially-removed
+            - '^/share([/?].*)?$' # initially-removed
+            - '^/static([/?].*)?$' # initially-removed
+            - '^/api/public([/?].*)?$' # initially-removed
+            policy: bypass # initially-removed
+          - domain: music.$SERVICES_DOMAIN # initially-removed
+            policy: bypass # initially-removed
+          - domain: immich.$SERVICES_DOMAIN # initially-removed
+            policy: bypass # initially-removed
+          - domain: auth.$SERVICES_DOMAIN
+            policy: bypass
+          - domain: plausible.$SERVICES_DOMAIN # initially-removed
+            policy: bypass # initially-removed
+          - domain: opodsync.$SERVICES_DOMAIN # initially-removed
+            policy: bypass # initially-removed
+          - domain: gpt.$SERVICES_DOMAIN # initially-removed
+            policy: bypass # initially-removed
+          - domain: docker.$SERVICES_DOMAIN # initially-removed
+            resources: # initially-removed
+            - '^/v2([/?].*)?$' # initially-removed
+            policy: bypass # initially-removed
+          - domain: fmd.$SERVICES_DOMAIN # initially-removed
+            policy: bypass # initially-removed
+          - domain: beszel.$SERVICES_DOMAIN # initially-removed
+            policy: bypass # initially-removed
+          - domain: rss.$SERVICES_DOMAIN
+            resources:
+            - '^/api([/?].*)?$'
+            - '^/p/i/?$'
+            policy: bypass
+          - domain: ytdl.$SERVICES_DOMAIN
+            policy: one_factor
+          - domain: '*.$SERVICES_DOMAIN'
+            policy: two_factor
+      regulation:
+        max_retries: 3
+        find_time: 120
+        ban_time: 300
