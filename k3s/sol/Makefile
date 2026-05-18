@@ -1,5 +1,5 @@
 .NOTPARALLEL:
-.PHONY: help all k3s base apps validate domains
+.PHONY: help all k3s k3s-base base apps namespaces nfs-server csi-driver-nfs longhorn validate update domains
 .DEFAULT_GOAL := help
 
 CURRENT_DIR := $(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
@@ -18,7 +18,7 @@ SCRIPTS_DIR := $(CURRENT_DIR)/scripts
 #   9. authelia          — SSO, depends on cert-manager and traefik for ingress
 #  10. ntfy              — notification backbone, needed by crowdsec and others
 BASE_TARGETS := namespaces nfs-server csi-driver-nfs longhorn cert-manager traefik crowdsec authelia ntfy
-APPS_TARGETS := immich logtfy jellyfin navidrome mdscl beszel homeassistant ollama nextcloud freshrss opodsync dscpln opencanary fmd syncthing
+APPS_TARGETS := immich logtfy jellyfin navidrome mdscl homeassistant ollama nextcloud freshrss opodsync dscpln opencanary fmd syncthing
 
 APPLY_MODE ?=
 
@@ -44,6 +44,7 @@ help:
 	@echo ""
 	@echo "Utility targets:"
 	@echo "  validate     Validate kustomization.yaml references, orphans, and env var consistency"
+	@echo "  update       Update Helm chart versions and container image tags"
 	@echo "  domains      List all DNS domains required by IngressRoutes"
 	@echo ""
 	@echo "Optional variables:"
@@ -56,7 +57,7 @@ help:
 k3s:
 	@if [ "$(APPLY_MODE)" = "delete" ]; then echo "Error: Cannot delete k3s via Makefile."; exit 1; fi
 	@if ! command -v kubectl >/dev/null 2>&1 || ! kubectl cluster-info >/dev/null 2>&1; then \
-		SU=$$(source $(SCRIPTS_DIR)/common.sh && get_sudo_cmd); \
+		SU=$$(if command -v run0 >/dev/null 2>&1; then echo run0; else echo sudo; fi); \
 		cd $(COMPONENTS_DIR)/k3s && $$SU bash -c './k3s.sh' && $$SU bash -c './firewall.sh'; \
 	fi
 
@@ -96,6 +97,10 @@ validate:
 	else \
 		echo "Warning: shellcheck not found. Install it to validate shell scripts."; \
 	fi
+
+update:
+	@echo "Updating Helm chart and container image versions..."
+	@python3 $(SCRIPTS_DIR)/update-versions.py
 
 domains:
 	@bash -c 'source $(SCRIPTS_DIR)/common.sh && source_env && \

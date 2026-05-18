@@ -11,14 +11,7 @@ data:
     freshrss-extensions-pvc
     homeassistant-config-pvc
     jellyfin-config-pvc
-    jellyfin-media
     nextcloud-data-pvc
-    plausible-db-pvc
-    plausible-data-pvc
-    plausible-clickhouse-data-pvc
-    plausible-clickhouse-logs-pvc
-    shlink-pvc
-    uptime-kuma-pvc
 ---
 apiVersion: v1
 kind: ServiceAccount

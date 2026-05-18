@@ -3,7 +3,6 @@ kind: Deployment
 metadata:
   name: ntfy
   namespace: base
-  annotations:
 spec:
   replicas: 1
   strategy:

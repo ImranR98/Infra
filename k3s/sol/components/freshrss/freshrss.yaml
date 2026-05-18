@@ -3,7 +3,6 @@ kind: Deployment
 metadata:
   name: freshrss
   namespace: apps
-  annotations:
 spec:
   replicas: 1
   strategy:
@@ -37,7 +36,7 @@ spec:
               memory: 128Mi
           env:
             - name: TZ
-              value: "US/Eastern"
+              value: "America/New_York"
             - name: CRON_MIN
               value: "2,32"
             - name: FRESHRSS_ENV
@@ -51,16 +50,13 @@ spec:
                 --default-user admin
                 --language en
             - name: FRESHRSS_ADMIN_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: freshrss-secret
-                  key: FRESHRSS_ADMIN_PASSWORD
+              value: "$FRESHRSS_PASSWORD"
             - name: FRESHRSS_USER
               value: |-
-                --api-password $FRESHRSS_ADMIN_PASSWORD
+                --api-password $FRESHRSS_PASSWORD
                 --email $DOMAIN_OWNER_EMAIL
                 --language en
-                --password $FRESHRSS_ADMIN_PASSWORD
+                --password $FRESHRSS_PASSWORD
                 --user admin
           volumeMounts:
             - name: freshrss-data

@@ -70,7 +70,7 @@ state/                      Runtime state (auto-generated, gitignored)
 - A Linux server with `systemd` and one of: `apt`, `dnf`, or `rpm-ostree`
 - Required ports depend on the target (see the VARS template)
 
-Install system prerequisites (Docker, yq, envsubst, jq, curl):
+Install system prerequisites (Docker, yq, envsubst, jq, curl, python3, python3-yaml):
 ```
 ./atlas.sh prereqs
 ```

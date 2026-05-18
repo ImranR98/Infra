@@ -23,7 +23,7 @@ It also updates Helm chart versions in helmchart.yaml files.
    - Images pinned by digest (@sha256:...) are NOT skipped — the digest
      is stripped and the tag is resolved normally (e.g. :latest@sha256:old
      is treated as just :latest)
-   - Skips files in the frp/ component directory
+
 
 3. IMAGE RESOLUTION (resolve_image):
    The core resolution logic for each image reference:
@@ -114,8 +114,16 @@ SEMVER_TAG_RE = re.compile(r"^(\d+)(?:\.(\d+)(?:\.(\d+))?)?(.*)$")
 SUFFIX_DIGIT_RE = re.compile(r"^[-_\.]\d")
 PRERELEASE_RE = re.compile(r"[-_](beta|rc|alpha|dev)\b")
 PURE_SEMVER_RE = re.compile(r"^v?\d+(\.\d+)+$")
-PURE_NUMERIC_RE = re.compile(r"^v?\d+(\.\d+)*$")
 PURE_NUMERIC_LINE_RE = re.compile(r"^v?\d+(?:\.\d+)*$")
+
+
+def _extract_tag(resolved):
+    """Extract the tag portion from a resolved image ref, preserving digest pinning."""
+    if "@sha256:" in resolved:
+        tag_part, digest = resolved.split("@sha256:", 1)
+        return tag_part.rsplit(":", 1)[-1] + "@sha256:" + digest
+    return resolved.rsplit(":", 1)[-1]
+
 DIRECT_IMAGE_RE = re.compile(r"^\s*image:[^\S\n]*(\S+)", re.MULTILINE)
 SEMVER_TRIPLE_RE = re.compile(r"^\d+\.\d+\.\d+$")
 HAS_SUFFIX_SEP_RE = re.compile(r"^v?\d+(?:\.\d+)*[-_]")
@@ -285,7 +293,7 @@ def _semver_key_cached(tag_stripped):
 
 def semver_key(tag):
     """Parse a tag into a sortable semver tuple. Normalizes v-prefix before caching."""
-    return _semver_key_cached(tag.lstrip("v"))
+    return _semver_key_cached(tag[1:] if tag.startswith("v") else tag)
 
 
 def is_prerelease(tag):
@@ -393,20 +401,30 @@ def highest_stable(tags, suffix="", original_tag=""):
 
 def parse_ref(ref):
     """Parse an image reference into (registry, image, tag, prefix). Handles
-    registry-qualified refs (ghcr.io/x/y:tag) and bare refs (nginx:tag).
+    registry-qualified refs (ghcr.io/x/y:tag), port-qualified registries
+    (registry:5000/x:tag), and bare refs (nginx:tag).
     Digests (@sha256:...) are stripped so the tag can be resolved normally."""
     tag = "latest"
     image = ref
     # Strip digest suffix: postgres:latest@sha256:abc → postgres:latest
     if "@sha256:" in image:
         image = image[:image.index("@sha256:")]
-    if ":" in image and not image.endswith(":") and image.count(":") <= 1:
+    # Split registry from the rest of the image path
+    registry = "docker.io"
+    prefix = ""
+    if "/" in image:
+        first_slash = image.index("/")
+        maybe_reg = image[:first_slash]
+        if "." in maybe_reg or ":" in maybe_reg or maybe_reg == "localhost":
+            registry = maybe_reg
+            image = image[first_slash + 1:]
+            prefix = f"{registry}/"
+    # Split tag from image
+    if ":" in image:
         parts = image.rsplit(":", 1)
-        image, tag = parts
-    if "/" in image and "." in image.split("/")[0]:
-        registry, rest = image.split("/", 1)
-        return RefInfo(registry, rest, tag, f"{registry}/")
-    return RefInfo("docker.io", image, tag, "")
+        image = parts[0]
+        tag = parts[1]
+    return RefInfo(registry, image, tag, prefix)
 
 
 def resolve_image(ref):
@@ -540,8 +558,6 @@ def find_image_refs():
     results = []
     file_contents = {}
     for f in sorted(COMPONENTS.rglob("*.yaml")):
-        if any(p == "frp" for p in f.parts):
-            continue
         if FILTER and FILTER not in str(f):
             continue
         content = f.read_text()
@@ -551,7 +567,7 @@ def find_image_refs():
 
         # Direct image refs: "image: <ref>" lines
         for m in DIRECT_IMAGE_RE.finditer(content):
-            ref = m.group(1).strip('"')
+            ref = m.group(1).strip('"\'')
             if ref and not ref.startswith("$") and ref != "null":
                 if not _is_pinned(plines, ref.rsplit(":", 1)[0]) and not _is_pinned(plines, ref):
                     results.append(("direct", fpath, ref))
@@ -593,9 +609,14 @@ def _apply_direct_ref(content, old_ref, new_ref):
 
 
 def _apply_values_tag(content, repo, new_tag):
-    """Replace the tag: value on the line following "repository: <repo>"."""
-    pat = _get_compiled(rf"^(\s*repository:\s*{re.escape(repo)}\s*(?:#.*)?\n\s*tag:\s*)\S+", re.MULTILINE)
-    return pat.sub(rf"\g<1>{new_tag}", content)
+    """Replace the tag: value associated with "repository: <repo>", allowing intervening lines."""
+    pat = _get_compiled(
+        rf"^(\s*repository:\s*{re.escape(repo)}\s*(?:#.*)?\n"
+        rf"(?:[^\n]*\n){{0,5}}?"
+        rf"\s*tag:\s*)\S+",
+        re.MULTILINE,
+    )
+    return pat.sub(rf"\g<1>{new_tag}", content, count=1)
 
 
 def _resolve_helm_chart(f, content):
@@ -648,8 +669,9 @@ def _resolve_helm_chart(f, content):
     if not version:
         return ChartResult(f, "no_version", chart, repo)
 
-    current = str(spec.get("version", "") or "").strip('"').lstrip("v")
-    version = version.lstrip("v")
+    current = str(spec.get("version", "") or "").strip('"')
+    current = current[1:] if current.startswith("v") else current
+    version = version[1:] if version.startswith("v") else version
     if current == version:
         return ChartResult(f, "current", chart, repo, version)
 
@@ -670,8 +692,6 @@ def update_helm_charts():
     print("\n=== Helm Charts ===")
     chart_files = []
     for f in sorted(COMPONENTS.rglob("*.yaml")):
-        if any(p == "frp" for p in f.parts):
-            continue
         if FILTER and FILTER not in str(f):
             continue
         content = f.read_text()
@@ -707,10 +727,11 @@ def update_helm_charts():
                         pat = _get_compiled(rf"^(\s*version:\s*){re.escape(r.current)}", re.MULTILINE)
                         new_content = pat.sub(rf"\g<1>{r.version}", r.content, count=1)
                     else:
-                        # No version line exists — insert before valuesContent or at end of spec
+                        # Remove existing empty version line, then insert before valuesContent
+                        cleaned = re.sub(r"^[ \t]*version:\s*[^\n]*\n?", "", r.content, count=1, flags=re.MULTILINE)
                         new_content = re.sub(
                             r"^(\s*)(valuesContent:.*)", rf"\1version: {r.version}\n\1\2",
-                            r.content, count=1, flags=re.MULTILINE)
+                            cleaned, count=1, flags=re.MULTILINE)
                     f.write_text(new_content)
                     print(f"    Updated: {r.current or 'none'} → {r.version}")
                 count += 1
@@ -781,7 +802,7 @@ def main():
                     continue
                 for ftype, fpath in entries:
                     if ftype == "values":
-                        new_tag = resolved.rsplit(":", 1)[-1]
+                        new_tag = _extract_tag(resolved)
                         repo = ref.rsplit(":", 1)[0]
                         print(f"  {fpath}: {ref} → {repo}:{new_tag}")
                     else:
@@ -798,7 +819,7 @@ def main():
                 for ftype, fpath in entries:
                     content = latest_content[fpath]
                     if ftype == "values":
-                        new_tag = resolved.rsplit(":", 1)[-1]
+                        new_tag = _extract_tag(resolved)
                         repo = ref.rsplit(":", 1)[0]
                         new_content = _apply_values_tag(content, repo, new_tag)
                         if new_content != content:

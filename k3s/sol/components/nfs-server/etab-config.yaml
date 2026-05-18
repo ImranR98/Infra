@@ -4,11 +4,11 @@ metadata:
   name: nfs-etab
   namespace: base
 data:
-  etab: |  
-    /exports	*(rw,fsid=0,crossmnt,no_subtree_check,insecure,no_root_squash)
-    /exports/longhorn-backup	*(rw,fsid=1,no_subtree_check,insecure,no_root_squash)
-    /exports/music	*(rw,fsid=2,no_subtree_check,insecure,no_root_squash)
-    /exports/jellyfin-tv	*(rw,fsid=3,no_subtree_check,insecure,no_root_squash)
-    /exports/jellyfin-youtube	*(rw,fsid=4,no_subtree_check,insecure,no_root_squash)
-    /exports/dscpln	*(rw,fsid=5,no_subtree_check,insecure,no_root_squash)
-    /exports/immich	*(rw,fsid=6,no_subtree_check,insecure,no_root_squash)
+  etab: |
+    /exports	*(rw,fsid=0,crossmnt,no_subtree_check,insecure,root_squash)
+    /exports/longhorn-backup	*(rw,fsid=1,no_subtree_check,insecure,root_squash)
+    /exports/music	*(rw,fsid=2,no_subtree_check,insecure,root_squash)
+    /exports/jellyfin-tv	*(rw,fsid=3,no_subtree_check,insecure,root_squash)
+    /exports/jellyfin-youtube	*(rw,fsid=4,no_subtree_check,insecure,root_squash)
+    /exports/dscpln	*(rw,fsid=5,no_subtree_check,insecure,root_squash)
+    /exports/immich	*(rw,fsid=6,no_subtree_check,insecure,root_squash)

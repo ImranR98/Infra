@@ -3,7 +3,6 @@ kind: Deployment
 metadata:
   name: mdscl-camera
   namespace: syncthing
-  annotations:
 spec:
   replicas: 1
   strategy:
@@ -28,12 +27,12 @@ spec:
             allowPrivilegeEscalation: false
           env:
             - name: NTFY_URL
-              value: "http://ntfy.base.svc.cluster.local:3000/${MAIN_NODE_NAME_LOWERCASE}_services_mdscl_errors"
+              value: "http://ntfy.base.svc.cluster.local:3000/${TARGET}_services_mdscl_errors"
             - name: NTFY_TOKEN
               valueFrom:
                 secretKeyRef:
-                  name: mdscl-secret
-                  key: NTFY_SERVICE_USER_TOKEN
+                  name: ntfy-service-token
+                  key: token
           resources:
             limits:
               memory: 2Gi
@@ -57,7 +56,6 @@ kind: Deployment
 metadata:
   name: mdscl-screenshots
   namespace: syncthing
-  annotations:
 spec:
   replicas: 1
   strategy:
@@ -82,12 +80,12 @@ spec:
             allowPrivilegeEscalation: false
           env:
             - name: NTFY_URL
-              value: "http://ntfy.base.svc.cluster.local:3000/${MAIN_NODE_NAME_LOWERCASE}_services_mdscl_errors"
+              value: "http://ntfy.base.svc.cluster.local:3000/${TARGET}_services_mdscl_errors"
             - name: NTFY_TOKEN
               valueFrom:
                 secretKeyRef:
-                  name: mdscl-secret
-                  key: NTFY_SERVICE_USER_TOKEN
+                  name: ntfy-service-token
+                  key: token
           resources:
             limits:
               memory: 2Gi
@@ -111,7 +109,6 @@ kind: Deployment
 metadata:
   name: mdscl-screenrecs
   namespace: syncthing
-  annotations:
 spec:
   replicas: 1
   strategy:
@@ -136,12 +133,12 @@ spec:
             allowPrivilegeEscalation: false
           env:
             - name: NTFY_URL
-              value: "http://ntfy.base.svc.cluster.local:3000/${MAIN_NODE_NAME_LOWERCASE}_services_mdscl_errors"
+              value: "http://ntfy.base.svc.cluster.local:3000/${TARGET}_services_mdscl_errors"
             - name: NTFY_TOKEN
               valueFrom:
                 secretKeyRef:
-                  name: mdscl-secret
-                  key: NTFY_SERVICE_USER_TOKEN
+                  name: ntfy-service-token
+                  key: token
           resources:
             limits:
               memory: 2Gi

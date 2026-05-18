@@ -2,10 +2,10 @@
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
-  name: ollama-prod-tls
+  name: openwebui-prod-tls
   namespace: apps
 spec:
-  secretName: ollama-prod-tls
+  secretName: openwebui-prod-tls
   issuerRef:
     name: letsencrypt-prod
     kind: ClusterIssuer
@@ -34,5 +34,5 @@ spec:
         - name: open-webui
           port: 80
   tls:
-    secretName: ollama-prod-tls
+    secretName: openwebui-prod-tls
 

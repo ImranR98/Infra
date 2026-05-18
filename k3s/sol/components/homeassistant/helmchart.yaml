@@ -19,6 +19,11 @@ spec:
     persistence:
       enabled: true
       existingClaim: homeassistant-config-pvc
+    configuration:
+      enabled: true
+      trusted_proxies:
+        - 10.0.0.0/8
+        - 172.16.0.0/12
     resources:
       limits:
         memory: 2Gi

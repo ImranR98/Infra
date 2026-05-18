@@ -58,6 +58,7 @@ spec:
   resources:
     requests:
       storage: 4000Gi
+
 ---
 apiVersion: v1
 kind: Secret
@@ -66,7 +67,7 @@ metadata:
   namespace: apps
 type: Opaque
 stringData:
-  IMMICH_DB_PASSWORD: "$IMMICH_DB_PASSWORD"
+  password: "$IMMICH_DB_PASSWORD"
 ---
 # PostgreSQL with VectorChord extension for Immich smart search
 apiVersion: apps/v1
@@ -74,7 +75,6 @@ kind: Deployment
 metadata:
   name: immich-postgresql
   namespace: apps
-  annotations:
 spec:
   replicas: 1
   selector:
@@ -111,7 +111,7 @@ spec:
           valueFrom:
             secretKeyRef:
               name: immich-db-credentials
-              key: IMMICH_DB_PASSWORD
+              key: password
         - name: POSTGRES_DB
           value: "immich"
         - name: PGDATA

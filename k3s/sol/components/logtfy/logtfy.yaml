@@ -46,13 +46,13 @@ stringData:
                     "id": "ntfy_self",
                     "host": "https://ntfy.$SERVICES_DOMAIN",
                     "authHeader": "Bearer $NTFY_SERVICE_USER_TOKEN",
-                    "topicPrefix": "${MAIN_NODE_NAME_LOWERCASE}_services_"
+                    "topicPrefix": "${TARGET}_services_"
                 },
                 {
                     "id": "ntfy_official",
                     "host": "https://ntfy.sh",
                     "authHeader": null,
-                    "topicPrefix": "${MAIN_NODE_NAME_LOWERCASE}_services_"
+                    "topicPrefix": "${TARGET}_services_"
                 }
             ],
             "defaultConfig": "ntfy_self",
@@ -96,7 +96,6 @@ metadata:
   namespace: monitoring
   labels:
     app: logtfy
-  annotations:
 spec:
   replicas: 1
   selector:
@@ -107,7 +106,7 @@ spec:
       labels:
         app: logtfy
     spec:
-      hostname: $MAIN_NODE_NAME_LOWERCASE
+      hostname: ${TARGET}
       serviceAccountName: logtfy-service-account
       securityContext:
         fsGroup: $MY_UID
@@ -128,7 +127,7 @@ spec:
             allowPrivilegeEscalation: false
           resources:
             limits:
-              memory: 2Gi
+              memory: 256Mi
             requests:
               memory: 128Mi
       volumes:

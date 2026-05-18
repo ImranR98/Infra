@@ -10,6 +10,15 @@ stringData:
   NEXTCLOUD_ADMIN_PASSWORD: "$NEXTCLOUD_ADMIN_PASSWORD"
 ---
 apiVersion: v1
+kind: Secret
+metadata:
+  name: nextcloud-db-secret
+  namespace: apps
+type: Opaque
+stringData:
+  password: "$NEXTCLOUD_DB_PASSWORD"
+---
+apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: nextcloud-data-pvc
@@ -21,4 +30,125 @@ spec:
   resources:
     requests:
       storage: 4Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: nextcloud-db-pvc
+  namespace: apps
+spec:
+  storageClassName: longhorn
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 2Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nextcloud-postgresql
+  namespace: apps
+  labels:
+    app: nextcloud-postgresql
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: nextcloud-postgresql
+  template:
+    metadata:
+      labels:
+        app: nextcloud-postgresql
+    spec:
+      securityContext:
+        fsGroup: 999
+      initContainers:
+        - name: volume-permissions
+          image: postgres:17-alpine
+          command:
+            - chown
+            - -R
+            - "999:999"
+            - /var/lib/postgresql/data
+          securityContext:
+            runAsUser: 0
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+      containers:
+        - name: postgresql
+          image: postgres:17-alpine
+          securityContext:
+            runAsUser: 999
+            runAsGroup: 999
+            allowPrivilegeEscalation: false
+          ports:
+            - containerPort: 5432
+          readinessProbe:
+            exec:
+              command:
+                - pg_isready
+                - -U
+                - nextcloud
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+            initialDelaySeconds: 15
+          env:
+            - name: POSTGRES_USER
+              value: nextcloud
+            - name: POSTGRES_DB
+              value: nextcloud
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: nextcloud-db-secret
+                  key: password
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+          resources:
+            limits:
+              memory: 2Gi
+            requests:
+              memory: 128Mi
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: nextcloud-db-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nextcloud-postgresql
+  namespace: apps
+spec:
+  selector:
+    app: nextcloud-postgresql
+  ports:
+    - protocol: TCP
+      port: 5432
+      targetPort: 5432
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-nextcloud-db-ingress
+  namespace: apps
+spec:
+  podSelector:
+    matchLabels:
+      app: nextcloud-postgresql
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: nextcloud
+      ports:
+        - port: 5432
+  policyTypes:
+    - Ingress
 

@@ -28,6 +28,8 @@ spec:
 ---
 # CrowdSec bouncer — checks IPs against CrowdSec's ban list in streaming mode.
 # Requires CrowdSec LAPI to be running (15.crowdsec.yaml).
+# NOTE: The bouncer key is inline because Traefik plugin Middleware CRDs
+# do not support valueFrom.secretKeyRef — only plain string values.
 apiVersion: traefik.io/v1alpha1
 kind: Middleware
 metadata:
@@ -87,5 +89,17 @@ metadata:
 spec:
   basicAuth:
     secret: localhost-auth-users
-
-
+---
+# IP whitelist for LAN-only routes (Longhorn dashboard, Jellyfin LAN access).
+# Allows direct pod/service traffic from private IP ranges.
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: lan-whitelist
+  namespace: base
+spec:
+  ipAllowList:
+    sourceRange:
+      - "10.0.0.0/8"
+      - "172.16.0.0/12"
+      - "192.168.0.0/16"

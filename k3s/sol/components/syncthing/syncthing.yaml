@@ -3,7 +3,6 @@ kind: Deployment
 metadata:
   name: syncthing
   namespace: syncthing
-  annotations:
 spec:
   replicas: 1
   strategy:
@@ -26,7 +25,7 @@ spec:
             allowPrivilegeEscalation: false
           env:
             - name: STGUIADDRESS
-              value: "0.0.0.0:8384"
+              value: "127.0.0.1:8384"
           resources:
             limits:
               memory: 2Gi

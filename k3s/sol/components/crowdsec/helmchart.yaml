@@ -75,7 +75,10 @@ spec:
         enabled: false
       env:
         - name: BOUNCER_KEY_traefik
-          value: "$CROWDSEC_BOUNCER_KEY"
+          valueFrom:
+            secretKeyRef:
+              name: crowdsec-secrets
+              key: bouncer-key
       extraVolumes:
         - name: crowdsec-lapi-configs
           configMap:
@@ -90,9 +93,6 @@ spec:
         - name: crowdsec-lapi-configs
           mountPath: /etc/crowdsec/immich.whitelist.yaml
           subPath: immich.whitelist.yaml
-        - name: crowdsec-lapi-configs
-          mountPath: /etc/crowdsec/plausible.whitelist.yaml
-          subPath: plausible.whitelist.yaml
         - name: crowdsec-lapi-configs
           mountPath: /etc/crowdsec/homeassistant.whitelist.yaml
           subPath: homeassistant.whitelist.yaml

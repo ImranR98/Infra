@@ -3,7 +3,6 @@ kind: Deployment
 metadata:
   name: navidrome
   namespace: apps
-  annotations:
 spec:
   replicas: 1
   strategy:

@@ -24,21 +24,25 @@ kubectl -n base exec "$POD" -- env NTFY_PASSWORD="$NTFY_ADMIN_PASSWORD" \
 	ntfy user add --ignore-exists service 2>/dev/null || true
 kubectl -n base exec "$POD" -- ntfy access service '*' write-only 2>/dev/null || true
 
-# Create service token
+# Create service token if it doesn't exist
 if ! kubectl -n base get secret ntfy-service-token >/dev/null 2>&1; then
 	TOKEN=$(kubectl -n base exec "$POD" -- ntfy token add service 2>&1 | grep -oP 'tk_\S+')
 	if [ -n "$TOKEN" ]; then
-		kubectl -n base create secret generic ntfy-service-token --from-literal=token="$TOKEN"
-		echo "ntfy service token: $TOKEN"
-		VARS_FILE="$ROOT_DIR/../../VARS.sh"
-		if grep -q "^export NTFY_SERVICE_USER_TOKEN=" "$VARS_FILE" 2>/dev/null; then
-			sed -i "s|^export NTFY_SERVICE_USER_TOKEN=.*|export NTFY_SERVICE_USER_TOKEN=\"$TOKEN\"|" "$VARS_FILE"
-		else
-			echo "export NTFY_SERVICE_USER_TOKEN=\"$TOKEN\"" >>"$VARS_FILE"
-		fi
+		for ns in base apps monitoring syncthing; do
+			kubectl create secret generic ntfy-service-token \
+				--namespace "$ns" \
+				--from-literal=token="$TOKEN" \
+				--dry-run=client -o yaml | kubectl apply -f -
+		done
+		echo "ntfy service token created and stored in K8s secret 'ntfy-service-token' (namespaces: base, apps, monitoring, syncthing)" >&2
 		echo ""
-		echo "*** IMPORTANT: VARS.sh has been updated with the ntfy service token. ***"
-		echo "*** You must manually re-deploy services that rely on this token:    ***"
-		echo "***     make logtfy && make dscpln && make mdscl    ***"
+		echo "*** The token has been distributed to all namespaces. Services that embed   ***"
+		echo "*** the token in ConfigMaps/Secrets (crowdsec, logtfy, opencanary) still    ***"
+		echo "*** use envsubst from VARS.sh. Update NTFY_SERVICE_USER_TOKEN in VARS.sh     ***"
+		echo "*** with the token below, then redeploy those services:                      ***"
+		echo "***     make crowdsec && make logtfy && make opencanary                      ***"
+		echo "*** Services using secretKeyRef (dscpln, mdscl) pick up the token            ***"
+		echo "*** automatically without redeploy.                                          ***"
+		echo "*** Token: $TOKEN"
 	fi
 fi

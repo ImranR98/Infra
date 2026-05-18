@@ -6,8 +6,8 @@ metadata:
   namespace: apps
 spec:
   rateLimit:
-    average: 50
-    burst: 25
+    average: 25
+    burst: 50
 ---
 apiVersion: cert-manager.io/v1
 kind: Certificate

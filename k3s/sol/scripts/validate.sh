@@ -15,7 +15,7 @@ KNOWN_SKIP_PATTERNS=(
 KNOWN_ENV_VARS=""
 for f in "$ROOT_DIR/../../vars/VARS.common.sh" "$ROOT_DIR/../../vars/VARS.sol.sh"; do
 	if [ -f "$f" ]; then
-		KNOWN_ENV_VARS+=$(grep -oP 'export \K[A-Z_]+' "$f" || true)
+		KNOWN_ENV_VARS+=$(grep -oP 'export \K[A-Z_][A-Z_0-9]*' "$f" || true)
 		KNOWN_ENV_VARS+="
 "
 	fi
@@ -24,7 +24,7 @@ done
 # Internal bash variables used inside YAML command: blocks (not envsubst vars)
 KNOWN_ENV_VARS+="
 MY_UID
-MAIN_NODE_NAME_LOWERCASE
+TARGET
 NS
 PV
 PVC
@@ -33,7 +33,7 @@ VOLUMES
 
 for comp_dir in "$ROOT_DIR"/components/*/; do
 	comp=$(basename "$comp_dir")
-	[ "$comp" = "frp" ] || [ "$comp" = "k3s" ] && continue
+	if [ "$comp" = "k3s" ]; then continue; fi
 
 	if [ ! -f "$comp_dir/kustomization.yaml" ]; then
 		echo "ERROR: $comp missing kustomization.yaml"
@@ -65,7 +65,7 @@ for comp_dir in "$ROOT_DIR"/components/*/; do
 		done
 		$_skip && continue
 
-		if ! grep -q "$filename" "$comp_dir/kustomization.yaml"; then
+		if ! grep -qF "$filename" "$comp_dir/kustomization.yaml"; then
 			echo "WARN: $comp/$filename not listed in kustomization.yaml"
 			WARNINGS=$((WARNINGS + 1))
 		fi
@@ -91,7 +91,7 @@ for comp_dir in "$ROOT_DIR"/components/*/; do
 			fi
 			echo "WARN: $comp/$(basename "$yaml_file") references '$var' but it's not defined in VARS templates"
 			WARNINGS=$((WARNINGS + 1))
-		done < <(grep -v '^\s*#' "$yaml_file" 2>/dev/null | grep -oP '\$\{?[A-Z_][A-Z_0-9]+\}?' | sed 's/^\$//;s/[{}]//g' | sort -u)
+		done < <(grep -v '^\s*#' "$yaml_file" 2>/dev/null | grep -oP '\$\{?[A-Z_][A-Z_0-9]*\}?' | sed 's/^\$//;s/[{}]//g' | sort -u)
 	done
 done
 

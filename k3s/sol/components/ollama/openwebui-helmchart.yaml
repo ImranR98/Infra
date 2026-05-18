@@ -35,7 +35,10 @@ spec:
       - name: OAUTH_CLIENT_ID
         value: "open-webui"
       - name: OAUTH_CLIENT_SECRET
-        value: "$AUTHELIA_OPENWEBUI_CLIENT_SECRET"
+        valueFrom:
+          secretKeyRef:
+            name: openwebui-oidc
+            key: client-secret
       - name: OAUTH_SCOPES
         value: "openid email profile groups"
       - name: ENABLE_OAUTH_ROLE_MANAGEMENT

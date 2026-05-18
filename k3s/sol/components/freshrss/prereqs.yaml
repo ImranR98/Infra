@@ -24,12 +24,3 @@ spec:
     requests:
       storage: 1Gi
 
----
-apiVersion: v1
-kind: Secret
-metadata:
-  name: freshrss-secret
-  namespace: apps
-type: Opaque
-stringData:
-  FRESHRSS_ADMIN_PASSWORD: "$FRESHRSS_ADMIN_PASSWORD"

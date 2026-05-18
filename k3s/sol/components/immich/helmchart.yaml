@@ -31,7 +31,11 @@ spec:
               DB_HOSTNAME: "immich-postgresql"
               DB_USERNAME: "postgres"
               DB_DATABASE_NAME: "immich"
-              DB_PASSWORD: "$IMMICH_DB_PASSWORD"
+              DB_PASSWORD:
+                valueFrom:
+                  secretKeyRef:
+                    name: immich-db-credentials
+                    key: password
 
     defaultPodOptions:
       securityContext:

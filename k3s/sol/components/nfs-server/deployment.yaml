@@ -4,7 +4,6 @@ kind: Deployment
 metadata:
   name: nfs-server
   namespace: base
-  annotations:
 spec:
   replicas: 1
   strategy:
@@ -22,10 +21,16 @@ spec:
           image: busybox:1.37.0-uclibc
           command:
             - modprobe
+            - -a
             - nfs
             - nfsd
           securityContext:
             privileged: true
+          resources:
+            limits:
+              memory: 2Gi
+            requests:
+              memory: 128Mi
           volumeMounts:
             - mountPath: /lib/modules
               name: modules
@@ -39,6 +44,11 @@ spec:
               protocol: TCP
           securityContext:
             privileged: true
+          resources:
+            limits:
+              memory: 2Gi
+            requests:
+              memory: 128Mi
           volumeMounts:
             - mountPath: /exports
               name: exports-root

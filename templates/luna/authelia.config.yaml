@@ -4,7 +4,7 @@
 #       should not be protected by Authelia once fully set up, but should be protected before
 #       some manual step is taken (usually manual creation of an admin account).
 
-jwt_secret: $AUTHELIA_JWT_SECRET
+jwt_secret: '$AUTHELIA_JWT_SECRET'
 
 log:
   level: debug
@@ -45,7 +45,7 @@ access_control:
       policy: bypass # IGNORE INITIALLY
 
 session:
-  secret: $AUTHELIA_SESSION_SECRET
+  secret: '$AUTHELIA_SESSION_SECRET'
   cookies:
     - domain: $SERVICES_DOMAIN
       authelia_url: https://luna.$SERVICES_DOMAIN

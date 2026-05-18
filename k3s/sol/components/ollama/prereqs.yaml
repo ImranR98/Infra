@@ -23,3 +23,12 @@ spec:
   resources:
     requests:
       storage: 4Gi
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: openwebui-oidc
+  namespace: apps
+type: Opaque
+stringData:
+  client-secret: "$AUTHELIA_OPENWEBUI_CLIENT_SECRET"

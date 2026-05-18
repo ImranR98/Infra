@@ -30,7 +30,7 @@ fi
 
 if [ "$MODE" = "initial" ] && [ -f "$COMPONENT_DIR/kustomization.yaml" ]; then
 	TMP_DIR=$(mktemp -d)
-	trap "rm -rf $TMP_DIR" EXIT
+	trap "rm -rf '$TMP_DIR'" EXIT
 	for f in "$COMPONENT_DIR"/*.yaml; do
 		sed '/# initially-removed$/d' "$f" > "$TMP_DIR/$(basename "$f")"
 	done
@@ -83,10 +83,10 @@ else
 		if echo "$output" | grep -qiE "connection refused|no route to host|no such host|i/o timeout"; then
 			_retries=$((_retries + 1))
 			if [ $_retries -ge 12 ]; then
-			echo "Error: Transient API error after 120s. Aborting." >&2
-			exit 1
-		fi
-		echo "Warning: API temporarily unavailable. Retrying in 10s..."
+				echo "Error: Transient API error after 120s. Aborting." >&2
+				exit 1
+			fi
+			echo "Warning: API temporarily unavailable. Retrying in 10s..."
 			sleep 10
 			continue
 		fi

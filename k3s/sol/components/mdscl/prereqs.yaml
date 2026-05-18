@@ -220,12 +220,4 @@ spec:
     requests:
       storage: 4000Gi
   volumeName: mdscl-screenrecs-dst-pv
----
-apiVersion: v1
-kind: Secret
-metadata:
-  name: mdscl-secret
-  namespace: syncthing
-type: Opaque
-stringData:
-  NTFY_SERVICE_USER_TOKEN: "$NTFY_SERVICE_USER_TOKEN"
+

@@ -8,7 +8,7 @@ type: Opaque
 stringData:
   opencanary.conf: |
     {
-      "device.node_id": "opencanary-$MAIN_NODE_NAME_LOWERCASE",
+      "device.node_id": "opencanary-${TARGET}",
       "ip.ignorelist": [],
       "logtype.ignorelist": [],
       "git.enabled": true,
@@ -38,7 +38,7 @@ stringData:
       "httpproxy.enabled": true,
       "httpproxy.port": 8082,
       "httpproxy.skin": "squid",
-      "httproxy.skin.list": [
+      "httpproxy.skin.list": [
         {
           "desc": "Squid",
           "name": "squid"
@@ -75,12 +75,12 @@ stringData:
             },
             "Webhook": {
               "class": "opencanary.logger.WebhookHandler",
-              "url": "http://ntfy.base.svc.cluster.local:3000/${MAIN_NODE_NAME_LOWERCASE}_services_opencanary",
+              "url": "http://ntfy.base.svc.cluster.local:3000/${TARGET}_services_opencanary",
               "method": "POST",
               "data": "%(message)s",
               "status_code": 200,
               "headers": {
-                "Title": "OpenCanary on $MAIN_NODE_NAME",
+                "Title": "OpenCanary on ${TARGET}",
                 "Authorization": "Bearer $NTFY_SERVICE_USER_TOKEN"
               }
             }

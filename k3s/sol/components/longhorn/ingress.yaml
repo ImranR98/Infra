@@ -92,5 +92,5 @@ spec:
   task: "backup"
   groups:
     - auto-backup
-  retain: 1
+  retain: 3
 

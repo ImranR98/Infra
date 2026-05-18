@@ -64,7 +64,6 @@ metadata:
   namespace: base
   labels:
     app.kubernetes.io/instance: authelia
-  annotations:
 spec:
   replicas: 1
   strategy:
@@ -138,7 +137,6 @@ metadata:
   namespace: base
   labels:
     app.kubernetes.io/instance: authelia
-  annotations:
 spec:
   replicas: 1
   strategy:

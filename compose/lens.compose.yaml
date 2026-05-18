@@ -24,5 +24,3 @@ services:
           - /var/log/journal:/var/log/journal:ro
         logging: *logging
 
-volumes:
-    logtfy_tmp: {}

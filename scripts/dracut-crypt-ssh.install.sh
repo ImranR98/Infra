@@ -4,13 +4,16 @@ set -e
 USERNAME="$1"
 if [ -z "$USERNAME" ]; then exit 1; fi
 
-if ! which rpm-ostree; then
+if ! command -v rpm-ostree >/dev/null 2>&1; then
     dnf copr enable uriesk/dracut-crypt-ssh -y
     dnf install dracut-crypt-ssh -y
-    sed -i 's/^\(GRUB_CMDLINE_LINUX=".*\)"/\1 rd.neednet=1 ip=dhcp"/' /etc/default/grub
-    grub2-mkconfig --output /etc/grub2.cfg
+    if ! grep -q "rd.neednet=1" /etc/default/grub 2>/dev/null; then
+        sed -i 's/^\(GRUB_CMDLINE_LINUX=".*\)"/\1 rd.neednet=1 ip=dhcp"/' /etc/default/grub
+        grub2-mkconfig --output /etc/grub2.cfg
+    fi
 else
-    wget -nv https://copr.fedorainfracloud.org/coprs/uriesk/dracut-crypt-ssh/repo/fedora-42/uriesk-dracut-crypt-ssh-fedora-42.repo -O /etc/yum.repos.d/dracut-crypt-ssh.repo
+    FEDORA_VERSION=$(rpm -E %fedora)
+    wget -nv "https://copr.fedorainfracloud.org/coprs/uriesk/dracut-crypt-ssh/repo/fedora-${FEDORA_VERSION}/uriesk-dracut-crypt-ssh-fedora-${FEDORA_VERSION}.repo" -O /etc/yum.repos.d/dracut-crypt-ssh.repo
     rpm-ostree initramfs --enable || :
     rpm-ostree refresh-md
     if ! rpm-ostree status | grep dracut-crypt-ssh; then
@@ -26,17 +29,19 @@ sed -i 's/"222"/"22"/g' /etc/dracut.conf.d/crypt-ssh.conf                       
 sed -i '/^#[[:space:]]*dropbear_port/s/^#[[:space:]]*//' /etc/dracut.conf.d/crypt-ssh.conf # Uncomment to use custom port
 sed -i '/^#[[:space:]]*dropbear_acl/s/^#[[:space:]]*//' /etc/dracut.conf.d/crypt-ssh.conf  # Uncomment to use custom authorized_keys path
 sed -i 's/\/root\/.ssh/\/etc\/.ssh/g' /etc/dracut.conf.d/crypt-ssh.conf
-umask 0077
-mkdir -p /etc/dracut-crypt-ssh-keys # Generate keys if needed
-test -f /etc/dracut-crypt-ssh-keys/ssh_dracut_rsa_key || ssh-keygen -t rsa -m PEM -f /etc/dracut-crypt-ssh-keys/ssh_dracut_rsa_key -N ""
-test -f /etc/dracut-crypt-ssh-keys/ssh_dracut_ecdsa_key || ssh-keygen -t ecdsa -m PEM -f /etc/dracut-crypt-ssh-keys/ssh_dracut_ecdsa_key -N ""
-test -f /etc/dracut-crypt-ssh-keys/ssh_dracut_ed25519_key || ssh-keygen -t ed25519 -m PEM -f /etc/dracut-crypt-ssh-keys/ssh_dracut_ed25519_key -N ""
+(
+    umask 0077
+    mkdir -p /etc/dracut-crypt-ssh-keys # Generate keys if needed
+    test -f /etc/dracut-crypt-ssh-keys/ssh_dracut_rsa_key || ssh-keygen -t rsa -m PEM -f /etc/dracut-crypt-ssh-keys/ssh_dracut_rsa_key -N ""
+    test -f /etc/dracut-crypt-ssh-keys/ssh_dracut_ecdsa_key || ssh-keygen -t ecdsa -m PEM -f /etc/dracut-crypt-ssh-keys/ssh_dracut_ecdsa_key -N ""
+    test -f /etc/dracut-crypt-ssh-keys/ssh_dracut_ed25519_key || ssh-keygen -t ed25519 -m PEM -f /etc/dracut-crypt-ssh-keys/ssh_dracut_ed25519_key -N ""
+    mkdir -p /etc/.ssh
+    if [ -f "/home/$USERNAME/.ssh/authorized_keys" ]; then cp "/home/$USERNAME/.ssh/authorized_keys" /etc/.ssh/; fi
+)
 sed -i 's/# dropbear_ed25519_key="GENERATE"/dropbear_ed25519_key="\/etc\/dracut-crypt-ssh-keys\/ssh_dracut_ed25519_key"/g' /etc/dracut.conf.d/crypt-ssh.conf # Tell it where to find keys
 sed -i 's/# dropbear_rsa_key="GENERATE"/dropbear_rsa_key="\/etc\/dracut-crypt-ssh-keys\/ssh_dracut_rsa_key"/g' /etc/dracut.conf.d/crypt-ssh.conf
 sed -i 's/# dropbear_ecdsa_key="GENERATE"/dropbear_ecdsa_key="\/etc\/dracut-crypt-ssh-keys\/ssh_dracut_ecdsa_key"/g' /etc/dracut.conf.d/crypt-ssh.conf
-mkdir -p /etc/.ssh
-if [ -f "/home/$USERNAME/.ssh/authorized_keys" ]; then cp "/home/$USERNAME/.ssh/authorized_keys" /etc/.ssh/; fi
 
-if ! which rpm-ostree; then
+if ! command -v rpm-ostree >/dev/null 2>&1; then
     dracut --force
 fi

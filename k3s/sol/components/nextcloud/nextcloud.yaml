@@ -3,7 +3,6 @@ kind: Deployment
 metadata:
   name: nextcloud
   namespace: apps
-  annotations:
 spec:
   replicas: 1
   strategy:
@@ -16,10 +15,14 @@ spec:
       labels:
         app: nextcloud
     spec:
+      securityContext:
+        fsGroup: 33
       containers:
         - name: nextcloud
           image: nextcloud:33.0.3
           securityContext:
+            runAsUser: 33
+            runAsGroup: 33
             allowPrivilegeEscalation: false
           ports:
             - containerPort: 80
@@ -41,14 +44,23 @@ spec:
                 secretKeyRef:
                   name: nextcloud-admin-secret
                   key: NEXTCLOUD_ADMIN_PASSWORD
-            - name: SQLITE_DATABASE
-              value: "nextcloud"
+            - name: POSTGRES_HOST
+              value: nextcloud-postgresql
+            - name: POSTGRES_DB
+              value: nextcloud
+            - name: POSTGRES_USER
+              value: nextcloud
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: nextcloud-db-secret
+                  key: password
             - name: NEXTCLOUD_TRUSTED_DOMAINS
               value: "nextcloud.$SERVICES_DOMAIN"
             - name: APACHE_DISABLE_REWRITE_IP
               value: "1"
             - name: TRUSTED_PROXIES
-              value: "10.0.0.0/8"
+              value: "10.0.0.0/8, 172.16.0.0/12"
           volumeMounts:
             - name: nextcloud-data
               mountPath: /var/www/html

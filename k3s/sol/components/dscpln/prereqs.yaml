@@ -31,12 +31,4 @@ spec:
   resources:
     requests:
       storage: 4000Gi
----
-apiVersion: v1
-kind: Secret
-metadata:
-  name: dscpln-secret
-  namespace: apps
-type: Opaque
-stringData:
-  NTFY_SERVICE_USER_TOKEN: "$NTFY_SERVICE_USER_TOKEN"
+

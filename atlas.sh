@@ -7,6 +7,47 @@ get_sudo_cmd() {
     if command -v run0 &>/dev/null; then echo "run0"; else echo "sudo"; fi
 }
 
+detect_pkgmgr() {
+    if command -v apt-get &>/dev/null; then echo "apt"
+    elif command -v dnf &>/dev/null; then echo "dnf"
+    elif command -v rpm-ostree &>/dev/null; then echo "rpm-ostree"
+    else echo "unknown"
+    fi
+}
+
+ensure_docker_repo() {
+    local su="$1"
+    local pkgmgr="$2"
+    case "$pkgmgr" in
+        apt)
+            install_pkgs "$su" "$pkgmgr" curl gnupg
+            $su install -m 0755 -d /etc/apt/keyrings
+            curl -fsSL https://download.docker.com/linux/ubuntu/gpg | $su gpg --dearmor -o /etc/apt/keyrings/docker.gpg 2>/dev/null || true
+            echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | $su tee /etc/apt/sources.list.d/docker.list >/dev/null || true
+            $su "$pkgmgr" update -qq 2>/dev/null || true
+            ;;
+        dnf)
+            $su "$pkgmgr" install -y dnf-plugins-core 2>/dev/null || true
+            $su "$pkgmgr" config-manager --add-repo https://download.docker.com/linux/fedora/docker-ce.repo 2>/dev/null || true
+            ;;
+        rpm-ostree)
+            $su rpm-ostree install --apply-live --assumeyes docker-ce docker-ce-cli containerd.io docker-compose-plugin 2>/dev/null || true
+            ;;
+    esac
+}
+
+install_pkgs() {
+    local su="$1"
+    local pkgmgr="$2"
+    shift 2
+    case "$pkgmgr" in
+        apt) $su apt-get install -y "$@" 2>/dev/null || return 1 ;;
+        dnf) $su dnf install -y "$@" 2>/dev/null || return 1 ;;
+        rpm-ostree) $su rpm-ostree install --apply-live --assumeyes "$@" 2>/dev/null || return 1 ;;
+        *) return 1 ;;
+    esac
+}
+
 case "${1:-}" in
     luna|lens|sol)
         export TARGET="$1"
@@ -41,81 +82,109 @@ if [ -f "$HERE/VARS.sh" ]; then
     else
         export MY_UID="$UID"
     fi
-    export DOCKER_GID="$(grep docker /etc/group | awk -F: '{print $3}')"
+    DOCKER_GID="$(getent group docker | cut -d: -f3)"
+    if [ -z "$DOCKER_GID" ]; then echo "Error: docker group not found. Is Docker installed?" >&2; exit 1; fi
+    export DOCKER_GID
     export FRPC_USER="${TARGET,,}"
-elif [ -n "$COMMAND" ] && [ "$COMMAND" != "prereqs" ] && [ "$COMMAND" != "list-domains" ] && [ "$COMMAND" != "old-images" ] && [ "$COMMAND" != "update-socket-proxy" ] && [ "$COMMAND" != "update-traefik-plugins" ] && [ "$COMMAND" != "k3s" ]; then
-    echo "No VARS.sh found. Create VARS.sh with variables from vars/VARS.common.sh and vars/VARS.$TARGET.sh." >&2
-    exit 1
+elif [ -n "$COMMAND" ]; then
+    case "$COMMAND" in
+        install|install-preboot|restart|backup-state)
+            echo "No VARS.sh found. Create VARS.sh with variables from vars/VARS.common.sh and vars/VARS.$TARGET.sh." >&2
+            exit 1
+            ;;
+    esac
 fi
+
+get_envsubst_vars() {
+    local vars=""
+    vars=$(grep -hEo '\$[A-Z_][A-Z_0-9]*|\$\{[A-Z_][A-Z_0-9]*\}' "$HERE"/compose/"$TARGET".compose.yaml 2>/dev/null | sed 's/[{}]//g' | sort -u | tr '\n' ' ')
+    for f in "$HERE"/templates/"$TARGET"/*.yaml "$HERE"/templates/"$TARGET"/*.json "$HERE"/templates/"$TARGET"/*.txt "$HERE"/templates/"$TARGET"/*.toml; do
+        [ -f "$f" ] && vars="$vars $(grep -hEo '\$[A-Z_][A-Z_0-9]*|\$\{[A-Z_][A-Z_0-9]*\}' "$f" 2>/dev/null | sed 's/[{}]//g' | tr '\n' ' ')"
+    done
+    vars=$(echo "$vars" | tr ' ' '\n' | sort -u | tr '\n' ' ')
+    for v in MY_UID DOCKER_GID FRPC_USER TARGET STATE_DIR; do
+        case " $vars " in *" \$$v "*) ;; *) vars="$vars \$$v" ;; esac
+    done
+    echo "$vars"
+}
+
+generate_configs() {
+    local target="$1"
+    echo "=== Re/generate various state files ==="
+
+    if [ -f "$HERE/templates/$target/authelia.config.yaml" ]; then
+        if [ -f "$STATE_DIR/authelia/config/configuration.yml" ]; then
+            PROTECT_INIT_ROUTES=${PROTECT_INIT_ROUTES:-false}
+        else
+            PROTECT_INIT_ROUTES=${PROTECT_INIT_ROUTES:-true}
+        fi
+        echo "PROTECT_INIT_ROUTES=$PROTECT_INIT_ROUTES"
+        if [ "$PROTECT_INIT_ROUTES" = true ]; then
+            sed '/# IGNORE INITIALLY$/ s/^/# /' "$HERE"/templates/"$target"/authelia.config.yaml | envsubst "$ENVSUBST_VARS" >"$STATE_DIR"/authelia/config/configuration.yml
+            echo "Note: the generated Authelia config does not include lines that end with \"# IGNORE INITIALLY\"."
+        else
+            envsubst "$ENVSUBST_VARS" < "$HERE"/templates/"$target"/authelia.config.yaml >"$STATE_DIR"/authelia/config/configuration.yml
+        fi
+
+        printf '%s\n' "$AUTHELIA_USERS_DATABASE" >"$STATE_DIR"/authelia/config/users_database.yml
+    fi
+
+    if [ -f "$HERE/templates/$target/traefik.dynamic-configuration.yaml" ]; then
+        if [ ! -f "$STATE_DIR"/traefik/acme.json ]; then
+            echo '{}' >"$STATE_DIR"/traefik/acme.json
+            echo "Created an empty \"acme.json\"."
+        fi
+        chmod 600 "$STATE_DIR"/traefik/acme.json
+        envsubst "$ENVSUBST_VARS" < "$HERE"/templates/"$target"/traefik.dynamic-configuration.yaml > "$STATE_DIR"/traefik/dynamic-configuration.yaml
+    fi
+
+    if [ -f "$HERE/templates/$target/plausible.clickhouse-config.xml" ]; then
+        cp "$HERE"/templates/"$target"/plausible.clickhouse-config.xml "$STATE_DIR"/plausible/config/clickhouse-config.xml
+    fi
+
+    if [ -f "$HERE/templates/$target/frpc.toml" ]; then
+        mkdir -p "$STATE_DIR"/frpc
+        envsubst "$ENVSUBST_VARS" < "$HERE"/templates/"$target"/frpc.toml > "$STATE_DIR"/frpc/frpc.toml
+        chmod 600 "$STATE_DIR"/frpc/frpc.toml
+    fi
+
+    if [ -f "$HERE/templates/$target/frps-tokens.txt" ]; then
+        mkdir -p "$STATE_DIR"/frps
+        envsubst "$ENVSUBST_VARS" < "$HERE"/templates/"$target"/frps-tokens.txt > "$STATE_DIR"/frps/tokens.txt
+        chmod 600 "$STATE_DIR"/frps/tokens.txt
+    fi
+
+    echo "=== Generate Logtfy config ==="
+    if [ -f "$HERE/templates/$target/logtfy.config.json" ]; then
+        mkdir -p "$STATE_DIR"/logtfy
+        envsubst "$ENVSUBST_VARS" < "$HERE"/templates/"$target"/logtfy.config.json > "$STATE_DIR"/logtfy/config.json
+        echo "Done."
+    else
+        echo "No logtfy config template found. Skipping."
+    fi
+}
+
+export ENVSUBST_VARS="$(get_envsubst_vars)"
 
 case "$COMMAND" in
     install)
         echo "=== Create Required Directories ==="
         tmpfile="$(mktemp)"
-        envsubst < "$HERE"/compose/"$TARGET".compose.yaml > "$tmpfile"
-        sed -n "s|^[[:space:]]*- \"\?$STATE_DIR/\([^:]*\):.*$|$STATE_DIR/\1|p" "$tmpfile" | \
-            while IFS=: read -r host_path _; do
+        trap 'rm -f "$tmpfile"' EXIT
+        envsubst "$ENVSUBST_VARS" < "$HERE"/compose/"$TARGET".compose.yaml > "$tmpfile"
+        while IFS=: read -r host_path _; do
                 name="$(basename "$host_path")"
                 if [[ "$name" =~ \.[a-zA-Z0-9]{1,5}$ ]]; then
-                    mkdir -p "$(dirname "$host_path")" 2>/dev/null || :
+                    mkdir -p "$(dirname "$host_path")"
                     [ "$UID" -eq 0 ] && chown "$MY_UID:$MY_UID" "$(dirname "$host_path")" 2>/dev/null || :
                 else
-                    mkdir -p "$host_path" 2>/dev/null || :
+                    mkdir -p "$host_path"
                     [ "$UID" -eq 0 ] && chown "$MY_UID:$MY_UID" "$host_path" 2>/dev/null || :
                 fi
-            done
+            done < <(sed -n "s|^[[:space:]]*- \"\?$STATE_DIR/\([^:]*\):.*$|$STATE_DIR/\1|p" "$tmpfile")
         echo "Done."
 
-        echo "=== Re/generate various state files ==="
-
-        if [ -f "$HERE/templates/$TARGET/authelia.config.yaml" ]; then
-            if [ -f "$STATE_DIR/authelia/config/configuration.yml" ]; then
-                PROTECT_INIT_ROUTES=${PROTECT_INIT_ROUTES:-false}
-            else
-                PROTECT_INIT_ROUTES=${PROTECT_INIT_ROUTES:-true}
-            fi
-            echo "PROTECT_INIT_ROUTES=$PROTECT_INIT_ROUTES"
-            if [ "$PROTECT_INIT_ROUTES" = true ]; then
-                sed '/# IGNORE INITIALLY$/ s/^/# /' "$HERE"/templates/"$TARGET"/authelia.config.yaml | envsubst >"$STATE_DIR"/authelia/config/configuration.yml
-                echo "Note: the generated Authelia config does not include lines that end with \"# IGNORE INITIALLY\"."
-            else
-                envsubst < "$HERE"/templates/"$TARGET"/authelia.config.yaml >"$STATE_DIR"/authelia/config/configuration.yml
-            fi
-
-            echo "$AUTHELIA_USERS_DATABASE" >"$STATE_DIR"/authelia/config/users_database.yml
-        fi
-
-        if [ -f "$HERE/templates/$TARGET/traefik.dynamic-configuration.yaml" ]; then
-            if [ ! -f "$STATE_DIR"/traefik/acme.json ]; then
-                echo '{}' >"$STATE_DIR"/traefik/acme.json
-                echo "Created an empty \"acme.json\"."
-            fi
-            chmod 600 "$STATE_DIR"/traefik/acme.json
-            envsubst < "$HERE"/templates/"$TARGET"/traefik.dynamic-configuration.yaml > "$STATE_DIR"/traefik/dynamic-configuration.yaml
-        fi
-
-        if [ -f "$HERE/templates/$TARGET/plausible.clickhouse-config.xml" ]; then
-            cp "$HERE"/templates/"$TARGET"/plausible.clickhouse-config.xml "$STATE_DIR"/plausible/config/clickhouse-config.xml
-        fi
-
-        if [ -f "$HERE/templates/$TARGET/frpc.toml" ]; then
-            mkdir -p "$STATE_DIR"/frpc
-            envsubst < "$HERE"/templates/"$TARGET"/frpc.toml > "$STATE_DIR"/frpc/frpc.toml
-        fi
-
-        if [ -f "$HERE/templates/$TARGET/frps-tokens.txt" ]; then
-            mkdir -p "$STATE_DIR"/frps
-            envsubst < "$HERE"/templates/"$TARGET"/frps-tokens.txt > "$STATE_DIR"/frps/tokens.txt
-        fi
-
-        echo "=== Generate Logtfy config ==="
-        if [ -f "$HERE/templates/$TARGET/logtfy.config.json" ]; then
-            mkdir -p "$STATE_DIR"/logtfy
-            envsubst < "$HERE"/templates/"$TARGET"/logtfy.config.json > "$STATE_DIR"/logtfy/config.json
-            echo "Done."
-        else
-            echo "No logtfy config template found. Skipping."
-        fi
+        generate_configs "$TARGET"
 
         echo "=== Generate Docker Compose file ==="
         cp "$tmpfile" "$STATE_DIR"/compose.yaml
@@ -161,7 +230,8 @@ EOF
 
         echo "=== Generate preboot FRPC config ==="
         mkdir -p "$STATE_DIR"/frpc
-        envsubst < "$HERE"/templates/"$TARGET"/frpc-preboot.toml > "$STATE_DIR"/frpc/frpc-preboot.toml
+        envsubst "$ENVSUBST_VARS" < "$HERE"/templates/"$TARGET"/frpc-preboot.toml > "$STATE_DIR"/frpc/frpc-preboot.toml
+        chmod 600 "$STATE_DIR"/frpc/frpc-preboot.toml
         echo "Done."
 
         echo "=== Check if root partition is LUKS-encrypted ==="
@@ -180,7 +250,8 @@ EOF
         ;;
 
     restart)
-        envsubst < "$HERE"/compose/"$TARGET".compose.yaml > "$STATE_DIR"/compose.yaml
+        generate_configs "$TARGET"
+        envsubst "$ENVSUBST_VARS" < "$HERE"/compose/"$TARGET".compose.yaml > "$STATE_DIR"/compose.yaml
 
         if [ -n "${2:-}" ]; then
             docker compose -p "$TARGET" -f "$STATE_DIR"/compose.yaml down "$2" || :
@@ -218,7 +289,7 @@ EOF
         ;;
 
     list-domains)
-        sed -n 's/.*Host(`\([^`]*\)`).*/\1/p' "$HERE"/compose/"$TARGET".compose.yaml | sort -u | envsubst
+        sed -n 's/.*Host(`\([^`]*\)`).*/\1/p' "$HERE"/compose/"$TARGET".compose.yaml | sort -u | envsubst "$ENVSUBST_VARS"
         ;;
 
     update-traefik-plugins)
@@ -261,15 +332,21 @@ EOF
         OUTPUT="$BACKUP_DIR/$TARGET-backup-$TIMESTAMP.tar"
 
         echo "Backing up $STATE_DIR and VARS.sh..."
-        docker run --rm -v "$STATE_DIR":/backup/state:ro -v "$HERE/VARS.sh":/backup/VARS.sh:ro \
-            alpine sh -c 'apk add --no-cache tar >/dev/null 2>&1 && exec tar cf - --ignore-failed-read --warning=no-file-changed --warning=no-file-removed -C /backup .' > "$OUTPUT"
+        (umask 0077; docker run --rm -v "$STATE_DIR":/backup/state:ro -v "$HERE/VARS.sh":/backup/VARS.sh:ro \
+            alpine sh -c 'apk add --no-cache tar >/dev/null 2>&1 && exec tar cf - --ignore-failed-read --warning=no-file-changed --warning=no-file-removed -C /backup .' > "$OUTPUT")
         if [ -s "$OUTPUT" ]; then
             echo "Backup created: $OUTPUT"
-            for f in "$BACKUP_DIR"/"$TARGET"-backup-*.tar; do
-                [ ! -e "$f" ] && continue
-                [ "$f" = "$OUTPUT" ] && continue
-                rm -f "$f"
-            done
+            BACKUP_RETENTION=${BACKUP_RETENTION:-1}
+            if [ "$BACKUP_RETENTION" -gt 0 ]; then
+                old_backups=()
+                while IFS= read -r -d '' f; do
+                    old_backups+=("$f")
+                done < <(find "$BACKUP_DIR" -maxdepth 1 -name "$TARGET-backup-*.tar" -printf '%T@ %p\0' | sort -rnz | cut -z -d' ' -f2- | tail -n +$((BACKUP_RETENTION + 1)))
+                for old in "${old_backups[@]}"; do
+                    rm -f "$old"
+                    echo "Pruned old backup: $old"
+                done
+            fi
             echo "Note: The backup contains VARS.sh which includes secrets. Store it securely."
         else
             echo "Backup failed" >&2
@@ -290,8 +367,14 @@ EOF
 
         if ! command -v docker >/dev/null 2>&1 || ! docker compose version >/dev/null 2>&1; then
             printf "Installing Docker and Docker Compose..."
-            ensure_docker_repo "$PKG_MGR"
-            install_pkgs "$PKG_MGR" docker.io docker-compose-v2 && echo " done" || { echo ""; echo "Docker install failed. Install manually: https://docs.docker.com/engine/install/" >&2; }
+            ensure_docker_repo "$SU" "$PKG_MGR"
+            if [ "$PKG_MGR" = "apt" ]; then
+                install_pkgs "$SU" "$PKG_MGR" docker-ce docker-ce-cli containerd.io docker-compose-plugin && echo " done" || { echo ""; echo "Docker install failed. Install manually: https://docs.docker.com/engine/install/" >&2; }
+            elif [ "$PKG_MGR" = "rpm-ostree" ]; then
+                echo " done (handled by ensure_docker_repo)"
+            else
+                install_pkgs "$SU" "$PKG_MGR" docker-ce docker-ce-cli containerd.io docker-compose-plugin && echo " done" || { echo ""; echo "Docker install failed. Install manually: https://docs.docker.com/engine/install/" >&2; }
+            fi
             $SU systemctl enable docker 2>/dev/null || true
             $SU systemctl start docker 2>/dev/null || true
         else
@@ -299,14 +382,25 @@ EOF
         fi
 
         ALL_OK=true
-        for tool in yq envsubst jq curl; do
+        for tool in yq envsubst jq curl python3; do
             if ! command -v "$tool" >/dev/null 2>&1; then
                 printf "Installing %s..." "$tool"
                 case "$tool" in
-                    envsubst) pkg="gettext-base" ;;
+                    envsubst)
+                        case "$PKG_MGR" in
+                            apt) pkg="gettext-base" ;;
+                            dnf|rpm-ostree) pkg="gettext" ;;
+                        esac
+                        ;;
+                    python3)
+                        case "$PKG_MGR" in
+                            apt) pkg="python3" ;;
+                            dnf|rpm-ostree) pkg="python3" ;;
+                        esac
+                        ;;
                     *) pkg="$tool" ;;
                 esac
-                install_pkgs "$PKG_MGR" "$pkg" && echo " done" || { echo " failed"; ALL_OK=false; }
+                install_pkgs "$SU" "$PKG_MGR" "$pkg" && echo " done" || { echo " failed"; ALL_OK=false; }
             else
                 echo "$tool already installed."
             fi
@@ -317,6 +411,31 @@ EOF
                 ALL_OK=false
             fi
         done
+
+        if ! python3 -c "import yaml" >/dev/null 2>&1; then
+            printf "Installing python3-yaml..."
+            case "$PKG_MGR" in
+                apt) pkg="python3-yaml" ;;
+                dnf) pkg="python3-pyyaml" ;;
+                rpm-ostree) pkg="python3-pyyaml" ;;
+                *) pkg="" ;;
+            esac
+            if [ -n "$pkg" ] && install_pkgs "$SU" "$PKG_MGR" "$pkg" >/dev/null 2>&1; then
+                echo " done"
+            else
+                echo " failed"
+                ALL_OK=false
+            fi
+            if python3 -c "import yaml" >/dev/null 2>&1; then
+                echo "  [OK] python3-yaml"
+            else
+                echo "  [MISSING] python3-yaml"
+                ALL_OK=false
+            fi
+        else
+            echo "python3-yaml already installed."
+            echo "  [OK] python3-yaml"
+        fi
 
         if command -v docker >/dev/null 2>&1 && docker compose version >/dev/null 2>&1; then
             echo "  [OK] docker"
@@ -354,7 +473,7 @@ EOF
         echo "  sol"
         echo ""
         echo "Commands:"
-        echo "  prereqs                   Install prerequisites (docker, yq, envsubst, jq, curl)"
+        echo "  prereqs                   Install prerequisites (docker, yq, envsubst, jq, curl, python3, python3-yaml)"
         echo "  install                   Install and start all services"
         echo "  install-preboot           Install preboot FRPC in initramfs (for remote LUKS unlock)"
         echo "  k3s [target]              Run K3s Make target (base, apps, validate, etc.)"

@@ -9,10 +9,9 @@ spec:
     additionalArguments:
       - "--providers.kubernetescrd.allowCrossNamespace=true"
       - "--api.dashboard=true"
-      - "--api.debug=true"
       - "--global.sendAnonymousUsage=false"
       - "--global.checkNewVersion=true"
-      - "--log.level=DEBUG"
+      - "--log.level=INFO"
       - "--accesslog=true"
       - "--metrics.prometheus=true"
       - "--metrics.prometheus.buckets=0.1,0.3,1.2,5.0"
@@ -54,7 +53,7 @@ metadata:
 spec:
   secretName: traefik-tls
   issuerRef:
-    name: ca-issuer
+    name: letsencrypt-prod
     kind: ClusterIssuer
   dnsNames:
     - traefik.$SERVICES_DOMAIN

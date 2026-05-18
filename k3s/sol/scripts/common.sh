@@ -3,10 +3,6 @@ set -euo pipefail
 
 ROOT_DIR="${ROOT_DIR:-"$(cd "$(dirname "${BASH_SOURCE[0]}")/.." >/dev/null 2>&1 && pwd)"}"
 
-get_sudo_cmd() {
-	if command -v run0 &>/dev/null; then echo "run0"; else echo "sudo"; fi
-}
-
 source_env() {
 	local vars_file="$ROOT_DIR/../../VARS.sh"
 	if [ -f "$vars_file" ]; then
@@ -20,24 +16,20 @@ source_env() {
 	[ "$MY_UID" -eq 0 ] && MY_UID=1000
 	export MY_UID
 
-	MAIN_NODE_NAME_LOWERCASE="${MAIN_NODE_NAME:-}"
-	MAIN_NODE_NAME_LOWERCASE="$(echo "$MAIN_NODE_NAME_LOWERCASE" | tr '[:upper:]' '[:lower:]')"
-	export MAIN_NODE_NAME_LOWERCASE
+	# Derive TARGET from the K3s directory name (k3s/<target>/) as fallback
+	TARGET="${TARGET:-$(basename "$ROOT_DIR")}"
+	export TARGET
 }
 
 get_envsubst_vars() {
 	local vars=""
 	if [ -f "$ROOT_DIR/../../VARS.sh" ]; then
-		vars=$(grep -oP 'export \K[A-Z_]+' "$ROOT_DIR/../../VARS.sh" | sed 's/^/$/' | tr '\n' ' ')
+		vars=$(grep -oP 'export \K[A-Z_][A-Z_0-9]*' "$ROOT_DIR/../../VARS.sh" | sed 's/^/$/' | tr '\n' ' ')
 	fi
 	# Also include runtime-computed vars
-	for v in MY_UID MAIN_NODE_NAME_LOWERCASE; do
+	for v in MY_UID TARGET; do
 		vars="$vars \$$v"
 	done
 	echo "$vars"
 }
 
-generate_token() {
-	local length="${1:-32}"
-	openssl rand -hex "$length"
-}

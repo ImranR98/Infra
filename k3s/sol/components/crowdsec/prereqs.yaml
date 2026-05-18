@@ -23,11 +23,11 @@ data:
     log_level: debug
     format: |
       {{.|toJson}}
-    url: http://ntfy.base.svc.cluster.local:3000/${MAIN_NODE_NAME_LOWERCASE}_services_crowdsec
+    url: http://ntfy.base.svc.cluster.local:3000/${TARGET}_services_crowdsec
     method: POST
     headers:
       Authorization: Bearer $NTFY_SERVICE_USER_TOKEN
-      Title: CrowdSec on $MAIN_NODE_NAME
+      Title: CrowdSec on ${TARGET}
       Priority: min
   navidrome.whitelist.yaml: |
     name: imranr/navidrome
@@ -48,14 +48,6 @@ data:
         - evt.Meta.http_verb == 'GET'
         - evt.Meta.http_status == '404'
         - evt.Meta.http_path matches '/api/assets/.+'
-  plausible.whitelist.yaml: |
-    name: imranr/plausible
-    description: "Whitelist for Plausible"
-    whitelist:
-      reason: "Browsing Plausible can cause false positives"
-      expression:
-        - evt.Overflow.Alert.Events[0].GetMeta('target_fqdn') == 'plausible.$SERVICES_DOMAIN'
-        - evt.Overflow.Alert.GetScenario() in ['crowdsecurity/http-probing', 'crowdsecurity/http-crawl-non_statics']
   homeassistant.whitelist.yaml: |
     name: imranr/homeassistant
     description: "Whitelist for HomeAssistant"
@@ -66,4 +58,14 @@ data:
         - evt.Overflow.Alert.GetScenario() in ['LePresidente/http-generic-403-bf']
         - evt.Meta.http_verb == 'POST'
         - evt.Meta.http_path matches '^/api/webhook/.+'
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: crowdsec-secrets
+  namespace: base
+type: Opaque
+stringData:
+  bouncer-key: "$CROWDSEC_BOUNCER_KEY"
+  lapi-secret: "$CROWDSEC_LAPI_SECRET"
 
