@@ -42,15 +42,13 @@ spec:
             - name: FRESHRSS_ENV
               value: "production"
             - name: TRUSTED_PROXY
-              value: "10.0.0.0/8"
+              value: "10.0.0.0/8, 172.16.0.0/12"
             - name: FRESHRSS_INSTALL
               value: |-
                 --api-enabled
                 --base-url https://rss.$SERVICES_DOMAIN
                 --default-user admin
                 --language en
-            - name: FRESHRSS_ADMIN_PASSWORD
-              value: "$FRESHRSS_PASSWORD"
             - name: FRESHRSS_USER
               value: |-
                 --api-password $FRESHRSS_PASSWORD

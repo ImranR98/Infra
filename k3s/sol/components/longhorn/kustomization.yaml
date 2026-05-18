@@ -3,5 +3,6 @@ kind: Kustomization
 resources:
   - helmchart.yaml
   - ingress.yaml
+  - backup.yaml
   - network-policy.yaml
   - backup-labeler.yaml

@@ -11,12 +11,11 @@ spec:
   createNamespace: false
   version: 0.11.1
   valuesContent: |-
-    # Database connection — PostgreSQL is deployed separately in 12.immich-prereqs.yaml.
-    # DB_HOSTNAME uses the short service name since both are in the 'immich' namespace.
-    # REDIS_HOSTNAME and IMMICH_MACHINE_LEARNING_URL are set automatically by chart defaults.
+    postgresql:
+      enabled: false
+
     controllers:
       main:
-        annotations:
         containers:
           main:
             resources:
@@ -65,7 +64,7 @@ spec:
           existingClaim: immich-external-pvc
           globalMounts:
             - path: /external
-              readOnly: false
+              readOnly: true
 
     valkey:
       enabled: true

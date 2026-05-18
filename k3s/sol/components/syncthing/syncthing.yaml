@@ -32,9 +32,8 @@ spec:
             requests:
               memory: 128Mi
           readinessProbe:
-            httpGet:
-              path: /rest/noauth/health
-              port: 8384
+            tcpSocket:
+              port: 22000
             periodSeconds: 30
             timeoutSeconds: 5
             failureThreshold: 3

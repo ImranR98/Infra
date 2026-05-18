@@ -13,7 +13,7 @@ KNOWN_SKIP_PATTERNS=(
 
 # Gather all known env vars from VARS templates
 KNOWN_ENV_VARS=""
-for f in "$ROOT_DIR/../../vars/VARS.common.sh" "$ROOT_DIR/../../vars/VARS.sol.sh"; do
+for f in "$ROOT_DIR/../../vars/VARS.common.sh" "$ROOT_DIR/../../vars/VARS.$(basename "$ROOT_DIR").sh"; do
 	if [ -f "$f" ]; then
 		KNOWN_ENV_VARS+=$(grep -oP 'export \K[A-Z_][A-Z_0-9]*' "$f" || true)
 		KNOWN_ENV_VARS+="
@@ -21,7 +21,7 @@ for f in "$ROOT_DIR/../../vars/VARS.common.sh" "$ROOT_DIR/../../vars/VARS.sol.sh
 	fi
 done
 
-# Internal bash variables used inside YAML command: blocks (not envsubst vars)
+# Internal/bash variables used inside YAML command: blocks or computed at runtime (not envsubst vars)
 KNOWN_ENV_VARS+="
 MY_UID
 TARGET
@@ -29,6 +29,9 @@ NS
 PV
 PVC
 VOLUMES
+DOCKER_GID
+FRPC_USER
+STATE_DIR
 "
 
 for comp_dir in "$ROOT_DIR"/components/*/; do
@@ -91,7 +94,7 @@ for comp_dir in "$ROOT_DIR"/components/*/; do
 			fi
 			echo "WARN: $comp/$(basename "$yaml_file") references '$var' but it's not defined in VARS templates"
 			WARNINGS=$((WARNINGS + 1))
-		done < <(grep -v '^\s*#' "$yaml_file" 2>/dev/null | grep -oP '\$\{?[A-Z_][A-Z_0-9]*\}?' | sed 's/^\$//;s/[{}]//g' | sort -u)
+		done < <(grep -v '^[[:space:]]*#' "$yaml_file" 2>/dev/null | grep -oP '\$[A-Z_][A-Z_0-9]*|\$\{[A-Z_][A-Z_0-9]*\}' | sed 's/^\$//;s/[{}]//g' | sort -u)
 	done
 done
 

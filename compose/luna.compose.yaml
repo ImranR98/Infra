@@ -102,6 +102,12 @@ services:
             - 9091
         restart: unless-stopped
         mem_limit: 256M
+        healthcheck:
+            test: ["CMD-SHELL", "wget --no-verbose --tries=1 -O - http://127.0.0.1:9091/api/health || exit 1"]
+            interval: 30s
+            timeout: 10s
+            start_period: 1m
+            retries: 3
         logging: *logging
 
     authelia-db:
@@ -126,8 +132,10 @@ services:
         image: traefik:latest
         container_name: traefik
         depends_on:
-            - authelia
-            - dockerproxy
+            authelia:
+                condition: service_healthy
+            dockerproxy:
+                condition: service_started
         command:
             - "--api=true"
             - "--api.dashboard=true"
@@ -144,7 +152,7 @@ services:
             - "--entryPoints.web.address=:80"
             - "--entryPoints.web.http.redirections.entryPoint.to=websecure"
             - "--entryPoints.web.http.redirections.entryPoint.scheme=https"
-            - "--entrypoints.web.http.redirections.entrypoint.permanent=true"
+            - "--entryPoints.web.http.redirections.entryPoint.permanent=true"
             - "--entryPoints.websecure=true"
             - "--entryPoints.websecure.address=:443"
             - "--certificatesresolvers.le.acme.email=$DOMAIN_OWNER_EMAIL"
@@ -259,7 +267,7 @@ services:
         container_name: send
         image: registry.gitlab.com/timvisee/send:latest
         restart: unless-stopped
-        mem_limit: 256M
+        mem_limit: 512M
         depends_on:
             traefik:
                 condition: service_started

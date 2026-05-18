@@ -1,4 +1,7 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
+# Issuers (issuers.yaml) and ClusterIssuer resources are NOT listed here.
+# They are applied by post.sh after the cert-manager Helm chart finishes,
+# because they depend on cert-manager CRDs being available in the cluster.
 resources:
   - helmchart.yaml

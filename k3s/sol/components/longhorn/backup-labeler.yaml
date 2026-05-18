@@ -67,8 +67,9 @@ spec:
             - -ec
             - |
               VOLUMES=$(kubectl get configmap backup-volumes -o jsonpath='{.data.volumes}')
-              for PVC in $VOLUMES; do
-                for NS in base apps monitoring; do
+              echo "$VOLUMES" | while IFS= read -r PVC; do
+                [ -z "$PVC" ] && continue
+                for NS in base apps monitoring syncthing; do
                   PV=$(kubectl get pvc -n "$NS" "$PVC" -o jsonpath='{.spec.volumeName}' 2>/dev/null || true)
                   if [ -n "$PV" ]; then
                     kubectl label volume -n longhorn-system "$PV" \

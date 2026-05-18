@@ -25,32 +25,6 @@ spec:
       storage: 1Gi
 ---
 apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: wyoming-whisper-pvc
-  namespace: apps
-spec:
-  storageClassName: longhorn
-  accessModes:
-    - ReadWriteOnce
-  resources:
-    requests:
-      storage: 4Gi
----
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: wyoming-piper-pvc
-  namespace: apps
-spec:
-  storageClassName: longhorn
-  accessModes:
-    - ReadWriteOnce
-  resources:
-    requests:
-      storage: 4Gi
----
-apiVersion: v1
 kind: ConfigMap
 metadata:
   name: mosquitto-config
@@ -94,7 +68,6 @@ spec:
     kind: ClusterIssuer
   dnsNames:
     - mosquitto.apps.svc.cluster.local
-    - ${TARGET}
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -121,9 +94,9 @@ spec:
           ports:
             - containerPort: 1883
             - containerPort: 8883
-              hostPort: 8883
+              hostPort: 8883 # LAN MQTT TLS access — hostPort needed so external clients can reach Mosquitto directly
             - containerPort: 9001
-              hostPort: 9001
+              hostPort: 9001 # LAN MQTT WebSocket access — same rationale as 8883
           readinessProbe:
             tcpSocket:
               port: 1883
@@ -175,117 +148,9 @@ spec:
   ports:
     - port: 1883
       targetPort: 1883
+    - port: 8883
+      targetPort: 8883
+    - port: 9001
+      targetPort: 9001
 ---
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: wyoming-whisper
-  namespace: apps
-spec:
-  replicas: 1
-  strategy:
-    type: Recreate
-  selector:
-    matchLabels:
-      app: wyoming-whisper
-  template:
-    metadata:
-      labels:
-        app: wyoming-whisper
-    spec:
-      containers:
-        - name: wyoming-whisper
-          image: rhasspy/wyoming-whisper:3.1.0
-          securityContext:
-            allowPrivilegeEscalation: false
-          args: ["--model", "small-int8", "--language", "en"]
-          ports:
-            - containerPort: 10300
-          readinessProbe:
-            tcpSocket:
-              port: 10300
-            periodSeconds: 30
-            timeoutSeconds: 5
-            failureThreshold: 3
-          resources:
-            limits:
-              memory: 2Gi
-            requests:
-              memory: 128Mi
-          volumeMounts:
-            - name: whisper-data
-              mountPath: /data
-      volumes:
-        - name: whisper-data
-          persistentVolumeClaim:
-            claimName: wyoming-whisper-pvc
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: wyoming-whisper
-  namespace: apps
-spec:
-  type: ClusterIP
-  selector:
-    app: wyoming-whisper
-  ports:
-    - port: 10300
-      targetPort: 10300
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: wyoming-piper
-  namespace: apps
-spec:
-  replicas: 1
-  strategy:
-    type: Recreate
-  selector:
-    matchLabels:
-      app: wyoming-piper
-  template:
-    metadata:
-      labels:
-        app: wyoming-piper
-    spec:
-      containers:
-        - name: wyoming-piper
-          image: rhasspy/wyoming-piper:2.2.2
-          securityContext:
-            allowPrivilegeEscalation: false
-          args: ["--voice", "en_US-lessac-medium"]
-          ports:
-            - containerPort: 10200
-          readinessProbe:
-            tcpSocket:
-              port: 10200
-            periodSeconds: 30
-            timeoutSeconds: 5
-            failureThreshold: 3
-          resources:
-            limits:
-              memory: 2Gi
-            requests:
-              memory: 128Mi
-          volumeMounts:
-            - name: piper-data
-              mountPath: /data
-      volumes:
-        - name: piper-data
-          persistentVolumeClaim:
-            claimName: wyoming-piper-pvc
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: wyoming-piper
-  namespace: apps
-spec:
-  type: ClusterIP
-  selector:
-    app: wyoming-piper
-  ports:
-    - port: 10200
-      targetPort: 10200
+

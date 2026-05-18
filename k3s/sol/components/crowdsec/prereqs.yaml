@@ -12,11 +12,12 @@ spec:
       storage: 1Gi
 ---
 apiVersion: v1
-kind: ConfigMap
+kind: Secret
 metadata:
   name: crowdsec-lapi-configs
   namespace: base
-data:
+type: Opaque
+stringData:
   http.yaml: |
     type: http
     name: http_default
@@ -67,5 +68,4 @@ metadata:
 type: Opaque
 stringData:
   bouncer-key: "$CROWDSEC_BOUNCER_KEY"
-  lapi-secret: "$CROWDSEC_LAPI_SECRET"
 

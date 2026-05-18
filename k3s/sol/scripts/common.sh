@@ -12,6 +12,14 @@ source_env() {
 		exit 1
 	fi
 
+	# Validate that all variables from VARS templates are present in VARS.sh
+	while IFS= read -r var; do
+		if ! grep -q "^export $var=" "$vars_file"; then
+			echo "VARS.sh is missing required variable: $var" >&2
+			exit 1
+		fi
+	done < <(grep -hEo '^export [^=]+' "$ROOT_DIR/../../vars/VARS.common.sh" "$ROOT_DIR/../../vars/VARS.${TARGET:-$(basename "$ROOT_DIR")}.sh" 2>/dev/null | sed 's/^export //' | sort -u)
+
 	MY_UID=$(id -u)
 	[ "$MY_UID" -eq 0 ] && MY_UID=1000
 	export MY_UID

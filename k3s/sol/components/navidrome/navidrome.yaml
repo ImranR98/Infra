@@ -15,8 +15,6 @@ spec:
       labels:
         app: navidrome
     spec:
-      securityContext:
-        fsGroup: $MY_UID
       containers:
         - name: navidrome
           image: deluan/navidrome:0.61.2

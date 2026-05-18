@@ -44,6 +44,18 @@ spec:
               protocol: TCP
           securityContext:
             privileged: true
+          readinessProbe:
+            tcpSocket:
+              port: 2049
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+          livenessProbe:
+            tcpSocket:
+              port: 2049
+            periodSeconds: 60
+            timeoutSeconds: 5
+            failureThreshold: 3
           resources:
             limits:
               memory: 2Gi

@@ -58,7 +58,7 @@ k3s:
 	@if [ "$(APPLY_MODE)" = "delete" ]; then echo "Error: Cannot delete k3s via Makefile."; exit 1; fi
 	@if ! command -v kubectl >/dev/null 2>&1 || ! kubectl cluster-info >/dev/null 2>&1; then \
 		SU=$$(if command -v run0 >/dev/null 2>&1; then echo run0; else echo sudo; fi); \
-		cd $(COMPONENTS_DIR)/k3s && $$SU bash -c './k3s.sh' && $$SU bash -c './firewall.sh'; \
+		$$SU bash -c 'cd $(COMPONENTS_DIR)/k3s && ./k3s.sh' && $$SU bash -c 'cd $(COMPONENTS_DIR)/k3s && ./firewall.sh'; \
 	fi
 
 # Guarded targets — refuse delete
@@ -86,7 +86,9 @@ endef
 k3s-base: k3s base
 base: $(if $(filter delete,$(APPLY_MODE)),$(call reverse,$(BASE_TARGETS)),$(BASE_TARGETS))
 apps: $(if $(filter delete,$(APPLY_MODE)),$(call reverse,$(APPS_TARGETS)),$(APPS_TARGETS))
-all: $(if $(filter delete,$(APPLY_MODE)),apps base,k3s base apps)
+all:
+	@if [ "$(APPLY_MODE)" = "delete" ]; then echo "Error: Cannot delete all via Makefile. Delete individual components instead."; exit 1; fi
+	@$(MAKE) k3s base apps
 
 validate:
 	@bash $(SCRIPTS_DIR)/validate.sh
@@ -113,11 +115,12 @@ domains:
 
 # All K8s components use the generic deploy function
 %:
+	@if [ -z "$@" ]; then echo "Error: Empty target specified."; exit 1; fi
 	@if [ ! -d "$(COMPONENTS_DIR)/$@" ]; then \
-		echo "Error: Unknown component '$@'."; \
+		echo "Error: Unknown target '$@'. Run 'make' to see available targets."; \
 		matches=$$(ls -d "$(COMPONENTS_DIR)"/"$@"* 2>/dev/null | sed 's|.*/||' | head -5); \
 		if [ -n "$$matches" ]; then \
-			echo "Did you mean one of these?"; \
+			echo "Did you mean one of these components?"; \
 			echo "$$matches" | sed 's/^/  - /'; \
 		fi; \
 		exit 1; \

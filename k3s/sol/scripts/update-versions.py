@@ -185,6 +185,9 @@ def run(cmd, timeout=3):
     except subprocess.TimeoutExpired:
         if VERBOSE:
             print(f"    [DEBUG] cmd timed out: {' '.join(cmd)}", file=sys.stderr)
+    except FileNotFoundError:
+        if VERBOSE:
+            print(f"    [DEBUG] command not found: {cmd[0]}", file=sys.stderr)
     return None
 
 
@@ -566,7 +569,31 @@ def find_image_refs():
         plines = _get_pinned_lines(fpath, content)
 
         # Direct image refs: "image: <ref>" lines
-        for m in DIRECT_IMAGE_RE.finditer(content):
+        # Track valuesContent blocks by indentation to avoid double-matching
+        # refs that _iter_repo_tag_pairs will find via parsed YAML.
+        lines = content.split("\n")
+        in_vc = False
+        vc_indent = 0
+        for line in lines:
+            stripped = line.strip()
+            if not stripped:
+                continue
+            indent = len(line) - len(line.lstrip())
+
+            if in_vc:
+                if indent <= vc_indent:
+                    in_vc = False
+                else:
+                    continue
+
+            if stripped.startswith("valuesContent:"):
+                in_vc = True
+                vc_indent = indent
+                continue
+
+            m = DIRECT_IMAGE_RE.match(line)
+            if not m:
+                continue
             ref = m.group(1).strip('"\'')
             if ref and not ref.startswith("$") and ref != "null":
                 if not _is_pinned(plines, ref.rsplit(":", 1)[0]) and not _is_pinned(plines, ref):

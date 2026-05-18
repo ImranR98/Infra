@@ -15,7 +15,7 @@ rules:
     verbs: ["list", "get", "watch"]
   - apiGroups: [""]
     resources: ["pods/log"]
-    verbs: ["get", "list"]
+    verbs: ["get", "list", "watch"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
@@ -52,7 +52,7 @@ stringData:
                     "id": "ntfy_official",
                     "host": "https://ntfy.sh",
                     "authHeader": null,
-                    "topicPrefix": "${TARGET}_services_"
+                    "topicPrefix": "$NTFY_FALLBACK_TOPIC"
                 }
             ],
             "defaultConfig": "ntfy_self",

@@ -18,7 +18,7 @@ spec:
     # Bypass rules marked with "# initially-removed" are omitted from the initial overlay.
 
     pod:
-      kind: DaemonSet
+      kind: Deployment
       resources:
         limits:
           memory: 2Gi
@@ -172,10 +172,6 @@ spec:
           - domain: opodsync.$SERVICES_DOMAIN # initially-removed
             policy: bypass # initially-removed
           - domain: gpt.$SERVICES_DOMAIN # initially-removed
-            policy: bypass # initially-removed
-          - domain: docker.$SERVICES_DOMAIN # initially-removed
-            resources: # initially-removed
-            - '^/v2([/?].*)?$' # initially-removed
             policy: bypass # initially-removed
           - domain: fmd.$SERVICES_DOMAIN # initially-removed
             policy: bypass # initially-removed

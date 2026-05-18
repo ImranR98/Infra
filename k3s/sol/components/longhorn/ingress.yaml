@@ -72,25 +72,4 @@ spec:
         - name: longhorn-frontend
           namespace: longhorn-system
           port: 80
----
-apiVersion: longhorn.io/v1beta2
-kind: BackupTarget
-metadata:
-  name: default
-  namespace: longhorn-system
-spec:
-  backupTargetURL: "nfs://nfs-server.base.svc.cluster.local:/longhorn-backup"
-  pollInterval: "5m0s"
----
-apiVersion: longhorn.io/v1beta2
-kind: RecurringJob
-metadata:
-  name: daily-backup
-  namespace: longhorn-system
-spec:
-  cron: "0 0 * * *"
-  task: "backup"
-  groups:
-    - auto-backup
-  retain: 3
 

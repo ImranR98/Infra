@@ -1,4 +1,4 @@
-# NOTE: Any ending (strictly ending, not just containing) with the 'IGNORE INITIALLY' comment 
+# NOTE: Any ending (strictly ending, not just containing) with the 'IGNORE INITIALLY' comment
 #       will be ignored by 'luna.sh install' when copying this file for the first time (but not when updating it later).
 #       The main use case for this is to avoid applying 'bypass' policies to some sites that
 #       should not be protected by Authelia once fully set up, but should be protected before

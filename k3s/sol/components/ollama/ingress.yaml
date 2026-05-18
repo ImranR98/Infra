@@ -15,7 +15,7 @@ spec:
 apiVersion: traefik.io/v1alpha1
 kind: IngressRoute
 metadata:
-  name: ollama-ingress
+  name: openwebui-ingress
   namespace: apps
 spec:
   entryPoints:

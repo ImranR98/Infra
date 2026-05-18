@@ -13,14 +13,12 @@ spec:
       - "--global.checkNewVersion=true"
       - "--log.level=INFO"
       - "--accesslog=true"
-      - "--metrics.prometheus=true"
-      - "--metrics.prometheus.buckets=0.1,0.3,1.2,5.0"
       - "--entryPoints.websecure.proxyProtocol.trustedIPs=127.0.0.1/32,10.0.0.0/8"
       - "--entryPoints.web.proxyProtocol.trustedIPs=127.0.0.1/32,10.0.0.0/8"
       - "--entryPoints.web.http.redirections.entryPoint.to=websecure"
-      - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
-      - "--entrypoints.web.http.redirections.entrypoint.permanent=true"
-      - "--entrypoints.web.http.redirections.entryPoint.priority=10"
+      - "--entryPoints.web.http.redirections.entryPoint.scheme=https"
+      - "--entryPoints.web.http.redirections.entryPoint.permanent=true"
+      - "--entryPoints.web.http.redirections.entryPoint.priority=10"
 
       - "--experimental.plugins.geoblock.modulename=github.com/PascalMinder/geoblock"
       - "--experimental.plugins.geoblock.version=v0.3.7"
@@ -30,7 +28,6 @@ spec:
       - name: plugins
         mountPath: /plugins-storage
     deployment:
-      hostNetwork: true
       additionalVolumes:
         - name: plugins
     ports:
@@ -48,10 +45,10 @@ spec:
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
-  name: traefik-tls
+  name: traefik-prod-tls
   namespace: kube-system
 spec:
-  secretName: traefik-tls
+  secretName: traefik-prod-tls
   issuerRef:
     name: letsencrypt-prod
     kind: ClusterIssuer
@@ -61,13 +58,13 @@ spec:
 apiVersion: traefik.io/v1alpha1
 kind: IngressRoute
 metadata:
-  name: traefik-dashboard
+  name: traefik-ingress
   namespace: kube-system
 spec:
   entryPoints:
     - websecure
   tls:
-    secretName: traefik-tls
+    secretName: traefik-prod-tls
   routes:
     - match: Host(`traefik.$SERVICES_DOMAIN`)
       kind: Rule

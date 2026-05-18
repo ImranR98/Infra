@@ -9,9 +9,11 @@ if [ "$(id -u)" != 0 ]; then
 	exit 1
 fi
 
-read -p "WARNING: YOU MUST HAVE A FIXED IP ON THIS NETWORK (ENSURE THIS IS SET IN YOUR OS SETTINGS).
+if [ -t 0 ]; then
+    read -p "WARNING: YOU MUST HAVE A FIXED IP ON THIS NETWORK (ENSURE THIS IS SET IN YOUR OS SETTINGS).
 A CHANGE IN IP WILL BREAK K3S NETWORKING! If that does happen, you can use this to update the cluster: sudo bash scripts/manage-node-ip.sh
 Press Enter to continue..." ANYTHING
+fi
 
 
 DID_COMPLETE=false

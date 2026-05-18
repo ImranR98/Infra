@@ -4,7 +4,7 @@ metadata:
   name: logtfy-journal-pv
 spec:
   capacity:
-    storage: 4000Gi
+    storage: 5Gi
   volumeMode: Filesystem
   accessModes:
     - ReadWriteOnce
@@ -32,5 +32,5 @@ spec:
   storageClassName: hostpath
   resources:
     requests:
-      storage: 4000Gi
+      storage: 5Gi
   volumeName: logtfy-journal-pv

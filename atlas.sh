@@ -9,8 +9,8 @@ get_sudo_cmd() {
 
 detect_pkgmgr() {
     if command -v apt-get &>/dev/null; then echo "apt"
-    elif command -v dnf &>/dev/null; then echo "dnf"
     elif command -v rpm-ostree &>/dev/null; then echo "rpm-ostree"
+    elif command -v dnf &>/dev/null; then echo "dnf"
     else echo "unknown"
     fi
 }
@@ -22,16 +22,22 @@ ensure_docker_repo() {
         apt)
             install_pkgs "$su" "$pkgmgr" curl gnupg
             $su install -m 0755 -d /etc/apt/keyrings
-            curl -fsSL https://download.docker.com/linux/ubuntu/gpg | $su gpg --dearmor -o /etc/apt/keyrings/docker.gpg 2>/dev/null || true
-            echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | $su tee /etc/apt/sources.list.d/docker.list >/dev/null || true
-            $su "$pkgmgr" update -qq 2>/dev/null || true
+            os_id=$(. /etc/os-release && echo "${ID:-ubuntu}")
+            os_codename=$(. /etc/os-release && echo "$VERSION_CODENAME")
+            case "$os_id" in
+                debian) docker_distro="debian" ;;
+                *)      docker_distro="ubuntu" ;;
+            esac
+            curl -fsSL "https://download.docker.com/linux/$docker_distro/gpg" | $su gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+            echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/$docker_distro $os_codename stable" | $su tee /etc/apt/sources.list.d/docker.list >/dev/null
+            $su "$pkgmgr" update -qq
             ;;
         dnf)
-            $su "$pkgmgr" install -y dnf-plugins-core 2>/dev/null || true
-            $su "$pkgmgr" config-manager --add-repo https://download.docker.com/linux/fedora/docker-ce.repo 2>/dev/null || true
+            $su "$pkgmgr" install -y dnf-plugins-core
+            $su "$pkgmgr" config-manager --add-repo https://download.docker.com/linux/fedora/docker-ce.repo
             ;;
         rpm-ostree)
-            $su rpm-ostree install --apply-live --assumeyes docker-ce docker-ce-cli containerd.io docker-compose-plugin 2>/dev/null || true
+            $su rpm-ostree install --apply-live --assumeyes docker-ce docker-ce-cli containerd.io docker-compose-plugin
             ;;
     esac
 }
@@ -88,7 +94,7 @@ if [ -f "$HERE/VARS.sh" ]; then
     export FRPC_USER="${TARGET,,}"
 elif [ -n "$COMMAND" ]; then
     case "$COMMAND" in
-        install|install-preboot|restart|backup-state)
+        install|install-preboot|restart|backup-state|k3s)
             echo "No VARS.sh found. Create VARS.sh with variables from vars/VARS.common.sh and vars/VARS.$TARGET.sh." >&2
             exit 1
             ;;
@@ -170,7 +176,7 @@ case "$COMMAND" in
     install)
         echo "=== Create Required Directories ==="
         tmpfile="$(mktemp)"
-        trap 'rm -f "$tmpfile"' EXIT
+        trap 'rm -f "$tmpfile"' EXIT INT TERM
         envsubst "$ENVSUBST_VARS" < "$HERE"/compose/"$TARGET".compose.yaml > "$tmpfile"
         while IFS=: read -r host_path _; do
                 name="$(basename "$host_path")"
@@ -181,7 +187,7 @@ case "$COMMAND" in
                     mkdir -p "$host_path"
                     [ "$UID" -eq 0 ] && chown "$MY_UID:$MY_UID" "$host_path" 2>/dev/null || :
                 fi
-            done < <(sed -n "s|^[[:space:]]*- \"\?$STATE_DIR/\([^:]*\):.*$|$STATE_DIR/\1|p" "$tmpfile")
+            done < <(sed -n "s|^[[:space:]]*- \"\?$STATE_DIR/\([^\":]*\)\"\?:.*$|$STATE_DIR/\1|p" "$tmpfile")
         echo "Done."
 
         generate_configs "$TARGET"
@@ -237,7 +243,7 @@ EOF
         echo "=== Check if root partition is LUKS-encrypted ==="
         if bash "$HERE"/scripts/check_root_luks.sh; then
             echo "LUKS detected. Installing preboot FRPC and dracut-crypt-ssh..."
-            $(get_sudo_cmd) bash "$HERE"/scripts/dracut-crypt-ssh.install.sh "$USER"
+            $(get_sudo_cmd) bash "$HERE"/scripts/dracut-crypt-ssh.install.sh "${SUDO_USER:-$USER}"
             bash "$HERE"/scripts/frpc-preboot.install.sh "$STATE_DIR"
             echo ""
             echo "Preboot FRPC installed. The initramfs has been rebuilt."
@@ -289,7 +295,11 @@ EOF
         ;;
 
     list-domains)
-        sed -n 's/.*Host(`\([^`]*\)`).*/\1/p' "$HERE"/compose/"$TARGET".compose.yaml | sort -u | envsubst "$ENVSUBST_VARS"
+        if [ "$TARGET" = "sol" ]; then
+            make -C "$HERE/k3s/$TARGET" domains
+        else
+            sed -n 's/.*Host(`\([^`]*\)`).*/\1/p' "$HERE"/compose/"$TARGET".compose.yaml | sort -u | envsubst "$ENVSUBST_VARS"
+        fi
         ;;
 
     update-traefik-plugins)
@@ -382,7 +392,7 @@ EOF
         fi
 
         ALL_OK=true
-        for tool in yq envsubst jq curl python3; do
+        for tool in yq envsubst jq curl python3 skopeo; do
             if ! command -v "$tool" >/dev/null 2>&1; then
                 printf "Installing %s..." "$tool"
                 case "$tool" in
@@ -473,7 +483,7 @@ EOF
         echo "  sol"
         echo ""
         echo "Commands:"
-        echo "  prereqs                   Install prerequisites (docker, yq, envsubst, jq, curl, python3, python3-yaml)"
+        echo "  prereqs                   Install prerequisites (docker, yq, envsubst, jq, curl, python3, python3-yaml, skopeo)"
         echo "  install                   Install and start all services"
         echo "  install-preboot           Install preboot FRPC in initramfs (for remote LUKS unlock)"
         echo "  k3s [target]              Run K3s Make target (base, apps, validate, etc.)"

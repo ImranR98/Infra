@@ -18,23 +18,21 @@ if [ -z "$POD" ]; then
 fi
 
 # Provision admin and service users
-kubectl -n base exec "$POD" -- env NTFY_PASSWORD="$NTFY_ADMIN_PASSWORD" \
-	ntfy user add --role=admin --ignore-exists admin 2>/dev/null || true
-kubectl -n base exec "$POD" -- env NTFY_PASSWORD="$NTFY_ADMIN_PASSWORD" \
-	ntfy user add --ignore-exists service 2>/dev/null || true
+kubectl -n base exec -i "$POD" -- ntfy user add --role=admin --ignore-exists admin 2>/dev/null <<< "$NTFY_ADMIN_PASSWORD" || true
+kubectl -n base exec -i "$POD" -- ntfy user add --ignore-exists service 2>/dev/null <<< "$NTFY_ADMIN_PASSWORD" || true
 kubectl -n base exec "$POD" -- ntfy access service '*' write-only 2>/dev/null || true
 
 # Create service token if it doesn't exist
 if ! kubectl -n base get secret ntfy-service-token >/dev/null 2>&1; then
-	TOKEN=$(kubectl -n base exec "$POD" -- ntfy token add service 2>&1 | grep -oP 'tk_\S+')
+	TOKEN=$(kubectl -n base exec "$POD" -- ntfy token add service 2>&1 | grep -o 'tk_[^[:space:]]*')
 	if [ -n "$TOKEN" ]; then
-		for ns in base apps monitoring syncthing; do
+		for ns in $(kubectl get namespace -l pod-security.kubernetes.io/warn=baseline -o jsonpath='{.items[*].metadata.name}' 2>/dev/null); do
 			kubectl create secret generic ntfy-service-token \
 				--namespace "$ns" \
 				--from-literal=token="$TOKEN" \
 				--dry-run=client -o yaml | kubectl apply -f -
 		done
-		echo "ntfy service token created and stored in K8s secret 'ntfy-service-token' (namespaces: base, apps, monitoring, syncthing)" >&2
+		echo "ntfy service token created and stored in K8s secret 'ntfy-service-token' (all user namespaces)" >&2
 		echo ""
 		echo "*** The token has been distributed to all namespaces. Services that embed   ***"
 		echo "*** the token in ConfigMaps/Secrets (crowdsec, logtfy, opencanary) still    ***"

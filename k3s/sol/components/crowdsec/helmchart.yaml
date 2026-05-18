@@ -48,7 +48,7 @@ spec:
       podSecurityContext:
         fsGroup: $MY_UID
         seLinuxOptions:
-          type: spc_t
+          type: spc_t  # Required to read host /var/log/pods for log acquisition
       containerSecurityContext:
         allowPrivilegeEscalation: false
       acquisition:
@@ -81,8 +81,9 @@ spec:
               key: bouncer-key
       extraVolumes:
         - name: crowdsec-lapi-configs
-          configMap:
-            name: crowdsec-lapi-configs
+          secret:
+            secretName: crowdsec-lapi-configs
+            defaultMode: 0600
       extraVolumeMounts:
         - name: crowdsec-lapi-configs
           mountPath: /etc/crowdsec/notifications/http.yaml

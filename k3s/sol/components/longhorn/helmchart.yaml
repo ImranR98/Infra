@@ -11,6 +11,8 @@ spec:
   createNamespace: true
   version: 1.11.2
   valuesContent: |-
+    # Single replica is intentional for single-node cluster.
+    # Increase defaultClassReplicaCount + defaultReplicaCount when adding additional nodes.
     persistence:
       defaultClassReplicaCount: 1
       reclaimPolicy: "Retain"

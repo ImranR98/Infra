@@ -10,7 +10,7 @@ services:
         container_name: frpc
         restart: always
         volumes:
-        - $STATE_DIR/frpc/frpc.toml:/frpc.toml
+          - $STATE_DIR/frpc/frpc.toml:/frpc.toml
         network_mode: host
         healthcheck:
             test: ["CMD-SHELL", "wget --no-verbose --tries=1 -O - http://127.0.0.1:7400/healthz || exit 1"]

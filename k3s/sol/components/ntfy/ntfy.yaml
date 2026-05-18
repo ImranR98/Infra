@@ -20,7 +20,7 @@ spec:
         image: binwiederhier/ntfy:v2.22.0
         securityContext:
           allowPrivilegeEscalation: false
-        args: ["serve", "-d"]
+        args: ["serve"]
         ports:
         - containerPort: 3000
         resources:

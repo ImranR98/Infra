@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Get the root filesystem source device and clean up any appended subvol/path
-root_source=$(findmnt -n -o SOURCE /sysroot | sed 's/\[.*//')  # Remove [subvol] or [/path] suffixes
+root_source=$(findmnt -n -o SOURCE /sysroot 2>/dev/null | sed 's/\[.*//')  # Remove [subvol] or [/path] suffixes
 if [[ -z "$root_source" ]]; then
     root_source=$(findmnt -n -o SOURCE / | sed 's/\[.*//')
 fi
