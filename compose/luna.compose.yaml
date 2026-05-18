@@ -174,7 +174,7 @@ services:
         image: postgres:16-alpine
         container_name: plausible_db
         restart: unless-stopped
-        mem_limit: 2G
+        mem_limit: 4G
         volumes:
             - $STATE_DIR/plausible/db:/var/lib/postgresql/data
         environment:
@@ -188,7 +188,7 @@ services:
     plausible_events_db:
         image: clickhouse/clickhouse-server:24.12-alpine
         restart: unless-stopped
-        mem_limit: 2G
+        mem_limit: 4G
         container_name: plausible_events_db
         networks:
             - traefik
@@ -220,7 +220,7 @@ services:
     plausible:
         image: ghcr.io/plausible/community-edition:v3
         restart: unless-stopped
-        mem_limit: 2G
+        mem_limit: 1G
         container_name: plausible
         command: sh -c "for i in \$(seq 1 30); do /entrypoint.sh db createdb 2>/dev/null && break; sleep 2; done && /entrypoint.sh db migrate && /entrypoint.sh run"
         depends_on:
