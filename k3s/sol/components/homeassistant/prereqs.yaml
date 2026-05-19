@@ -54,6 +54,10 @@ type: Opaque
 stringData:
   password_file: $MOSQUITTO_CREDENTIALS
 ---
+# TLS cert for internal cluster MQTT (hostPort exposure uses same cert; external
+# LAN clients will see a hostname mismatch since they connect via host IP, not
+# the cluster DNS name. require_certificate: false in mosquitto.conf disables
+# client-side verification, so TLS encryption still works.)
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
@@ -152,5 +156,4 @@ spec:
       targetPort: 8883
     - port: 9001
       targetPort: 9001
----
 

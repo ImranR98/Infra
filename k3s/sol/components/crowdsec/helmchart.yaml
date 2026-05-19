@@ -29,7 +29,7 @@ spec:
     config:
       profiles.yaml: |
         name: default_ip_remediation
-        debug: true
+        debug: false
         filters:
             - Alert.Remediation == true && Alert.GetScope() == "Ip"
         decisions:

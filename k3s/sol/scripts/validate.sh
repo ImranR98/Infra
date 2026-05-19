@@ -85,7 +85,7 @@ for comp_dir in "$ROOT_DIR"/components/*/; do
 	done
 
 	# Check for env vars referenced in YAML but not defined in VARS templates
-	for yaml_file in "$comp_dir"*.yaml; do
+	for yaml_file in "$comp_dir"*.yaml "$comp_dir"*.yml; do
 		[ -f "$yaml_file" ] || continue
 		while IFS= read -r var; do
 			[ -z "$var" ] && continue

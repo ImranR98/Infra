@@ -32,7 +32,7 @@ help:
 	@echo "  make <component>                     Deploy a component"
 	@echo "  make <component> APPLY_MODE=delete   Delete a component"
 	@echo "  make <component> APPLY_MODE=diff     Preview changes without applying"
-	@echo "  make <component> APPLY_MODE=initial  Deploy with initial mode (strips # initially-removed lines)"
+	@echo "  make <component> APPLY_MODE=initial  Deploy with initial mode (comments out # IGNORE INITIALLY lines)"
 	@echo "  make <component> APPLY_MODE=yaml     Print processed YAML (dry-run validation included)"
 	@echo ""
 	@echo "Convenience targets:"
@@ -49,7 +49,7 @@ help:
 	@echo ""
 	@echo "Optional variables:"
 	@echo "  APPLY_MODE=yaml      Print processed YAML to stdout (skips prep/post)"
-	@echo "  APPLY_MODE=initial   Deploy with initial mode (strips # initially-removed lines)"
+	@echo "  APPLY_MODE=initial   Deploy with initial mode (comments out # IGNORE INITIALLY lines)"
 	@echo "  APPLY_MODE=delete    Delete resources instead of applying"
 	@echo "  APPLY_MODE=diff      Preview changes with kubectl diff"
 
@@ -105,7 +105,11 @@ update:
 	@python3 $(SCRIPTS_DIR)/update-versions.py
 
 domains:
-	@bash -c 'source $(SCRIPTS_DIR)/common.sh && source_env && \
+	@bash -c 'ROOT_DIR='$(CURRENT_DIR)' && \
+		export VARS_ROOT="$$ROOT_DIR/../.." && \
+		export TARGET="$$(basename "$$ROOT_DIR")" && \
+		source "$$VARS_ROOT/lib/vars.sh" && \
+		source_env && \
 		VARS=$$(get_envsubst_vars) && \
 		grep -rohP "Host\(\x60[^\x60]+\x60\)" --include="*.yaml" $(COMPONENTS_DIR) | \
 		sed "s/.*\x60\([^\x60]*\)\x60.*/\1/" | \

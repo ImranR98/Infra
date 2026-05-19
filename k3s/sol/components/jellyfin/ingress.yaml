@@ -77,8 +77,8 @@ spec:
       middlewares:
         - name: lan-whitelist
           namespace: base
-        - name: forwardauth-authelia # initially-removed
-          namespace: base # initially-removed
+        - name: forwardauth-authelia # IGNORE INITIALLY
+          namespace: base # IGNORE INITIALLY
       services: # Above Authelia middleware fails, effectively blocking this route after initial mode
         - name: jellyfin
           port: 8096

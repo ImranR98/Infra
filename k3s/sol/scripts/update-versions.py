@@ -126,7 +126,6 @@ def _extract_tag(resolved):
 
 DIRECT_IMAGE_RE = re.compile(r"^\s*image:[^\S\n]*(\S+)", re.MULTILINE)
 SEMVER_TRIPLE_RE = re.compile(r"^\d+\.\d+\.\d+$")
-HAS_SUFFIX_SEP_RE = re.compile(r"^v?\d+(?:\.\d+)*[-_]")
 
 _SKIP_KEYS = frozenset({
     "env", "envFrom", "resources", "securityContext", "extraArgs",
@@ -560,7 +559,7 @@ def find_image_refs():
     """
     results = []
     file_contents = {}
-    for f in sorted(COMPONENTS.rglob("*.yaml")):
+    for f in sorted(COMPONENTS.rglob("*.yaml")) + sorted(COMPONENTS.rglob("*.yml")):
         if FILTER and FILTER not in str(f):
             continue
         content = f.read_text()
@@ -718,7 +717,7 @@ def update_helm_charts():
     """Find and update all HelmChart CRDs across all YAML files."""
     print("\n=== Helm Charts ===")
     chart_files = []
-    for f in sorted(COMPONENTS.rglob("*.yaml")):
+    for f in sorted(COMPONENTS.rglob("*.yaml")) + sorted(COMPONENTS.rglob("*.yml")):
         if FILTER and FILTER not in str(f):
             continue
         content = f.read_text()

@@ -88,6 +88,11 @@ spec:
             - /bitnami/postgresql
           securityContext:
             runAsUser: 0
+          resources:
+            limits:
+              memory: 256Mi
+            requests:
+              memory: 64Mi
           volumeMounts:
             - name: data
               mountPath: /bitnami/postgresql

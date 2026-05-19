@@ -30,10 +30,11 @@ compose/
   luna.compose.yaml         Compose services for luna
   lens.compose.yaml         Compose services for lens
   sol.compose.yaml          Compose services for sol (FRPC only)
+lib/                        Shared libraries
+  vars.sh                   VARS sourcing and validation (used by atlas.sh and K3s scripts)
 k3s/sol/                    K3s manifests for sol
   Makefile                  Make targets: k3s, base, apps, all, validate, domains
   scripts/
-    common.sh               Shared helpers (sources VARS.sh)
     apply.sh                Kustomize → envsubst → kubectl pipeline
     validate.sh             Kustomization + env var validation
     update-versions.py      Helm chart + image version pinning
@@ -129,7 +130,7 @@ Create DNS records for each.
 
 **Luna only**: The first `install` run comments out `# IGNORE INITIALLY` lines in Authelia's config, keeping new services protected. Re-run `install` after initial setup to expose them.
 
-**Sol only**: Some components have `post.sh` hooks (cert-manager applies issuers, ntfy provisions users, homeassistant patches trusted proxies). These run automatically on first deploy. The initial deploy mode (`APPLY_MODE=initial`) strips `# initially-removed` lines from Authelia and Jellyfin configs.
+**Sol only**: Some components have `post.sh` hooks (cert-manager applies issuers, ntfy provisions users, homeassistant patches trusted proxies). These run automatically on first deploy. The initial deploy mode (`APPLY_MODE=initial`) comments out `# IGNORE INITIALLY` lines from Authelia and Jellyfin configs.
 
 ## Configuration
 
@@ -174,7 +175,7 @@ Commands:
 Additional Make variables:
 - `APPLY_MODE=delete` — Delete a component and its PVCs
 - `APPLY_MODE=diff` — Preview changes with `kubectl diff`
-- `APPLY_MODE=initial` — Strip `# initially-removed` lines on first deploy
+- `APPLY_MODE=initial` — Comment out `# IGNORE INITIALLY` lines on first deploy
 - `APPLY_MODE=yaml` — Print processed YAML without applying
 
 ## Maintenance

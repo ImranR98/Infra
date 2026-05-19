@@ -15,7 +15,7 @@ spec:
     # WARNING: This configuration contains variable references for secrets (e.g., $AUTHELIA_REDIS_PASSWORD).
     # These are expanded by apply.sh using envsubst after sourcing secrets.sh.
     # For initial deployment without bypass rules, use: make authelia APPLY_MODE=initial
-    # Bypass rules marked with "# initially-removed" are omitted from the initial overlay.
+    # Bypass rules marked with "# IGNORE INITIALLY" are commented out from the initial overlay.
 
     pod:
       kind: Deployment
@@ -78,7 +78,7 @@ spec:
           enabled: false
         postgres:
           enabled: true
-          deploy: true
+          deploy: false
           address: "tcp://authelia-postgresql.base.svc.cluster.local:5432"
           timeout: "5 seconds"
           password:
@@ -147,41 +147,35 @@ spec:
             resources:
             - '^/\.well-known/acme-challenge/.*$'
             policy: bypass
-          - domain: tv.$SERVICES_DOMAIN # initially-removed
-            policy: bypass # initially-removed
-          - domain: isbn.$SERVICES_DOMAIN
-            policy: bypass
-          - domain: ha.$SERVICES_DOMAIN # initially-removed
-            policy: bypass # initially-removed
+          - domain: tv.$SERVICES_DOMAIN # IGNORE INITIALLY
+            policy: bypass # IGNORE INITIALLY
+          - domain: ha.$SERVICES_DOMAIN # IGNORE INITIALLY
+            policy: bypass # IGNORE INITIALLY
           - domain: ntfy.$SERVICES_DOMAIN
             policy: bypass
-          - domain: files.$SERVICES_DOMAIN # initially-removed
-            resources: # initially-removed
-            - '^/share([/?].*)?$' # initially-removed
-            - '^/static([/?].*)?$' # initially-removed
-            - '^/api/public([/?].*)?$' # initially-removed
-            policy: bypass # initially-removed
-          - domain: music.$SERVICES_DOMAIN # initially-removed
-            policy: bypass # initially-removed
-          - domain: immich.$SERVICES_DOMAIN # initially-removed
-            policy: bypass # initially-removed
+          - domain: files.$SERVICES_DOMAIN # IGNORE INITIALLY
+            resources: # IGNORE INITIALLY
+            - '^/share([/?].*)?$' # IGNORE INITIALLY
+            - '^/static([/?].*)?$' # IGNORE INITIALLY
+            - '^/api/public([/?].*)?$' # IGNORE INITIALLY
+            policy: bypass # IGNORE INITIALLY
+          - domain: music.$SERVICES_DOMAIN # IGNORE INITIALLY
+            policy: bypass # IGNORE INITIALLY
+          - domain: immich.$SERVICES_DOMAIN # IGNORE INITIALLY
+            policy: bypass # IGNORE INITIALLY
           - domain: auth.$SERVICES_DOMAIN
             policy: bypass
-          - domain: plausible.$SERVICES_DOMAIN # initially-removed
-            policy: bypass # initially-removed
-          - domain: opodsync.$SERVICES_DOMAIN # initially-removed
-            policy: bypass # initially-removed
-          - domain: gpt.$SERVICES_DOMAIN # initially-removed
-            policy: bypass # initially-removed
-          - domain: fmd.$SERVICES_DOMAIN # initially-removed
-            policy: bypass # initially-removed
+          - domain: opodsync.$SERVICES_DOMAIN # IGNORE INITIALLY
+            policy: bypass # IGNORE INITIALLY
+          - domain: gpt.$SERVICES_DOMAIN # IGNORE INITIALLY
+            policy: bypass # IGNORE INITIALLY
+          - domain: fmd.$SERVICES_DOMAIN # IGNORE INITIALLY
+            policy: bypass # IGNORE INITIALLY
           - domain: rss.$SERVICES_DOMAIN
             resources:
             - '^/api([/?].*)?$'
             - '^/p/i/?$'
             policy: bypass
-          - domain: ytdl.$SERVICES_DOMAIN
-            policy: one_factor
           - domain: '*.$SERVICES_DOMAIN'
             policy: two_factor
       regulation:

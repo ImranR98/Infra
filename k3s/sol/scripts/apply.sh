@@ -20,7 +20,9 @@ if [ ! -d "$COMPONENT_DIR" ]; then
 	exit 1
 fi
 
-source "$ROOT_DIR/scripts/common.sh"
+export VARS_ROOT="$(cd "$ROOT_DIR/../.." >/dev/null 2>&1 && pwd)"
+export TARGET="$(basename "$ROOT_DIR")"
+source "$VARS_ROOT/lib/vars.sh"
 source_env
 ENVSUBST_VARS="$(get_envsubst_vars)"
 
@@ -32,7 +34,7 @@ if [ "$MODE" = "initial" ] && [ -f "$COMPONENT_DIR/kustomization.yaml" ]; then
 	TMP_DIR=$(mktemp -d)
 	trap "rm -rf '$TMP_DIR'" EXIT
 	for f in "$COMPONENT_DIR"/*.yaml; do
-		sed '/# initially-removed$/d' "$f" > "$TMP_DIR/$(basename "$f")"
+		sed '/# IGNORE INITIALLY$/ s/^/# /' "$f" > "$TMP_DIR/$(basename "$f")"
 	done
 	RAW_YAML=$(kubectl kustomize "$TMP_DIR")
 else
@@ -46,7 +48,7 @@ fi
 PROCESSED_YAML=$(printf '%s\n' "$RAW_YAML" | envsubst "$ENVSUBST_VARS")
 
 if [ "$MODE" = "initial" ] && [ ! -f "$COMPONENT_DIR/kustomization.yaml" ]; then
-	PROCESSED_YAML=$(printf '%s\n' "$PROCESSED_YAML" | sed '/# initially-removed$/d')
+	PROCESSED_YAML=$(printf '%s\n' "$PROCESSED_YAML" | sed '/# IGNORE INITIALLY$/ s/^/# /')
 fi
 
 if [ "$MODE" = "delete" ]; then

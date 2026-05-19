@@ -75,19 +75,9 @@ COMMAND="${1:-}"
 
 export STATE_DIR="$HERE/state"
 
+source "$HERE/lib/vars.sh"
 if [ -f "$HERE/VARS.sh" ]; then
-    while IFS= read -r var; do
-        if ! grep -q "^export $var=" "$HERE/VARS.sh"; then
-            echo "VARS.sh is missing required variable: $var" >&2
-            exit 1
-        fi
-    done < <(grep -hEo '^export [^=]+' "$HERE"/vars/VARS.common.sh "$HERE"/vars/VARS."$TARGET".sh | sed 's/^export //' | sort -u)
-    source "$HERE/VARS.sh"
-    if [ "$UID" -eq 0 ]; then
-        export MY_UID=1000
-    else
-        export MY_UID="$UID"
-    fi
+    source_env "$TARGET"
     DOCKER_GID="$(getent group docker | cut -d: -f3)"
     if [ -z "$DOCKER_GID" ]; then echo "Error: docker group not found. Is Docker installed?" >&2; exit 1; fi
     export DOCKER_GID
