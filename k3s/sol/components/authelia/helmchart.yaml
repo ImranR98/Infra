@@ -54,7 +54,8 @@ spec:
           port: 6379
           username: ""
           password:
-            value: "$AUTHELIA_REDIS_PASSWORD"
+            secret_name: authelia-redis
+            path: redis-password
           database_index: 0
           maximum_active_connections: 8
           minimum_idle_connections: 0
@@ -137,7 +138,7 @@ spec:
             userinfo_signed_response_alg: 'none'
             token_endpoint_auth_method: 'client_secret_basic'
       log:
-        level: debug
+        level: info
       totp:
         issuer: $SERVICES_DOMAIN
       access_control:

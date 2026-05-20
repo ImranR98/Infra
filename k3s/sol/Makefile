@@ -83,7 +83,9 @@ define deploy-component
   $(SCRIPTS_DIR)/apply.sh $1 "$(APPLY_MODE)"
 endef
 
-k3s-base: k3s base
+k3s-base:
+	@if [ "$(APPLY_MODE)" = "delete" ]; then echo "Error: Cannot delete k3s-base. Delete k3s and base separately."; exit 1; fi
+	@$(MAKE) k3s base
 base: $(if $(filter delete,$(APPLY_MODE)),$(call reverse,$(BASE_TARGETS)),$(BASE_TARGETS))
 apps: $(if $(filter delete,$(APPLY_MODE)),$(call reverse,$(APPS_TARGETS)),$(APPS_TARGETS))
 all:

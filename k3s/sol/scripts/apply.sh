@@ -38,18 +38,10 @@ if [ "$MODE" = "initial" ] && [ -f "$COMPONENT_DIR/kustomization.yaml" ]; then
 	done
 	RAW_YAML=$(kubectl kustomize "$TMP_DIR")
 else
-	if [ -f "$COMPONENT_DIR/kustomization.yaml" ]; then
-		RAW_YAML=$(kubectl kustomize "$COMPONENT_DIR")
-	else
-		RAW_YAML=$(awk 'FNR==1 && NR!=1 {print "---"} {print}' "$COMPONENT_DIR"/*.yaml)
-	fi
+	RAW_YAML=$(kubectl kustomize "$COMPONENT_DIR")
 fi
 
 PROCESSED_YAML=$(printf '%s\n' "$RAW_YAML" | envsubst "$ENVSUBST_VARS")
-
-if [ "$MODE" = "initial" ] && [ ! -f "$COMPONENT_DIR/kustomization.yaml" ]; then
-	PROCESSED_YAML=$(printf '%s\n' "$PROCESSED_YAML" | sed '/# IGNORE INITIALLY$/ s/^/# /')
-fi
 
 if [ "$MODE" = "delete" ]; then
 	[ -f "$COMPONENT_DIR/delete.sh" ] && bash "$COMPONENT_DIR/delete.sh"
@@ -62,7 +54,12 @@ if [ "$MODE" = "delete" ]; then
 		echo "Waiting for PVC $ns/$pvc_name to be deleted..."
 		_deleted=false
 		for _ in $(seq 1 30); do
-			if ! kubectl get pvc -n "$ns" "$pvc_name" >/dev/null 2>&1; then
+			if kubectl get pvc -n "$ns" "$pvc_name" >/dev/null 2>&1; then
+				_exists=true
+			else
+				_exists=false
+			fi
+			if [ "$_exists" = false ]; then
 				_deleted=true
 				break
 			fi
@@ -87,7 +84,7 @@ else
 			echo "$output" | grep -v '^$' || true
 			break
 		fi
-		if echo "$output" | grep -qiE "connection refused|no route to host|no such host|i/o timeout"; then
+		if echo "$output" | grep -qiE "connection refused|no route to host|i/o timeout"; then
 			_retries=$((_retries + 1))
 			if [ $_retries -ge 12 ]; then
 				echo "Error: Transient API error after 12 retries. Aborting." >&2

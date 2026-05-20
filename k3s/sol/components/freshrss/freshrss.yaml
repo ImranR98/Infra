@@ -42,7 +42,7 @@ spec:
             - name: FRESHRSS_ENV
               value: "production"
             - name: TRUSTED_PROXIES
-              value: "10.0.0.0/8, 172.16.0.0/12"
+              value: "10.42.0.0/16, 10.43.0.0/16"
             - name: FRESHRSS_INSTALL
               value: |-
                 --api-enabled

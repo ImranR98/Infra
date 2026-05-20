@@ -26,7 +26,7 @@ services:
         <<: *socket-proxy
         container_name: dockerproxy
         command:
-            - "-loglevel=debug"
+            - "-loglevel=info"
             - '-allowGET=(/v1\..{1,2})?/(version|containers/.*|events.*)'
             - "-allowHEAD=/_ping"
             - "-shutdowngracetime=5"
@@ -46,7 +46,7 @@ services:
         <<: *socket-proxy
         container_name: dockerproxy_priv
         command:
-            - "-loglevel=debug"
+            - "-loglevel=info"
             - '-allowGET=/v1\..{1,2}/(containers/.*|images/.*)'
             - '-allowPOST=/v1\..{1,2}/(containers/.*|images/.*|networks/.*)'
             - '-allowDELETE=/v1\..{1,2}/(containers/.*|images/.*)'

@@ -130,7 +130,7 @@ Create DNS records for each.
 
 **Luna only**: The first `install` run comments out `# IGNORE INITIALLY` lines in Authelia's config, keeping new services protected. Re-run `install` after initial setup to expose them.
 
-**Sol only**: Some components have `post.sh` hooks (cert-manager applies issuers, ntfy provisions users, homeassistant patches trusted proxies). These run automatically on first deploy. The initial deploy mode (`APPLY_MODE=initial`) comments out `# IGNORE INITIALLY` lines from Authelia and Jellyfin configs.
+**Sol only**: Some components have `post.sh` hooks (cert-manager applies issuers, ntfy provisions users). These run automatically on first deploy. The initial deploy mode (`APPLY_MODE=initial`) comments out `# IGNORE INITIALLY` lines from Authelia and Jellyfin configs.
 
 ## Configuration
 

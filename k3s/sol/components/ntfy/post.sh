@@ -21,8 +21,8 @@ if [ -z "$POD" ]; then
 fi
 
 # Provision admin and service users
-kubectl -n base exec -i "$POD" -- ntfy user add --role=admin --ignore-exists admin 2>/dev/null <<< "$NTFY_ADMIN_PASSWORD" || true
-kubectl -n base exec -i "$POD" -- ntfy user add --ignore-exists service 2>/dev/null <<< "$NTFY_ADMIN_PASSWORD" || true
+printf '%s\n' "$NTFY_ADMIN_PASSWORD" | kubectl -n base exec -i "$POD" -- ntfy user add --role=admin --ignore-exists admin 2>/dev/null || true
+printf '%s\n' "$NTFY_ADMIN_PASSWORD" | kubectl -n base exec -i "$POD" -- ntfy user add --ignore-exists service 2>/dev/null || true
 kubectl -n base exec "$POD" -- ntfy access service '*' write-only 2>/dev/null || true
 
 # Create service token if it doesn't exist
