@@ -222,6 +222,13 @@ services:
         image: alpine
         container_name: plausible-init
         restart: no
+        cap_drop:
+            - ALL
+        cap_add:
+            - CHOWN
+            - FOWNER
+        security_opt:
+            - no-new-privileges
         volumes:
             - $STATE_DIR/plausible/data:/var/lib/plausible
         command: chown -R 999:999 /var/lib/plausible
@@ -440,6 +447,7 @@ services:
             - "traefik.http.routers.sb25.tls=true"
             - "traefik.http.routers.sb25.middlewares=authelia@file"
             - "traefik.http.services.sb25.loadbalancer.server.port=3000"
+            - "com.centurylinklabs.watchtower.enable=false"
         environment:
             - AUTH_TOKEN=$SB25_AUTH_TOKEN
         networks:

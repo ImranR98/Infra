@@ -37,7 +37,7 @@ ensure_docker_repo() {
             $su "$pkgmgr" config-manager --add-repo https://download.docker.com/linux/fedora/docker-ce.repo
             ;;
         rpm-ostree)
-            $su rpm-ostree install --apply-live --assumeyes docker-ce docker-ce-cli containerd.io docker-compose-plugin
+            $su rpm-ostree refresh-md
             ;;
     esac
 }
@@ -47,9 +47,9 @@ install_pkgs() {
     local pkgmgr="$2"
     shift 2
     case "$pkgmgr" in
-        apt) $su apt-get install -y "$@" 2>/dev/null || return 1 ;;
-        dnf) $su dnf install -y "$@" 2>/dev/null || return 1 ;;
-        rpm-ostree) $su rpm-ostree install --apply-live --assumeyes "$@" 2>/dev/null || return 1 ;;
+        apt) $su apt-get install -y "$@" || return 1 ;;
+        dnf) $su dnf install -y "$@" || return 1 ;;
+        rpm-ostree) $su rpm-ostree install --apply-live --assumeyes "$@" || return 1 ;;
         *) return 1 ;;
     esac
 }
@@ -177,7 +177,7 @@ case "$COMMAND" in
                     mkdir -p "$host_path"
                     [ "$UID" -eq 0 ] && chown "$MY_UID:$MY_UID" "$host_path" 2>/dev/null || :
                 fi
-            done < <(sed -n "s|^[[:space:]]*- \"\?$STATE_DIR/\([^\":]*\)\"\?:.*$|$STATE_DIR/\1|p" "$tmpfile")
+            done < <(STATE_DIR_ESC=$(printf '%s\n' "$STATE_DIR" | sed 's|[][.^$*+?(){|\\]|\\&|g'); sed -n "s|^[[:space:]]*- \"\?$STATE_DIR_ESC/\([^\":]*\)\"\?:.*$|$STATE_DIR/\1|p" "$tmpfile")
         echo "Done."
 
         generate_configs "$TARGET"
@@ -246,10 +246,9 @@ EOF
         ;;
 
     restart)
-        generate_configs "$TARGET"
-        envsubst "$ENVSUBST_VARS" < "$HERE"/compose/"$TARGET".compose.yaml > "$STATE_DIR"/compose.yaml
-
         if [ -n "${2:-}" ]; then
+            generate_configs "$TARGET"
+            envsubst "$ENVSUBST_VARS" < "$HERE"/compose/"$TARGET".compose.yaml > "$STATE_DIR"/compose.yaml
             docker compose -p "$TARGET" -f "$STATE_DIR"/compose.yaml down "$2" || :
             docker compose -p "$TARGET" -f "$STATE_DIR"/compose.yaml up -d "$2"
         else
@@ -368,10 +367,8 @@ EOF
         if ! command -v docker >/dev/null 2>&1 || ! docker compose version >/dev/null 2>&1; then
             printf "Installing Docker and Docker Compose..."
             ensure_docker_repo "$SU" "$PKG_MGR"
-            if [ "$PKG_MGR" = "apt" ]; then
-                install_pkgs "$SU" "$PKG_MGR" docker-ce docker-ce-cli containerd.io docker-compose-plugin && echo " done" || { echo ""; echo "Docker install failed. Install manually: https://docs.docker.com/engine/install/" >&2; }
-            elif [ "$PKG_MGR" = "rpm-ostree" ]; then
-                echo " done (handled by ensure_docker_repo)"
+            if [ "$PKG_MGR" = "rpm-ostree" ]; then
+                $SU rpm-ostree install --apply-live --assumeyes docker-ce docker-ce-cli containerd.io docker-compose-plugin && echo " done" || { echo ""; echo "Docker install failed. Install manually: https://docs.docker.com/engine/install/" >&2; }
             else
                 install_pkgs "$SU" "$PKG_MGR" docker-ce docker-ce-cli containerd.io docker-compose-plugin && echo " done" || { echo ""; echo "Docker install failed. Install manually: https://docs.docker.com/engine/install/" >&2; }
             fi

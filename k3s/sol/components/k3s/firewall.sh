@@ -16,7 +16,7 @@ if ! command -v firewall-cmd >/dev/null 2>&1; then
 	exit 0
 fi
 
-firewall-cmd --permanent --zone=trusted --add-interface=cni0
+firewall-cmd --permanent --zone=trusted --add-interface=cni0 2>/dev/null || true
 firewall-cmd --permanent --zone=trusted --add-interface=flannel.1 2>/dev/null || true
 firewall-cmd --reload
 

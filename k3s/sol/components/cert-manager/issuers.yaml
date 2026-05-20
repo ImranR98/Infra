@@ -18,7 +18,7 @@ spec:
                 annotations:
                   traefik.ingress.kubernetes.io/router.entrypoints: web
                   traefik.ingress.kubernetes.io/router.tls: "false"
-                  traefik.ingress.kubernetes.io/router.priority: "42" # https://www.reddit.com/r/Traefik/comments/giqiih/cant_figure_out_http_https_redirection_for/
+                  traefik.ingress.kubernetes.io/router.priority: "42" # Must be >0 to avoid conflict with default HTTP>HTTPS redirect. See https://www.reddit.com/r/Traefik/comments/giqiih/cant_figure_out_http_https_redirection_for/
 ---
 apiVersion: cert-manager.io/v1
 kind: ClusterIssuer

@@ -137,7 +137,7 @@ spec:
       - name: dshm
         emptyDir:
           medium: Memory
-          sizeLimit: 128Mi
+          sizeLimit: 512Mi
 ---
 apiVersion: v1
 kind: Service

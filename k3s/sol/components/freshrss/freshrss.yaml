@@ -41,7 +41,7 @@ spec:
               value: "2,32"
             - name: FRESHRSS_ENV
               value: "production"
-            - name: TRUSTED_PROXY
+            - name: TRUSTED_PROXIES
               value: "10.0.0.0/8, 172.16.0.0/12"
             - name: FRESHRSS_INSTALL
               value: |-

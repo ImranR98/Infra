@@ -27,7 +27,7 @@ done
 
 echo "Applying issuers..."
 ENVSUBST_VARS="$(get_envsubst_vars)"
-until envsubst "$ENVSUBST_VARS" <"$ROOT_DIR/components/cert-manager/issuers.yaml" | kubectl apply -f - 2>/dev/null; do
+until envsubst "$ENVSUBST_VARS" <"$(dirname "$COMP_DIR")/issuers.yaml" | kubectl apply -f - 2>/dev/null; do
     sleep 5
 done
 
