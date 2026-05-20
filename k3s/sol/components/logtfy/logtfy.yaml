@@ -45,7 +45,7 @@ stringData:
                 {
                     "id": "ntfy_self",
                     "host": "https://ntfy.$SERVICES_DOMAIN",
-                    "authHeader": "Bearer $NTFY_SERVICE_USER_TOKEN",
+                    "authHeader": "Bearer $NTFY_WRITE_ONLY_ACCOUNT_TOKEN",
                     "topicPrefix": "${TARGET}_services_"
                 },
                 {

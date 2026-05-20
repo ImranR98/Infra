@@ -80,7 +80,7 @@ stringData:
               "status_code": 200,
               "headers": {
                 "Title": "OpenCanary on ${TARGET}",
-                "Authorization": "Bearer $NTFY_SERVICE_USER_TOKEN"
+                "Authorization": "Bearer $NTFY_WRITE_ONLY_ACCOUNT_TOKEN"
               }
             }
           }

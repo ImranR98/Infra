@@ -23,6 +23,13 @@ spec:
         securityContext:
           allowPrivilegeEscalation: false
         args: ["serve"]
+        env:
+        - name: NTFY_AUTH_USERS
+          value: "admin:$NTFY_ADMIN_PASSWORD_HASH:admin,service:$NTFY_WRITE_ONLY_ACCOUNT_PASSWORD_HASH:user"
+        - name: NTFY_AUTH_TOKENS
+          value: "service:$NTFY_WRITE_ONLY_ACCOUNT_TOKEN"
+        - name: NTFY_AUTH_ACCESS
+          value: "admin:*:read-write,service:*:write-only"
         ports:
         - containerPort: 3000
         resources:

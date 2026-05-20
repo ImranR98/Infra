@@ -27,7 +27,7 @@ stringData:
     url: http://ntfy.base.svc.cluster.local:3000/${TARGET}_services_crowdsec
     method: POST
     headers:
-      Authorization: Bearer $NTFY_SERVICE_USER_TOKEN
+      Authorization: Bearer $NTFY_WRITE_ONLY_ACCOUNT_TOKEN
       Title: CrowdSec on ${TARGET}
       Priority: min
   navidrome.whitelist.yaml: |

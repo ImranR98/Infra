@@ -24,6 +24,4 @@ stringData:
     cache-file: "/home/ntfy/cache.db"
     attachment-cache-dir: "/home/ntfy/attachments"
     behind-proxy: true
-    auth-file: "/home/ntfy/user.db"
-    auth-default-access: "deny-all"
     listen-http: ":3000"
