@@ -16,6 +16,10 @@ spec:
       type: Deployment
     image:
       tag: stable
+    podSecurityContext:
+      fsGroup: $MY_UID
+    containerSecurityContext:
+      allowPrivilegeEscalation: false
     persistence:
       enabled: true
       existingClaim: homeassistant-config-pvc

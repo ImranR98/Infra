@@ -18,6 +18,8 @@ spec:
       main:
         containers:
           main:
+            securityContext:
+              allowPrivilegeEscalation: false
             resources:
               limits:
                 memory: 2Gi

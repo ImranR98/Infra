@@ -27,3 +27,41 @@ spec:
         memory: 2Gi
       requests:
         memory: 128Mi
+    longhorn:
+      manager:
+        resources:
+          limits:
+            memory: 2Gi
+          requests:
+            memory: 128Mi
+      ui:
+        resources:
+          limits:
+            memory: 256Mi
+          requests:
+            memory: 64Mi
+    csi:
+      attacher:
+        resources:
+          limits:
+            memory: 128Mi
+          requests:
+            memory: 32Mi
+      provisioner:
+        resources:
+          limits:
+            memory: 128Mi
+          requests:
+            memory: 32Mi
+      resizer:
+        resources:
+          limits:
+            memory: 128Mi
+          requests:
+            memory: 32Mi
+      snapshotter:
+        resources:
+          limits:
+            memory: 128Mi
+          requests:
+            memory: 32Mi
