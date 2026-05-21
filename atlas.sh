@@ -108,6 +108,11 @@ generate_configs() {
     local target="$1"
     echo "=== Re/generate various state files ==="
 
+    # IGNORE INITIALLY logic: on first install the state dir doesn't exist yet,
+    # so PROTECT_INIT_ROUTES defaults to true and lines ending with
+    # "# IGNORE INITIALLY" are commented out. On subsequent runs the existing
+    # config is detected and routes are uncommented. Deleting the state dir
+    # resets this — all routes go back to protected mode.
     if [ -f "$HERE/templates/$target/authelia.config.yaml" ]; then
         if [ -f "$STATE_DIR/authelia/config/configuration.yml" ]; then
             PROTECT_INIT_ROUTES=${PROTECT_INIT_ROUTES:-false}

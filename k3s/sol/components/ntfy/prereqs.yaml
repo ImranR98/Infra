@@ -25,3 +25,15 @@ stringData:
     attachment-cache-dir: "/home/ntfy/attachments"
     behind-proxy: true
     listen-http: ":3000"
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: ntfy-auth
+  namespace: base
+type: Opaque
+stringData:
+  auth-users: "admin:$NTFY_ADMIN_PASSWORD_HASH:admin,service:$NTFY_WRITE_ONLY_ACCOUNT_PASSWORD_HASH:user"
+  auth-tokens: "service:$NTFY_WRITE_ONLY_ACCOUNT_TOKEN"
+  auth-access: "admin:*:read-write,service:*:write-only"
