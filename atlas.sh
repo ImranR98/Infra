@@ -186,7 +186,7 @@ case "$COMMAND" in
                     mkdir -p "$host_path"
                     [ "$UID" -eq 0 ] && chown "$MY_UID:$MY_UID" "$host_path" 2>/dev/null || :
                 fi
-            done < <(STATE_DIR_ESC=$(printf '%s\n' "$STATE_DIR" | sed 's|[][.^$*+?(){|\\]|\\&|g'); sed -n "s|^[[:space:]]*- \"\?$STATE_DIR_ESC/\([^\":]*\)\"\?:.*$|$STATE_DIR/\1|p" "$tmpfile")
+            done < <(awk -v dir="$STATE_DIR" 'index($0, dir"/") && /^[[:space:]]*-/ { sub(/^[[:space:]]*-[[:space:]]*"?/, ""); sub(/[":].*/, ""); print }' "$tmpfile")
         echo "Done."
 
         generate_configs "$TARGET"
