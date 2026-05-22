@@ -15,7 +15,7 @@ Self-hosted infrastructure with 3 deployment targets: **luna**, **lens**, and **
 
 | Target | Role | Stack |
 |--------|------|-------|
-| **luna** | Cloud VPS — standalone | Docker Compose (Traefik, Authelia, Plausible, Send, MeTube, PixelNtfy, ISBN lookup, logtfy, Syncthing relay, dockerproxy, watchtower) |
+| **luna** | Cloud VPS — standalone | Docker Compose (Traefik, Authelia, etc.) |
 | **lens** | Relay VPS — FRP tunnel endpoint | Docker Compose (FRP server, logtfy) |
 | **sol** | Home server — K3s cluster + FRPC | K3s (Kustomize) for services + Docker Compose for FRPC |
 
@@ -30,12 +30,12 @@ compose/
   luna.compose.yaml         Compose services for luna
   lens.compose.yaml         Compose services for lens
   sol.compose.yaml          Compose services for sol (FRPC only)
-lib/                        Shared libraries
+lib/
   vars.sh                   VARS sourcing and validation (used by atlas.sh and K3s scripts)
 k3s/sol/                    K3s manifests for sol
   Makefile                  Make targets: k3s, base, apps, all, validate, domains
   scripts/
-    apply.sh                Kustomize → envsubst → kubectl pipeline
+    apply.sh                Kustomize -> envsubst -> kubectl pipeline
     validate.sh             Kustomization + env var validation
     update-versions.py      Helm chart + image version pinning
   components/
@@ -49,9 +49,8 @@ k3s/sol/                    K3s manifests for sol
     crowdsec/               WAF / IP banning
     authelia/               SSO / OIDC provider
     ntfy/                   Notification backbone
-    .../                 several other services
+    # And all application workloads
 vars/
-  VARS.common.sh            Shared variables
   VARS.luna.sh              luna configuration template
   VARS.lens.sh              lens configuration template
   VARS.sol.sh               sol configuration template
@@ -71,7 +70,7 @@ state/                      Runtime state (auto-generated, gitignored)
 - A Linux server with `systemd` and one of: `apt`, `dnf`, or `rpm-ostree`
 - Required ports depend on the target (see the VARS template)
 
-Install system prerequisites (Docker, yq, envsubst, jq, curl, python3, python3-yaml):
+Install system prerequisites (Docker, yq, envsubst, jq, curl, python3, python3-yaml, skopeo):
 ```
 ./atlas.sh prereqs
 ```
@@ -134,7 +133,7 @@ Create DNS records for each.
 
 ## Configuration
 
-VARS templates are at `vars/VARS.<target>.sh` with a shared base at `vars/VARS.common.sh`. Copy the target's template to `VARS.sh` and fill in the values. Each template documents its required variables.
+VARS templates are at `vars/VARS.<target>.sh`. Copy the target's template to `VARS.sh` and fill in the values. Each template documents its required variables.
 
 ## CLI Commands
 
@@ -147,7 +146,7 @@ Targets:
   sol
 
 Commands:
-  prereqs                   Install prerequisites (docker, yq, envsubst, jq, curl)
+  prereqs                   Install prerequisites (docker, yq, envsubst, jq, curl, python3, python3-yaml, skopeo)
   install                   Install and start all compose services
   install-preboot           Install preboot FRPC in initramfs (for remote LUKS unlock)
   k3s [target]              Run K3s Make target (passes through to k3s/<target>/Makefile)
@@ -157,6 +156,7 @@ Commands:
   old-images                List Docker images older than 60 days
   update-socket-proxy       Pull latest socket-proxy and restart if needed
   update-traefik-plugins    Update Traefik plugin versions
+  update-frp                Check FRPC version, update compose files, build/push frps image
 ```
 
 ### K3s Make targets (for sol)
@@ -173,7 +173,7 @@ Commands:
 ```
 
 Additional Make variables:
-- `APPLY_MODE=delete` — Delete a component and its PVCs
+- `APPLY_MODE=delete` — Delete a component and its PVCs (blocked for base components: namespaces, nfs-server, csi-driver-nfs, longhorn)
 - `APPLY_MODE=diff` — Preview changes with `kubectl diff`
 - `APPLY_MODE=initial` — Comment out `# IGNORE INITIALLY` lines on first deploy
 - `APPLY_MODE=yaml` — Print processed YAML without applying
