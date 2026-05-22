@@ -371,8 +371,9 @@ EOF
         echo "Compose files updated and image pushed to Docker Hub."
         echo ""
         echo "Next steps:"
-        echo "  1. On lens, pull the repo and restart the frps-with-multiuser container."
-        echo "  2. On sol, restart the frpc container."
+        echo "  1. Commit and push the changes."
+        echo "  2. On lens, pull the repo and restart the frps-with-multiuser container."
+        echo "  3. On sol, restart the frpc container."
         echo ""
         ;;
 
