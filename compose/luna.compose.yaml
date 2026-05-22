@@ -534,9 +534,9 @@ services:
         networks:
             - traefik
         logging: *logging
-    shlink-web-client:
+    shlink_web_client:
         image: shlinkio/shlink-web-client:stable
-        container_name: shlink-web-client
+        container_name: shlink_web_client
         environment:
             - SHLINK_SERVER_URL=https://ln.$SERVICES_DOMAIN
             - SHLINK_SERVER_NAME=ln.$SERVICES_DOMAIN
@@ -550,12 +550,12 @@ services:
         mem_limit: 128M
         labels:
             - "traefik.enable=true"
-            - "traefik.http.routers.shlink-web-client.rule=Host(`ui.ln.$SERVICES_DOMAIN`)"
-            - "traefik.http.routers.shlink-web-client.entrypoints=websecure"
-            - "traefik.http.routers.shlink-web-client.tls.certresolver=le"
-            - "traefik.http.routers.shlink-web-client.tls=true"
-            - "traefik.http.routers.shlink-web-client.middlewares=authelia@file,geoblock@file"
-            - "traefik.http.services.shlink-web-client.loadbalancer.server.port=8080"
+            - "traefik.http.routers.shlink_web_client.rule=Host(`ui.ln.$SERVICES_DOMAIN`)"
+            - "traefik.http.routers.shlink_web_client.entrypoints=websecure"
+            - "traefik.http.routers.shlink_web_client.tls.certresolver=le"
+            - "traefik.http.routers.shlink_web_client.tls=true"
+            - "traefik.http.routers.shlink_web_client.middlewares=authelia@file,geoblock@file"
+            - "traefik.http.services.shlink_web_client.loadbalancer.server.port=8080"
         logging: *logging
 
     # Uptime Kuma - Service Uptime Monitoring
