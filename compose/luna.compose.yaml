@@ -489,6 +489,100 @@ services:
             - "22070:22070"
         logging: *logging
 
+    # Shlink - URL Shortener
+    shlink:
+        image: shlinkio/shlink:stable
+        container_name: shlink
+        environment:
+            - SHORT_DOMAIN_HOST=ln.$SERVICES_DOMAIN
+            - SHORT_DOMAIN_SCHEMA=https
+            - DB_DRIVER=postgres
+            - DB_HOST=shlink_db
+            - DB_USER=postgres
+            - DB_PASSWORD=$SHLINK_DB_PASSWORD
+            - INITIAL_API_KEY=$SHLINK_API_KEY
+            - GEOLITE_LICENSE_KEY=$GEOLITE_LICENSE_KEY
+        networks:
+            - traefik
+        depends_on:
+            - traefik
+            - shlink_db
+        restart: unless-stopped
+        mem_limit: 256M
+        labels:
+            - "traefik.enable=true"
+            - "traefik.http.routers.shlink.rule=Host(`ln.$SERVICES_DOMAIN`)"
+            - "traefik.http.routers.shlink.entrypoints=websecure"
+            - "traefik.http.routers.shlink.tls.certresolver=le"
+            - "traefik.http.routers.shlink.tls=true"
+            - "traefik.http.routers.shlink.middlewares=authelia@file"
+            - "traefik.http.services.shlink.loadbalancer.server.port=8080"
+        logging: *logging
+    shlink_db:
+        image: postgres:17-alpine
+        container_name: shlink_db
+        restart: unless-stopped
+        user: "$MY_UID:$MY_UID"
+        mem_limit: 512M
+        volumes:
+            - $STATE_DIR/shlink/db:/var/lib/postgresql/data
+        environment:
+            - POSTGRES_PASSWORD=$SHLINK_DB_PASSWORD
+        healthcheck:
+            test: ["CMD-SHELL", "pg_isready -U postgres"]
+            start_period: 1m
+        networks:
+            - traefik
+        logging: *logging
+    shlink-web-client:
+        image: shlinkio/shlink-web-client:stable
+        container_name: shlink-web-client
+        environment:
+            - SHLINK_SERVER_URL=https://ln.$SERVICES_DOMAIN
+            - SHLINK_SERVER_NAME=ln.$SERVICES_DOMAIN
+            - SHLINK_SERVER_API_KEY=$SHLINK_API_KEY
+        networks:
+            - traefik
+        depends_on:
+            - traefik
+            - shlink
+        restart: unless-stopped
+        mem_limit: 128M
+        labels:
+            - "traefik.enable=true"
+            - "traefik.http.routers.shlink-web-client.rule=Host(`ui.ln.$SERVICES_DOMAIN`)"
+            - "traefik.http.routers.shlink-web-client.entrypoints=websecure"
+            - "traefik.http.routers.shlink-web-client.tls.certresolver=le"
+            - "traefik.http.routers.shlink-web-client.tls=true"
+            - "traefik.http.routers.shlink-web-client.middlewares=authelia@file,geoblock@file"
+            - "traefik.http.services.shlink-web-client.loadbalancer.server.port=8080"
+        logging: *logging
+
+    # Uptime Kuma - Service Uptime Monitoring
+    uptime:
+        image: louislam/uptime-kuma:latest
+        container_name: uptime
+        restart: unless-stopped
+        mem_limit: 256M
+        depends_on:
+            - traefik
+        environment:
+            - PUID=$MY_UID
+            - PGID=$MY_UID
+        volumes:
+            - $STATE_DIR/uptime:/app/data/
+        labels:
+            - "traefik.enable=true"
+            - "traefik.http.routers.uptime.rule=Host(`uptime.$SERVICES_DOMAIN`)"
+            - "traefik.http.routers.uptime.entrypoints=websecure"
+            - "traefik.http.routers.uptime.tls.certresolver=le"
+            - "traefik.http.routers.uptime.tls=true"
+            - "traefik.http.routers.uptime.middlewares=authelia@file,geoblock@file"
+            - "traefik.http.services.uptime.loadbalancer.server.port=3001"
+        networks:
+            - traefik
+        logging: *logging
+
 networks:
     traefik:
         name: traefik
