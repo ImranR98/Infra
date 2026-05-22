@@ -414,6 +414,7 @@ services:
             - "$MAIN_PARENT_DIR/Main/Media/YouTube:/media/YouTube"
             - $STATE_DIR/jellyfin/config:/config
             - $STATE_DIR/jellyfin/cache:/cache
+            - /mnt/ssd2/temp_jellyfin_stuff:/media/TempShows
         labels:
             - "traefik.enable=true"
             - "traefik.http.routers.jellyfin.rule=Host(`tv.$SERVICES_DOMAIN`)"
@@ -565,30 +566,6 @@ services:
             - $STATE_DIR/immich/postgres:/var/lib/postgresql/data
         shm_size: 128mb
         restart: always
-        networks:
-            - traefik
-        logging: *logging
-
-    # Service Uptime
-    uptime:
-        container_name: uptime
-        image: louislam/uptime-kuma:latest
-        restart: unless-stopped
-        depends_on:
-            - traefik
-        environment:
-            - PUID=1000
-            - PGID=1000
-        volumes:
-            - $STATE_DIR/uptime:/app/data/
-        labels:
-            - "traefik.enable=true"
-            - "traefik.http.routers.uptime.rule=Host(`uptime.$SERVICES_DOMAIN`)"
-            - "traefik.http.routers.uptime.entrypoints=websecure"
-            - "traefik.http.routers.uptime.tls.certresolver=le"
-            - "traefik.http.routers.uptime.tls=true"
-            - "traefik.http.routers.uptime.middlewares=authelia@docker,geoblock@file"
-            - "traefik.http.services.uptime.loadbalancer.server.port=3001"
         networks:
             - traefik
         logging: *logging
@@ -797,72 +774,6 @@ services:
             resources:
                 limits:
                     cpus: '0.1'
-        logging: *logging
-
-    # Link Sharing
-    shlink:
-        image: shlinkio/shlink:stable
-        container_name: shlink
-        environment:
-            - SHORT_DOMAIN_HOST=ln.$SERVICES_DOMAIN
-            - SHORT_DOMAIN_SCHEMA=https
-            - DB_DRIVER=postgres
-            - DB_HOST=shlink_db
-            - DB_USER=postgres
-            - DB_PASSWORD=$SHLINK_DB_PASSWORD
-            - INITIAL_API_KEY=$SHLINK_API_KEY
-            - GEOLITE_LICENSE_KEY=$GEOLITE_LICENSE_KEY
-        networks:
-            - traefik
-        depends_on:
-            - traefik
-            - shlink_db
-        restart: unless-stopped
-        labels:
-            - "traefik.enable=true"
-            - "traefik.http.routers.shlink.rule=Host(`ln.$SERVICES_DOMAIN`)"
-            - "traefik.http.routers.shlink.entrypoints=websecure"
-            - "traefik.http.routers.shlink.middlewares=authelia@docker"
-            - "traefik.http.routers.shlink.tls.certresolver=le"
-            - "traefik.http.routers.shlink.tls=true"
-            - "traefik.http.services.shlink.loadbalancer.server.port=8080"
-        logging: *logging
-    shlink_db:
-        image: postgres:17-alpine
-        container_name: shlink_db
-        restart: unless-stopped
-        volumes:
-            - $STATE_DIR/shlink/db:/var/lib/postgresql/data
-        environment:
-            - POSTGRES_PASSWORD=$SHLINK_DB_PASSWORD
-        healthcheck:
-            test: ["CMD-SHELL", "pg_isready -U postgres"]
-            start_period: 1m
-        networks:
-            - traefik
-        user: 1000:1000
-        logging: *logging
-    shlink-web-client:
-        image: shlinkio/shlink-web-client:stable
-        container_name: shlink-web-client
-        environment: # Important: Only pre-configure a server if the app is behind Authelia
-            - SHLINK_SERVER_URL=https://ln.$SERVICES_DOMAIN
-            - SHLINK_SERVER_NAME=ln.$SERVICES_DOMAIN
-            - SHLINK_SERVER_API_KEY=$SHLINK_API_KEY # Will be made available to client browser
-        networks:
-            - traefik
-        depends_on:
-            - traefik
-            - shlink
-        restart: unless-stopped
-        labels:
-            - "traefik.enable=true"
-            - "traefik.http.routers.shlink-web-client.rule=Host(`ui.ln.$SERVICES_DOMAIN`)"
-            - "traefik.http.routers.shlink-web-client.entrypoints=websecure"
-            - "traefik.http.routers.shlink-web-client.middlewares=authelia@docker,geoblock@file"
-            - "traefik.http.routers.shlink-web-client.tls.certresolver=le"
-            - "traefik.http.routers.shlink-web-client.tls=true"
-            - "traefik.http.services.shlink-web-client.loadbalancer.server.port=8080"
         logging: *logging
 
     # Find My Device Server
