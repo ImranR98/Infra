@@ -13,7 +13,7 @@ KNOWN_SKIP_PATTERNS=(
 
 # Gather all known env vars from VARS templates
 KNOWN_ENV_VARS=""
-for f in "$ROOT_DIR/../../vars/VARS.common.sh" "$ROOT_DIR/../../vars/VARS.$(basename "$ROOT_DIR").sh"; do
+for f in "$ROOT_DIR/../../vars/VARS.$(basename "$ROOT_DIR").sh"; do
 	if [ -f "$f" ]; then
 		KNOWN_ENV_VARS+=$(grep -oP 'export \K[A-Z_][A-Z_0-9]*' "$f" || true)
 		KNOWN_ENV_VARS+="

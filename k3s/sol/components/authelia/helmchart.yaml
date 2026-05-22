@@ -12,8 +12,6 @@ spec:
   createNamespace: false
   version: 0.11.5
   valuesContent: |-
-    # WARNING: This configuration contains variable references for secrets (e.g., $AUTHELIA_REDIS_PASSWORD).
-    # These are expanded by apply.sh using envsubst after sourcing secrets.sh.
     # For initial deployment without bypass rules, use: make authelia APPLY_MODE=initial
     # Bypass rules marked with "# IGNORE INITIALLY" are commented out from the initial overlay.
 

@@ -76,8 +76,12 @@ COMMAND="${1:-}"
 export STATE_DIR="$HERE/state"
 
 source "$HERE/lib/vars.sh"
-if [ -f "$HERE/VARS.sh" ]; then
+vars_found=false
+if [ -f "$HERE/VARS.$TARGET.sh" ] || [ -f "$HERE/VARS.sh" ]; then
     source_env "$TARGET"
+    vars_found=true
+fi
+if [ "$vars_found" = true ]; then
     DOCKER_GID="$(getent group docker | cut -d: -f3)"
     if [ -z "$DOCKER_GID" ]; then echo "Error: docker group not found. Is Docker installed?" >&2; exit 1; fi
     export DOCKER_GID
@@ -85,7 +89,7 @@ if [ -f "$HERE/VARS.sh" ]; then
 elif [ -n "$COMMAND" ]; then
     case "$COMMAND" in
         install|install-preboot|restart|backup-state|k3s)
-            echo "No VARS.sh found. Create VARS.sh with variables from vars/VARS.common.sh and vars/VARS.$TARGET.sh." >&2
+            echo "No VARS.$TARGET.sh or VARS.sh found. Create VARS.$TARGET.sh with variables from vars/VARS.$TARGET.sh." >&2
             exit 1
             ;;
     esac
@@ -388,8 +392,12 @@ EOF
         mkdir -p "$BACKUP_DIR"
         OUTPUT="$BACKUP_DIR/$TARGET-backup-$TIMESTAMP.tar"
 
-        echo "Backing up $STATE_DIR and VARS.sh..."
-        (umask 0077; docker run --rm -v "$STATE_DIR":/backup/state:ro -v "$HERE/VARS.sh":/backup/VARS.sh:ro \
+        vars_backup_file="$HERE/VARS.$TARGET.sh"
+        if [ ! -f "$vars_backup_file" ]; then
+            vars_backup_file="$HERE/VARS.sh"
+        fi
+        echo "Backing up $STATE_DIR and $(basename "$vars_backup_file")..."
+        (umask 0077; docker run --rm -v "$STATE_DIR":/backup/state:ro -v "$vars_backup_file":/backup/VARS.sh:ro \
             alpine sh -c 'apk add --no-cache tar >/dev/null 2>&1 && exec tar cf - --ignore-failed-read --warning=no-file-changed --warning=no-file-removed -C /backup .' > "$OUTPUT")
         if [ -s "$OUTPUT" ]; then
             echo "Backup created: $OUTPUT"
@@ -404,7 +412,7 @@ EOF
                     echo "Pruned old backup: $old"
                 done
             fi
-            echo "Note: The backup contains VARS.sh which includes secrets. Store it securely."
+            echo "Note: The backup contains $(basename "$vars_backup_file") which includes secrets. Store it securely."
         else
             echo "Backup failed" >&2
             rm -f "$OUTPUT"
