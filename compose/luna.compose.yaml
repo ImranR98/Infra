@@ -560,7 +560,7 @@ services:
 
     # Uptime Kuma - Service Uptime Monitoring
     uptime:
-        image: louislam/uptime-kuma:latest
+        image: louislam/uptime-kuma:2
         container_name: uptime
         restart: unless-stopped
         mem_limit: 256M
