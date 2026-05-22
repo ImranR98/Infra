@@ -324,6 +324,58 @@ EOF
         done < <(echo "$PLUGIN_LINES" | grep -o '\.plugins\..*\.modulename=[^"]*')
         ;;
 
+    update-frp)
+        if [ "$TARGET" != "sol" ]; then
+            echo "This command must be run on the sol target." >&2
+            exit 1
+        fi
+
+        if ! docker system info 2>/dev/null | grep -q "Username"; then
+            echo "Not logged into Docker Hub. Run 'docker login' first." >&2
+            exit 1
+        fi
+
+        current_ver="$(sed -n 's/.*image: fatedier\/frpc:v\([^"]*\).*/\1/p' "$HERE/compose/sol.compose.yaml")"
+        if [ -z "$current_ver" ]; then
+            echo "Could not determine current FRPC version from sol.compose.yaml." >&2
+            exit 1
+        fi
+        echo "Current FRPC version: v$current_ver"
+
+        latest_tag="$(curl -s https://api.github.com/repos/fatedier/frp/releases/latest | grep -oP '"tag_name":\s*"\K[^"]+')"
+        latest_ver="${latest_tag#v}"
+        echo "Latest FRP version:  v$latest_ver"
+
+        if [ "$current_ver" = "$latest_ver" ]; then
+            echo "FRPC is already at the latest version."
+            exit 0
+        fi
+
+        echo "Updating sol.compose.yaml..."
+        sed -i "s|image: fatedier/frpc:v$current_ver|image: fatedier/frpc:v$latest_ver|" "$HERE/compose/sol.compose.yaml"
+
+        echo "Updating lens.compose.yaml..."
+        sed -i "s|image: imranrdev/frps-with-multiuser:latest|image: imranrdev/frps-with-multiuser:v$latest_ver|" "$HERE/compose/lens.compose.yaml"
+
+        echo "=== Build frps-with-multiuser:v$latest_ver ==="
+        TMPDIR="$(mktemp -d)"
+        trap 'rm -rf "$TMPDIR"' EXIT INT TERM
+        git clone https://github.com/ImranR98/frps-with-multiuser-docker.git "$TMPDIR"
+        cd "$TMPDIR"
+        docker build --no-cache . --network host -t "imranrdev/frps-with-multiuser:v$latest_ver"
+        docker push "imranrdev/frps-with-multiuser:v$latest_ver"
+        echo "=== Done ==="
+
+        echo ""
+        echo "FRPC updated from v$current_ver to v$latest_ver."
+        echo "Compose files updated and image pushed to Docker Hub."
+        echo ""
+        echo "Next steps:"
+        echo "  1. On lens, pull the repo and restart the frps-with-multiuser container."
+        echo "  2. On sol, restart the frpc container."
+        echo ""
+        ;;
+
     backup-state)
         if [ ! -d "$STATE_DIR" ]; then
             echo "State directory not found: $STATE_DIR" >&2
@@ -485,6 +537,7 @@ EOF
         echo "  old-images                List Docker images older than 60 days"
         echo "  update-socket-proxy       Pull latest socket-proxy and restart if needed"
         echo "  update-traefik-plugins    Update Traefik plugin versions"
+        echo "  update-frp              Check FRPC version on sol, update compose files, build and push frps image"
         exit 1
         ;;
 
