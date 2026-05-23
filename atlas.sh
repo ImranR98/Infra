@@ -97,15 +97,6 @@ while [ $arg_idx -lt ${#CMD_ARGS[@]} ]; do
 done
 
 if [ -z "$CMD_PATH" ]; then
-	# Fallback: try matching a common.sh function (hyphens→underscores)
-	_fn_name="${CMD_ARGS[$arg_idx]:-}"
-	_fn_name="${_fn_name//-/_}"
-	if [ -n "$_fn_name" ] && declare -f "$_fn_name" >/dev/null 2>&1; then
-		shift $((arg_idx + 1))
-		"$_fn_name" "$TARGET" "$@"
-		exit $?
-	fi
-
 	if [ $arg_idx -eq 0 ] && [ -z "${CMD_ARGS[0]:-}" ]; then
 		# No command given — show available commands
 		:
@@ -132,17 +123,8 @@ if [ -z "$CMD_PATH" ]; then
 
 	# Top-level commands (files directly in commands/, not in subdirs)
 	_list_flat "$ATLAS_ROOT/commands" "" | _indent
-	# Function-based commands (top-level only)
-	{ echo "validate"; echo "list-domains"; echo "update-traefik-plugins"; } | _indent
 
-	# Stack-known function commands ("fn:stack")
-	_stack_fn() {
-		case "$1" in
-			compose) echo "old-images" ;;
-		esac
-	}
-
-	# Each stack: generic first (files + functions), then target-specific
+	# Each stack: generic first (files), then target-specific
 	for stack_dir in "$ATLAS_ROOT/commands"/*/; do
 		[ -d "$stack_dir" ] || continue
 		stack=$(basename "$stack_dir")
@@ -151,7 +133,6 @@ if [ -z "$CMD_PATH" ]; then
 		echo ""
 		{
 			_list_flat "$stack_dir" "$stack "
-			_stack_fn "$stack" | while read -r fn; do [ -n "$fn" ] && echo "$stack $fn"; done
 		} | _indent
 		target_dir="$ATLAS_ROOT/targets/$TARGET/commands/$stack"
 		if [ -d "$target_dir" ]; then
@@ -162,4 +143,4 @@ if [ -z "$CMD_PATH" ]; then
 	exit 1
 fi
 
-exec $CMD_RUNNER "$CMD_PATH" "$@"
+exec ${CMD_RUNNER:-bash} "$CMD_PATH" "$@"

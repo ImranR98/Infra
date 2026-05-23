@@ -185,7 +185,7 @@ update_traefik_plugins() {
 			return
 		fi
 		local latest
-		latest="$(curl -s "https://api.github.com/repos/$(echo "$url" | sed 's|github\.com/||')/releases/latest" | jq -r '.tag_name')"
+		latest="$(curl -fsSL --connect-timeout 10 --max-time 30 "https://api.github.com/repos/$(echo "$url" | sed 's|github\.com/||')/releases/latest" | jq -r '.tag_name')"
 		if [ "$current" != "$latest" ]; then
 			echo "  $name: $current → $latest"
 			echo "$name:$url:$current:$latest"

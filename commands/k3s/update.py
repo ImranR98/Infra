@@ -85,7 +85,16 @@ from urllib.request import Request, urlopen
 
 import yaml
 
-ATLAS_ROOT = Path(os.environ.get("ATLAS_ROOT", Path(__file__).resolve().parent.parent.parent))
+_path = Path(__file__).resolve()
+ATLAS_ROOT = Path(os.environ.get("ATLAS_ROOT", ""))
+if not str(ATLAS_ROOT):
+    for parent in _path.parents:
+        if (parent / "lib" / "common.sh").exists():
+            ATLAS_ROOT = parent
+            break
+    if not str(ATLAS_ROOT):
+        print("Error: cannot find ATLAS_ROOT. Set ATLAS_ROOT or run via atlas.sh.", file=sys.stderr)
+        sys.exit(1)
 TARGET = os.environ.get("TARGET", "")
 if not TARGET:
     print("Error: TARGET must be set. Run via atlas.sh.", file=sys.stderr)

@@ -74,7 +74,7 @@ PROCESSED_YAML=$(printf '%s\n' "$RAW_YAML" | envsubst "$ENVSUBST_VARS")
 if [ "$MODE" = "delete" ]; then
 	[ -f "$COMPONENT_DIR/delete.sh" ] && bash "$COMPONENT_DIR/delete.sh"
 
-	printf '%s\n' "$PROCESSED_YAML" | kubectl delete --wait=false --ignore-not-found -f - 2>&1 || true
+	printf '%s\n' "$PROCESSED_YAML" | kubectl delete --wait=false --ignore-not-found -f - 2>/dev/null || echo "Warning: some resources may not have been deleted." >&2
 
 	# Wait for PVCs to be fully deleted before returning
 	printf '%s\n' "$PROCESSED_YAML" | yq -r 'select(.kind == "PersistentVolumeClaim") | .metadata.namespace + "/" + .metadata.name' 2>/dev/null | sed '/^---$/d' | while IFS="/" read -r ns pvc_name; do

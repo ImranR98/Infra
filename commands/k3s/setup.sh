@@ -23,34 +23,35 @@ cleanup() {
 	if [ "$DID_COMPLETE" = false ]; then
 		echo "It appears the script did not complete." >&2
 	fi
+	rm -f "$K3S_SCRIPT"
 }
 trap cleanup EXIT
 
-curl -fsSL --connect-timeout 30 --max-time 120 --retry 3 https://get.k3s.io -o /tmp/k3s.sh
+curl -fsSL --connect-timeout 30 --max-time 120 --retry 3 https://get.k3s.io -o "$K3S_SCRIPT"
 
 # Verify the install script SHA256 checksum
 K3S_SCRIPT_SHA256=$(curl -fsSL --connect-timeout 10 --max-time 30 https://github.com/k3s-io/k3s/raw/main/install.sh 2>/dev/null | sha256sum | cut -d' ' -f1)
-DOWNLOADED_SHA256=$(sha256sum /tmp/k3s.sh | cut -d' ' -f1)
+DOWNLOADED_SHA256=$(sha256sum $K3S_SCRIPT | cut -d' ' -f1)
 if [ -n "$K3S_SCRIPT_SHA256" ] && [ "$K3S_SCRIPT_SHA256" != "$DOWNLOADED_SHA256" ]; then
     echo "Error: K3s install script checksum mismatch." >&2
     echo "  Expected: $K3S_SCRIPT_SHA256" >&2
     echo "  Got:      $DOWNLOADED_SHA256" >&2
-    rm -f /tmp/k3s.sh
+    rm -f $K3S_SCRIPT
     exit 1
 fi
 
 # Only needed on secureblue
 # semodule --disable=userns_deny_unconfined_relabels # Required for K3s Flannel unfortunately
-# sed -i 's/# rpm_install_extra_args/rpm_install_extra_args/g' /tmp/k3s.sh
+# sed -i 's/# rpm_install_extra_args/rpm_install_extra_args/g' $K3S_SCRIPT
 
-chmod +x /tmp/k3s.sh
-/tmp/k3s.sh --write-kubeconfig-mode 644 --selinux
+chmod +x $K3S_SCRIPT
+$K3S_SCRIPT --write-kubeconfig-mode 644 --selinux
 
 # Label the node for hostPath volume scheduling
 echo "Labeling node for hostPath volume scheduling..."
 # Wait for k3s to be ready and kubectl to work
 CLUSTER_READY=false
-for i in {1..30}; do
+for i in $(seq 1 30); do
 	if kubectl get nodes >/dev/null 2>&1; then
 		echo "Kubernetes cluster is ready."
 		CLUSTER_READY=true
@@ -61,9 +62,10 @@ for i in {1..30}; do
 done
 
 if [ "$CLUSTER_READY" = false ]; then
-	echo "Warning: Could not connect to Kubernetes cluster after 150 seconds."
-	echo "Skipping node labeling. You can label the node manually later with:"
-	echo "  kubectl label node <node-name> hostpath-main=true --overwrite"
+	echo "Error: Could not connect to Kubernetes cluster after 150 seconds." >&2
+	echo "You can label the node manually later with:" >&2
+	echo "  kubectl label node <node-name> hostpath-main=true --overwrite" >&2
+	exit 1
 else
 	# Determine node name (use hostname, fallback to first node from kubectl)
 	NODE_NAME="$(hostname)"

@@ -19,19 +19,15 @@ kubectl scale deployment longhorn-manager -n "$NS" --replicas=0 --timeout=10s 2>
 kubectl scale deployment longhorn-driver-deployer -n "$NS" --replicas=0 --timeout=10s 2>/dev/null || true
 
 echo "Deleting Longhorn custom resources..."
-kubectl delete recurringjobs.longhorn.io --all -n "$NS" --wait=false --ignore-not-found 2>/dev/null || true
-kubectl delete backuptargets.longhorn.io --all -n "$NS" --wait=false --ignore-not-found 2>/dev/null || true
-kubectl delete volumes.longhorn.io --all -n "$NS" --wait=false --ignore-not-found 2>/dev/null || true
-kubectl delete engines.longhorn.io --all -n "$NS" --wait=false --ignore-not-found 2>/dev/null || true
-kubectl delete replicas.longhorn.io --all -n "$NS" --wait=false --ignore-not-found 2>/dev/null || true
-kubectl delete volumeattachments.longhorn.io --all -n "$NS" --wait=false --ignore-not-found 2>/dev/null || true
-kubectl delete engineimages.longhorn.io --all -n "$NS" --wait=false --ignore-not-found 2>/dev/null || true
-kubectl delete nodes.longhorn.io --all -n "$NS" --wait=false --ignore-not-found 2>/dev/null || true
-kubectl delete orphans.longhorn.io --all -n "$NS" --wait=false --ignore-not-found 2>/dev/null || true
+for crd in $(kubectl api-resources --api-group=longhorn.io -o name --namespaced 2>/dev/null); do
+	kubectl delete "$crd" --all -n "$NS" --wait=false --ignore-not-found 2>/dev/null || true
+done
 
 echo "Stripping longhorn.io finalizers from stuck resources..."
-for crd in volumes engines replicas volumeattachments engineimages nodes backuptargets recurringjobs orphans; do
-	kubectl get "$crd.longhorn.io" -n "$NS" -o name --ignore-not-found 2>/dev/null | while read -r obj; do
+for crd in $(kubectl api-resources --api-group=longhorn.io -o name --namespaced 2>/dev/null); do
+	crd_short="${crd#*.}"  # strip group prefix (e.g. "volumes.longhorn.io" → "volumes")
+	[ -z "$crd_short" ] && crd_short="$crd"
+	kubectl get "$crd" -n "$NS" -o name --ignore-not-found 2>/dev/null | while read -r obj; do
 		kubectl patch "$obj" -n "$NS" -p '{"metadata":{"finalizers":[]}}' --type=merge 2>/dev/null || true
 	done
 done
