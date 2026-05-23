@@ -4,6 +4,9 @@ set -euo pipefail
 ATLAS_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 export ATLAS_ROOT
 
+[ -t 0 ] && ATLAS_INTERACTIVE=true || ATLAS_INTERACTIVE=false
+export ATLAS_INTERACTIVE
+
 export COMPOSE_STATE_DIR="$ATLAS_ROOT/current_target/compose_live_state"
 export COMPOSE_STATE_BACKUP_DIR="$ATLAS_ROOT/current_target/compose_state_backups"
 export LONGHORN_BACKUP_DIR="$ATLAS_ROOT/current_target/k3s_longhorn_backups"

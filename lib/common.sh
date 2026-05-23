@@ -7,7 +7,17 @@ _lib_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 # ---- Package manager helpers ----
 
 get_sudo_cmd() {
-	if command -v run0 &>/dev/null; then echo "run0"; else echo "sudo"; fi
+	local has_sudo=false has_run0=false
+	command -v sudo  &>/dev/null && has_sudo=true
+	command -v run0  &>/dev/null && has_run0=true
+
+	if $has_run0 && $has_sudo; then
+		${ATLAS_INTERACTIVE:-false} && echo "sudo" || echo "run0"
+	elif $has_run0; then
+		echo "run0"
+	else
+		echo "sudo"
+	fi
 }
 
 detect_pkgmgr() {
