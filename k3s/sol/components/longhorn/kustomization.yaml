@@ -3,6 +3,7 @@ kind: Kustomization
 resources:
   - helmchart.yaml
   - ingress.yaml
-  - backup.yaml
-  - network-policy.yaml
-  - backup-labeler.yaml
+  - certificates.yaml # IGNORE INITIALLY
+  - backup.yaml # IGNORE INITIALLY
+  - network-policy.yaml # IGNORE INITIALLY
+  - backup-labeler.yaml # IGNORE INITIALLY

@@ -21,8 +21,6 @@ spec:
         - name: nextcloud
           image: nextcloud:33.0.3
           securityContext:
-            runAsUser: 33
-            runAsGroup: 33
             allowPrivilegeEscalation: false
           ports:
             - containerPort: 80

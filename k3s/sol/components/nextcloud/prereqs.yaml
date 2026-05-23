@@ -68,10 +68,11 @@ spec:
         - name: volume-permissions
           image: postgres:17-alpine
           command:
-            - chown
-            - -R
-            - "999:999"
-            - /var/lib/postgresql/data
+            - sh
+            - -c
+            - |
+              rm -rf /var/lib/postgresql/data/lost+found
+              chown -R 999:999 /var/lib/postgresql/data
           securityContext:
             runAsUser: 0
           resources:

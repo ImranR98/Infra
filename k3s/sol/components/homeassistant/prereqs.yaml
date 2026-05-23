@@ -135,7 +135,7 @@ spec:
         - name: mosquitto-password
           secret:
             secretName: mosquitto-password
-            defaultMode: 0600
+            defaultMode: 0644
         - name: mosquitto-tls
           secret:
             secretName: mosquitto-tls
@@ -150,10 +150,13 @@ spec:
   selector:
     app: mosquitto
   ports:
-    - port: 1883
+    - name: mqtt
+      port: 1883
       targetPort: 1883
-    - port: 8883
+    - name: mqtt-tls
+      port: 8883
       targetPort: 8883
-    - port: 9001
+    - name: mqtt-ws
+      port: 9001
       targetPort: 9001
 

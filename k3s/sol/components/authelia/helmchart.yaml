@@ -12,9 +12,6 @@ spec:
   createNamespace: false
   version: 0.11.5
   valuesContent: |-
-    # For initial deployment without bypass rules, use: make authelia APPLY_MODE=initial
-    # Bypass rules marked with "# IGNORE INITIALLY" are commented out from the initial overlay.
-
     pod:
       kind: Deployment
       resources:
@@ -52,8 +49,7 @@ spec:
           port: 6379
           username: ""
           password:
-            secret_name: authelia-redis
-            path: redis-password
+            value: "$AUTHELIA_REDIS_PASSWORD"
           database_index: 0
           maximum_active_connections: 8
           minimum_idle_connections: 0

@@ -30,11 +30,37 @@ if [[ ("$MODE" == "apply" || "$MODE" == "initial") && -f "$COMPONENT_DIR/prep.sh
 	bash "$COMPONENT_DIR/prep.sh"
 fi
 
+if [ "$MODE" = "apply" ]; then
+	_HAS_INITIAL_RESOURCES=""
+	grep -q '# IGNORE INITIALLY$' "$COMPONENT_DIR"/*.yaml 2>/dev/null && _HAS_INITIAL_RESOURCES=1
+	if [ -n "$_HAS_INITIAL_RESOURCES" ]; then
+		_MISSING_STATE=""
+		kubectl get crd certificates.cert-manager.io >/dev/null 2>&1 || _MISSING_STATE="$_MISSING_STATE  - cert-manager CRDs\n"
+		kubectl get ns longhorn-system >/dev/null 2>&1 || _MISSING_STATE="$_MISSING_STATE  - longhorn-system namespace\n"
+		if [ -n "$_MISSING_STATE" ]; then
+			printf '\n\033[1;33m╔══════════════════════════════════════════════════════════════╗\n'
+			printf     '║  WARNING: This cluster may not be fully initialized.        ║\n'
+			printf     '║  The following expected prerequisites are missing:          ║\n'
+			printf     '║                                                            ║\n'
+			printf "$_MISSING_STATE"
+			printf     '║                                                            ║\n'
+			printf     '║  If this is a fresh install, run with APPLY_MODE=initial    ║\n'
+			printf     '║  first, then re-run without it.                             ║\n'
+			printf     '╚══════════════════════════════════════════════════════════════╝\033[0m\n\n'
+			if [ -t 0 ]; then
+				read -rp "Press Enter to continue anyway, or Ctrl-C to abort... "
+			else
+				echo "Non-interactive mode: continuing automatically..."
+			fi
+		fi
+	fi
+fi
+
 if [ "$MODE" = "initial" ] && [ -f "$COMPONENT_DIR/kustomization.yaml" ]; then
 	TMP_DIR=$(mktemp -d)
 	trap "rm -rf '$TMP_DIR'" EXIT
 	for f in "$COMPONENT_DIR"/*.yaml; do
-		sed '/# IGNORE INITIALLY$/ s/^/# /' "$f" > "$TMP_DIR/$(basename "$f")"
+		sed '/# IGNORE INITIALLY$/d' "$f" > "$TMP_DIR/$(basename "$f")"
 	done
 	RAW_YAML=$(kubectl kustomize "$TMP_DIR")
 else
@@ -102,4 +128,17 @@ fi
 
 if [[ ("$MODE" == "apply" || "$MODE" == "initial") && -f "$COMPONENT_DIR/post.sh" ]]; then
 	bash "$COMPONENT_DIR/post.sh"
+fi
+
+if [ "$MODE" = "initial" ]; then
+	if [ -f "$COMPONENT_DIR/kustomization.yaml" ] && grep -q '# IGNORE INITIALLY$' "$COMPONENT_DIR"/*.yaml 2>/dev/null; then
+		printf '\n\033[1;33m╔══════════════════════════════════════════════════════════════╗\n'
+		printf     '║  REMINDER: This deployment ran with APPLY_MODE=initial.     ║\n'
+		printf     '║  Some resources were skipped (e.g. certs, policies that     ║\n'
+		printf     '║  depend on infrastructure not yet available).               ║\n'
+		printf     '║                                                            ║\n'
+		printf     '║  Re-run without APPLY_MODE=initial once prerequisites       ║\n'
+		printf     '║  are ready to complete the full deployment.                 ║\n'
+		printf     '╚══════════════════════════════════════════════════════════════╝\033[0m\n\n'
+	fi
 fi

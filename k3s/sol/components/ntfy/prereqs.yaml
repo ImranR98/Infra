@@ -36,4 +36,4 @@ type: Opaque
 stringData:
   auth-users: "admin:$NTFY_ADMIN_PASSWORD_HASH:admin,service:$NTFY_WRITE_ONLY_ACCOUNT_PASSWORD_HASH:user"
   auth-tokens: "service:$NTFY_WRITE_ONLY_ACCOUNT_TOKEN"
-  auth-access: "admin:*:read-write,service:*:write-only"
+  auth-access: "service:*:write-only"

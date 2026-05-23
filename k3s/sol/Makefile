@@ -61,23 +61,6 @@ k3s:
 		$$SU bash -c 'cd $(COMPONENTS_DIR)/k3s && ./k3s.sh' && $$SU bash -c 'cd $(COMPONENTS_DIR)/k3s && ./firewall.sh'; \
 	fi
 
-# Guarded targets — refuse delete
-namespaces:
-	@if [ "$(APPLY_MODE)" = "delete" ]; then echo "Error: Cannot delete namespaces via Makefile."; exit 1; fi
-	@$(call deploy-component,$@)
-
-nfs-server:
-	@if [ "$(APPLY_MODE)" = "delete" ]; then echo "Error: Cannot delete nfs-server via Makefile."; exit 1; fi
-	@$(call deploy-component,$@)
-
-csi-driver-nfs:
-	@if [ "$(APPLY_MODE)" = "delete" ]; then echo "Error: Cannot delete csi-driver-nfs via Makefile."; exit 1; fi
-	@$(call deploy-component,$@)
-
-longhorn:
-	@if [ "$(APPLY_MODE)" = "delete" ]; then echo "Error: Cannot delete longhorn via Makefile."; exit 1; fi
-	@$(call deploy-component,$@)
-
 # Generic K8s component deployment
 define deploy-component
   $(SCRIPTS_DIR)/apply.sh $1 "$(APPLY_MODE)"

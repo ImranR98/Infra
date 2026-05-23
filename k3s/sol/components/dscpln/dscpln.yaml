@@ -45,9 +45,9 @@ spec:
             - name: NTFY_TOKEN
               value: "$NTFY_WRITE_ONLY_ACCOUNT_TOKEN"
             - name: TEXTFILE_BUDGET_INIT_AMT
-              value: "$DSCPLN_BUDGET_INIT_AMT"
+              value: $DSCPLN_BUDGET_INIT_AMT
             - name: TEXTFILE_FIRST_WEEK_BIAS_INIT_AMT
-              value: "$DSCPLN_FIRST_WEEK_BIAS_INIT_AMT"
+              value: $DSCPLN_FIRST_WEEK_BIAS_INIT_AMT
           volumeMounts:
             - name: dscpln-data
               mountPath: /data

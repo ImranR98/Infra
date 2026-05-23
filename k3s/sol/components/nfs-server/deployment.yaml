@@ -21,7 +21,6 @@ spec:
           image: busybox:1.37.0-uclibc
           command:
             - modprobe
-            - -a
             - nfs
             - nfsd
           securityContext:
