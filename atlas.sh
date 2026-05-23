@@ -108,8 +108,8 @@ if [ -z "$CMD_PATH" ]; then
 		:
 	else
 		echo "Unknown command: ${CMD_ARGS[*]:0:$arg_idx}${search_path:+$search_path/}${CMD_ARGS[$arg_idx]:-}" >&2
+		echo ""
 	fi
-	echo ""
 	echo "Available commands:"
 	echo ""
 
