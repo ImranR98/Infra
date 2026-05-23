@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
         - name: freshrss
-          image: freshrss/freshrss:1.28.1
+          image: freshrss/freshrss:1.29.1
           securityContext:
             allowPrivilegeEscalation: false
           ports:
