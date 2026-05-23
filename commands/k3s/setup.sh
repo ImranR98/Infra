@@ -11,7 +11,7 @@ fi
 
 if [ -t 0 ]; then
     read -p "WARNING: YOU MUST HAVE A FIXED IP ON THIS NETWORK (ENSURE THIS IS SET IN YOUR OS SETTINGS).
-A CHANGE IN IP WILL BREAK K3S NETWORKING! If that does happen, you can update the cluster with: ./atlas.sh sol k3s setup
+A CHANGE IN IP WILL BREAK K3S NETWORKING! If that does happen, you can update the cluster with: ./atlas.sh sol k3s update-node-ip
 Press Enter to continue..." ANYTHING
 fi
 
