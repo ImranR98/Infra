@@ -111,30 +111,30 @@ if [ -z "$CMD_PATH" ]; then
 	fi
 	echo ""
 	echo "Available commands:"
-	for base in "$ATLAS_ROOT/targets/$TARGET/commands" "$ATLAS_ROOT/commands"; do
-		[ -d "$base" ] || continue
-		bash -c '
-			shopt -s nullglob dotglob
-			list_dir() {
-				local base="$1" prefix="$2"
-				for f in "$base"/*.sh "$base"/*.py "$base"/*/; do
-					if [ -f "$f" ]; then
-						echo "  $prefix$(basename "${f%.*}")"
-					elif [ -d "$f" ]; then
-						local dn; dn=$(basename "$f")
-						list_dir "$f" "$prefix$dn/"
-					fi
-				done
-			}
-			list_dir "$1" ""
-		' _ "$base"
-	done
-	echo ""
-	echo "Also available as functions:"
-	echo "  validate      Validate all stacks"
-	echo "  list-domains  List all required DNS domains"
-	echo "  update-traefik-plugins  Update Traefik plugin versions"
-	echo "  compose old-images     List images older than 60 days"
+	(
+		for base in "$ATLAS_ROOT/targets/$TARGET/commands" "$ATLAS_ROOT/commands"; do
+			[ -d "$base" ] || continue
+			bash -c '
+				shopt -s nullglob dotglob
+				list_dir() {
+					local base="$1" prefix="$2"
+					for f in "$base"/*.sh "$base"/*.py "$base"/*/; do
+						if [ -f "$f" ]; then
+							echo "$prefix$(basename "${f%.*}")"
+						elif [ -d "$f" ]; then
+							local dn; dn=$(basename "$f")
+							list_dir "$f" "$prefix$dn/"
+						fi
+					done
+				}
+				list_dir "$1" ""
+			' _ "$base"
+		done
+		echo "validate"
+		echo "list-domains"
+		echo "update-traefik-plugins"
+		echo "compose/old-images"
+	) | sort | while IFS= read -r line; do echo "  $line"; done
 	exit 1
 fi
 
