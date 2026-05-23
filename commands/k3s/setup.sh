@@ -4,9 +4,11 @@
 
 set -euo pipefail
 
+: ${ATLAS_ROOT:="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." >/dev/null 2>&1 && pwd)"}
+source "$ATLAS_ROOT/lib/common.sh"
+
 if [ "$(id -u)" != 0 ]; then
-	echo "Run as root." >&2
-	exit 1
+	exec $(get_sudo_cmd) bash "$0" "$@"
 fi
 
 if [ -t 0 ]; then
