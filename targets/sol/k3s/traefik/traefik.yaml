@@ -23,7 +23,7 @@ spec:
       - "--experimental.plugins.geoblock.modulename=github.com/PascalMinder/geoblock"
       - "--experimental.plugins.geoblock.version=v0.3.7"
       - "--experimental.plugins.crowdsec-bouncer-traefik-plugin.modulename=github.com/maxlerebourg/crowdsec-bouncer-traefik-plugin"
-      - "--experimental.plugins.crowdsec-bouncer-traefik-plugin.version=v1.5.1"
+      - "--experimental.plugins.crowdsec-bouncer-traefik-plugin.version=v1.6.0"
     additionalVolumeMounts:
       - name: plugins
         mountPath: /plugins-storage
