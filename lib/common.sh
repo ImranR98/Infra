@@ -79,7 +79,7 @@ source_env() {
 			echo "Error: $vars_file is missing required variable: $var" >&2
 			exit 1
 		fi
-	done < <(grep -hEo '^export [^=]+' "$VARS_ROOT/vars/VARS.${target}.sh" 2>/dev/null | sed 's/^export //' | sort -u)
+	done < <(grep -hEo '^export [^=]+' "$VARS_ROOT/targets/$target/VARS.template.sh" 2>/dev/null | sed 's/^export //' | sort -u)
 
 	source "$vars_file"
 
@@ -113,17 +113,17 @@ get_envsubst_vars() {
 	fi
 
 	# Compose template references
-	if [ -f "$VARS_ROOT/compose/$TARGET.compose.yaml" ]; then
-		vars="$vars $(grep -hEo '\$[A-Z_][A-Z_0-9]*|\$\{[A-Z_][A-Z_0-9]*\}' "$VARS_ROOT/compose/$TARGET.compose.yaml" 2>/dev/null | sed 's/[{}]//g' | tr '\n' ' ')"
+	if [ -f "$VARS_ROOT/targets/$TARGET/compose/compose.yaml" ]; then
+		vars="$vars $(grep -hEo '\$[A-Z_][A-Z_0-9]*|\$\{[A-Z_][A-Z_0-9]*\}' "$VARS_ROOT/targets/$TARGET/compose/compose.yaml" 2>/dev/null | sed 's/[{}]//g' | tr '\n' ' ')"
 	fi
-	for f in "$VARS_ROOT/templates/$TARGET"/*.yaml "$VARS_ROOT/templates/$TARGET"/*.json "$VARS_ROOT/templates/$TARGET"/*.txt "$VARS_ROOT/templates/$TARGET"/*.toml; do
+	for f in "$VARS_ROOT/targets/$TARGET/compose/templates"/*.yaml "$VARS_ROOT/targets/$TARGET/compose/templates"/*.json "$VARS_ROOT/targets/$TARGET/compose/templates"/*.txt "$VARS_ROOT/targets/$TARGET/compose/templates"/*.toml; do
 		[ -f "$f" ] || continue
 		vars="$vars $(grep -hEo '\$[A-Z_][A-Z_0-9]*|\$\{[A-Z_][A-Z_0-9]*\}' "$f" 2>/dev/null | sed 's/[{}]//g' | tr '\n' ' ')"
 	done
 
 	# K3s component YAML references
-	if [ -d "$VARS_ROOT/k3s/$TARGET" ]; then
-		vars="$vars $(grep -rhoE '\$[A-Z_][A-Z_0-9]*|\$\{[A-Z_][A-Z_0-9]*\}' "$VARS_ROOT/k3s/$TARGET" --include='*.yaml' 2>/dev/null | sed 's/[${}]//g' | tr '\n' ' ')"
+	if [ -d "$VARS_ROOT/targets/$TARGET/k3s" ]; then
+		vars="$vars $(grep -rhoE '\$[A-Z_][A-Z_0-9]*|\$\{[A-Z_][A-Z_0-9]*\}' "$VARS_ROOT/targets/$TARGET/k3s" --include='*.yaml' 2>/dev/null | sed 's/[${}]//g' | tr '\n' ' ')"
 	fi
 
 	# Always include
@@ -140,8 +140,8 @@ list_domains() {
 	local target="${1:-$TARGET}"
 
 	# K3s: grep IngressRoute Host() from component YAMLs
-	if [ -d "$VARS_ROOT/k3s/$target" ]; then
-		grep -rohP "Host\(\x60[^\x60]+\x60\)" --include="*.yaml" "$VARS_ROOT/k3s/$target" | \
+	if [ -d "$VARS_ROOT/targets/$target/k3s" ]; then
+		grep -rohP "Host\(\x60[^\x60]+\x60\)" --include="*.yaml" "$VARS_ROOT/targets/$target/k3s" | \
 			sed "s/.*\x60\([^\x60]*\)\x60.*/\1/" | \
 			grep -v "\.localhost" | \
 			envsubst "$(get_envsubst_vars)" | \
@@ -149,8 +149,8 @@ list_domains() {
 	fi
 
 	# Compose: grep Host() from Traefik dynamic config in compose file
-	if [ -f "$VARS_ROOT/compose/${target}.compose.yaml" ]; then
-		sed -n 's/.*Host(`\([^`]*\)`).*/\1/p' "$VARS_ROOT/compose/${target}.compose.yaml" | \
+	if [ -f "$VARS_ROOT/targets/$target/compose/compose.yaml" ]; then
+		sed -n 's/.*Host(`\([^`]*\)`).*/\1/p' "$VARS_ROOT/targets/$target/compose/compose.yaml" | \
 			sort -u | \
 			envsubst "$(get_envsubst_vars)"
 	fi
@@ -186,7 +186,7 @@ update_traefik_plugins() {
 	}
 
 	# Compose path
-	local compose_file="$VARS_ROOT/compose/${target}.compose.yaml"
+	local compose_file="$VARS_ROOT/targets/$target/compose/compose.yaml"
 	if [ -f "$compose_file" ]; then
 		echo "=== Compose: $target ==="
 		local plugin_lines
@@ -210,7 +210,7 @@ update_traefik_plugins() {
 	fi
 
 	# K3s path: parse HelmChartConfig valuesContent for plugin entries
-	local traefik_yaml="$VARS_ROOT/k3s/$target/traefik/traefik.yaml"
+	local traefik_yaml="$VARS_ROOT/targets/$target/traefik/traefik.yaml"
 	if [ -f "$traefik_yaml" ]; then
 		echo "=== K3s: $target ==="
 		local vc
@@ -276,10 +276,10 @@ validate() {
 	local target="${1:-$TARGET}"
 	local k3s_ok=true compose_ok=true
 
-	if [ -d "$VARS_ROOT/k3s/$target" ]; then
+	if [ -d "$VARS_ROOT/targets/$target/k3s" ]; then
 		_validate_k3s "$target" || k3s_ok=false
 	fi
-	if [ -f "$VARS_ROOT/compose/${target}.compose.yaml" ]; then
+	if [ -f "$VARS_ROOT/targets/$target/compose/compose.yaml" ]; then
 		_validate_compose "$target" || compose_ok=false
 	fi
 
@@ -290,7 +290,7 @@ validate() {
 
 _validate_k3s() {
 	local target="$1"
-	local comp_dir="$VARS_ROOT/k3s/$target"
+	local comp_dir="$VARS_ROOT/targets/$target/k3s"
 	local errors=0 warnings=0
 
 	# Gather required vars from VARS template
@@ -303,7 +303,7 @@ NS
 PV
 PVC
 VOLUMES"
-	local template_file="$VARS_ROOT/vars/VARS.$target.sh"
+	local template_file="$VARS_ROOT/targets/$target/VARS.template.sh"
 	if [ -f "$template_file" ]; then
 		while IFS= read -r v; do
 			known_vars+="
@@ -373,7 +373,7 @@ _validate_compose() {
 	local target="$1"
 	local errors=0 warnings=0
 
-	local template_file="$VARS_ROOT/vars/VARS.$target.sh"
+	local template_file="$VARS_ROOT/targets/$target/VARS.template.sh"
 	local known_vars="MY_UID
 TARGET
 DOCKER_GID
@@ -387,7 +387,7 @@ $v"
 	fi
 
 	# Scan compose file + templates
-	for f in "$VARS_ROOT/compose/${target}.compose.yaml" "$VARS_ROOT/templates/$target"/*; do
+	for f in "$VARS_ROOT/targets/$target/compose/compose.yaml" "$VARS_ROOT/targets/$target/compose/templates"/*; do
 		[ -f "$f" ] || continue
 		while IFS= read -r var; do
 			[ -z "$var" ] && continue
@@ -410,4 +410,61 @@ $v"
 	echo ""
 	echo "Compose validation: $errors errors, $warnings warnings"
 	return $(( errors > 0 ? 1 : 0 ))
+}
+
+# ---- Compose config generation (used by compose/install.sh, compose/restart.sh) ----
+
+generate_compose_configs() {
+	local target="$1"
+	echo "=== Re/generate various state files ==="
+
+	if [ -f "$VARS_ROOT/targets/$target/compose/templates/authelia.config.yaml" ]; then
+		if [ -f "$COMPOSE_STATE_DIR/authelia/config/configuration.yml" ]; then
+			PROTECT_INIT_ROUTES=${PROTECT_INIT_ROUTES:-false}
+		else
+			PROTECT_INIT_ROUTES=${PROTECT_INIT_ROUTES:-true}
+		fi
+		echo "PROTECT_INIT_ROUTES=$PROTECT_INIT_ROUTES"
+		if [ "$PROTECT_INIT_ROUTES" = true ]; then
+			sed '/# IGNORE INITIALLY$/ s/^/# /' "$VARS_ROOT/targets/$target/compose/templates/authelia.config.yaml" | envsubst "$ENVSUBST_VARS" >"$COMPOSE_STATE_DIR/authelia/config/configuration.yml"
+			echo "Note: the generated Authelia config does not include lines that end with \"# IGNORE INITIALLY\"."
+		else
+			envsubst "$ENVSUBST_VARS" < "$VARS_ROOT/targets/$target/compose/templates/authelia.config.yaml" >"$COMPOSE_STATE_DIR/authelia/config/configuration.yml"
+		fi
+		printf '%s\n' "$AUTHELIA_USERS_DATABASE" >"$COMPOSE_STATE_DIR/authelia/config/users_database.yml"
+	fi
+
+	if [ -f "$VARS_ROOT/targets/$target/compose/templates/traefik.dynamic-configuration.yaml" ]; then
+		if [ ! -f "$COMPOSE_STATE_DIR/traefik/acme.json" ]; then
+			echo '{}' >"$COMPOSE_STATE_DIR/traefik/acme.json"
+			echo "Created an empty \"acme.json\"."
+		fi
+		chmod 600 "$COMPOSE_STATE_DIR/traefik/acme.json"
+		envsubst "$ENVSUBST_VARS" < "$VARS_ROOT/targets/$target/compose/templates/traefik.dynamic-configuration.yaml" > "$COMPOSE_STATE_DIR/traefik/dynamic-configuration.yaml"
+	fi
+
+	if [ -f "$VARS_ROOT/targets/$target/compose/templates/plausible.clickhouse-config.xml" ]; then
+		cp "$VARS_ROOT/targets/$target/compose/templates/plausible.clickhouse-config.xml" "$COMPOSE_STATE_DIR/plausible/config/clickhouse-config.xml"
+	fi
+
+	if [ -f "$VARS_ROOT/targets/$target/compose/templates/frpc.toml" ]; then
+		mkdir -p "$COMPOSE_STATE_DIR/frpc"
+		envsubst "$ENVSUBST_VARS" < "$VARS_ROOT/targets/$target/compose/templates/frpc.toml" > "$COMPOSE_STATE_DIR/frpc/frpc.toml"
+		chmod 600 "$COMPOSE_STATE_DIR/frpc/frpc.toml"
+	fi
+
+	if [ -f "$VARS_ROOT/targets/$target/compose/templates/frps-tokens.txt" ]; then
+		mkdir -p "$COMPOSE_STATE_DIR/frps"
+		envsubst "$ENVSUBST_VARS" < "$VARS_ROOT/targets/$target/compose/templates/frps-tokens.txt" > "$COMPOSE_STATE_DIR/frps/tokens.txt"
+		chmod 600 "$COMPOSE_STATE_DIR/frps/tokens.txt"
+	fi
+
+	echo "=== Generate Logtfy config ==="
+	if [ -f "$VARS_ROOT/targets/$target/compose/templates/logtfy.config.json" ]; then
+		mkdir -p "$COMPOSE_STATE_DIR/logtfy"
+		envsubst "$ENVSUBST_VARS" < "$VARS_ROOT/targets/$target/compose/templates/logtfy.config.json" > "$COMPOSE_STATE_DIR/logtfy/config.json"
+		echo "Done."
+	else
+		echo "No logtfy config template found. Skipping."
+	fi
 }

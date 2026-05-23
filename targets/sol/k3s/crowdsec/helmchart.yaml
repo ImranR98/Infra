@@ -8,7 +8,7 @@ spec:
   repo: https://crowdsecurity.github.io/helm-charts
   failurePolicy: abort
   targetNamespace: base
-  version: 0.23.0
+  version: 0.24.0
   valuesContent: |-
     container_runtime: containerd
 

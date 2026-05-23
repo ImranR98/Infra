@@ -17,7 +17,7 @@ case "$MODE" in
 		;;
 esac
 
-COMPONENT_DIR="$VARS_ROOT/k3s/$TARGET/$COMPONENT"
+COMPONENT_DIR="$VARS_ROOT/targets/$TARGET/k3s/$COMPONENT"
 
 if [ ! -d "$COMPONENT_DIR" ]; then
 	echo "Error: Unknown component '$COMPONENT'" >&2

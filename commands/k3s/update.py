@@ -85,9 +85,9 @@ from urllib.request import Request, urlopen
 
 import yaml
 
-VARS_ROOT = Path(os.environ.get("VARS_ROOT", Path(__file__).resolve().parent.parent))
+VARS_ROOT = Path(os.environ.get("VARS_ROOT", Path(__file__).resolve().parent.parent.parent))
 TARGET = os.environ.get("TARGET", "")
-COMPONENTS = VARS_ROOT / "k3s" / TARGET if TARGET else VARS_ROOT / "k3s" / "sol"
+COMPONENTS = VARS_ROOT / "targets" / TARGET / "k3s" if TARGET else VARS_ROOT / "targets" / "sol" / "k3s"
 PARALLELISM = os.cpu_count() or 4
 INNER_POOL_SIZE = min(4, PARALLELISM)
 

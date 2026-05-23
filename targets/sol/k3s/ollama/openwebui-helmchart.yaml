@@ -9,7 +9,7 @@ spec:
   targetNamespace: apps
   createNamespace: false
   failurePolicy: abort
-  version: 14.4.0
+  version: 14.6.0
   valuesContent: |-
     ollama:
       enabled: false
