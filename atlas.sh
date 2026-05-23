@@ -111,30 +111,51 @@ if [ -z "$CMD_PATH" ]; then
 	fi
 	echo ""
 	echo "Available commands:"
-	(
-		for base in "$ATLAS_ROOT/targets/$TARGET/commands" "$ATLAS_ROOT/commands"; do
-			[ -d "$base" ] || continue
-			bash -c '
-				shopt -s nullglob dotglob
-				list_dir() {
-					local base="$1" prefix="$2"
-					for f in "$base"/*.sh "$base"/*.py "$base"/*/; do
-						if [ -f "$f" ]; then
-							echo "$prefix$(basename "${f%.*}")"
-						elif [ -d "$f" ]; then
-							local dn; dn=$(basename "$f")
-							list_dir "$f" "$prefix$dn/"
-						fi
-					done
-				}
-				list_dir "$1" ""
-			' _ "$base"
-		done
-		echo "validate"
-		echo "list-domains"
-		echo "update-traefik-plugins"
-		echo "compose/old-images"
-	) | sort | while IFS= read -r line; do echo "  $line"; done
+	echo ""
+
+	_list_flat() {
+		local dir="$1" prefix="$2"
+		[ -d "$dir" ] || return
+		bash -c '
+			shopt -s nullglob dotglob
+			for f in "$1"/*.sh "$1"/*.py; do
+				[ -f "$f" ] || continue
+				printf "%s%s\n" "$2" "$(basename "${f%.*}")"
+			done
+		' _ "$dir" "$prefix"
+	}
+
+	_indent() { sort | while IFS= read -r l; do echo "  $l"; done; }
+
+	# Top-level commands (files directly in commands/, not in subdirs)
+	_list_flat "$ATLAS_ROOT/commands" "" | _indent
+	# Function-based commands (top-level only)
+	{ echo "validate"; echo "list-domains"; echo "update-traefik-plugins"; } | _indent
+
+	# Stack-known function commands ("fn:stack")
+	_stack_fn() {
+		case "$1" in
+			compose) echo "old-images" ;;
+		esac
+	}
+
+	# Each stack: generic first (files + functions), then target-specific
+	for stack_dir in "$ATLAS_ROOT/commands"/*/; do
+		[ -d "$stack_dir" ] || continue
+		stack=$(basename "$stack_dir")
+		# Only show stack commands if the target has this stack
+		[ -d "$ATLAS_ROOT/targets/$TARGET/$stack" ] || continue
+		echo ""
+		{
+			_list_flat "$stack_dir" "$stack "
+			_stack_fn "$stack" | while read -r fn; do [ -n "$fn" ] && echo "$stack $fn"; done
+		} | _indent
+		target_dir="$ATLAS_ROOT/targets/$TARGET/commands/$stack"
+		if [ -d "$target_dir" ]; then
+			echo ""
+			_list_flat "$target_dir" "$stack " | _indent
+		fi
+	done
 	exit 1
 fi
 
