@@ -11,7 +11,7 @@ fi
 
 if [ -t 0 ]; then
     read -p "WARNING: YOU MUST HAVE A FIXED IP ON THIS NETWORK (ENSURE THIS IS SET IN YOUR OS SETTINGS).
-A CHANGE IN IP WILL BREAK K3S NETWORKING! If that does happen, you can use this to update the cluster: sudo bash scripts/manage-node-ip.sh
+A CHANGE IN IP WILL BREAK K3S NETWORKING! If that does happen, you can update the cluster with: ./atlas.sh sol k3s setup
 Press Enter to continue..." ANYTHING
 fi
 
@@ -88,16 +88,6 @@ DID_COMPLETE=true
 
 
 # ---- Firewall section ----
-#!/bin/bash
-# Firewall configuration for K3s cluster networking
-# Primarily tested on Fedora SecureBlue with firewalld
-
-
-
-if [ "$(id -u)" != 0 ]; then
-	echo "Run as root." >&2
-	exit 1
-fi
 
 # Check for firewalld
 if ! command -v firewall-cmd >/dev/null 2>&1; then

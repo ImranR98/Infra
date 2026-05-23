@@ -2,3 +2,4 @@ current_target/
 /VARS.sh
 /VARS.*.sh
 ~*
+**/__pycache__

@@ -1,6 +1,5 @@
 #!/bin/bash
-# Common library for Atlas — sourced by atlas.sh, apply_k3s_component.sh,
-# validate.sh, and k3s-install.sh.
+# Common library for Atlas — sourced by atlas.sh and all command scripts.
 
 _lib_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 : ${ATLAS_ROOT:="$(cd "$_lib_dir/.." >/dev/null 2>&1 && pwd)"}
@@ -294,6 +293,8 @@ _validate_k3s() {
 	local errors=0 warnings=0
 
 	# Gather required vars from VARS template
+	# NS, PV, PVC, VOLUMES are shell-local variables used in inline
+	# command: blocks — not envsubst vars.  Exempted to avoid false warnings.
 	local known_vars="MY_UID
 TARGET
 COMPOSE_STATE_DIR

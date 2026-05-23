@@ -87,7 +87,10 @@ import yaml
 
 ATLAS_ROOT = Path(os.environ.get("ATLAS_ROOT", Path(__file__).resolve().parent.parent.parent))
 TARGET = os.environ.get("TARGET", "")
-COMPONENTS = ATLAS_ROOT / "targets" / TARGET / "k3s" if TARGET else ATLAS_ROOT / "targets" / "sol" / "k3s"
+if not TARGET:
+    print("Error: TARGET must be set. Run via atlas.sh.", file=sys.stderr)
+    sys.exit(1)
+COMPONENTS = ATLAS_ROOT / "targets" / TARGET / "k3s"
 PARALLELISM = os.cpu_count() or 4
 INNER_POOL_SIZE = min(4, PARALLELISM)
 
@@ -885,7 +888,7 @@ def main():
                 print(f"  {d}")
 
         print("\n" + ("Nothing to update." if DRY_RUN and image_count == 0 else
-              "Done. Review changes with 'git diff' and run 'make validate'."))
+              "Done. Review changes with 'git diff' and run './atlas.sh <target> validate'."))
 
     finally:
         _digest_pool.shutdown(wait=True)
