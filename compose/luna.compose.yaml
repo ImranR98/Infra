@@ -88,7 +88,7 @@ services:
             authelia-db:
                 condition: service_healthy
         volumes:
-            - $STATE_DIR/authelia/config:/config
+            - $COMPOSE_STATE_DIR/authelia/config:/config
         networks:
             - traefik
         labels:
@@ -115,7 +115,7 @@ services:
         container_name: authelia-db
         user: "$MY_UID:$MY_UID"
         volumes:
-            - $STATE_DIR/authelia/db:/data
+            - $COMPOSE_STATE_DIR/authelia/db:/data
         networks:
             - traefik
         expose:
@@ -167,9 +167,9 @@ services:
             - "443:443"
             - "127.0.0.1:8080:8080" # Traefik dashboard. To view remotely, tunnel: ssh -L 8080:localhost:8080 user@your-server
         volumes:
-            - $STATE_DIR/traefik/acme.json:/acme.json
-            - $STATE_DIR/traefik/dynamic-configuration.yaml:/etc/traefik/dynamic-configuration.yaml
-            - $STATE_DIR/traefik/logs:/var/log/traefik/
+            - $COMPOSE_STATE_DIR/traefik/acme.json:/acme.json
+            - $COMPOSE_STATE_DIR/traefik/dynamic-configuration.yaml:/etc/traefik/dynamic-configuration.yaml
+            - $COMPOSE_STATE_DIR/traefik/logs:/var/log/traefik/
             - dockerproxy:/socket/:ro
         restart: unless-stopped
         mem_limit: 256M
@@ -184,7 +184,7 @@ services:
         restart: unless-stopped
         mem_limit: 4G
         volumes:
-            - $STATE_DIR/plausible/db:/var/lib/postgresql/data
+            - $COMPOSE_STATE_DIR/plausible/db:/var/lib/postgresql/data
         environment:
             - POSTGRES_PASSWORD=postgres
         healthcheck:
@@ -201,9 +201,9 @@ services:
         networks:
             - traefik
         volumes:
-            - $STATE_DIR/plausible/event_data:/var/lib/clickhouse
-            - $STATE_DIR/plausible/event_logs:/var/log/clickhouse-server
-            - $STATE_DIR/plausible/config/clickhouse-config.xml:/etc/clickhouse-server/config.d/clickhouse-config.xml:ro
+            - $COMPOSE_STATE_DIR/plausible/event_data:/var/lib/clickhouse
+            - $COMPOSE_STATE_DIR/plausible/event_logs:/var/log/clickhouse-server
+            - $COMPOSE_STATE_DIR/plausible/config/clickhouse-config.xml:/etc/clickhouse-server/config.d/clickhouse-config.xml:ro
         environment:
             - CLICKHOUSE_SKIP_USER_SETUP=1
         ulimits:
@@ -230,7 +230,7 @@ services:
         security_opt:
             - no-new-privileges
         volumes:
-            - $STATE_DIR/plausible/data:/var/lib/plausible
+            - $COMPOSE_STATE_DIR/plausible/data:/var/lib/plausible
         command: chown -R 999:999 /var/lib/plausible
     plausible:
         image: ghcr.io/plausible/community-edition:v3
@@ -250,7 +250,7 @@ services:
         networks:
             - traefik
         volumes:
-            - $STATE_DIR/plausible/data:/var/lib/plausible
+            - $COMPOSE_STATE_DIR/plausible/data:/var/lib/plausible
         ulimits:
             nofile:
                 soft: 65535
@@ -281,7 +281,7 @@ services:
             send-db:
                 condition: service_healthy
         volumes:
-            - $STATE_DIR/send/uploads:/uploads
+            - $COMPOSE_STATE_DIR/send/uploads:/uploads
         environment:
             - DHPARAM_GENERATION=false
             - NODE_ENV=production
@@ -314,7 +314,7 @@ services:
         restart: unless-stopped
         mem_limit: 128M
         volumes:
-            - $STATE_DIR/send/db:/data
+            - $COMPOSE_STATE_DIR/send/db:/data
         networks:
             - traefik
         healthcheck:
@@ -375,7 +375,7 @@ services:
         image: ghcr.io/alexta69/metube:latest
         container_name: metube
         volumes:
-            - $STATE_DIR/metube:/downloads
+            - $COMPOSE_STATE_DIR/metube:/downloads
         networks:
             - traefik
         depends_on:
@@ -426,7 +426,7 @@ services:
             - "traefik.http.routers.ikom.middlewares=authelia@file"
             - "traefik.http.services.ikom.loadbalancer.server.port=3000"
         volumes:
-            - "$STATE_DIR/ikom:/app/data"
+            - "$COMPOSE_STATE_DIR/ikom:/app/data"
         networks:
             - traefik
         restart: unless-stopped
@@ -466,7 +466,7 @@ services:
         depends_on:
             - dockerproxy
         volumes:
-            - $STATE_DIR/logtfy/config.json:/logtfy/config.json:ro
+            - $COMPOSE_STATE_DIR/logtfy/config.json:/logtfy/config.json:ro
             - /var/log/journal:/var/log/journal:ro
             - dockerproxy:/socket/:ro
         environment:
@@ -525,7 +525,7 @@ services:
         user: "$MY_UID:$MY_UID"
         mem_limit: 512M
         volumes:
-            - $STATE_DIR/shlink/db:/var/lib/postgresql/data
+            - $COMPOSE_STATE_DIR/shlink/db:/var/lib/postgresql/data
         environment:
             - POSTGRES_PASSWORD=$SHLINK_DB_PASSWORD
         healthcheck:
@@ -570,7 +570,7 @@ services:
             - PUID=$MY_UID
             - PGID=$MY_UID
         volumes:
-            - $STATE_DIR/uptime:/app/data/
+            - $COMPOSE_STATE_DIR/uptime:/app/data/
         labels:
             - "traefik.enable=true"
             - "traefik.http.routers.uptime.rule=Host(`uptime.$SERVICES_DOMAIN`)"

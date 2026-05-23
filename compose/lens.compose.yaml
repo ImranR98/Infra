@@ -9,7 +9,7 @@ services:
         container_name: frps-with-multiuser
         restart: always
         volumes:
-          - $STATE_DIR/frps/tokens.txt:/workdir/service-data/frps-tokens.txt:ro
+          - $COMPOSE_STATE_DIR/frps/tokens.txt:/workdir/service-data/frps-tokens.txt:ro
         network_mode: host
         healthcheck:
             test: ["CMD-SHELL", "wget --no-verbose --tries=1 -O - http://127.0.0.1:7500/healthz || exit 1"]
@@ -26,7 +26,7 @@ services:
         restart: unless-stopped
         mem_limit: 256M
         volumes:
-          - $STATE_DIR/logtfy/config.json:/logtfy/config.json:ro
+          - $COMPOSE_STATE_DIR/logtfy/config.json:/logtfy/config.json:ro
           - /var/log/journal:/var/log/journal:ro
         logging: *logging
 

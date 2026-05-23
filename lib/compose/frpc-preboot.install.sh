@@ -1,10 +1,10 @@
 #!/bin/bash
 set -e
 
-STATE_DIR="$1"
-if [ -z "$STATE_DIR" ]; then exit 1; fi
+COMPOSE_STATE_DIR="$1"
+if [ -z "$COMPOSE_STATE_DIR" ]; then exit 1; fi
 
-PRESET_PATH="$STATE_DIR/frpc/frpc-preboot.toml"
+PRESET_PATH="$COMPOSE_STATE_DIR/frpc/frpc-preboot.toml"
 
 temp_dir="$(mktemp -d)"
 working_dir="$(pwd)"

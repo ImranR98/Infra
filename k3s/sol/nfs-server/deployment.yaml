@@ -90,7 +90,7 @@ spec:
             name: nfs-etab
         - name: longhorn-backup-storage
           hostPath:
-            path: $LONGHORN_BACKUP_PATH
+            path: $LONGHORN_BACKUP_DIR
             type: DirectoryOrCreate
         - name: music-storage
           hostPath:

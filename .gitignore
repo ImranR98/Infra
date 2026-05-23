@@ -1,5 +1,4 @@
-state/
+current_target/
 /VARS.sh
 /VARS.*.sh
-backup/
 ~*
