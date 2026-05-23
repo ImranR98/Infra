@@ -1,18 +1,18 @@
 #!/bin/bash
 set -euo pipefail
-source "$VARS_ROOT/lib/common.sh"
+source "$ATLAS_ROOT/lib/common.sh"
 
 ENVSUBST_VARS="$(get_envsubst_vars)"
 COMP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../compose" >/dev/null 2>&1 && pwd)"
 
-if [ ! -f "$VARS_ROOT/targets/$TARGET/compose/templates/frpc-preboot.toml" ]; then
+if [ ! -f "$ATLAS_ROOT/targets/$TARGET/compose/templates/frpc-preboot.toml" ]; then
 	echo "No preboot template found for target $TARGET." >&2
 	exit 1
 fi
 
 echo "=== Generate preboot FRPC config ==="
 mkdir -p "$COMPOSE_STATE_DIR/frpc"
-envsubst "$ENVSUBST_VARS" < "$VARS_ROOT/targets/$TARGET/compose/templates/frpc-preboot.toml" > "$COMPOSE_STATE_DIR/frpc/frpc-preboot.toml"
+envsubst "$ENVSUBST_VARS" < "$ATLAS_ROOT/targets/$TARGET/compose/templates/frpc-preboot.toml" > "$COMPOSE_STATE_DIR/frpc/frpc-preboot.toml"
 chmod 600 "$COMPOSE_STATE_DIR/frpc/frpc-preboot.toml"
 echo "Done."
 

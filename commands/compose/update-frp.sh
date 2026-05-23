@@ -1,8 +1,8 @@
 #!/bin/bash
 set -euo pipefail
-source "$VARS_ROOT/lib/common.sh"
+source "$ATLAS_ROOT/lib/common.sh"
 
-frpc_compose_file="$VARS_ROOT/targets/$TARGET/compose/compose.yaml"
+frpc_compose_file="$ATLAS_ROOT/targets/$TARGET/compose/compose.yaml"
 if [ ! -f "$frpc_compose_file" ]; then
 	echo "No compose file found for target '$TARGET'." >&2; exit 1
 fi
@@ -26,7 +26,7 @@ fi
 echo "Updating $TARGET.compose.yaml..."
 sed -i "s|image: fatedier/frpc:v$current_ver|image: fatedier/frpc:v$latest_ver|" "$frpc_compose_file"
 echo "Updating lens.compose.yaml..."
-sed -i "s|image: imranrdev/frps-with-multiuser:latest|image: imranrdev/frps-with-multiuser:v$latest_ver|" "$VARS_ROOT/targets/lens/compose/compose.yaml"
+sed -i "s|image: imranrdev/frps-with-multiuser:latest|image: imranrdev/frps-with-multiuser:v$latest_ver|" "$ATLAS_ROOT/targets/lens/compose/compose.yaml"
 
 echo "=== Build frps-with-multiuser:v$latest_ver ==="
 TMPDIR="$(mktemp -d)"

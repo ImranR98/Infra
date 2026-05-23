@@ -1,6 +1,6 @@
 #!/bin/bash
 set -euo pipefail
-source "$VARS_ROOT/lib/common.sh"
+source "$ATLAS_ROOT/lib/common.sh"
 
 echo "=== Pull Latest 'wollomatic/socket-proxy:1' and Restart $TARGET if Needed ==="
 OLDSPHASH="$(docker images wollomatic/socket-proxy:1 --format '{{.ID}}')"

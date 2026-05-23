@@ -1,6 +1,6 @@
 #!/bin/bash
 set -euo pipefail
-source "$VARS_ROOT/lib/common.sh"
+source "$ATLAS_ROOT/lib/common.sh"
 
 if ! command -v docker >/dev/null 2>&1; then
 	echo "Docker is required for backup-state but is not installed." >&2

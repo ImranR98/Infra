@@ -3,7 +3,7 @@ set -euo pipefail
 
 # Fallback derivations — atlas.sh exports these before calling us,
 # so they're only computed here when the script is invoked directly.
-: ${VARS_ROOT:="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." >/dev/null 2>&1 && pwd)"}
+: ${ATLAS_ROOT:="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." >/dev/null 2>&1 && pwd)"}
 : ${TARGET:="sol"}
 
 COMPONENT="$1"
@@ -17,14 +17,14 @@ case "$MODE" in
 		;;
 esac
 
-COMPONENT_DIR="$VARS_ROOT/targets/$TARGET/k3s/$COMPONENT"
+COMPONENT_DIR="$ATLAS_ROOT/targets/$TARGET/k3s/$COMPONENT"
 
 if [ ! -d "$COMPONENT_DIR" ]; then
 	echo "Error: Unknown component '$COMPONENT'" >&2
 	exit 1
 fi
 
-source "$VARS_ROOT/lib/common.sh"
+source "$ATLAS_ROOT/lib/common.sh"
 source_env
 ENVSUBST_VARS="$(get_envsubst_vars)"
 

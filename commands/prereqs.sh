@@ -1,6 +1,6 @@
 #!/bin/bash
 set -euo pipefail
-source "$VARS_ROOT/lib/common.sh"
+source "$ATLAS_ROOT/lib/common.sh"
 
 SU=$(get_sudo_cmd)
 PKG_MGR=$(detect_pkgmgr)

@@ -1,12 +1,12 @@
 #!/bin/bash
 set -euo pipefail
 
-VARS_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
-export VARS_ROOT
+ATLAS_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
+export ATLAS_ROOT
 
-export COMPOSE_STATE_DIR="$VARS_ROOT/current_target/compose_live_state"
-export COMPOSE_STATE_BACKUP_DIR="$VARS_ROOT/current_target/compose_state_backups"
-export LONGHORN_BACKUP_DIR="$VARS_ROOT/current_target/k3s_longhorn_backups"
+export COMPOSE_STATE_DIR="$ATLAS_ROOT/current_target/compose_live_state"
+export COMPOSE_STATE_BACKUP_DIR="$ATLAS_ROOT/current_target/compose_state_backups"
+export LONGHORN_BACKUP_DIR="$ATLAS_ROOT/current_target/k3s_longhorn_backups"
 
 # ---- Target validation ----
 
@@ -16,9 +16,9 @@ if [ "${1:-}" = "" ]; then
 	exit 1
 fi
 
-if [ ! -d "$VARS_ROOT/targets/$1" ]; then
+if [ ! -d "$ATLAS_ROOT/targets/$1" ]; then
 	echo "Unknown target: $1" >&2
-	echo "Available targets: $(ls -1 "$VARS_ROOT/targets" | tr '\n' ' ')" >&2
+	echo "Available targets: $(ls -1 "$ATLAS_ROOT/targets" | tr '\n' ' ')" >&2
 	exit 1
 fi
 export TARGET="$1"
@@ -26,10 +26,10 @@ shift
 
 # ---- Source VARS file ----
 
-source "$VARS_ROOT/lib/common.sh"
+source "$ATLAS_ROOT/lib/common.sh"
 
 vars_found=false
-if [ -f "$VARS_ROOT/VARS.$TARGET.sh" ] || [ -f "$VARS_ROOT/VARS.sh" ]; then
+if [ -f "$ATLAS_ROOT/VARS.$TARGET.sh" ] || [ -f "$ATLAS_ROOT/VARS.sh" ]; then
 	source_env "$TARGET"
 	vars_found=true
 fi
@@ -64,9 +64,9 @@ while [ $arg_idx -lt ${#CMD_ARGS[@]} ]; do
 	arg="${CMD_ARGS[$arg_idx]}"
 	found=""
 	for base in "${search_dirs[@]}"; do
-		full_sh="$VARS_ROOT/${base}${search_path:+/$search_path}/$arg.sh"
-		full_py="$VARS_ROOT/${base}${search_path:+/$search_path}/$arg.py"
-		dir="$VARS_ROOT/${base}${search_path:+/$search_path}/$arg"
+		full_sh="$ATLAS_ROOT/${base}${search_path:+/$search_path}/$arg.sh"
+		full_py="$ATLAS_ROOT/${base}${search_path:+/$search_path}/$arg.py"
+		dir="$ATLAS_ROOT/${base}${search_path:+/$search_path}/$arg"
 		if [ -x "$full_sh" ]; then
 			found="script"
 			CMD_PATH="$full_sh"
@@ -94,6 +94,15 @@ while [ $arg_idx -lt ${#CMD_ARGS[@]} ]; do
 done
 
 if [ -z "$CMD_PATH" ]; then
+	# Fallback: try matching a common.sh function (hyphens→underscores)
+	_fn_name="${CMD_ARGS[$arg_idx]:-}"
+	_fn_name="${_fn_name//-/_}"
+	if [ -n "$_fn_name" ] && declare -f "$_fn_name" >/dev/null 2>&1; then
+		shift $((arg_idx + 1))
+		"$_fn_name" "$TARGET" "$@"
+		exit $?
+	fi
+
 	if [ $arg_idx -eq 0 ] && [ -z "${CMD_ARGS[0]:-}" ]; then
 		# No command given — show available commands
 		:
@@ -102,7 +111,7 @@ if [ -z "$CMD_PATH" ]; then
 	fi
 	echo ""
 	echo "Available commands:"
-	for base in "$VARS_ROOT/targets/$TARGET/commands" "$VARS_ROOT/commands"; do
+	for base in "$ATLAS_ROOT/targets/$TARGET/commands" "$ATLAS_ROOT/commands"; do
 		[ -d "$base" ] || continue
 		bash -c '
 			shopt -s nullglob dotglob
@@ -120,6 +129,12 @@ if [ -z "$CMD_PATH" ]; then
 			list_dir "$1" ""
 		' _ "$base"
 	done
+	echo ""
+	echo "Also available as functions:"
+	echo "  validate      Validate all stacks"
+	echo "  list-domains  List all required DNS domains"
+	echo "  update-traefik-plugins  Update Traefik plugin versions"
+	echo "  compose old-images     List images older than 60 days"
 	exit 1
 fi
 

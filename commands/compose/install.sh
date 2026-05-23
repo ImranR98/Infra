@@ -1,13 +1,13 @@
 #!/bin/bash
 set -euo pipefail
-source "$VARS_ROOT/lib/common.sh"
+source "$ATLAS_ROOT/lib/common.sh"
 
 ENVSUBST_VARS="$(get_envsubst_vars)"
 
 echo "=== Create Required Directories ==="
 tmpfile="$(mktemp)"
 trap 'rm -f "$tmpfile"' EXIT INT TERM
-envsubst "$ENVSUBST_VARS" < "$VARS_ROOT/targets/$TARGET/compose/compose.yaml" > "$tmpfile"
+envsubst "$ENVSUBST_VARS" < "$ATLAS_ROOT/targets/$TARGET/compose/compose.yaml" > "$tmpfile"
 while IFS=: read -r host_path _; do
 	name="$(basename "$host_path")"
 	if [[ "$name" =~ \.[a-zA-Z0-9]{1,5}$ ]]; then

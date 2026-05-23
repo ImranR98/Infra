@@ -2,9 +2,9 @@
 set -euo pipefail
 
 COMP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
-: ${VARS_ROOT:="$(cd "$COMP_DIR/../../.." >/dev/null 2>&1 && pwd)"}
+: ${ATLAS_ROOT:="$(cd "$COMP_DIR/../../../.." >/dev/null 2>&1 && pwd)"}
 : ${TARGET:="sol"}
-source "$VARS_ROOT/lib/common.sh"
+source "$ATLAS_ROOT/lib/common.sh"
 
 kubectl delete clusterissuer letsencrypt-staging letsencrypt-prod self-signed-issuer ca-issuer --ignore-not-found 2>/dev/null || true
 kubectl delete certificate k3s-local-ca -n base --ignore-not-found 2>/dev/null || true

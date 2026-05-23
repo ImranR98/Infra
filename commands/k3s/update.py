@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 """Pin Helm chart versions and container image tags to specific versions.
 
-This script scans all YAML files under components/ and pins floating container
+This script scans all YAML files under the k3s component dir and pins floating container
 image references (e.g. "nginx:latest") to specific semver tags (e.g. "nginx:1.30.0-alpine").
 It also updates Helm chart versions in helmchart.yaml files.
 
 == How it works ==
 
 1. HELM CHARTS (update_helm_charts):
-   - Scans all YAML files under components/ for `kind: HelmChart` CRDs
+   - Scans all YAML files under the k3s component dir for `kind: HelmChart` CRDs
    - For OCI charts (oci://), queries the registry via skopeo for available tags
    - For HTTP charts, fetches the Helm index.yaml and extracts versions
    - Skips files with "# PINNED" comment on the version line
@@ -85,9 +85,9 @@ from urllib.request import Request, urlopen
 
 import yaml
 
-VARS_ROOT = Path(os.environ.get("VARS_ROOT", Path(__file__).resolve().parent.parent.parent))
+ATLAS_ROOT = Path(os.environ.get("ATLAS_ROOT", Path(__file__).resolve().parent.parent.parent))
 TARGET = os.environ.get("TARGET", "")
-COMPONENTS = VARS_ROOT / "targets" / TARGET / "k3s" if TARGET else VARS_ROOT / "targets" / "sol" / "k3s"
+COMPONENTS = ATLAS_ROOT / "targets" / TARGET / "k3s" if TARGET else ATLAS_ROOT / "targets" / "sol" / "k3s"
 PARALLELISM = os.cpu_count() or 4
 INNER_POOL_SIZE = min(4, PARALLELISM)
 
@@ -552,7 +552,7 @@ def _iter_repo_tag_pairs(doc):
 
 
 def find_image_refs():
-    """Scan all YAML files under components/ for unpinned image references.
+    """Scan all YAML files under the k3s component dir for unpinned image references.
 
     Returns (results, file_contents) where:
     - results: list of ("direct"|"values", filepath, ref) tuples
