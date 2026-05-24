@@ -25,21 +25,32 @@ Atlas is a single-repo infrastructure manager. It deploys, configures, validates
 
 ```
 Atlas/
-├── atlas.sh                  # Entry point — ~140 line dispatcher
+├── atlas.sh                  # Entry point — ~150 line dispatcher
 ├── commands/                 # Generic commands (shared across targets)
 │   ├── prereqs.sh
+│   ├── validate.sh
+│   ├── list-domains.sh
+│   ├── update-traefik-plugins.sh
 │   ├── compose/
 │   │   ├── install.sh
 │   │   ├── restart.sh
-│   │   └── ...
+│   │   ├── backup-state.sh
+│   │   ├── old-images.sh
+│   │   ├── update-socket-proxy.sh
+│   │   └── update-frp.sh
 │   └── k3s/
 │       ├── setup.sh           # K3s cluster bootstrap
-│       ├── install.sh          # Component deploy/delete
-│       └── update.py           # Version pinning
+│       ├── join.sh            # Join a worker node
+│       ├── install.sh         # Component deploy/delete
+│       ├── update.py          # Version pinning
+│       └── update-node-ip.sh  # IP change recovery
 ├── targets/                   # Per-machine definitions
 │   └── <name>/
 │       ├── VARS.template.sh   # Required env vars for this target
 │       ├── commands/          # Target-specific command overrides
+│       │   └── k3s/
+│       │       ├── base.sh    # Deploy all base components
+│       │       └── apps.sh    # Deploy all app components
 │       ├── compose/           # Docker Compose stack
 │       │   ├── compose.yaml
 │       │   └── templates/     # Config files with $VAR substitution
@@ -47,10 +58,14 @@ Atlas/
 │           ├── <component>/
 │           │   ├── kustomization.yaml
 │           │   ├── *.yaml
-│           │   └── post.sh   # Optional post-apply hook
+│           │   ├── post.sh    # Optional post-apply hook
+│           │   └── delete.sh  # Optional teardown hook
 │           └── ...
 ├── lib/
-│   └── common.sh              # Shared functions (all stacks)
+│   ├── common.sh              # Core shared functions
+│   ├── k3s-common.sh          # K3s installer/helper functions
+│   ├── validate.sh            # Stack validation logic
+│   └── update-traefik-plugins.sh  # Plugin updater logic
 ├── current_target/            # Runtime state (gitignored)
 └── VARS.<target>.sh           # User secrets/config (gitignored)
 ```
@@ -62,8 +77,7 @@ Atlas/
 1. **Target validation** — checks that `targets/<name>/` exists. Targets are discovered from the filesystem, not hardcoded.
 2. **Environment setup** — sources the user's `VARS.<target>.sh`, validates against `targets/<target>/VARS.template.sh`, exports derived variables (`ATLAS_ROOT`, `TARGET`, `MY_UID`, `DOCKER_GID`, etc.).
 3. **Command discovery** — walks the remaining arguments left-to-right, searching two directories in order: `targets/<target>/commands/` (target-specific) then `commands/` (generic). At each step it checks for `<path>/<arg>.sh`, `<path>/<arg>.py`, or `<path>/<arg>/` (a subdirectory to descend into).
-4. **Function fallback** — if no script file is found, the last argument is checked (with hyphens converted to underscores) as a function name in `common.sh`. This is how `validate`, `list-domains`, `update-traefik-plugins`, and `old-images` work with no wrapper script.
-5. **Execution** — the found script (or function) is called with the remaining arguments and `TARGET` as context.
+4. **Execution** — the found script is called with the remaining arguments and `TARGET` as context. Shell scripts run via `bash`, Python scripts via `python3`.
 
 ### VARS system
 
@@ -93,15 +107,21 @@ K3s components support several modes, passed as the third argument to `k3s insta
 
 ### `# IGNORE INITIALLY`
 
-Resources that depend on infrastructure not yet available (e.g., cert-manager Certificate objects before cert-manager is installed) can be deferred. Add the file reference to `kustomization.yaml` with a `# IGNORE INITIALLY` comment:
+Resources that depend on infrastructure not yet available (e.g., cert-manager Certificate objects before cert-manager is installed) can be deferred. Add the `# IGNORE INITIALLY` comment on resource lines in `kustomization.yaml`, or on individual YAML lines inside manifests:
 
 ```yaml
+# In kustomization.yaml — skip the entire file during initial deploy
 resources:
   - helmchart.yaml
   - certificates.yaml # IGNORE INITIALLY
+
+# In ingress.yaml — skip just this middleware during initial deploy
+middlewares:
+  - name: forwardauth-authelia # IGNORE INITIALLY
+    namespace: base          # IGNORE INITIALLY
 ```
 
-When deploying with `APPLY_MODE=initial`, that line is silently removed. On the second run (without `initial`), the resource is included. This is how fresh deployments handle dependency ordering without manual intervention.
+When deploying with `APPLY_MODE=initial`, lines ending in `# IGNORE INITIALLY` are deleted from all component YAML files before kustomize runs. On the second run (without `initial`), the full file is applied unchanged.
 
 ### `# PINNED`
 
@@ -121,15 +141,6 @@ YAML files listed in `kustomization.yaml` that are applied by a `post.sh` script
 ---
 apiVersion: cert-manager.io/v1
 ```
-
-### When no wrapper script is needed
-
-Commands whose logic lives entirely in `lib/common.sh` do not need a separate script file. The dispatcher detects functions by converting hyphens to underscores and checking `declare -f`. Currently these are:
-
-- `validate` — validates all stacks for a target
-- `list-domains` — prints required DNS domains
-- `update-traefik-plugins` — checks and updates Traefik plugin versions across both stacks
-- `compose old-images` — lists Docker images older than 60 days
 
 ### Runtime state
 
