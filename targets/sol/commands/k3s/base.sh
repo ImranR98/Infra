@@ -10,6 +10,12 @@ case "$MODE" in apply|initial|delete) ;; *) echo "Usage: $0 [apply|initial|delet
 COMPONENTS=(namespaces nfs-server csi-driver-nfs longhorn cert-manager traefik crowdsec authelia ntfy)
 
 if [ "$MODE" = "delete" ]; then
+	_bound_pvcs=$(kubectl get pvc -n apps -n monitoring -n syncthing --no-headers 2>/dev/null | grep -c Bound || true)
+	if [ "${_bound_pvcs:-0}" -gt 0 ]; then
+		echo "$_bound_pvcs bound PVCs found in apps/monitoring/syncthing namespaces." >&2
+		echo "Run './atlas.sh sol k3s apps delete' first to safely drain storage before removing base components." >&2
+		exit 1
+	fi
 	for ((i=${#COMPONENTS[@]}-1; i>=0; i--)); do
 		echo "=== ${COMPONENTS[$i]} (delete) ==="
 		bash "$ATLAS_ROOT/commands/k3s/install.sh" "${COMPONENTS[$i]}" delete || true

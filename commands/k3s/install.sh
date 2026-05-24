@@ -94,9 +94,14 @@ if [ "$MODE" = "delete" ]; then
 			sleep 3
 		done
 		if [ "$_deleted" = false ]; then
-			echo "PVC $ns/$pvc_name stuck. Stripping finalizers..."
-			kubectl patch pvc -n "$ns" "$pvc_name" -p '{"metadata":{"finalizers":null}}' --type=merge 2>/dev/null || true
-			sleep 2
+			_reclaim=$(kubectl get pvc -n "$ns" "$pvc_name" -o jsonpath='{.spec.volumeName}' 2>/dev/null | xargs -r -I{} kubectl get pv {} -o jsonpath='{.spec.persistentVolumeReclaimPolicy}' 2>/dev/null)
+			if [ "$_reclaim" = "Retain" ]; then
+				echo "PVC $ns/$pvc_name uses Retain policy — data is safe. Skipping."
+			else
+				echo "PVC $ns/$pvc_name stuck. Stripping finalizers..."
+				kubectl patch pvc -n "$ns" "$pvc_name" -p '{"metadata":{"finalizers":null}}' --type=merge 2>/dev/null || true
+				sleep 2
+			fi
 		fi
 		# Clear claimRef.uid on Released PVs so new PVCs with the same name can bind
 		kubectl get pv -o json 2>/dev/null | jq -r ".items[] | select(.status.phase == \"Released\" and .spec.claimRef.name == \"$pvc_name\" and .spec.claimRef.namespace == \"$ns\") | .metadata.name" | while read -r pv; do
