@@ -1,6 +1,5 @@
 #!/bin/bash
 # Installs k3s
-# Assumed that it's okay for all user accounts to read k3s config
 
 set -euo pipefail
 
@@ -37,7 +36,7 @@ download_k3s_installer
 mkdir -p /etc/rancher/k3s/config.yaml.d
 cat > /etc/rancher/k3s/config.yaml.d/10-server.yaml <<'K3SEOF'
 selinux: true
-write-kubeconfig-mode: "0644"
+write-kubeconfig-mode: "0640"
 cluster-init: true
 node-label:
   - "hostpath-main=true"
@@ -63,6 +62,19 @@ if [ "$CLUSTER_READY" = false ]; then
 	echo "Error: Could not connect to Kubernetes cluster after 150 seconds." >&2
 	exit 1
 fi
+
+echo ""
+echo "=== Setting up kubectl group access ==="
+groupadd -f kubectl
+if ! grep -E '^kubectl:' /etc/group >/dev/null 2>&1; then
+	# Workaround for secureblue
+    grep -E '^kubectl:' /usr/lib/group | tee -a /etc/group >/dev/null
+fi
+chgrp kubectl /etc/rancher/k3s/k3s.yaml
+K3S_CONFIG_OWNER="$(logname 2>/dev/null || echo "${SUDO_USER:-$USER}")"
+usermod -aG kubectl "$K3S_CONFIG_OWNER"
+echo "Added $K3S_CONFIG_OWNER to the kubectl group."
+echo "Log out and back in for group membership to take effect, or use: newgrp kubectl"
 
 echo ""
 echo "=== Node Labels ==="

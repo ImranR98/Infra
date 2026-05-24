@@ -55,6 +55,7 @@ session:
   redis:
     host: authelia-db
     port: 6379
+    password: $AUTHELIA_REDIS_PASSWORD
 
 regulation:
   max_retries: 3
