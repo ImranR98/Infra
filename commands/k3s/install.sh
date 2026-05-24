@@ -81,7 +81,7 @@ if [ "$MODE" = "delete" ]; then
 		[ -z "$pvc_name" ] && continue
 		echo "Waiting for PVC $ns/$pvc_name to be deleted..."
 		_deleted=false
-		for _ in $(seq 1 30); do
+		for _ in $(seq 1 10); do
 			if kubectl get pvc -n "$ns" "$pvc_name" >/dev/null 2>&1; then
 				_exists=true
 			else
@@ -91,10 +91,12 @@ if [ "$MODE" = "delete" ]; then
 				_deleted=true
 				break
 			fi
-			sleep 2
+			sleep 3
 		done
 		if [ "$_deleted" = false ]; then
-			echo "Warning: PVC $ns/$pvc_name was not deleted within 60s." >&2
+			echo "PVC $ns/$pvc_name stuck. Stripping finalizers..."
+			kubectl patch pvc -n "$ns" "$pvc_name" -p '{"metadata":{"finalizers":null}}' --type=merge 2>/dev/null || true
+			sleep 2
 		fi
 		# Clear claimRef.uid on Released PVs so new PVCs with the same name can bind
 		kubectl get pv -o json 2>/dev/null | jq -r ".items[] | select(.status.phase == \"Released\" and .spec.claimRef.name == \"$pvc_name\" and .spec.claimRef.namespace == \"$ns\") | .metadata.name" | while read -r pv; do

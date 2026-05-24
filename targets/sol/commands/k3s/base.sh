@@ -20,4 +20,8 @@ fi
 for comp in "${COMPONENTS[@]}"; do
 	echo "=== $comp ==="
 	bash "$ATLAS_ROOT/commands/k3s/install.sh" "$comp" "$MODE"
+	if [ "$comp" = "namespaces" ] && [ "$MODE" != "delete" ]; then
+		echo "Waiting for network policy propagation before continuing..."
+		sleep 15
+	fi
 done
