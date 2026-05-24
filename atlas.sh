@@ -97,12 +97,14 @@ while [ $arg_idx -lt ${#CMD_ARGS[@]} ]; do
 done
 
 if [ -z "$CMD_PATH" ]; then
+	_err=false
 	if [ $arg_idx -eq 0 ] && [ -z "${CMD_ARGS[0]:-}" ]; then
 		# No command given — show available commands
 		:
 	else
 		echo "Unknown command: ${CMD_ARGS[*]:0:$arg_idx}${search_path:+$search_path/}${CMD_ARGS[$arg_idx]:-}" >&2
 		echo ""
+		_err=true
 	fi
 	echo "Available commands:"
 	echo ""
@@ -140,7 +142,7 @@ if [ -z "$CMD_PATH" ]; then
 			_list_flat "$target_dir" "$stack " | _indent
 		fi
 	done
-	exit 1
+	$_err && exit 1 || exit 0
 fi
 
 exec ${CMD_RUNNER:-bash} "$CMD_PATH" "$@"

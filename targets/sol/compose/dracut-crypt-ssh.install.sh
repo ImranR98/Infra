@@ -1,5 +1,5 @@
 #!/bin/bash
-set -e
+set -euo pipefail
 
 USERNAME="$1"
 if [ -z "$USERNAME" ]; then exit 1; fi

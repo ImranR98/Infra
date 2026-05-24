@@ -48,9 +48,7 @@ SU=$(get_sudo_cmd)
 $SU mv "$COMPOSE_STATE_DIR/$TARGET.service" "/etc/systemd/system/$TARGET.service"
 command -v chcon &>/dev/null && $SU chcon -t systemd_unit_file_t /etc/systemd/system/$TARGET.service 2>/dev/null || true
 $SU systemctl daemon-reload && $SU systemctl enable $TARGET.service
-$SU systemctl stop $TARGET.service 2>/dev/null || true
-sleep 5
-$SU systemctl start $TARGET.service
+$SU systemctl restart $TARGET.service 2>/dev/null || $SU systemctl start $TARGET.service
 echo "Done."
 
 echo "=== Finished ==="

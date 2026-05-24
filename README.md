@@ -103,6 +103,25 @@ resources:
 
 When deploying with `APPLY_MODE=initial`, that line is silently removed. On the second run (without `initial`), the resource is included. This is how fresh deployments handle dependency ordering without manual intervention.
 
+### `# PINNED`
+
+In HelmChart or image references, add `# PINNED` on the same line to prevent the `k3s update` command from upgrading a specific chart version or image tag. Useful for pinning to a known-good version.
+
+```yaml
+spec:
+  version: 0.11.5  # PINNED — do not autoupdate
+```
+
+### `# POST_APPLY`
+
+YAML files listed in `kustomization.yaml` that are applied by a `post.sh` script (not directly by kubectl) should have `# POST_APPLY` as their first line. The validator skips orphan-file warnings for these.
+
+```yaml
+# POST_APPLY: applied by cert-manager/post.sh
+---
+apiVersion: cert-manager.io/v1
+```
+
 ### When no wrapper script is needed
 
 Commands whose logic lives entirely in `lib/common.sh` do not need a separate script file. The dispatcher detects functions by converting hyphens to underscores and checking `declare -f`. Currently these are:

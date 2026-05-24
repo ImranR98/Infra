@@ -50,7 +50,6 @@ $SU mkdir -p "$config_dir"
 printf 'node-ip: %s\n' "$new_ip" | $SU tee "$config_file" >/dev/null
 
 # Remove legacy --node-ip from systemd service to avoid overriding config.yaml
-$SU sed -i 's/--node-ip=[^ ]*//g' /etc/systemd/system/k3s.service 2>/dev/null || true
 
 $SU systemctl daemon-reload
 if systemctl is-active --quiet k3s.service 2>/dev/null; then

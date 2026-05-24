@@ -27,12 +27,13 @@ cleanup() {
 }
 trap cleanup EXIT
 
+K3S_SCRIPT="$(mktemp /tmp/k3s-install.XXXXXX)"
 curl -fsSL --connect-timeout 30 --max-time 120 --retry 3 https://get.k3s.io -o "$K3S_SCRIPT"
 
 # Verify the install script SHA256 checksum
 K3S_SCRIPT_SHA256=$(curl -fsSL --connect-timeout 10 --max-time 30 https://github.com/k3s-io/k3s/raw/main/install.sh 2>/dev/null | sha256sum | cut -d' ' -f1)
 DOWNLOADED_SHA256=$(sha256sum $K3S_SCRIPT | cut -d' ' -f1)
-if [ -n "$K3S_SCRIPT_SHA256" ] && [ "$K3S_SCRIPT_SHA256" != "$DOWNLOADED_SHA256" ]; then
+if [ -z "$K3S_SCRIPT_SHA256" ]; then echo "Error: could not verify K3s install script (GitHub unreachable)." >&2; exit 1; elif [ "$K3S_SCRIPT_SHA256" != "$DOWNLOADED_SHA256" ]; then
     echo "Error: K3s install script checksum mismatch." >&2
     echo "  Expected: $K3S_SCRIPT_SHA256" >&2
     echo "  Got:      $DOWNLOADED_SHA256" >&2
@@ -97,11 +98,11 @@ DID_COMPLETE=true
 if ! command -v firewall-cmd >/dev/null 2>&1; then
 	echo "Warning: firewall-cmd not found. Skipping firewall configuration."
 	echo "If using a different firewall, ensure interfaces cni0 and flannel.1 are trusted."
-	exit 0
-fi
+else
 
 firewall-cmd --permanent --zone=trusted --add-interface=cni0 2>/dev/null || true
 firewall-cmd --permanent --zone=trusted --add-interface=flannel.1 2>/dev/null || true
 firewall-cmd --reload
+fi
 
 echo "Firewall configured. Note: VPNs may interfere with cluster networking and should run on an upstream router."

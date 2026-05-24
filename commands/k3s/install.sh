@@ -29,7 +29,7 @@ source_env
 ENVSUBST_VARS="$(get_envsubst_vars)"
 
 if [[ ("$MODE" == "apply" || "$MODE" == "initial") && -f "$COMPONENT_DIR/prep.sh" ]]; then
-	bash "$COMPONENT_DIR/prep.sh"
+	source "$COMPONENT_DIR/prep.sh"
 fi
 
 if [ "$MODE" = "apply" ]; then

@@ -60,16 +60,17 @@ update_traefik_plugins() {
 	if [ -f "$traefik_yaml" ]; then
 		echo "=== K3s: $target ==="
 		local vc
-		vc="$(python3 -c "
+		vc="$(python3 - "$traefik_yaml" <<'PYEOF'
 import yaml, sys
 try:
-    docs = list(yaml.safe_load_all(open('$traefik_yaml')))
+    docs = list(yaml.safe_load_all(open(sys.argv[1])))
     for d in docs:
         if isinstance(d, dict) and d.get('kind') == 'HelmChartConfig':
             sys.stdout.write(d.get('spec',{}).get('valuesContent',''))
             break
 except: pass
-" 2>/dev/null)"
+PYEOF
+)"
 		if [ -n "$vc" ]; then
 			while IFS= read -r l; do
 				[ -z "$l" ] && continue
@@ -84,16 +85,22 @@ except: pass
 					# Rewrite version inside valuesContent block
 					local tmp
 					tmp="$(mktemp)"
-					python3 -c "
-import re
-with open('$traefik_yaml') as f: content = f.read()
+					trap "rm -f '$tmp'" EXIT
+					printf '{"file":"%s","old":"%s","new":"%s"}' "$traefik_yaml" "$pname" "$newver" | python3 -c "
+import json, re, sys
+data = json.load(sys.stdin)
+with open(data['file']) as f:
+    content = f.read()
 new_content = re.sub(
-    r'\.plugins\.$pname\.version=' + re.escape('$pver'),
-    '.plugins.$pname.version=$newver', content
+    r'\.plugins\.' + re.escape(data['old']) + r'\.version=\S+',
+    '.plugins.' + data['old'] + '.version=' + data['new'],
+    content
 )
-with open('$tmp', 'w') as f: f.write(new_content)
+with open('$tmp', 'w') as f:
+    f.write(new_content)
 "
 					mv "$tmp" "$traefik_yaml"
+					trap - EXIT
 					echo "  Updated $pname → $newver (restart Traefik to apply)"
 				fi
 			done < <(echo "$vc" | grep -o '\.plugins\..*\.modulename=[^"]*')

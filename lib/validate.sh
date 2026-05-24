@@ -69,7 +69,7 @@ $v"
 			[ -f "$yf" ] || continue
 			local fn; fn=$(basename "$yf")
 			[ "$fn" = "kustomization.yaml" ] && continue
-			[ "$fn" = "issuers.yaml" ] && continue  # applied by post.sh
+			if head -1 "$yf" 2>/dev/null | grep -q "# POST_APPLY"; then continue; fi
 			if ! grep -qF "$fn" "$kfile"; then
 				echo "WARN: $comp/$fn not listed in kustomization.yaml"
 				warnings=$((warnings + 1))
@@ -138,6 +138,8 @@ $v"
 				echo "ERROR: docker compose config validation failed"
 				errors=$((errors + 1))
 			fi
+		else
+			echo "NOTE: Docker compose validation skipped (no rendered compose.yaml — run 'compose install' first)"
 		fi
 	fi
 

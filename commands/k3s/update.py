@@ -89,15 +89,22 @@ def _parse_args():
 # ── registry helpers ────────────────────────────────────────────────────────
 
 def _run(cmd, timeout=10):
+    # redact credentials from debug output
+    _dbg = list(cmd)
+    if "--creds" in _dbg:
+        i = _dbg.index("--creds") + 1
+        if i < len(_dbg):
+            _dbg[i] = "***"
     try:
         r = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
         if r.returncode == 0:
             return r.stdout.strip()
         if VERBOSE:
-            print(f"    [DEBUG] {' '.join(cmd)}: rc={r.returncode}", file=sys.stderr)
+            print(f"    [DEBUG] {' '.join(_dbg)}: rc={r.returncode}", file=sys.stderr)
     except Exception as e:
         if VERBOSE:
-            print(f"    [DEBUG] {' '.join(cmd)}: {e}", file=sys.stderr)
+            print(f"    [DEBUG] {' '.join(_dbg)}: {e}", file=sys.stderr)
+    return None
     return None
 
 def _http_get(url, timeout=10):
@@ -259,13 +266,15 @@ def _image_refs(components_dir, filter_pat):
 
         # ── direct image refs (skip lines inside valuesContent blocks) ──
         in_vc = 0
+        vc_block_scalar = False  # True when valuesContent uses | or |- block scalar
         for line in content.split("\n"):
             stripped = line.strip()
             indent = len(line) - len(line.lstrip())
-            if in_vc and indent <= in_vc:
+            if in_vc and indent <= in_vc and not vc_block_scalar:
                 in_vc = 0
             if stripped.startswith("valuesContent:"):
                 in_vc = indent
+                vc_block_scalar = bool(re.match(r"valuesContent:\s*\|", stripped))
                 continue
             m = IMAGE_LINE_RE.match(line)
             if not m:
@@ -449,7 +458,7 @@ def _apply_values(content, repo, new_tag):
 
 
 def _apply_helm_version(content, old_ver, new_ver):
-    pat = re.compile(rf"^(\s*version:\s*){re.escape(old_ver)}", re.MULTILINE)
+    pat = re.compile(rf"^(\s*version:\s*v?){re.escape(old_ver)}", re.MULTILINE)
     return pat.sub(rf"\g<1>{new_ver}", content, count=1)
 
 
@@ -534,10 +543,6 @@ def main():
                 else:
                     content = _apply_direct(content, ref, new_ref)
                 file_cache[fpath] = content
-            # batch-write
-            for fpath, content in file_cache.items():
-                Path(fpath).write_text(content)
-                file_cache = {}  # reset after flush
         for ftype, fpath in entries:
             print(f"  {fpath}: {ref} → {new_ref}")
             image_count += 1
