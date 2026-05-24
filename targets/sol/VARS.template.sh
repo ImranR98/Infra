@@ -28,7 +28,7 @@ export GEOBLOCK_CONFIG_SUBSET='
 # Ensure these exist before starting services
 export MAIN_PARENT_DIR="/path/to/data"
 export MEDIA_DIR_PATH="$MAIN_PARENT_DIR/Main/Media"
-export DSCPLN_TRANSACTIONS_PATH="$MAIN_PARENT_DIR/Main/Documents/Transactions"
+export DSCPLN_TRANSACTIONS_PATH="$MAIN_PARENT_DIR/Main/Notes/Transactions"
 export MDSCL_DEVICE_SYNC_PATH="$MAIN_PARENT_DIR/deviceSync"
 
 # --- Authelia ---

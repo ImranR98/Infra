@@ -5,7 +5,7 @@ metadata:
   namespace: apps
 spec:
   chart: home-assistant
-  repo: https://pajikos.github.io/home-assistant-helm-chart/
+  repo: https://blog.pavelsklenar.com/home-assistant-helm-chart/
   targetNamespace: apps
   createNamespace: false
   failurePolicy: abort
