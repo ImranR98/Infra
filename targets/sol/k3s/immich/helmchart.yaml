@@ -11,9 +11,6 @@ spec:
   createNamespace: false
   version: 0.12.0
   valuesContent: |-
-    postgresql:
-      enabled: false
-
     controllers:
       main:
         containers:
