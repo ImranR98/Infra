@@ -6,9 +6,6 @@ frpc_compose_file="$ATLAS_ROOT/targets/$TARGET/compose/compose.yaml"
 if [ ! -f "$frpc_compose_file" ]; then
 	echo "No compose file found for target '$TARGET'." >&2; exit 1
 fi
-if ! docker system info 2>/dev/null | grep -q "Username"; then
-	echo "Not logged into Docker Hub. Run 'docker login' first." >&2; exit 1
-fi
 current_ver="$(sed -n 's/.*image: fatedier\/frpc:v\([^"]*\).*/\1/p' "$frpc_compose_file")"
 if [ -z "$current_ver" ]; then
 	echo "No fatedier/frpc image found in $frpc_compose_file. Nothing to update." >&2; exit 0

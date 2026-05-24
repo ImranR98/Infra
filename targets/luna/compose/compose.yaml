@@ -129,7 +129,7 @@ services:
 
     # Traefik - Reverse Proxy
     traefik:
-        image: traefik:latest
+        image: traefik:v3
         container_name: traefik
         depends_on:
             authelia:
@@ -139,7 +139,6 @@ services:
         command:
             - "--api=true"
             - "--api.dashboard=true"
-            - "--api.insecure=true"
             - "--global.sendAnonymousUsage=false"
             - "--global.checkNewVersion=true"
             - "--log.level=INFO"
@@ -165,12 +164,19 @@ services:
         ports:
             - "80:80"
             - "443:443"
-            - "127.0.0.1:8080:8080" # Traefik dashboard. To view remotely, tunnel: ssh -L 8080:localhost:8080 user@your-server
         volumes:
             - $COMPOSE_STATE_DIR/traefik/acme.json:/acme.json
             - $COMPOSE_STATE_DIR/traefik/dynamic-configuration.yaml:/etc/traefik/dynamic-configuration.yaml
             - $COMPOSE_STATE_DIR/traefik/logs:/var/log/traefik/
             - dockerproxy:/socket/:ro
+        labels:
+            - "traefik.enable=true"
+            - "traefik.http.routers.traefik-dashboard.rule=Host(`luna.$SERVICES_DOMAIN`)"
+            - "traefik.http.routers.traefik-dashboard.entrypoints=websecure"
+            - "traefik.http.routers.traefik-dashboard.tls.certresolver=le"
+            - "traefik.http.routers.traefik-dashboard.tls=true"
+            - "traefik.http.routers.traefik-dashboard.service=api@internal"
+            - "traefik.http.routers.traefik-dashboard.middlewares=authelia@file,geoblock@file"
         restart: unless-stopped
         mem_limit: 256M
         networks:

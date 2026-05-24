@@ -2,7 +2,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: nfs-etab
-  namespace: base
+  namespace: nfs
 data:
   etab: |
     /exports *(rw,fsid=0,crossmnt,no_subtree_check,insecure,root_squash)

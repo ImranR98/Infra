@@ -5,7 +5,7 @@ metadata:
   name: default
   namespace: longhorn-system
 spec:
-  backupTargetURL: "nfs://nfs-server.base.svc.cluster.local:/longhorn-backup"
+  backupTargetURL: "nfs://nfs-server.nfs.svc.cluster.local:/longhorn-backup"
   pollInterval: "5m0s"
 ---
 apiVersion: longhorn.io/v1beta2

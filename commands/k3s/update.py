@@ -105,7 +105,6 @@ def _run(cmd, timeout=10):
         if VERBOSE:
             print(f"    [DEBUG] {' '.join(_dbg)}: {e}", file=sys.stderr)
     return None
-    return None
 
 def _http_get(url, timeout=10):
     try:
