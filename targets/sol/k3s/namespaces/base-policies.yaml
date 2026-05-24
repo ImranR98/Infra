@@ -6,9 +6,15 @@
 #
 # POLICY MODEL (per namespace):
 #   default-deny-all      — block all ingress + egress by default
-#   allow-internal-egress — DNS + pod/service CIDRs + all namespaces
+#   allow-internal-egress — DNS + pod CIDR + API server + all namespaces
 #   allow-traefik-ingress — HTTP from kube-system/traefik (where applicable)
 #   allow-helm-egress     — internet HTTPS for HelmChart install jobs
+#
+# NOTE: allow-internal-egress includes the API server's host IP
+# (192.168.8.XX/32) because kube-proxy DNAT rewrites ClusterIP
+# traffic to the API server's node IP BEFORE network policy
+# evaluation. The service CIDR (10.43.0.0/16) rule alone is
+# insufficient because the rewritten destination is the node IP.
 #
 # External internet access for running workloads is granted ONLY by
 # component-specific egress rules (e.g. cert-manager → Let's Encrypt,
@@ -58,11 +64,11 @@ metadata:
 spec:
   podSelector: {}          # all pods
   egress:
-    - to:                  # cluster-internal: pod network + service network + cross-namespace
+    - to:                  # cluster-internal: pod network + API server + cross-namespace
         - ipBlock:
             cidr: 10.42.0.0/16
         - ipBlock:
-            cidr: 10.43.0.0/16
+            cidr: $K8S_API_SERVER_SUBNET  # API server host subnet (auto-detected)
         - namespaceSelector: {}
     - to:                  # DNS (CoreDNS in kube-system)
         - namespaceSelector:
@@ -128,11 +134,11 @@ metadata:
 spec:
   podSelector: {}
   egress:
-    - to:                  # cluster-internal
+    - to:                  # cluster-internal: pod network + API server + cross-namespace
         - ipBlock:
             cidr: 10.42.0.0/16
         - ipBlock:
-            cidr: 10.43.0.0/16
+            cidr: 192.168.8.XX/32  # API server host IP
         - namespaceSelector: {}
     - to:                  # DNS
         - namespaceSelector:
@@ -192,11 +198,11 @@ metadata:
 spec:
   podSelector: {}
   egress:
-    - to:                  # cluster-internal
+    - to:                  # cluster-internal: pod network + API server + cross-namespace
         - ipBlock:
             cidr: 10.42.0.0/16
         - ipBlock:
-            cidr: 10.43.0.0/16
+            cidr: 192.168.8.XX/32  # API server host IP
         - namespaceSelector: {}
     - to:                  # DNS
         - namespaceSelector:
@@ -279,11 +285,11 @@ metadata:
 spec:
   podSelector: {}
   egress:
-    - to:                  # cluster-internal
+    - to:                  # cluster-internal: pod network + API server + cross-namespace
         - ipBlock:
             cidr: 10.42.0.0/16
         - ipBlock:
-            cidr: 10.43.0.0/16
+            cidr: 192.168.8.XX/32  # API server host IP
         - namespaceSelector: {}
     - to:                  # DNS
         - namespaceSelector:
@@ -342,11 +348,11 @@ metadata:
 spec:
   podSelector: {}
   egress:
-    - to:                  # cluster-internal
+    - to:                  # cluster-internal: pod network + API server + cross-namespace
         - ipBlock:
             cidr: 10.42.0.0/16
         - ipBlock:
-            cidr: 10.43.0.0/16
+            cidr: 192.168.8.XX/32  # API server host IP
         - namespaceSelector: {}
     - to:                  # DNS
         - namespaceSelector:

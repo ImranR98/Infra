@@ -28,6 +28,16 @@ source "$ATLAS_ROOT/lib/common.sh"
 source_env
 ENVSUBST_VARS="$(get_envsubst_vars)"
 
+# Auto-detect K3s API server host IP for network policy ipBlock rules.
+# kube-proxy DNAT rewrites ClusterIP targets to backend host IPs before
+# policy evaluation, so policies must allow the post-NAT destination.
+# Uses the /24 subnet so IP changes within the same network segment
+# don't require a re-apply.
+_k8s_api_ip="$(kubectl get endpoints kubernetes -o jsonpath='{.subsets[0].addresses[0].ip}' 2>/dev/null)"
+export K8S_API_SERVER_IP="${K8S_API_SERVER_IP:-$_k8s_api_ip}"
+export K8S_API_SERVER_SUBNET="${K8S_API_SERVER_SUBNET:-${_k8s_api_ip%.*}.0/24}"
+ENVSUBST_VARS="$ENVSUBST_VARS"'$K8S_API_SERVER_IP $K8S_API_SERVER_SUBNET'
+
 if [[ ("$MODE" == "apply" || "$MODE" == "initial") && -f "$COMPONENT_DIR/prep.sh" ]]; then
 	source "$COMPONENT_DIR/prep.sh"
 fi

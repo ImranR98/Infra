@@ -53,4 +53,17 @@ if systemctl is-active --quiet k3s.service 2>/dev/null; then
 	$SU systemctl restart k3s.service
 fi
 
+echo "Waiting for cluster to be ready..."
+for i in $(seq 1 30); do
+	if kubectl get nodes >/dev/null 2>&1; then
+		echo "Cluster ready."
+		break
+	fi
+	echo "Waiting... ($i/30)"
+	sleep 5
+done
+
+echo "Re-applying network policies with updated API server subnet..."
+bash "$ATLAS_ROOT/commands/k3s/install.sh" namespaces apply
+
 echo "Done. K3s node IP updated to $new_ip."
