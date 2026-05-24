@@ -44,12 +44,9 @@ fi
 
 echo "Updating K3s node IP: $current_node_ip → $new_ip"
 
-config_dir="/etc/rancher/k3s"
-config_file="$config_dir/config.yaml"
+config_dir="/etc/rancher/k3s/config.yaml.d"
 $SU mkdir -p "$config_dir"
-printf 'node-ip: %s\n' "$new_ip" | $SU tee "$config_file" >/dev/null
-
-# Remove legacy --node-ip from systemd service to avoid overriding config.yaml
+printf 'node-ip: %s\n' "$new_ip" | $SU tee "$config_dir/20-node-ip.yaml" >/dev/null
 
 $SU systemctl daemon-reload
 if systemctl is-active --quiet k3s.service 2>/dev/null; then

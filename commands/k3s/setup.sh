@@ -45,8 +45,17 @@ fi
 # semodule --disable=userns_deny_unconfined_relabels # Required for K3s Flannel unfortunately
 # sed -i 's/# rpm_install_extra_args/rpm_install_extra_args/g' $K3S_SCRIPT
 
-chmod +x $K3S_SCRIPT
-$K3S_SCRIPT --write-kubeconfig-mode 644 --selinux
+# Write K3s config drop-in files before installing so the first start picks them up
+mkdir -p /etc/rancher/k3s/config.yaml.d
+cat > /etc/rancher/k3s/config.yaml.d/10-server.yaml <<'K3SEOF'
+selinux: true
+write-kubeconfig-mode: "0644"
+cluster-init: true
+K3SEOF
+echo "K3s config drop-in written to /etc/rancher/k3s/config.yaml.d/10-server.yaml"
+
+chmod +x "$K3S_SCRIPT"
+"$K3S_SCRIPT"
 
 # Label the node for hostPath volume scheduling
 echo "Labeling node for hostPath volume scheduling..."
