@@ -79,6 +79,15 @@ spec:
               name: nfs-exports
               subPath: etab
               readOnly: true
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: hostpath-main
+                    operator: In
+                    values:
+                      - "true"
       volumes:
         - name: modules
           hostPath:

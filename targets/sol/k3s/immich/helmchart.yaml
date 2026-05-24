@@ -43,6 +43,16 @@ spec:
         runAsUser: $MY_UID
         runAsGroup: $MY_UID
         fsGroup: $MY_UID
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              preference:
+                matchExpressions:
+                  - key: has-amdgpu
+                    operator: In
+                    values:
+                      - "true"
 
     immich:
       machineLearning:

@@ -16,7 +16,7 @@ spec:
     required:
       nodeSelectorTerms:
         - matchExpressions:
-            - key: hostpath-main
+            - key: external-exposed
               operator: In
               values:
                 - "true"
