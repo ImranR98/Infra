@@ -84,13 +84,13 @@ spec:
 apiVersion: traefik.io/v1alpha1
 kind: Middleware
 metadata:
-  name: basicauth-localhost
+  name: basicauth-cluster
   namespace: base
 spec:
   basicAuth:
-    secret: localhost-auth-users
+    secret: cluster-auth-users
 ---
-# IP whitelist for LAN-only routes (Longhorn dashboard, Jellyfin LAN access).
+# IP whitelist for LAN-only routes (Jellyfin LAN access, etc.).
 # Allows direct pod/service traffic from private IP ranges.
 apiVersion: traefik.io/v1alpha1
 kind: Middleware
@@ -103,3 +103,16 @@ spec:
       - "10.0.0.0/8"
       - "172.16.0.0/12"
       - "192.168.0.0/16"
+---
+# IP whitelist for cluster-local routes (*.cluster domains).
+# Only requests originating from the K3s pod network (10.42.0.0/16)
+# are allowed — effectively localhost on a single-node cluster.
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: cluster-only
+  namespace: base
+spec:
+  ipAllowList:
+    sourceRange:
+      - "10.42.0.0/16"

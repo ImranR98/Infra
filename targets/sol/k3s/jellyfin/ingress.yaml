@@ -48,37 +48,24 @@ spec:
   tls:
     secretName: jellyfin-prod-tls
 ---
-apiVersion: cert-manager.io/v1
-kind: Certificate
-metadata:
-  name: jellyfin-localhost-tls
-  namespace: apps
-spec:
-  secretName: jellyfin-localhost-tls
-  issuerRef:
-    name: ca-issuer
-    kind: ClusterIssuer
-  dnsNames:
-    - tv.localhost
----
 apiVersion: traefik.io/v1alpha1
 kind: IngressRoute
 metadata:
-  name: jellyfin-ingress-lan # For initial setup when behind Authelia (external URL won't work)
+  name: jellyfin-ingress-local
   namespace: apps
 spec:
   entryPoints:
     - websecure
   tls:
-    secretName: jellyfin-localhost-tls
+    secretName: local-tls
   routes:
-    - match: Host(`tv.localhost`)
+    - match: Host(`tv.lan.localhost`)
       kind: Rule
       middlewares:
         - name: lan-whitelist
           namespace: base
         - name: forwardauth-authelia # IGNORE INITIALLY
           namespace: base # IGNORE INITIALLY
-      services: # Above Authelia middleware fails, effectively blocking this route after initial mode
+      services:
         - name: jellyfin
           port: 8096
