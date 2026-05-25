@@ -1,0 +1,61 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mosquitto-data-pvc
+  namespace: apps-privileged
+spec:
+  storageClassName: longhorn
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mosquitto-config
+  namespace: apps-privileged
+data:
+  mosquitto.conf: |
+    persistence true
+    persistence_location /mosquitto/data/
+    allow_anonymous false
+    password_file /mosquitto/config/password_file
+    listener 1883
+    listener 8883
+      cafile /mosquitto/certs/ca.crt
+      certfile /mosquitto/certs/tls.crt
+      keyfile /mosquitto/certs/tls.key
+      require_certificate false
+    listener 9001
+      protocol websockets
+    log_type all
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: mosquitto-password
+  namespace: apps-privileged
+type: Opaque
+stringData:
+  password_file: $MOSQUITTO_CREDENTIALS
+---
+# TLS cert for internal cluster MQTT (hostPort exposure uses same cert; external
+# LAN clients will see a hostname mismatch since they connect via host IP, not
+# the cluster DNS name. require_certificate: false in mosquitto.conf disables
+# client-side verification, so TLS encryption still works.)
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: mosquitto-tls
+  namespace: apps-privileged
+spec:
+  secretName: mosquitto-tls
+  duration: 2160h
+  renewBefore: 360h
+  issuerRef:
+    name: ca-issuer
+    kind: ClusterIssuer
+  dnsNames:
+    - mosquitto.apps-privileged.svc.cluster.local

@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: opencanary
-  namespace: apps
+  namespace: apps-privileged
 spec:
   replicas: 1
   strategy:

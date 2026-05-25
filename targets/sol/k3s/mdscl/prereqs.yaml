@@ -25,7 +25,7 @@ apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: mdscl-camera-src-pvc
-  namespace: syncthing
+  namespace: apps
 spec:
   accessModes:
     - ReadWriteOnce
@@ -62,7 +62,7 @@ apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: mdscl-camera-dst-pvc
-  namespace: syncthing
+  namespace: apps
 spec:
   accessModes:
     - ReadWriteOnce
@@ -99,7 +99,7 @@ apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: mdscl-screenshots-src-pvc
-  namespace: syncthing
+  namespace: apps
 spec:
   accessModes:
     - ReadWriteOnce
@@ -136,7 +136,7 @@ apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: mdscl-screenshots-dst-pvc
-  namespace: syncthing
+  namespace: apps
 spec:
   accessModes:
     - ReadWriteOnce
@@ -173,7 +173,7 @@ apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: mdscl-screenrecs-src-pvc
-  namespace: syncthing
+  namespace: apps
 spec:
   accessModes:
     - ReadWriteOnce
@@ -210,7 +210,7 @@ apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: mdscl-screenrecs-dst-pvc
-  namespace: syncthing
+  namespace: apps
 spec:
   accessModes:
     - ReadWriteOnce

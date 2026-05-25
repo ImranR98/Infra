@@ -1,0 +1,87 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mosquitto
+  namespace: apps-privileged
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: mosquitto
+  template:
+    metadata:
+      labels:
+        app: mosquitto
+    spec:
+      containers:
+        - name: mosquitto
+          image: eclipse-mosquitto:2.0.22-openssl
+          securityContext:
+            allowPrivilegeEscalation: false
+          ports:
+            - containerPort: 1883
+            - containerPort: 8883
+              hostPort: 8883 # LAN MQTT TLS access — hostPort needed so external clients can reach Mosquitto directly
+            - containerPort: 9001
+              hostPort: 9001 # LAN MQTT WebSocket access — same rationale as 8883
+          readinessProbe:
+            tcpSocket:
+              port: 1883
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+            initialDelaySeconds: 10
+          resources:
+            limits:
+              memory: 2Gi
+            requests:
+              memory: 128Mi
+          volumeMounts:
+            - name: mosquitto-data
+              mountPath: /mosquitto/data
+            - name: mosquitto-config
+              mountPath: /mosquitto/config/mosquitto.conf
+              subPath: mosquitto.conf
+            - name: mosquitto-password
+              mountPath: /mosquitto/config/password_file
+              subPath: password_file
+            - name: mosquitto-tls
+              mountPath: /mosquitto/certs
+              readOnly: true
+      volumes:
+        - name: mosquitto-data
+          persistentVolumeClaim:
+            claimName: mosquitto-data-pvc
+        - name: mosquitto-config
+          configMap:
+            name: mosquitto-config
+        - name: mosquitto-password
+          secret:
+            secretName: mosquitto-password
+            defaultMode: 0644
+        - name: mosquitto-tls
+          secret:
+            secretName: mosquitto-tls
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mosquitto
+  namespace: apps-privileged
+spec:
+  type: ClusterIP
+  selector:
+    app: mosquitto
+  ports:
+    - name: mqtt
+      port: 1883
+      targetPort: 1883
+    - name: mqtt-tls
+      port: 8883
+      targetPort: 8883
+    - name: mqtt-ws
+      port: 9001
+      targetPort: 9001

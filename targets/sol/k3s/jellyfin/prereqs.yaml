@@ -27,7 +27,7 @@ spec:
     driver: nfs.csi.k8s.io
     volumeHandle: jellyfin-tv
     volumeAttributes:
-      server: nfs-server.nfs.svc.cluster.local
+      server: nfs-server.base-privileged.svc.cluster.local
       share: /jellyfin-tv
 ---
 apiVersion: v1
@@ -60,7 +60,7 @@ spec:
     driver: nfs.csi.k8s.io
     volumeHandle: jellyfin-youtube
     volumeAttributes:
-      server: nfs-server.nfs.svc.cluster.local
+      server: nfs-server.base-privileged.svc.cluster.local
       share: /jellyfin-youtube
 ---
 apiVersion: v1

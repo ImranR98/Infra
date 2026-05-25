@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: mdscl-camera
-  namespace: syncthing
+  namespace: apps
 spec:
   replicas: 1
   strategy:
@@ -52,7 +52,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: mdscl-screenshots
-  namespace: syncthing
+  namespace: apps
 spec:
   replicas: 1
   strategy:
@@ -102,7 +102,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: mdscl-screenrecs
-  namespace: syncthing
+  namespace: apps
 spec:
   replicas: 1
   strategy:

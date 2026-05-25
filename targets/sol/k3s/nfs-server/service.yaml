@@ -2,7 +2,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: nfs-server
-  namespace: nfs
+  namespace: base-privileged
 spec:
   type: ClusterIP
   ports:

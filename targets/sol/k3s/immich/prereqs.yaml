@@ -42,7 +42,7 @@ spec:
     driver: nfs.csi.k8s.io
     volumeHandle: immich-external
     volumeAttributes:
-      server: nfs-server.nfs.svc.cluster.local
+      server: nfs-server.base-privileged.svc.cluster.local
       share: /immich
 ---
 apiVersion: v1

@@ -25,7 +25,7 @@ apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: syncthing-home-pvc
-  namespace: syncthing
+  namespace: apps-privileged
 spec:
   accessModes:
     - ReadWriteOnce

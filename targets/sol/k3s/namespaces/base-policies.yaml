@@ -110,16 +110,15 @@ spec:
     - Egress
 
 #
-# === nfs ===
-# NFS server namespace (single privileged pod — no Traefik ingress needed).
-# Accessed via ClusterIP by csi-nfs-node and longhorn-manager.
+# === base-privileged ===
+# Privileged base namespace: NFS server (needs privileged: true, hostPath mounts).
 #
 ---
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
   name: default-deny-all
-  namespace: nfs
+  namespace: base-privileged
 spec:
   podSelector: {}
   policyTypes:
@@ -130,7 +129,7 @@ apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
   name: allow-internal-egress
-  namespace: nfs
+  namespace: base-privileged
 spec:
   podSelector: {}
   egress:
@@ -307,15 +306,15 @@ spec:
     - Egress
 
 #
-# === syncthing ===
-# File sync (hostNetwork — needs privileged enforcement).
+# === apps-privileged ===
+# Privileged apps namespace: apps-privileged (hostNetwork), mosquitto (hostPort), opencanary (hostPort).
 #
 ---
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
   name: default-deny-all
-  namespace: syncthing
+  namespace: apps-privileged
 spec:
   podSelector: {}
   policyTypes:
@@ -326,7 +325,7 @@ apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
   name: allow-traefik-ingress
-  namespace: syncthing
+  namespace: apps-privileged
 spec:
   podSelector: {}
   ingress:
@@ -344,7 +343,7 @@ apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
   name: allow-internal-egress
-  namespace: syncthing
+  namespace: apps-privileged
 spec:
   podSelector: {}
   egress:

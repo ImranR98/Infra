@@ -2,7 +2,7 @@ apiVersion: v1
 kind: Secret
 metadata:
   name: opencanary-config
-  namespace: apps
+  namespace: apps-privileged
 type: Opaque
 stringData:
   opencanary.conf: |

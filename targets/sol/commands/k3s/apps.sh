@@ -7,7 +7,7 @@ source "$ATLAS_ROOT/lib/common.sh"
 MODE="${1:-apply}"
 case "$MODE" in apply|initial|delete) ;; *) echo "Usage: $0 [apply|initial|delete]" >&2; exit 1 ;; esac
 
-COMPONENTS=(immich logtfy jellyfin navidrome mdscl homeassistant ollama nextcloud freshrss opodsync dscpln opencanary fmd syncthing)
+COMPONENTS=(immich logtfy jellyfin navidrome mdscl mosquitto homeassistant ollama nextcloud freshrss opodsync dscpln opencanary fmd syncthing)
 
 if [ "$MODE" = "delete" ]; then
 	for ((i=${#COMPONENTS[@]}-1; i>=0; i--)); do

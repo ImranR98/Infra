@@ -27,7 +27,7 @@ spec:
               app: logtfy
         - namespaceSelector:
             matchLabels:
-              kubernetes.io/metadata.name: syncthing
+              kubernetes.io/metadata.name: apps-privileged
           podSelector:
             matchLabels:
               app.kubernetes.io/component: mdscl
