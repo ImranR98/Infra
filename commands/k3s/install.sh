@@ -84,40 +84,76 @@ PROCESSED_YAML=$(printf '%s\n' "$RAW_YAML" | envsubst "$ENVSUBST_VARS")
 if [ "$MODE" = "delete" ]; then
 	[ -f "$COMPONENT_DIR/delete.sh" ] && bash "$COMPONENT_DIR/delete.sh"
 
-	printf '%s\n' "$PROCESSED_YAML" | kubectl delete --wait=false --ignore-not-found -f - 2>/dev/null || echo "Warning: some resources may not have been deleted." >&2
+	_YAML=$(printf '%s\n' "$PROCESSED_YAML")
 
-	# Wait for PVCs to be fully deleted before returning
-	printf '%s\n' "$PROCESSED_YAML" | yq -r 'select(.kind == "PersistentVolumeClaim") | .metadata.namespace + "/" + .metadata.name' 2>/dev/null | sed '/^---$/d' | while IFS="/" read -r ns pvc_name; do
-		[ -z "$pvc_name" ] && continue
-		echo "Waiting for PVC $ns/$pvc_name to be deleted..."
-		_deleted=false
-		for _ in $(seq 1 10); do
-			if kubectl get pvc -n "$ns" "$pvc_name" >/dev/null 2>&1; then
-				_exists=true
-			else
-				_exists=false
+	# ── Phase 1: Delete HelmCharts first, wait for helm-delete jobs ──────────
+	# Helm releases need to cleanly destroy their pods/services/secrets before
+	# we touch anything else. The HelmChart API object stays alive until the
+	# helm-delete-* job completes, so we wait for the chart resource itself to
+	# vanish — that confirms the cleanup job ran to completion.
+	_helmcharts=$(printf '%s\n' "$_YAML" | yq -r 'select(.kind == "HelmChart") | "\(.metadata.namespace)/\(.metadata.name)"' 2>/dev/null | sed '/^---$/d')
+	if [ -n "$_helmcharts" ]; then
+		while IFS="/" read -r ns chart; do
+			[ -z "$chart" ] && continue
+			echo "Deleting HelmChart $ns/$chart..."
+			kubectl delete helmchart "$chart" -n "$ns" --wait=false 2>/dev/null || true
+			if ! kubectl wait --for=delete helmchart "$chart" -n "$ns" --timeout=30s >/dev/null 2>&1; then
+				echo "" >&2
+				echo "╔══════════════════════════════════════════════════════════════╗" >&2
+				echo "║  ERROR: HelmChart $ns/$chart did not finish deleting  ║" >&2
+				echo "║  within 30s. The helm-delete job likely failed.              ║" >&2
+				echo "║  Check logs:                                                 ║" >&2
+				echo "║    kubectl logs -n $ns -l job-name=helm-delete-$chart       ║" >&2
+				echo "║  Common causes: egress policy blocking the job, chart        ║" >&2
+				echo "║  repo unreachable, or the Helm release is in a broken        ║" >&2
+				echo "║  state. Delete the release manually if needed:               ║" >&2
+				echo "║    helm delete $chart -n $ns                                ║" >&2
+				echo "╚══════════════════════════════════════════════════════════════╝" >&2
+				exit 1
 			fi
-			if [ "$_exists" = false ]; then
-				_deleted=true
-				break
+		done <<< "$_helmcharts"
+	fi
+
+	# ── Phase 2: Delete everything except PVCs ───────────────────────────────
+	# Deployments, services, secrets, configmaps, etc. delete quickly. We wait
+	# so kubectl confirms each resource is gone. If something can't delete
+	# (e.g. a deployment with a stuck finalizer), kubectl exits non-zero and
+	# we bail immediately.
+	printf '%s\n' "$_YAML" | yq 'select(.kind != "PersistentVolumeClaim")' 2>/dev/null | kubectl delete --wait -f - 2>/dev/null || {
+		echo "Deletion of some non-PVC resources failed. Check output above." >&2
+	}
+
+	# ── Phase 3: Delete PVCs, wait with diagnostics ──────────────────────────
+	# PVCs are separated because they're the only resource that predictably
+	# gets stuck — the CSI driver finalizer can't be removed if the storage
+	# backend (Longhorn/NFS) has already been deleted out of order.
+	_pvcs=$(printf '%s\n' "$_YAML" | yq -r 'select(.kind == "PersistentVolumeClaim") | .metadata.namespace + "/" + .metadata.name' 2>/dev/null | sed '/^---$/d')
+	if [ -n "$_pvcs" ]; then
+		while IFS="/" read -r ns pvc_name; do
+			[ -z "$pvc_name" ] && continue
+			echo "Deleting PVC $ns/$pvc_name..."
+			kubectl delete pvc "$pvc_name" -n "$ns" --wait=false 2>/dev/null || true
+			if ! kubectl wait --for=delete pvc "$pvc_name" -n "$ns" --timeout=30s >/dev/null 2>&1; then
+				echo "" >&2
+				echo "╔══════════════════════════════════════════════════════════════╗" >&2
+				echo "║  ERROR: PVC $ns/$pvc_name did not finish deleting   ║" >&2
+				echo "║  within 30s. The CSI driver or storage backend needed       ║" >&2
+				echo "║  to release it may already be deleted.                      ║" >&2
+				echo "║  Check what's holding the finalizer:                        ║" >&2
+				echo "║    kubectl describe pvc $pvc_name -n $ns | grep Finalizers  ║" >&2
+				echo "║  If the storage backend is gone, strip the finalizer:       ║" >&2
+				echo "║    kubectl patch pvc $pvc_name -n $ns -p '{\"metadata\":{\"finalizers\":null}}' --type=merge  ║" >&2
+				echo "║  Or re-install the storage backend (Longhorn/NFS) first.    ║" >&2
+				echo "╚══════════════════════════════════════════════════════════════╝" >&2
+				exit 1
 			fi
-			sleep 3
-		done
-		if [ "$_deleted" = false ]; then
-			_reclaim=$(kubectl get pvc -n "$ns" "$pvc_name" -o jsonpath='{.spec.volumeName}' 2>/dev/null | xargs -r -I{} kubectl get pv {} -o jsonpath='{.spec.persistentVolumeReclaimPolicy}' 2>/dev/null)
-			if [ "$_reclaim" = "Retain" ]; then
-				echo "PVC $ns/$pvc_name uses Retain policy — data is safe. Skipping."
-			else
-				echo "PVC $ns/$pvc_name stuck. Stripping finalizers..."
-				kubectl patch pvc -n "$ns" "$pvc_name" -p '{"metadata":{"finalizers":null}}' --type=merge 2>/dev/null || true
-				sleep 2
-			fi
-		fi
-		# Clear claimRef.uid on Released PVs so new PVCs with the same name can bind
-		kubectl get pv -o json 2>/dev/null | jq -r ".items[] | select(.status.phase == \"Released\" and .spec.claimRef.name == \"$pvc_name\" and .spec.claimRef.namespace == \"$ns\") | .metadata.name" | while read -r pv; do
-			kubectl patch pv "$pv" --type=json -p='[{"op": "remove", "path": "/spec/claimRef/uid"}]' 2>/dev/null || true
-		done
-	done
+
+			# Phase 4: Clear claimRef.uid on Released PVs so new PVCs can re-bind
+			kubectl get pv -o json 2>/dev/null | jq -r ".items[] | select(.status.phase == \"Released\" and .spec.claimRef.name == \"$pvc_name\" and .spec.claimRef.namespace == \"$ns\") | .metadata.name" | while read -r pv; do
+				kubectl patch pv "$pv" --type=json -p='[{"op": "remove", "path": "/spec/claimRef/uid"}]' 2>/dev/null || true
+			done
+		done <<< "$_pvcs"
+	fi
 elif [ "$MODE" = "diff" ]; then
 	printf '%s\n' "$PROCESSED_YAML" | kubectl diff -f - || true
 elif [ "$MODE" = "yaml" ]; then
