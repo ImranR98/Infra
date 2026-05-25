@@ -33,7 +33,7 @@ spec:
               app.kubernetes.io/component: mdscl
         - namespaceSelector:
             matchLabels:
-              kubernetes.io/metadata.name: apps
+              kubernetes.io/metadata.name: apps-privileged
           podSelector:
             matchLabels:
               app: opencanary
