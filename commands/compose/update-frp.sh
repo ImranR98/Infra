@@ -2,6 +2,12 @@
 set -euo pipefail
 source "$ATLAS_ROOT/lib/common.sh"
 
+TARGET_SERVER="$2"
+if [ -z "$TARGET_SERVER" ] || [ ! -f "$ATLAS_ROOT/targets/$TARGET_SERVER/compose/compose.yaml" ]; then
+	echo "FRPS target name not specified!" >&2
+	exit 1
+fi
+
 frpc_compose_file="$ATLAS_ROOT/targets/$TARGET/compose/compose.yaml"
 if [ ! -f "$frpc_compose_file" ]; then
 	echo "No compose file found for target '$TARGET'." >&2; exit 1
@@ -23,7 +29,7 @@ fi
 echo "Updating $TARGET.compose.yaml..."
 sed -i "s|image: fatedier/frpc:v$current_ver|image: fatedier/frpc:v$latest_ver|" "$frpc_compose_file"
 echo "Updating lens.compose.yaml..."
-sed -i "s|image: imranrdev/frps-with-multiuser:latest|image: imranrdev/frps-with-multiuser:v$latest_ver|" "$ATLAS_ROOT/targets/lens/compose/compose.yaml"
+sed -i "s|image: imranrdev/frps-with-multiuser:latest|image: imranrdev/frps-with-multiuser:v$latest_ver|" "$ATLAS_ROOT/targets/$TARGET_SERVER/compose/compose.yaml"
 
 echo "=== Build frps-with-multiuser:v$latest_ver ==="
 TMPDIR="$(mktemp -d)"
@@ -40,6 +46,6 @@ echo "Compose files updated and image pushed to Docker Hub."
 echo ""
 echo "Next steps:"
 echo "  1. Commit and push the changes."
-echo "  2. On lens, pull the repo and restart the frps-with-multiuser container."
-echo "  3. On sol, restart the frpc container."
+echo "  2. On $TARGET_SERVER, pull the repo and restart the frps-with-multiuser container."
+echo "  3. On $TARGET, restart the frpc container."
 echo ""

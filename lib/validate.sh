@@ -1,8 +1,6 @@
 #!/bin/bash
 # Stack validator — validates K3s and Compose stacks independently.
-# Sourced by commands/validate.sh.  Requires common.sh.
-
-# ---- Validate (both stacks) ----
+# Sourced by atlas.sh (built-in 'validate' command).  Requires common.sh.
 
 validate() {
 	local target="${1:-$TARGET}"
@@ -25,9 +23,6 @@ _validate_k3s() {
 	local comp_dir="$ATLAS_ROOT/targets/$target/k3s"
 	local errors=0 warnings=0
 
-	# Gather required vars from VARS template
-	# NS, PV, PVC, VOLUMES are shell-local variables used in inline
-	# command: blocks — not envsubst vars.  Exempted to avoid false warnings.
 	local known_vars="MY_UID
 TARGET
 COMPOSE_STATE_DIR
@@ -37,13 +32,11 @@ NS
 PV
 PVC
 VOLUMES"
-	local template_file="$ATLAS_ROOT/targets/$target/VARS.template.sh"
-	if [ -f "$template_file" ]; then
-		while IFS= read -r v; do
-			known_vars+="
+	while IFS= read -r v; do
+		[ -z "$v" ] && continue
+		known_vars+="
 $v"
-		done < <(grep -oP 'export \K[A-Z_][A-Z_0-9]*' "$template_file" 2>/dev/null || true)
-	fi
+	done < <(get_template_export_names "$target")
 
 	for comp_dir in "$comp_dir"/*/; do
 		local comp; comp=$(basename "$comp_dir")
@@ -55,7 +48,6 @@ $v"
 			continue
 		fi
 
-		# Resources listed exist
 		while IFS= read -r resource; do
 			[ -z "$resource" ] && continue
 			if [ ! -f "$comp_dir/$resource" ] && [ ! -d "$comp_dir/$resource" ]; then
@@ -64,7 +56,6 @@ $v"
 			fi
 		done < <(yq '.resources[]' "$kfile" 2>/dev/null)
 
-		# Orphan YAMLs not listed
 		for yf in "$comp_dir"*.yaml "$comp_dir"*.yml; do
 			[ -f "$yf" ] || continue
 			local fn; fn=$(basename "$yf")
@@ -76,7 +67,6 @@ $v"
 			fi
 		done
 
-		# Overlay kustomization check
 		for overlay_dir in "$comp_dir"/overlays/*/; do
 			[ -d "$overlay_dir" ] || continue
 			local overlay; overlay=$(basename "$overlay_dir")
@@ -86,7 +76,6 @@ $v"
 			fi
 		done
 
-		# Env var references not in known vars
 		for yf in "$comp_dir"*.yaml "$comp_dir"*.yml; do
 			[ -f "$yf" ] || continue
 			while IFS= read -r var; do
@@ -107,20 +96,17 @@ _validate_compose() {
 	local target="$1"
 	local errors=0 warnings=0
 
-	local template_file="$ATLAS_ROOT/targets/$target/VARS.template.sh"
 	local known_vars="MY_UID
 TARGET
 DOCKER_GID
 FRPC_USER
 COMPOSE_STATE_DIR"
-	if [ -f "$template_file" ]; then
-		while IFS= read -r v; do
-			known_vars+="
+	while IFS= read -r v; do
+		[ -z "$v" ] && continue
+		known_vars+="
 $v"
-		done < <(grep -oP 'export \K[A-Z_][A-Z_0-9]*' "$template_file" 2>/dev/null || true)
-	fi
+	done < <(get_template_export_names "$target")
 
-	# Scan compose file + templates
 	for f in "$ATLAS_ROOT/targets/$target/compose/compose.yaml" "$ATLAS_ROOT/targets/$target/compose/templates"/*; do
 		[ -f "$f" ] || continue
 		while IFS= read -r var; do
@@ -131,7 +117,6 @@ $v"
 		done < <(grep -hEo '\$[A-Z_][A-Z_0-9]*|\$\{[A-Z_][A-Z_0-9]*\}' "$f" 2>/dev/null | sed 's/^\$//;s/[{}]//g' | sort -u)
 	done
 
-	# Docker Compose dry-run
 	if command -v docker >/dev/null 2>&1 && docker compose version >/dev/null 2>&1; then
 		if [ -f "$COMPOSE_STATE_DIR/compose.yaml" ]; then
 			if ! docker compose -f "$COMPOSE_STATE_DIR/compose.yaml" config --dry-run >/dev/null 2>&1; then
@@ -147,4 +132,3 @@ $v"
 	echo "Compose validation: $errors errors, $warnings warnings"
 	return $(( errors > 0 ? 1 : 0 ))
 }
-

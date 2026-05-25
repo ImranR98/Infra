@@ -3,7 +3,6 @@
 
 set -euo pipefail
 
-: ${ATLAS_ROOT:="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." >/dev/null 2>&1 && pwd)"}
 source "$ATLAS_ROOT/lib/common.sh"
 source "$ATLAS_ROOT/lib/k3s-common.sh"
 

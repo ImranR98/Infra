@@ -2,17 +2,11 @@
 set -euo pipefail
 
 COMP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
-: ${ATLAS_ROOT:="$(cd "$COMP_DIR/../../../.." >/dev/null 2>&1 && pwd)"}
-: ${TARGET:="sol"}
 source "$ATLAS_ROOT/lib/common.sh"
+source "$ATLAS_ROOT/lib/wait-for-crd.sh"
 
 echo "Waiting for cert-manager CRDs..."
-for crd in certificates.cert-manager.io clusterissuers.cert-manager.io issuers.cert-manager.io; do
-	for _ in $(seq 1 60); do
-		kubectl wait --for condition=established "crd/$crd" --timeout=10s 2>/dev/null && break
-		sleep 5
-	done
-done
+wait_for_crds 300 certificates.cert-manager.io clusterissuers.cert-manager.io issuers.cert-manager.io
 
 echo "Waiting for cert-manager pod..."
 for _ in $(seq 1 60); do

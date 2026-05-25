@@ -25,17 +25,14 @@ Atlas is a single-repo infrastructure manager. It deploys, configures, validates
 
 ```
 Atlas/
-├── atlas.sh                  # Entry point — ~150 line dispatcher
+├── atlas.sh                  # Entry point — dispatcher with built-in commands
 ├── commands/                 # Generic commands (shared across targets)
 │   ├── prereqs.sh
-│   ├── validate.sh
-│   ├── list-domains.sh
-│   ├── update-traefik-plugins.sh
+│   ├── update-traefik-plugins.py
 │   ├── compose/
 │   │   ├── install.sh
 │   │   ├── restart.sh
 │   │   ├── backup-state.sh
-│   │   ├── old-images.sh
 │   │   ├── update-socket-proxy.sh
 │   │   └── update-frp.sh
 │   └── k3s/
@@ -62,10 +59,15 @@ Atlas/
 │           │   └── delete.sh  # Optional teardown hook
 │           └── ...
 ├── lib/
-│   ├── common.sh              # Core shared functions
-│   ├── k3s-common.sh          # K3s installer/helper functions
+│   ├── common.sh              # Aggregator — sources all sub-modules
+│   ├── packages.sh            # Package manager helpers
+│   ├── vars.sh                # VARS file handling + envsubst
+│   ├── domains.sh             # Domain listing
+│   ├── images.sh              # Old Docker image listing
+│   ├── compose-gen.sh         # Compose config generation + render
 │   ├── validate.sh            # Stack validation logic
-│   └── update-traefik-plugins.sh  # Plugin updater logic
+│   ├── wait-for-crd.sh        # CRD wait helper for K3s post hooks
+│   └── k3s-common.sh          # K3s installer/helper functions
 ├── current_target/            # Runtime state (gitignored)
 └── VARS.<target>.sh           # User secrets/config (gitignored)
 ```

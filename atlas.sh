@@ -11,8 +11,6 @@ export COMPOSE_STATE_DIR="$ATLAS_ROOT/current_target/compose_live_state"
 export COMPOSE_STATE_BACKUP_DIR="$ATLAS_ROOT/current_target/compose_state_backups"
 export LONGHORN_BACKUP_DIR="$ATLAS_ROOT/current_target/k3s_longhorn_backups"
 
-# ---- Target validation ----
-
 if [ "${1:-}" = "" ]; then
 	echo "Usage: $0 <target> <command...>" >&2
 	echo "Run '$0 <target>' to see available commands." >&2
@@ -26,8 +24,6 @@ if [ ! -d "$ATLAS_ROOT/targets/$1" ]; then
 fi
 export TARGET="$1"
 shift
-
-# ---- Source VARS file ----
 
 source "$ATLAS_ROOT/lib/common.sh"
 
@@ -48,16 +44,30 @@ elif [ -n "${1:-}" ]; then
 	esac
 fi
 
+# ---- Built-in command shortcuts (eliminates thin wrapper scripts) ----
+
+_builtin_cmd="${1:-}"
+case "$_builtin_cmd" in
+	validate)
+		source "$ATLAS_ROOT/lib/validate.sh"
+		validate "$TARGET"
+		exit $?
+		;;
+	list-domains)
+		list_domains "$TARGET"
+		exit $?
+		;;
+esac
+
+if [ "${1:-}" = "compose" ] && [ "${2:-}" = "old-images" ]; then
+	old_images
+	exit $?
+fi
+
 # ---- Command discovery and dispatch ----
 
 CMD_PATH=""
 CMD_ARGS=("$@")
-
-# Walk arguments left to right, trying both target-specific and generic directories.
-# For each arg, check: targets/$TARGET/commands/<path>/<arg>.sh  OR  commands/<path>/<arg>.sh
-# If .sh found → found the script, remaining args are its arguments.
-# If directory found → descend into it and continue with next arg.
-# Otherwise → error.
 
 search_dirs=("targets/$TARGET/commands" "commands")
 search_path=""
@@ -99,7 +109,6 @@ done
 if [ -z "$CMD_PATH" ]; then
 	_err=false
 	if [ $arg_idx -eq 0 ] && [ -z "${CMD_ARGS[0]:-}" ]; then
-		# No command given — show available commands
 		:
 	else
 		echo "Unknown command: ${CMD_ARGS[*]:0:$arg_idx}${search_path:+$search_path/}${CMD_ARGS[$arg_idx]:-}" >&2
@@ -123,18 +132,20 @@ if [ -z "$CMD_PATH" ]; then
 
 	_indent() { sort | while IFS= read -r l; do echo "  $l"; done; }
 
-	# Top-level commands (files directly in commands/, not in subdirs)
 	_list_flat "$ATLAS_ROOT/commands" "" | _indent
 
-	# Each stack: generic first (files), then target-specific
+	# Built-in commands (no wrapper script needed)
+	echo "  list-domains"
+	echo "  validate"
+
 	for stack_dir in "$ATLAS_ROOT/commands"/*/; do
 		[ -d "$stack_dir" ] || continue
 		stack=$(basename "$stack_dir")
-		# Only show stack commands if the target has this stack
 		[ -d "$ATLAS_ROOT/targets/$TARGET/$stack" ] || continue
 		echo ""
 		{
 			_list_flat "$stack_dir" "$stack "
+			[ "$stack" = "compose" ] && echo "  $stack old-images"
 		} | _indent
 		target_dir="$ATLAS_ROOT/targets/$TARGET/commands/$stack"
 		if [ -d "$target_dir" ]; then

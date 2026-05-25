@@ -5,9 +5,7 @@ source "$ATLAS_ROOT/lib/common.sh"
 ENVSUBST_VARS="$(get_envsubst_vars)"
 
 echo "=== Create Required Directories ==="
-tmpfile="$(mktemp)"
-trap 'rm -f "$tmpfile"' EXIT INT TERM
-envsubst "$ENVSUBST_VARS" < "$ATLAS_ROOT/targets/$TARGET/compose/compose.yaml" > "$tmpfile"
+render_compose_yaml
 while IFS=: read -r host_path _; do
 	name="$(basename "$host_path")"
 	if [[ "$name" =~ \.[a-zA-Z0-9]{1,5}$ ]]; then
@@ -17,15 +15,10 @@ while IFS=: read -r host_path _; do
 		mkdir -p "$host_path"
 		[ "$UID" -eq 0 ] && chown "$MY_UID:$MY_UID" "$host_path" 2>/dev/null || :
 	fi
-done < <(awk -v dir="$COMPOSE_STATE_DIR" 'index($0, dir"/") && /^[[:space:]]*-/ { sub(/^[[:space:]]*-[[:space:]]*"?/, ""); sub(/[":].*/, ""); print }' "$tmpfile")
+done < <(awk -v dir="$COMPOSE_STATE_DIR" 'index($0, dir"/") && /^[[:space:]]*-/ { sub(/^[[:space:]]*-[[:space:]]*"?/, ""); sub(/[":].*/, ""); print }' "$COMPOSE_STATE_DIR/compose.yaml")
 echo "Done."
 
 generate_compose_configs "$TARGET"
-
-echo "=== Generate Docker Compose file ==="
-cp "$tmpfile" "$COMPOSE_STATE_DIR/compose.yaml"
-rm -f "$tmpfile"
-echo "Done."
 
 echo "=== Install and start the $TARGET service ==="
 cat > "$COMPOSE_STATE_DIR/$TARGET.service" << EOF

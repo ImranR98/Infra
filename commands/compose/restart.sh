@@ -8,8 +8,7 @@ if [ -z "$SVC" ]; then
 	exit 1
 fi
 
-ENVSUBST_VARS="$(get_envsubst_vars)"
 generate_compose_configs "$TARGET"
-envsubst "$ENVSUBST_VARS" < "$ATLAS_ROOT/targets/$TARGET/compose/compose.yaml" > "$COMPOSE_STATE_DIR/compose.yaml"
+render_compose_yaml
 docker compose -p "$TARGET" -f "$COMPOSE_STATE_DIR/compose.yaml" down "$SVC" || :
 docker compose -p "$TARGET" -f "$COMPOSE_STATE_DIR/compose.yaml" up -d "$SVC"
