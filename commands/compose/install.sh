@@ -1,8 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 source "$ATLAS_ROOT/lib/common.sh"
-
-ENVSUBST_VARS="$(get_envsubst_vars)"
+ensure_envsubst_vars
 
 echo "=== Create Required Directories ==="
 render_compose_yaml

@@ -3,7 +3,6 @@ set -euo pipefail
 
 COMP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 source "$ATLAS_ROOT/lib/common.sh"
-source "$ATLAS_ROOT/lib/wait-for-crd.sh"
 
 echo "Waiting for cert-manager CRDs..."
 wait_for_crds 300 certificates.cert-manager.io clusterissuers.cert-manager.io issuers.cert-manager.io
@@ -22,7 +21,7 @@ for _ in $(seq 1 60); do
 done
 
 echo "Applying issuers..."
-ENVSUBST_VARS="$(get_envsubst_vars)"
+ensure_envsubst_vars
 for _ in $(seq 1 30); do
 	envsubst "$ENVSUBST_VARS" <"$COMP_DIR/issuers.yaml" | kubectl apply -f - 2>/dev/null && break
 	sleep 5

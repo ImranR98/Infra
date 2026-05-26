@@ -6,14 +6,6 @@ set -euo pipefail
 COMPONENT="$1"
 MODE="${2:-apply}"
 
-case "$MODE" in
-	apply|initial|delete|diff|yaml) ;;
-	*)
-		echo "Error: Unknown APPLY_MODE '$MODE'. Valid modes: apply, initial, delete, diff, yaml" >&2
-		exit 1
-		;;
-esac
-
 COMPONENT_DIR="$ATLAS_ROOT/targets/$TARGET/k3s/$COMPONENT"
 
 if [ ! -d "$COMPONENT_DIR" ]; then
@@ -23,18 +15,21 @@ fi
 
 source "$ATLAS_ROOT/lib/common.sh"
 source_env
-ENVSUBST_VARS="$(get_envsubst_vars)"
+ensure_envsubst_vars
 
 _k8s_api_ip="$(kubectl get endpoints kubernetes -o jsonpath='{.subsets[0].addresses[0].ip}' 2>/dev/null)"
 export K8S_API_SERVER_IP="${K8S_API_SERVER_IP:-$_k8s_api_ip}"
 export K8S_API_SERVER_SUBNET="${K8S_API_SERVER_SUBNET:-${_k8s_api_ip%.*}.0/24}"
 ENVSUBST_VARS="$ENVSUBST_VARS"'$K8S_API_SERVER_IP $K8S_API_SERVER_SUBNET'
 
+_has_initial_markers=false
+grep -q '# IGNORE INITIALLY$' "$COMPONENT_DIR"/*.yaml 2>/dev/null && _has_initial_markers=true
+
 _build_yaml() {
 	local is_initial="${1:-false}"
 	if [ "$is_initial" = true ] && [ -f "$COMPONENT_DIR/kustomization.yaml" ]; then
 		TMP_DIR=$(mktemp -d)
-		trap "rm -rf '$TMP_DIR'" EXIT
+		_cleanup_dirs+=("$TMP_DIR")
 		for f in "$COMPONENT_DIR"/*.yaml; do
 			sed '/# IGNORE INITIALLY$/d' "$f" > "$TMP_DIR/$(basename "$f")"
 		done
@@ -45,20 +40,15 @@ _build_yaml() {
 	PROCESSED_YAML=$(printf '%s\n' "$RAW_YAML" | envsubst "$ENVSUBST_VARS")
 }
 
-_prep_hook() {
-	if [[ ("$MODE" == "apply" || "$MODE" == "initial") && -f "$COMPONENT_DIR/prep.sh" ]]; then
-		source "$COMPONENT_DIR/prep.sh"
-	fi
-}
-
-_post_hook() {
-	if [[ ("$MODE" == "apply" || "$MODE" == "initial") && -f "$COMPONENT_DIR/post.sh" ]]; then
-		bash "$COMPONENT_DIR/post.sh"
+_run_hook() {
+	local hook="$1"
+	if [ -f "$COMPONENT_DIR/$hook" ]; then
+		bash "$COMPONENT_DIR/$hook"
 	fi
 }
 
 _check_initial_prereqs() {
-	if ! grep -q '# IGNORE INITIALLY$' "$COMPONENT_DIR"/*.yaml 2>/dev/null; then
+	if ! $_has_initial_markers; then
 		return
 	fi
 
@@ -89,7 +79,7 @@ _initial_reminder() {
 	if [ ! -f "$COMPONENT_DIR/kustomization.yaml" ]; then
 		return
 	fi
-	if ! grep -q '# IGNORE INITIALLY$' "$COMPONENT_DIR"/*.yaml 2>/dev/null; then
+	if ! $_has_initial_markers; then
 		return
 	fi
 	printf '\n\033[1;33m╔══════════════════════════════════════════════════════════════╗\n'
@@ -126,6 +116,36 @@ _k3s_apply() {
 	done
 }
 
+_delete_resource_with_timeout() {
+	local kind="$1" ns="$2" name="$3" timeout="${4:-30s}"
+	kubectl delete "$kind" "$name" -n "$ns" --wait=false 2>/dev/null || true
+	if ! kubectl wait --for=delete "$kind" "$name" -n "$ns" --timeout="$timeout" >/dev/null 2>&1; then
+		local suggestion
+		case "$kind" in
+			helmchart)
+				suggestion="Check logs:
+    kubectl logs -n $ns -l job-name=helm-delete-$name
+  Common causes: egress policy blocking the job, chart
+  repo unreachable, or the Helm release is in a broken
+  state. Delete the release manually if needed:
+    helm delete $name -n $ns" ;;
+			pvc)
+				suggestion="Check what's holding the finalizer:
+    kubectl describe pvc $name -n $ns | grep Finalizers
+  If the storage backend is gone, strip the finalizer:
+    kubectl patch pvc $name -n $ns -p '{\"metadata\":{\"finalizers\":null}}' --type=merge
+  Or re-install the storage backend (Longhorn/NFS) first." ;;
+			*) suggestion="" ;;
+		esac
+		echo "" >&2
+		printf '╔══════════════════════════════════════════════════════════════╗\n' >&2
+		printf "║  ERROR: %s %s/%s did not finish deleting within %s.  ║\n" "$kind" "$ns" "$name" "$timeout" >&2
+		printf '║  %s  ║\n' "$suggestion" >&2
+		printf '╚══════════════════════════════════════════════════════════════╝\n' >&2
+		exit 1
+	fi
+}
+
 _k3s_delete() {
 	[ -f "$COMPONENT_DIR/delete.sh" ] && bash "$COMPONENT_DIR/delete.sh"
 
@@ -137,21 +157,7 @@ _k3s_delete() {
 		while IFS="/" read -r ns chart; do
 			[ -z "$chart" ] && continue
 			echo "Deleting HelmChart $ns/$chart..."
-			kubectl delete helmchart "$chart" -n "$ns" --wait=false 2>/dev/null || true
-			if ! kubectl wait --for=delete helmchart "$chart" -n "$ns" --timeout=30s >/dev/null 2>&1; then
-				echo "" >&2
-				echo "╔══════════════════════════════════════════════════════════════╗" >&2
-				echo "║  ERROR: HelmChart $ns/$chart did not finish deleting  ║" >&2
-				echo "║  within 30s. The helm-delete job likely failed.              ║" >&2
-				echo "║  Check logs:                                                 ║" >&2
-				echo "║    kubectl logs -n $ns -l job-name=helm-delete-$chart       ║" >&2
-				echo "║  Common causes: egress policy blocking the job, chart        ║" >&2
-				echo "║  repo unreachable, or the Helm release is in a broken        ║" >&2
-				echo "║  state. Delete the release manually if needed:               ║" >&2
-				echo "║    helm delete $chart -n $ns                                ║" >&2
-				echo "╚══════════════════════════════════════════════════════════════╝" >&2
-				exit 1
-			fi
+			_delete_resource_with_timeout helmchart "$ns" "$chart"
 		done <<< "$_helmcharts"
 	fi
 
@@ -165,22 +171,7 @@ _k3s_delete() {
 		while IFS="/" read -r ns pvc_name; do
 			[ -z "$pvc_name" ] && continue
 			echo "Deleting PVC $ns/$pvc_name..."
-			kubectl delete pvc "$pvc_name" -n "$ns" --wait=false 2>/dev/null || true
-			if ! kubectl wait --for=delete pvc "$pvc_name" -n "$ns" --timeout=30s >/dev/null 2>&1; then
-				echo "" >&2
-				echo "╔══════════════════════════════════════════════════════════════╗" >&2
-				echo "║  ERROR: PVC $ns/$pvc_name did not finish deleting   ║" >&2
-				echo "║  within 30s. The CSI driver or storage backend needed       ║" >&2
-				echo "║  to release it may already be deleted.                      ║" >&2
-				echo "║  Check what's holding the finalizer:                        ║" >&2
-				echo "║    kubectl describe pvc $pvc_name -n $ns | grep Finalizers  ║" >&2
-				echo "║  If the storage backend is gone, strip the finalizer:       ║" >&2
-				echo "║    kubectl patch pvc $pvc_name -n $ns -p '{\"metadata\":{\"finalizers\":null}}' --type=merge  ║" >&2
-				echo "║  Or re-install the storage backend (Longhorn/NFS) first.    ║" >&2
-				echo "╚══════════════════════════════════════════════════════════════╝" >&2
-				exit 1
-			fi
-
+			_delete_resource_with_timeout pvc "$ns" "$pvc_name"
 			kubectl get pv -o json 2>/dev/null | jq -r ".items[] | select(.status.phase == \"Released\" and .spec.claimRef.name == \"$pvc_name\" and .spec.claimRef.namespace == \"$ns\") | .metadata.name" | while read -r pv; do
 				kubectl patch pv "$pv" --type=json -p='[{"op": "remove", "path": "/spec/claimRef/uid"}]' 2>/dev/null || true
 			done
@@ -196,19 +187,22 @@ _k3s_yaml() {
 	printf '%s\n' "$PROCESSED_YAML"
 }
 
+trap 'rm -rf "${_cleanup_dirs[@]:-}"' EXIT
+declare -a _cleanup_dirs=()
+
 case "$MODE" in
 	apply)
-		_prep_hook
+		_run_hook prep.sh
 		_check_initial_prereqs
 		_build_yaml false
 		_k3s_apply
-		_post_hook
+		_run_hook post.sh
 		;;
 	initial)
-		_prep_hook
+		_run_hook prep.sh
 		_build_yaml true
 		_k3s_apply
-		_post_hook
+		_run_hook post.sh
 		_initial_reminder
 		;;
 	delete)
@@ -222,5 +216,9 @@ case "$MODE" in
 	yaml)
 		_build_yaml false
 		_k3s_yaml
+		;;
+	*)
+		echo "Error: Unknown mode '$MODE'. Valid modes: apply, initial, delete, diff, yaml" >&2
+		exit 1
 		;;
 esac

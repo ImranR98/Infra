@@ -28,9 +28,10 @@ shift
 source "$ATLAS_ROOT/lib/common.sh"
 
 vars_found=false
-if [ -f "$ATLAS_ROOT/VARS.$TARGET.sh" ] || [ -f "$ATLAS_ROOT/VARS.sh" ]; then
+if [ -n "$(resolve_vars_file "$TARGET")" ]; then
 	source_env "$TARGET"
 	vars_found=true
+	export ENVSUBST_VARS="$(get_envsubst_vars)"
 fi
 if [ "$vars_found" = true ]; then
 	DOCKER_GID="$(getent group docker | cut -d: -f3)"
@@ -49,7 +50,6 @@ fi
 _builtin_cmd="${1:-}"
 case "$_builtin_cmd" in
 	validate)
-		source "$ATLAS_ROOT/lib/validate.sh"
 		validate "$TARGET"
 		exit $?
 		;;

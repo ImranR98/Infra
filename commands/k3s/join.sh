@@ -2,7 +2,6 @@
 set -euo pipefail
 
 source "$ATLAS_ROOT/lib/common.sh"
-source "$ATLAS_ROOT/lib/k3s-common.sh"
 
 SERVER_IP="${1:-}"
 if [ -z "$SERVER_IP" ]; then

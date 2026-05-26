@@ -1,8 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 source "$ATLAS_ROOT/lib/common.sh"
-
-ENVSUBST_VARS="$(get_envsubst_vars)"
+ensure_envsubst_vars
 COMP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../compose" >/dev/null 2>&1 && pwd)"
 
 if [ ! -f "$ATLAS_ROOT/targets/$TARGET/compose/templates/frpc-preboot.toml" ]; then

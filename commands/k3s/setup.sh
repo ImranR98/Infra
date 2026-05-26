@@ -4,7 +4,6 @@
 set -euo pipefail
 
 source "$ATLAS_ROOT/lib/common.sh"
-source "$ATLAS_ROOT/lib/k3s-common.sh"
 
 if [ "$(id -u)" != 0 ]; then
 	exec $(get_sudo_cmd) bash "$0" "$@"

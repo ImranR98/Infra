@@ -1,5 +1,15 @@
 #!/bin/bash
+set -euo pipefail
 # VARS file handling for Atlas.
+
+resolve_vars_file() {
+	local target="${1:-${TARGET:-}}"
+	if [ -f "$ATLAS_ROOT/VARS.${target}.sh" ]; then
+		echo "$ATLAS_ROOT/VARS.${target}.sh"
+	elif [ -f "$ATLAS_ROOT/VARS.sh" ]; then
+		echo "$ATLAS_ROOT/VARS.sh"
+	fi
+}
 
 get_template_export_names() {
 	local target="${1:-${TARGET:-}}"
@@ -14,12 +24,8 @@ source_env() {
 		exit 1
 	fi
 
-	local vars_file
-	if [ -f "$ATLAS_ROOT/VARS.${target}.sh" ]; then
-		vars_file="$ATLAS_ROOT/VARS.${target}.sh"
-	elif [ -f "$ATLAS_ROOT/VARS.sh" ]; then
-		vars_file="$ATLAS_ROOT/VARS.sh"
-	else
+	local vars_file; vars_file=$(resolve_vars_file "$target")
+	if [ -z "$vars_file" ]; then
 		echo "Error: neither VARS.${target}.sh nor VARS.sh found at $ATLAS_ROOT" >&2
 		exit 1
 	fi
@@ -45,12 +51,7 @@ source_env() {
 get_envsubst_vars() {
 	local vars=""
 
-	local vars_file=""
-	if [ -f "$ATLAS_ROOT/VARS.$TARGET.sh" ]; then
-		vars_file="$ATLAS_ROOT/VARS.$TARGET.sh"
-	elif [ -f "$ATLAS_ROOT/VARS.sh" ]; then
-		vars_file="$ATLAS_ROOT/VARS.sh"
-	fi
+	local vars_file; vars_file=$(resolve_vars_file)
 	if [ -n "$vars_file" ]; then
 		vars="$vars $(grep -oP 'export \K[A-Z_][A-Z_0-9]*' "$vars_file" | tr '\n' ' ')"
 	fi
@@ -72,4 +73,11 @@ get_envsubst_vars() {
 	done
 
 	echo "$vars" | tr ' ' '\n' | sort -u | sed 's/^/$/' | tr '\n' ' '
+}
+
+ensure_envsubst_vars() {
+	if [ -z "${ENVSUBST_VARS:-}" ]; then
+		ENVSUBST_VARS="$(get_envsubst_vars)"
+		export ENVSUBST_VARS
+	fi
 }
