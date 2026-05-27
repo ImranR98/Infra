@@ -35,8 +35,15 @@ if [ -n "$(resolve_vars_file "$TARGET")" ]; then
 fi
 if [ "$vars_found" = true ]; then
 	DOCKER_GID="$(getent group docker | cut -d: -f3)" || true
-	if [ -z "$DOCKER_GID" ]; then echo "Error: docker group not found. Is Docker installed?" >&2; exit 1; fi
-	export DOCKER_GID
+	case "${1:-}" in
+		compose|k3s)
+			if [ -z "$DOCKER_GID" ]; then
+				echo "Error: docker group not found. Is Docker installed?" >&2
+				exit 1
+			fi
+			export DOCKER_GID
+			;;
+	esac
 	export FRPC_USER="${TARGET,,}"
 elif [ -n "${1:-}" ]; then
 	case "$1" in compose|k3s)
