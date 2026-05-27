@@ -5,7 +5,7 @@ _build_known_vars() {
 	local target="$1"; shift
 	local known="$*"
 	while IFS= read -r v; do
-		[ -z "$v" ] && continue
+		if [ -z "$v" ]; then continue; fi
 		known+="
 $v"
 	done < <(get_template_export_names "$target")
@@ -16,9 +16,9 @@ _check_var_refs() {
 	local known_vars="$1" file="$2"
 	[ -f "$file" ] || return 0
 	local refs; refs=$(grep -oP '\$[A-Z_][A-Z_0-9]*|\$\{[A-Z_][A-Z_0-9]*\}' "$file" 2>/dev/null | sed 's/^\${//; s/^\$//; s/}$//' | sort -u)
-	[ -z "$refs" ] && return 0
+	if [ -z "$refs" ]; then return 0; fi
 	echo "$refs" | grep -vxFf <(echo "$known_vars") | while read -r v; do
-		[ -z "$v" ] && continue
+		if [ -z "$v" ]; then continue; fi
 		echo "ERROR: $(basename "$file") references '\$$v' but it's not defined in VARS template"
 	done
 }
@@ -27,8 +27,12 @@ validate() {
 	local target="${1:-$TARGET}"
 	local k3s_ok=true compose_ok=true
 
-	[ -d "$ATLAS_ROOT/targets/$target/k3s" ] && { _validate_k3s "$target" || k3s_ok=false; }
-	[ -f "$ATLAS_ROOT/targets/$target/compose/compose.yaml" ] && { _validate_compose "$target" || compose_ok=false; }
+	if [ -d "$ATLAS_ROOT/targets/$target/k3s" ]; then
+		_validate_k3s "$target" || k3s_ok=false
+	fi
+	if [ -f "$ATLAS_ROOT/targets/$target/compose/compose.yaml" ]; then
+		_validate_compose "$target" || compose_ok=false
+	fi
 
 	echo ""
 	echo "K3s:     $( $k3s_ok && echo "OK" || echo "issues found" )"
@@ -59,10 +63,13 @@ VOLUMES")
 		fi
 
 		local yaml_files=()
-		for yf in "$comp_dir"/*.yaml "$comp_dir"/*.yml; do [ -f "$yf" ] && yaml_files+=("$yf"); done
+		for yf in "$comp_dir"/*.yaml "$comp_dir"/*.yml; do if [ -f "$yf" ]; then yaml_files+=("$yf"); fi; done
 		for yf in "${yaml_files[@]}"; do
 			local ref_errors; ref_errors=$(_check_var_refs "$known_vars" "$yf")
-			[ -n "$ref_errors" ] && { echo "$ref_errors"; errors=$((errors + $(echo "$ref_errors" | wc -l))); }
+			if [ -n "$ref_errors" ]; then
+				echo "$ref_errors"
+				errors=$((errors + $(echo "$ref_errors" | wc -l)))
+			fi
 		done
 	done
 
@@ -91,10 +98,13 @@ FRPC_USER
 COMPOSE_STATE_DIR")
 
 	local compose_files=("$ATLAS_ROOT/targets/$target/compose/compose.yaml")
-	for f in "$ATLAS_ROOT/targets/$target/compose/templates"/*; do [ -f "$f" ] && compose_files+=("$f"); done
+	for f in "$ATLAS_ROOT/targets/$target/compose/templates"/*; do if [ -f "$f" ]; then compose_files+=("$f"); fi; done
 	for f in "${compose_files[@]}"; do
 		local ref_errors; ref_errors=$(_check_var_refs "$known_vars" "$f")
-		[ -n "$ref_errors" ] && { echo "$ref_errors"; errors=$((errors + $(echo "$ref_errors" | wc -l))); }
+		if [ -n "$ref_errors" ]; then
+			echo "$ref_errors"
+			errors=$((errors + $(echo "$ref_errors" | wc -l)))
+		fi
 	done
 
 	if command -v docker >/dev/null 2>&1 && docker compose version >/dev/null 2>&1; then

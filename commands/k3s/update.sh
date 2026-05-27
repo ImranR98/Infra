@@ -35,7 +35,7 @@ fi
 export RENOVATE_CONFIG_FILE="$_CONFIG_FILE"
 
 echo "Update Versions"
-[ "$DRY_RUN" = true ] && echo "=== DRY RUN ==="
+if [ "$DRY_RUN" = true ]; then echo "=== DRY RUN ==="; fi
 
 _RENOVATE_LOG=$(mktemp /tmp/renovate-log.XXXXXX)
 trap 'rm -f "$_RENOVATE_LOG"' EXIT

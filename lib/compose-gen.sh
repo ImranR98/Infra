@@ -33,7 +33,9 @@ _generate_config() {
 		plain) cp "$_src" "$_dst" ;;
 		secret|normal)
 			envsubst "$ENVSUBST_VARS" < "$_src" > "$_dst"
-			[ "$_mode" = "secret" ] && chmod 600 "$_dst"
+			if [ "$_mode" = "secret" ]; then
+				chmod 600 "$_dst"
+			fi
 			;;
 		authelia)
 			if [ -f "$_dst" ]; then
@@ -64,8 +66,8 @@ configure_compose_templates() {
 	local map_file="$template_dir/map"
 	[ -f "$map_file" ] || return
 	while IFS=: read -r mode src dest; do
-		[[ "$mode" =~ ^# ]] && continue
-		[ -z "$mode" ] && continue
+		if [[ "$mode" =~ ^# ]]; then continue; fi
+		if [ -z "$mode" ]; then continue; fi
 		_generate_config "$mode" "$template_dir/$src" "$COMPOSE_STATE_DIR/$dest"
 	done < "$map_file"
 }

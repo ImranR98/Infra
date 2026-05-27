@@ -15,10 +15,14 @@ for s in c.get('services',{}).values():
 	name="$(basename "$host_path")"
 	if [[ "$name" =~ \.[a-zA-Z0-9]{1,5}$ ]]; then
 		mkdir -p "$(dirname "$host_path")"
-		[ "$UID" -eq 0 ] && chown "$MY_UID:$MY_UID" "$(dirname "$host_path")" 2>/dev/null || :
+		if [ "$UID" -eq 0 ]; then
+			chown "$MY_UID:$MY_UID" "$(dirname "$host_path")" 2>/dev/null || :
+		fi
 	else
 		mkdir -p "$host_path"
-		[ "$UID" -eq 0 ] && chown "$MY_UID:$MY_UID" "$host_path" 2>/dev/null || :
+		if [ "$UID" -eq 0 ]; then
+			chown "$MY_UID:$MY_UID" "$host_path" 2>/dev/null || :
+		fi
 	fi
 done
 

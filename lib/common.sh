@@ -16,7 +16,7 @@ source "$_lib_dir/validate.sh"
 list_domains() {
 	local target="${1:-$TARGET}"
 	local sd="${SERVICES_DOMAIN:-}"
-	[ -z "$sd" ] && sd='$SERVICES_DOMAIN'
+	if [ -z "$sd" ]; then sd='$SERVICES_DOMAIN'; fi
 
 	_extract_hosts() {
 		grep -rohP "Host\(\x60[^\x60]+\x60\)" "$@" 2>/dev/null | \

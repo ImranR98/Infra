@@ -13,7 +13,7 @@ resolve_vars_file() {
 
 get_template_export_names() {
 	local target="${1:-${TARGET:-}}"
-	[ -z "$target" ] && return 0
+	if [ -z "$target" ]; then return 0; fi
 	grep -hEo '^export [A-Z_][A-Z_0-9]*' "$ATLAS_ROOT/targets/$target/VARS.template.sh" 2>/dev/null | sed 's/^export //' | sort -u
 }
 

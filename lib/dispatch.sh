@@ -8,14 +8,16 @@ atlas_dispatch() {
 		validate)  validate "$TARGET"; exit $? ;;
 		list-domains) list_domains "$TARGET"; exit $? ;;
 	esac
-	[ "${cmd_args[0]:-}" = "compose" ] && [ "${cmd_args[1]:-}" = "old-images" ] && {
+	if [ "${cmd_args[0]:-}" = "compose" ] && [ "${cmd_args[1]:-}" = "old-images" ]; then
 		docker images --no-trunc --format '{{.Repository}}:{{.Tag}}\t{{.CreatedAt}}' | while IFS=$'\t' read -r image created; do
 			created_ts=$(date -d "$created" +%s 2>/dev/null) || continue
 			days=$(( ($(date +%s) - created_ts) / 86400 ))
-			[ "$days" -gt 60 ] && printf "%-50s %3d days\n" "$image" "$days"
+			if [ "$days" -gt 60 ]; then
+				printf "%-50s %3d days\n" "$image" "$days"
+			fi
 		done | sort -k2 -n
 		exit $?
-	}
+	fi
 
 	local CMD_PATH="" CMD_RUNNER="bash" search_path="" found="" arg_idx=0
 	local search_dirs=("targets/$TARGET/commands" "commands")
@@ -34,18 +36,22 @@ atlas_dispatch() {
 				found="dir"; search_path="${search_path}${search_path:+/}$arg"; arg_idx=$((arg_idx + 1)); break
 			fi
 		done
-		[ "$found" = "script" ] && break
-		[ "$found" = "" ] && break
+		if [ "$found" = "script" ]; then break; fi
+		if [ "$found" = "" ]; then break; fi
 	done
 
-	[ -n "$CMD_PATH" ] && exec "$CMD_RUNNER" "$CMD_PATH" "$@"
+	if [ -n "$CMD_PATH" ]; then exec "$CMD_RUNNER" "$CMD_PATH" "$@"; fi
 
 	_atlas_help "$@"
 }
 
 _atlas_help() {
 	local _err=false
-	[ $# -gt 0 ] && { echo "Unknown command: $*" >&2; echo ""; _err=true; }
+	if [ $# -gt 0 ]; then
+		echo "Unknown command: $*" >&2
+		echo ""
+		_err=true
+	fi
 	echo "Available commands:"
 	echo ""
 	for f in commands/*.sh commands/*.py; do
@@ -62,5 +68,6 @@ _atlas_help() {
 			printf '  %s %s\n' "$stack" "$(basename "${f%.*}")"
 		done
 	done
-	$_err && exit 1 || exit 0
+	if $_err; then exit 1; fi
+	exit 0
 }

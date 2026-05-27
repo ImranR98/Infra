@@ -40,7 +40,7 @@ for i in $(seq 1 30); do
 		echo "Node $(hostname) joined the cluster successfully."
 		break
 	fi
-	[ $i -eq 30 ] && echo "Warning: node not detected after 150s. It may take longer to register."
+	if [ $i -eq 30 ]; then echo "Warning: node not detected after 150s. It may take longer to register."; fi
 	sleep 5
 done
 

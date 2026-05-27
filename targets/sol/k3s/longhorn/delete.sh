@@ -23,7 +23,7 @@ done
 echo "Stripping longhorn.io finalizers from stuck resources..."
 for crd in $(kubectl api-resources --api-group=longhorn.io -o name --namespaced 2>/dev/null); do
 	crd_short="${crd#*.}"  # strip group prefix (e.g. "volumes.longhorn.io" → "volumes")
-	[ -z "$crd_short" ] && crd_short="$crd"
+	if [ -z "$crd_short" ]; then crd_short="$crd"; fi
 	kubectl get "$crd" -n "$NS" -o name --ignore-not-found 2>/dev/null | while read -r obj; do
 		kubectl patch "$obj" -n "$NS" -p '{"metadata":{"finalizers":[]}}' --type=merge 2>/dev/null || true
 	done

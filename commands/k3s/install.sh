@@ -42,7 +42,7 @@ _build_yaml() {
 
 _run_hook() {
 	local hook="$1"
-	[ -f "$COMPONENT_DIR/$hook" ] && bash "$COMPONENT_DIR/$hook"
+	if [ -f "$COMPONENT_DIR/$hook" ]; then bash "$COMPONENT_DIR/$hook"; fi
 }
 
 _check_initial_prereqs() {
@@ -70,7 +70,7 @@ _delete_resource_with_timeout() {
 }
 
 _k3s_delete() {
-	[ -f "$COMPONENT_DIR/delete.sh" ] && bash "$COMPONENT_DIR/delete.sh"
+	if [ -f "$COMPONENT_DIR/delete.sh" ]; then bash "$COMPONENT_DIR/delete.sh"; fi
 
 	local _YAML; _YAML=$(printf '%s\n' "$PROCESSED_YAML")
 
@@ -78,7 +78,7 @@ _k3s_delete() {
 	_helmcharts=$(printf '%s\n' "$_YAML" | python3 -c "import sys,yaml; docs=yaml.safe_load_all(sys.stdin); [print(f'{d[\"metadata\"][\"namespace\"]}/{d[\"metadata\"][\"name\"]}') for d in docs if d and d.get('kind')=='HelmChart']" 2>/dev/null)
 	if [ -n "$_helmcharts" ]; then
 		while IFS="/" read -r ns chart; do
-			[ -z "$chart" ] && continue
+			if [ -z "$chart" ]; then continue; fi
 			echo "Deleting HelmChart $ns/$chart..."
 			_delete_resource_with_timeout helmchart "$ns" "$chart"
 		done <<< "$_helmcharts"
@@ -90,7 +90,7 @@ _k3s_delete() {
 	_pvcs=$(printf '%s\n' "$_YAML" | python3 -c "import sys,yaml; docs=yaml.safe_load_all(sys.stdin); [print(f'{d[\"metadata\"][\"namespace\"]}/{d[\"metadata\"][\"name\"]}') for d in docs if d and d.get('kind')=='PersistentVolumeClaim']" 2>/dev/null)
 	if [ -n "$_pvcs" ]; then
 		while IFS="/" read -r ns pvc_name; do
-			[ -z "$pvc_name" ] && continue
+			if [ -z "$pvc_name" ]; then continue; fi
 			echo "Deleting PVC $ns/$pvc_name..."
 			_delete_resource_with_timeout pvc "$ns" "$pvc_name"
 			kubectl get pv -o json 2>/dev/null | python3 -c "import sys,json; pvs=json.load(sys.stdin)['items']; [print(p['metadata']['name']) for p in pvs if p.get('status',{}).get('phase')=='Released' and p.get('spec',{}).get('claimRef',{}).get('name')=='$pvc_name' and p.get('spec',{}).get('claimRef',{}).get('namespace')=='$ns']" | while read -r pv; do
