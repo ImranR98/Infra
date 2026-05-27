@@ -8,7 +8,7 @@ if [ -z "$SVC" ]; then
 	exit 1
 fi
 
-generate_compose_configs "$TARGET"
+configure_compose_templates "$TARGET"
 render_compose_yaml
-docker compose -p "$TARGET" -f "$COMPOSE_STATE_DIR/compose.yaml" down "$SVC" || :
-docker compose -p "$TARGET" -f "$COMPOSE_STATE_DIR/compose.yaml" up -d "$SVC"
+docker compose --env-file "$COMPOSE_STATE_DIR/.env" -p "$TARGET" -f "$COMPOSE_STATE_DIR/compose.yaml" down "$SVC" || :
+docker compose --env-file "$COMPOSE_STATE_DIR/.env" -p "$TARGET" -f "$COMPOSE_STATE_DIR/compose.yaml" up -d "$SVC"

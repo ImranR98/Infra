@@ -9,7 +9,6 @@ Usage: RENOVATE_LOG=<file> python3 _apply_updates.py [--dry-run]
 """
 import json
 import os
-import re
 import sys
 from pathlib import Path
 
@@ -17,28 +16,11 @@ ATLAS_ROOT = Path(os.environ.get("ATLAS_ROOT", ".")).resolve()
 
 
 def _render_template(template, dep_name, new_value, new_digest=""):
-    """Render Renovate's autoReplaceStringTemplate (Handlebar-ish).
-    Supports: {{depName}}, {{newValue}}, {{newDigest}}, {{#if ...}}{{/if}}"""
-    result = template
-
-    def _if(repl, cond, body):
-        if cond:
-            return re.sub(r"\{\{#if\s+\w+\}\}" + re.escape(body) + r"\{\{/if\}\}", body, repl)
-        return re.sub(r"\{\{#if\s+\w+\}\}" + re.escape(body) + r"\{\{/if\}\}", "", repl)
-
-    result = result.replace("{{depName}}", dep_name)
-
+    result = template.replace("{{depName}}", dep_name)
     nv = new_value or ""
-    result = _if(result, bool(nv), "{{newValue}}")
+    if "{{#if newValue}}" in result:
+        result = result.replace("{{#if newValue}}", "").replace("{{/if}}", "")
     result = result.replace("{{newValue}}", nv)
-
-    nd = new_digest or ""
-    result = _if(result, bool(nd), "{{newDigest}}")
-    result = result.replace("{{newDigest}}", nd)
-
-    result = result.replace("{{#if newValue}}", "").replace("{{#if newDigest}}", "")
-    result = re.sub(r"\{\{/if\}\}", "", result)
-
     return result
 
 

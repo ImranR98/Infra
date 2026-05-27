@@ -26,7 +26,7 @@ else
 fi
 
 ALL_OK=true
-for tool in yq envsubst jq curl python3 skopeo; do
+for tool in yq envsubst jq curl python3; do
 	if ! command -v "$tool" >/dev/null 2>&1; then
 		printf "Installing %s..." "$tool"
 		case "$tool" in

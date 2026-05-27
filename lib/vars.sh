@@ -56,28 +56,15 @@ get_envsubst_vars() {
 		vars="$vars $(grep -oP 'export \K[A-Z_][A-Z_0-9]*' "$vars_file" | tr '\n' ' ')"
 	fi
 
-	if [ -f "$ATLAS_ROOT/targets/$TARGET/compose/compose.yaml" ]; then
-		vars="$vars $(grep -hEo '\$[A-Z_][A-Z_0-9]*|\$\{[A-Z_][A-Z_0-9]*\}' "$ATLAS_ROOT/targets/$TARGET/compose/compose.yaml" 2>/dev/null | sed 's/[{}]//g' | tr '\n' ' ')"
-	fi
-	for f in "$ATLAS_ROOT/targets/$TARGET/compose/templates"/*.yaml "$ATLAS_ROOT/targets/$TARGET/compose/templates"/*.json "$ATLAS_ROOT/targets/$TARGET/compose/templates"/*.txt "$ATLAS_ROOT/targets/$TARGET/compose/templates"/*.toml; do
-		[ -f "$f" ] || continue
-		vars="$vars $(grep -hEo '\$[A-Z_][A-Z_0-9]*|\$\{[A-Z_][A-Z_0-9]*\}' "$f" 2>/dev/null | sed 's/[{}]//g' | tr '\n' ' ')"
-	done
-
 	if [ -d "$ATLAS_ROOT/targets/$TARGET/k3s" ]; then
 		vars="$vars $(grep -rhoE '\$[A-Z_][A-Z_0-9]*|\$\{[A-Z_][A-Z_0-9]*\}' "$ATLAS_ROOT/targets/$TARGET/k3s" --include='*.yaml' 2>/dev/null | sed 's/[${}]//g' | tr '\n' ' ')"
 	fi
 
-	for v in MY_UID TARGET; do
+	for v in MY_UID TARGET COMPOSE_STATE_DIR DOCKER_GID FRPC_USER; do
 		case " $vars " in *" $v "*) ;; *) vars="$vars $v" ;; esac
 	done
 
 	echo "$vars" | tr ' ' '\n' | sort -u | sed 's/^/$/' | tr '\n' ' '
 }
 
-ensure_envsubst_vars() {
-	if [ -z "${ENVSUBST_VARS:-}" ]; then
-		ENVSUBST_VARS="$(get_envsubst_vars)"
-		export ENVSUBST_VARS
-	fi
-}
+ensure_envsubst_vars() { export ENVSUBST_VARS="${ENVSUBST_VARS:-$(get_envsubst_vars)}"; }

@@ -3,9 +3,15 @@ set -euo pipefail
 source "$ATLAS_ROOT/lib/common.sh"
 ensure_envsubst_vars
 
-echo "=== Create Required Directories ==="
 render_compose_yaml
-while IFS=: read -r host_path _; do
+python3 -c "
+import yaml
+c=yaml.safe_load(open('$COMPOSE_STATE_DIR/compose.yaml','r'))
+for s in c.get('services',{}).values():
+ for v in s.get('volumes',[]):
+  p=(v if isinstance(v,str) else v.get('source','')).split(':')[0]
+  if p.startswith('$COMPOSE_STATE_DIR'): print(p)
+" | while read -r host_path; do
 	name="$(basename "$host_path")"
 	if [[ "$name" =~ \.[a-zA-Z0-9]{1,5}$ ]]; then
 		mkdir -p "$(dirname "$host_path")"
@@ -14,12 +20,10 @@ while IFS=: read -r host_path _; do
 		mkdir -p "$host_path"
 		[ "$UID" -eq 0 ] && chown "$MY_UID:$MY_UID" "$host_path" 2>/dev/null || :
 	fi
-done < <(awk -v dir="$COMPOSE_STATE_DIR" 'index($0, dir"/") && /^[[:space:]]*-/ { sub(/^[[:space:]]*-[[:space:]]*"?/, ""); sub(/[":].*/, ""); print }' "$COMPOSE_STATE_DIR/compose.yaml")
-echo "Done."
+done
 
-generate_compose_configs "$TARGET"
+configure_compose_templates "$TARGET"
 
-echo "=== Install and start the $TARGET service ==="
 cat > "$COMPOSE_STATE_DIR/$TARGET.service" << EOF
 [Unit]
 Description=$TARGET start
@@ -28,8 +32,8 @@ StartLimitIntervalSec=0
 [Service]
 User=$UID
 Type=simple
-ExecStart=/usr/bin/docker compose -p $TARGET -f $COMPOSE_STATE_DIR/compose.yaml up
-ExecStop=/usr/bin/docker compose -p $TARGET -f $COMPOSE_STATE_DIR/compose.yaml down
+ExecStart=/usr/bin/docker compose --env-file $COMPOSE_STATE_DIR/.env -p $TARGET -f $COMPOSE_STATE_DIR/compose.yaml up
+ExecStop=/usr/bin/docker compose --env-file $COMPOSE_STATE_DIR/.env -p $TARGET -f $COMPOSE_STATE_DIR/compose.yaml down
 Restart=always
 RestartSec=30
 
@@ -41,8 +45,5 @@ $SU mv "$COMPOSE_STATE_DIR/$TARGET.service" "/etc/systemd/system/$TARGET.service
 command -v chcon &>/dev/null && $SU chcon -t systemd_unit_file_t /etc/systemd/system/$TARGET.service 2>/dev/null || true
 $SU systemctl daemon-reload && $SU systemctl enable $TARGET.service
 $SU systemctl restart $TARGET.service 2>/dev/null || $SU systemctl start $TARGET.service
-echo "Done."
 
-echo "=== Finished ==="
-echo "Note: Some services may need manual setup in their respective GUIs."
-echo ""
+echo "Installed and started $TARGET service."

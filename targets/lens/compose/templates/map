@@ -1,0 +1,2 @@
+secret:frps-tokens.txt:frps/tokens.txt
+normal:logtfy.config.json:logtfy/config.json
