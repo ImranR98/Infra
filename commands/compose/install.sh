@@ -36,8 +36,8 @@ StartLimitIntervalSec=0
 [Service]
 User=$UID
 Type=simple
-ExecStart=/usr/bin/docker compose --env-file $COMPOSE_STATE_DIR/.env -p $TARGET -f $COMPOSE_STATE_DIR/compose.yaml up
-ExecStop=/usr/bin/docker compose --env-file $COMPOSE_STATE_DIR/.env -p $TARGET -f $COMPOSE_STATE_DIR/compose.yaml down
+ExecStart=/usr/bin/docker compose -p $TARGET -f $COMPOSE_STATE_DIR/compose.yaml up
+ExecStop=/usr/bin/docker compose -p $TARGET -f $COMPOSE_STATE_DIR/compose.yaml down
 Restart=always
 RestartSec=30
 

@@ -10,5 +10,5 @@ fi
 
 configure_compose_templates "$TARGET"
 render_compose_yaml
-docker compose --env-file "$COMPOSE_STATE_DIR/.env" -p "$TARGET" -f "$COMPOSE_STATE_DIR/compose.yaml" down "$SVC" || :
-docker compose --env-file "$COMPOSE_STATE_DIR/.env" -p "$TARGET" -f "$COMPOSE_STATE_DIR/compose.yaml" up -d "$SVC"
+docker compose -p "$TARGET" -f "$COMPOSE_STATE_DIR/compose.yaml" down "$SVC" || :
+docker compose -p "$TARGET" -f "$COMPOSE_STATE_DIR/compose.yaml" up -d "$SVC"

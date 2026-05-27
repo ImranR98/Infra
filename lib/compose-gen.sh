@@ -6,24 +6,6 @@ render_compose_yaml() {
 	ensure_envsubst_vars
 	mkdir -p "$COMPOSE_STATE_DIR"
 	envsubst "$ENVSUBST_VARS" < "$ATLAS_ROOT/targets/$TARGET/compose/compose.yaml" > "$COMPOSE_STATE_DIR/compose.yaml"
-	_write_compose_env
-}
-
-_write_compose_env() {
-	local env_file="$COMPOSE_STATE_DIR/.env"
-	{
-		printf 'COMPOSE_STATE_DIR=%s\n' "$COMPOSE_STATE_DIR"
-		printf 'TARGET=%s\n' "$TARGET"
-		printf 'MY_UID=%s\n' "$MY_UID"
-		printf 'DOCKER_GID=%s\n' "${DOCKER_GID:-}"
-		printf 'FRPC_USER=%s\n' "${FRPC_USER:-}"
-		local vars_file; vars_file=$(resolve_vars_file "$TARGET")
-		if [ -n "$vars_file" ]; then
-			grep -oP '^export \K[A-Z_][A-Z_0-9]*' "$vars_file" | while IFS= read -r vname; do
-				printf '%s=%s\n' "$vname" "${!vname:-}"
-			done
-		fi
-	} > "$env_file"
 }
 
 _generate_config() {
