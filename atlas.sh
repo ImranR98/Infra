@@ -34,7 +34,7 @@ if [ -n "$(resolve_vars_file "$TARGET")" ]; then
 	export ENVSUBST_VARS="$(get_envsubst_vars)"
 fi
 if [ "$vars_found" = true ]; then
-	DOCKER_GID="$(getent group docker | cut -d: -f3)"
+	DOCKER_GID="$(getent group docker | cut -d: -f3)" || true
 	if [ -z "$DOCKER_GID" ]; then echo "Error: docker group not found. Is Docker installed?" >&2; exit 1; fi
 	export DOCKER_GID
 	export FRPC_USER="${TARGET,,}"
