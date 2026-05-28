@@ -62,19 +62,14 @@ if [ $# -ge 2 ]; then
 	echo "  Output: $OUTPUT" >&2
 	echo "  SSH: ssh -T $remote_host \"cd $remote_path && ATLAS_BACKUP_STREAM=true ./atlas.sh $remote_target compose backup-state\"" >&2
 
-	REMOTE_STATE_DIR="$remote_path/current_target/compose_live_state"
-	pv_cmd=()
+	pv_cmd=(cat)
 	if command -v pv >/dev/null 2>&1; then
-		remote_size=$(ssh -T "$remote_host" "du -sb '$REMOTE_STATE_DIR' 2>/dev/null" 2>/dev/null | awk '{print $1}') || remote_size=""
-		if [ -n "$remote_size" ]; then
-			echo "Remote state directory size: $(numfmt --to=iec $remote_size 2>/dev/null || echo "$remote_size bytes")" >&2
-			pv_cmd=(pv -pterb -s "$remote_size")
-		else
-			pv_cmd=(pv -pterb)
-		fi
+		pv_cmd=(pv -pterb)
 	fi
 
-	if ! (umask 0077; ssh -T "$remote_host" "cd $remote_path && ATLAS_BACKUP_STREAM=true ./atlas.sh '$remote_target' compose backup-state" | "${pv_cmd[@]}" > "$OUTPUT"); then
+	tar_exit=0
+	(umask 0077; ssh -T "$remote_host" "cd $remote_path && ATLAS_BACKUP_STREAM=true ./atlas.sh '$remote_target' compose backup-state" | "${pv_cmd[@]}" > "$OUTPUT") || tar_exit=$?
+	if [ $tar_exit -ge 2 ]; then
 		echo "Backup command failed on remote" >&2
 		rm -f "$OUTPUT"
 		exit 1
@@ -101,8 +96,9 @@ if [ ! -d "$COMPOSE_STATE_DIR" ]; then
 fi
 
 # Docker+tar pipeline that excludes FIFOs/sockets (they block reads indefinitely)
-docker_tar_cmd=(docker run --rm -v "$COMPOSE_STATE_DIR":/backup/state:ro \
-	alpine sh -c 'apk add --no-cache tar >/dev/null && find /backup/state \( -type f -o -type d -o -type l \) -print0 | tar cf - --null -T - --ignore-failed-read')
+# --log-driver none prevents Docker from writing the tar stream to json-file logs on disk
+docker_tar_cmd=(docker run --rm --log-driver none -v "$COMPOSE_STATE_DIR":/backup/state:ro \
+	alpine sh -c 'apk add --no-cache tar >/dev/null && find /backup/state \( -type f -o -type d -o -type l \) -print0 | tar cf - --null -T - --sparse --ignore-failed-read --warning=no-file-changed --warning=no-file-removed')
 
 # Size estimate for progress display
 dir_size=$(du -sb "$COMPOSE_STATE_DIR" 2>/dev/null | awk '{print $1}') || dir_size=""
@@ -118,14 +114,20 @@ if [ -t 1 ] && [ "${ATLAS_BACKUP_STREAM:-}" != "true" ]; then
 		echo "State directory size: $(numfmt --to=iec $dir_size 2>/dev/null || echo "$dir_size bytes")"
 	fi
 
-	pv_cmd=()
+	pv_cmd=(cat)
 	if command -v pv >/dev/null 2>&1 && [ -n "$dir_size" ]; then
 		pv_cmd=(pv -pterb -s "$dir_size")
 	elif command -v pv >/dev/null 2>&1; then
 		pv_cmd=(pv -pterb)
 	fi
 
-	"${docker_tar_cmd[@]}" | "${pv_cmd[@]}" > "$OUTPUT"
+	tar_exit=0
+	"${docker_tar_cmd[@]}" | "${pv_cmd[@]}" > "$OUTPUT" || tar_exit=$?
+	if [ $tar_exit -ge 2 ]; then
+		echo "Backup failed" >&2
+		rm -f "$OUTPUT"
+		exit 1
+	fi
 	if [ -s "$OUTPUT" ]; then
 		size=$(du -h "$OUTPUT" | awk '{print $1}')
 		echo "Backup created: $OUTPUT ($size)"
@@ -142,12 +144,16 @@ else
 		echo "State directory size: $(numfmt --to=iec $dir_size 2>/dev/null || echo "$dir_size bytes")" >&2
 	fi
 
-	pv_cmd=()
+	pv_cmd=(cat)
 	if command -v pv >/dev/null 2>&1 && [ -n "$dir_size" ]; then
 		pv_cmd=(pv -pterb -s "$dir_size")
 	elif command -v pv >/dev/null 2>&1; then
 		pv_cmd=(pv -pterb)
 	fi
 
-	"${docker_tar_cmd[@]}" | "${pv_cmd[@]}"
+	tar_exit=0
+	"${docker_tar_cmd[@]}" | "${pv_cmd[@]}" || tar_exit=$?
+	if [ $tar_exit -ge 2 ]; then
+		exit $tar_exit
+	fi
 fi
