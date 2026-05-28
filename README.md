@@ -146,13 +146,13 @@ apiVersion: cert-manager.io/v1
 
 ### Runtime state
 
-All runtime state lives under `current_target/` (gitignored):
+All runtime directories are gitignored:
 
 | Directory | Purpose |
 |-----------|---------|
-| `compose_live_state/` | Rendered compose configs, acme.json, authelia DB |
+| `current_target/compose_live_state/` | Rendered compose configs, acme.json, authelia DB |
+| `current_target/k3s_longhorn_backups/` | NFS export for Longhorn volume backups |
 | `compose_state_backups/` | Tar backups created by `compose backup-state` |
-| `k3s_longhorn_backups/` | NFS export for Longhorn volume backups |
 
 ---
 

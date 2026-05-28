@@ -12,7 +12,7 @@ fi
 export ATLAS_INTERACTIVE
 
 export COMPOSE_STATE_DIR="$ATLAS_ROOT/current_target/compose_live_state"
-export COMPOSE_STATE_BACKUP_DIR="$ATLAS_ROOT/current_target/compose_state_backups"
+export COMPOSE_STATE_BACKUP_DIR="$ATLAS_ROOT/compose_state_backups"
 export LONGHORN_BACKUP_DIR="$ATLAS_ROOT/current_target/k3s_longhorn_backups"
 
 if [ "${1:-}" = "" ]; then
@@ -41,18 +41,21 @@ if [ "$vars_found" = true ]; then
 	DOCKER_GID="$(getent group docker | cut -d: -f3)" || true
 	case "${1:-}" in
 		compose|k3s)
-			if [ -z "$DOCKER_GID" ]; then
+			if [ -z "$DOCKER_GID" ] && [ "${2:-}" != "backup-state" ]; then
 				echo "Error: docker group not found. Is Docker installed?" >&2
 				exit 1
 			fi
-			export DOCKER_GID
+			[ -n "$DOCKER_GID" ] && export DOCKER_GID
 			;;
 	esac
 	export FRPC_USER="${TARGET,,}"
 elif [ -n "${1:-}" ]; then
 	case "$1" in compose|k3s)
-		echo "No VARS.$TARGET.sh or VARS.sh found. Create VARS.$TARGET.sh with variables from targets/$TARGET/VARS.template.sh." >&2
-		exit 1 ;;
+		if [ "${2:-}" != "backup-state" ]; then
+			echo "No VARS.$TARGET.sh or VARS.sh found. Create VARS.$TARGET.sh with variables from targets/$TARGET/VARS.template.sh." >&2
+			exit 1
+		fi
+		;;
 	esac
 fi
 

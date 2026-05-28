@@ -1,4 +1,5 @@
-current_target/
+/current_target/
+/compose_state_backups/
 /VARS.sh
 /VARS.*.sh
 ~*
