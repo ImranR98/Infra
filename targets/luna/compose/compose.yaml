@@ -188,7 +188,7 @@ services:
         image: postgres:16-alpine
         container_name: plausible_db
         restart: unless-stopped
-        mem_limit: 4G
+        mem_limit: 8G
         volumes:
             - $COMPOSE_STATE_DIR/plausible/db:/var/lib/postgresql/data
         environment:
@@ -202,7 +202,7 @@ services:
     plausible_events_db:
         image: clickhouse/clickhouse-server:24.12-alpine
         restart: unless-stopped
-        mem_limit: 4G
+        mem_limit: 8G
         container_name: plausible_events_db
         networks:
             - traefik
@@ -241,7 +241,7 @@ services:
     plausible:
         image: ghcr.io/plausible/community-edition:v3
         restart: unless-stopped
-        mem_limit: 1G
+        mem_limit: 8G
         container_name: plausible
         command: sh -c "for i in \$(seq 1 30); do /entrypoint.sh db createdb 2>/dev/null && break; sleep 2; done && /entrypoint.sh db migrate && /entrypoint.sh run"
         depends_on:
@@ -273,59 +273,6 @@ services:
             - "traefik.http.routers.plausible.tls=true"
             - "traefik.http.routers.plausible.middlewares=authelia@file"
             - "traefik.http.services.plausible.loadbalancer.server.port=8000"
-        logging: *logging
-
-    # Send - File Sharing
-    send:
-        container_name: send
-        image: registry.gitlab.com/timvisee/send:latest
-        restart: unless-stopped
-        mem_limit: 512M
-        depends_on:
-            traefik:
-                condition: service_started
-            send-db:
-                condition: service_healthy
-        volumes:
-            - $COMPOSE_STATE_DIR/send/uploads:/uploads
-        environment:
-            - DHPARAM_GENERATION=false
-            - NODE_ENV=production
-            - BASE_URL=https://share.$SERVICES_DOMAIN
-            - PORT=80
-            - REDIS_HOST=send-db
-            - FILE_DIR=/uploads
-            - MAX_FILES_PER_ARCHIVE=512
-            - MAX_FILE_SIZE=137438953472
-            - MAX_EXPIRE_SECONDS=31536000
-            - MAX_DOWNLOADS=1000000000
-            - DOWNLOAD_COUNTS=10,1,2,5,10,15,25,50,100,1000,1000000000
-            - EXPIRE_TIMES_SECONDS=3600,86400,604800,2592000,31536000
-            - DEFAULT_DOWNLOADS=100
-            - DEFAULT_EXPIRE_SECONDS=2592000
-        labels:
-            - "traefik.enable=true"
-            - "traefik.http.routers.send.rule=Host(`share.$SERVICES_DOMAIN`)"
-            - "traefik.http.routers.send.entrypoints=websecure"
-            - "traefik.http.routers.send.tls.certresolver=le"
-            - "traefik.http.routers.send.tls=true"
-            - "traefik.http.routers.send.middlewares=authelia@file"
-            - "traefik.http.services.send.loadbalancer.server.port=80"
-        networks:
-            - traefik
-        logging: *logging
-    send-db:
-        container_name: send-db
-        image: "redis:alpine"
-        restart: unless-stopped
-        mem_limit: 128M
-        volumes:
-            - $COMPOSE_STATE_DIR/send/db:/data
-        networks:
-            - traefik
-        healthcheck:
-            test: ["CMD-SHELL", "redis-cli ping || exit 1"]
-            start_period: 1m
         logging: *logging
 
     # PixelNtfy - Tracking Pixels
