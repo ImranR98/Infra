@@ -56,19 +56,31 @@ for tool in yq envsubst jq curl python3; do
 	fi
 done
 
+_python3_is_brew() {
+	python3 -c "import sys; print(sys.executable)" 2>/dev/null | grep -qiE 'brew|linuxbrew'
+}
+
 if ! python3 -c "import yaml" >/dev/null 2>&1; then
 	printf "Installing python3-yaml..."
-	case "$PKG_MGR" in
-		apt) pkg="python3-yaml" ;;
-		dnf) pkg="python3-pyyaml" ;;
-		rpm-ostree) pkg="python3-pyyaml" ;;
-		*) pkg="" ;;
-	esac
-	if [ -n "$pkg" ] && install_pkgs "$SU" "$PKG_MGR" "$pkg" >/dev/null 2>&1; then
-		echo " done"
+	if _python3_is_brew; then
+		if python3 -m pip install --break-system-packages pyyaml; then
+			echo " done"
+		else
+			echo " failed"
+			ALL_OK=false
+		fi
 	else
-		echo " failed"
-		ALL_OK=false
+		case "$PKG_MGR" in
+			apt) pkg="python3-yaml" ;;
+			dnf|rpm-ostree) pkg="python3-pyyaml" ;;
+			*) pkg="" ;;
+		esac
+		if [ -n "$pkg" ] && install_pkgs "$SU" "$PKG_MGR" "$pkg"; then
+			echo " done"
+		else
+			echo " failed"
+			ALL_OK=false
+		fi
 	fi
 	if python3 -c "import yaml" >/dev/null 2>&1; then
 		echo "  [OK] python3-yaml"

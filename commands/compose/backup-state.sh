@@ -17,7 +17,7 @@ OUTPUT="$COMPOSE_STATE_BACKUP_DIR/$TARGET-backup-$TIMESTAMP.tar"
 
 echo "Backing up $COMPOSE_STATE_DIR..."
 (umask 0077; docker run --rm -v "$COMPOSE_STATE_DIR":/backup/state:ro \
-	alpine sh -c 'apk add --no-cache tar >/dev/null 2>&1 && exec tar cf - --ignore-failed-read --warning=no-file-changed --warning=no-file-removed -C /backup state' > "$OUTPUT")
+	alpine sh -c 'apk add --no-cache tar >/dev/null && exec tar cf - --ignore-failed-read --warning=no-file-changed --warning=no-file-removed -C /backup state' > "$OUTPUT")
 if [ -s "$OUTPUT" ]; then
 	echo "Backup created: $OUTPUT"
 	BACKUP_RETENTION=${BACKUP_RETENTION:-1}

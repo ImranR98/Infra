@@ -59,7 +59,7 @@ VOLUMES")
 		[ -f "$kfile" ] || { echo "ERROR: $comp missing kustomization.yaml"; errors=$((errors + 1)); continue; }
 
 		if command -v kubectl >/dev/null 2>&1; then
-			kubectl kustomize "$comp_dir" >/dev/null 2>&1 || { echo "ERROR: $comp kustomize build failed"; errors=$((errors + 1)); }
+			kubectl kustomize "$comp_dir" >/dev/null || { echo "ERROR: $comp kustomize build failed"; errors=$((errors + 1)); }
 		fi
 
 		local yaml_files=()
@@ -109,7 +109,7 @@ COMPOSE_STATE_DIR")
 
 	if command -v docker >/dev/null 2>&1 && docker compose version >/dev/null 2>&1; then
 		if [ -f "$COMPOSE_STATE_DIR/compose.yaml" ]; then
-			docker compose -f "$COMPOSE_STATE_DIR/compose.yaml" config --dry-run >/dev/null 2>&1 || { echo "ERROR: docker compose config validation failed"; errors=$((errors + 1)); }
+			docker compose -f "$COMPOSE_STATE_DIR/compose.yaml" config --dry-run >/dev/null || { echo "ERROR: docker compose config validation failed"; errors=$((errors + 1)); }
 		fi
 	fi
 
