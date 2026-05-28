@@ -58,8 +58,23 @@ if [ $# -ge 2 ]; then
 	mkdir -p "$COMPOSE_STATE_BACKUP_DIR"
 	OUTPUT="$COMPOSE_STATE_BACKUP_DIR/$remote_target-backup-$TIMESTAMP.tar"
 
-	echo "Backing up $remote_target state from $remote_host..."
-	if ! (umask 0077; ssh "$remote_host" "cd $remote_path && ./atlas.sh '$remote_target' compose backup-state" > "$OUTPUT"); then
+	echo "Backing up $remote_target state from $remote_host..." >&2
+	echo "  Output: $OUTPUT" >&2
+	echo "  SSH: ssh -T $remote_host \"cd $remote_path && ATLAS_BACKUP_STREAM=true ./atlas.sh $remote_target compose backup-state\"" >&2
+
+	REMOTE_STATE_DIR="$remote_path/current_target/compose_live_state"
+	pv_cmd=()
+	if command -v pv >/dev/null 2>&1; then
+		remote_size=$(ssh -T "$remote_host" "du -sb '$REMOTE_STATE_DIR' 2>/dev/null" 2>/dev/null | awk '{print $1}') || remote_size=""
+		if [ -n "$remote_size" ]; then
+			echo "Remote state directory size: $(numfmt --to=iec $remote_size 2>/dev/null || echo "$remote_size bytes")" >&2
+			pv_cmd=(pv -pterb -s "$remote_size")
+		else
+			pv_cmd=(pv -pterb)
+		fi
+	fi
+
+	if ! (umask 0077; ssh -T "$remote_host" "cd $remote_path && ATLAS_BACKUP_STREAM=true ./atlas.sh '$remote_target' compose backup-state" | "${pv_cmd[@]}" > "$OUTPUT"); then
 		echo "Backup command failed on remote" >&2
 		rm -f "$OUTPUT"
 		exit 1
@@ -69,7 +84,8 @@ if [ $# -ge 2 ]; then
 		rm -f "$OUTPUT"
 		exit 1
 	fi
-	echo "Backup created: $OUTPUT"
+	size=$(du -h "$OUTPUT" | awk '{print $1}')
+	echo "Backup created: $OUTPUT ($size)" >&2
 	prune_backups "$remote_target"
 	exit 0
 fi
@@ -84,17 +100,35 @@ if [ ! -d "$COMPOSE_STATE_DIR" ]; then
 	exit 1
 fi
 
-if [ -t 1 ]; then
-	# stdout is a terminal → write to file (original behavior)
+# Docker+tar pipeline that excludes FIFOs/sockets (they block reads indefinitely)
+docker_tar_cmd=(docker run --rm -v "$COMPOSE_STATE_DIR":/backup/state:ro \
+	alpine sh -c 'apk add --no-cache tar >/dev/null && find /backup/state \( -type f -o -type d -o -type l \) -print0 | tar cf - --null -T - --ignore-failed-read')
+
+# Size estimate for progress display
+dir_size=$(du -sb "$COMPOSE_STATE_DIR" 2>/dev/null | awk '{print $1}') || dir_size=""
+
+if [ -t 1 ] && [ "${ATLAS_BACKUP_STREAM:-}" != "true" ]; then
+	# stdout is a terminal (and not explicitly streaming) → write to file
 	TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 	mkdir -p "$COMPOSE_STATE_BACKUP_DIR"
 	OUTPUT="$COMPOSE_STATE_BACKUP_DIR/$TARGET-backup-$TIMESTAMP.tar"
 
 	echo "Backing up $COMPOSE_STATE_DIR..."
-	(umask 0077; docker run --rm -v "$COMPOSE_STATE_DIR":/backup/state:ro \
-		alpine sh -c 'apk add --no-cache tar >/dev/null && exec tar cf - --ignore-failed-read --warning=no-file-changed --warning=no-file-removed -C /backup state' > "$OUTPUT")
+	if [ -n "$dir_size" ]; then
+		echo "State directory size: $(numfmt --to=iec $dir_size 2>/dev/null || echo "$dir_size bytes")"
+	fi
+
+	pv_cmd=()
+	if command -v pv >/dev/null 2>&1 && [ -n "$dir_size" ]; then
+		pv_cmd=(pv -pterb -s "$dir_size")
+	elif command -v pv >/dev/null 2>&1; then
+		pv_cmd=(pv -pterb)
+	fi
+
+	"${docker_tar_cmd[@]}" | "${pv_cmd[@]}" > "$OUTPUT"
 	if [ -s "$OUTPUT" ]; then
-		echo "Backup created: $OUTPUT"
+		size=$(du -h "$OUTPUT" | awk '{print $1}')
+		echo "Backup created: $OUTPUT ($size)"
 		prune_backups "$TARGET"
 	else
 		echo "Backup failed" >&2
@@ -102,8 +136,18 @@ if [ -t 1 ]; then
 		exit 1
 	fi
 else
-	# stdout is not a terminal → stream tar to stdout (for remote piped usage)
+	# pipe/stream mode → tar to stdout, progress to stderr
 	echo "Backing up $COMPOSE_STATE_DIR..." >&2
-	docker run --rm -v "$COMPOSE_STATE_DIR":/backup/state:ro \
-		alpine sh -c 'apk add --no-cache tar >/dev/null && exec tar cf - --ignore-failed-read --warning=no-file-changed --warning=no-file-removed -C /backup state'
+	if [ -n "$dir_size" ]; then
+		echo "State directory size: $(numfmt --to=iec $dir_size 2>/dev/null || echo "$dir_size bytes")" >&2
+	fi
+
+	pv_cmd=()
+	if command -v pv >/dev/null 2>&1 && [ -n "$dir_size" ]; then
+		pv_cmd=(pv -pterb -s "$dir_size")
+	elif command -v pv >/dev/null 2>&1; then
+		pv_cmd=(pv -pterb)
+	fi
+
+	"${docker_tar_cmd[@]}" | "${pv_cmd[@]}"
 fi
