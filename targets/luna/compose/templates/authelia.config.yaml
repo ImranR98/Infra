@@ -27,20 +27,6 @@ access_control:
       policy: bypass
     - domain: sb25.$SERVICES_DOMAIN
       policy: bypass
-    - domain: share.$SERVICES_DOMAIN
-      resources:
-      - '^/download/[^/]+/?$'
-      - '^/api/download/[^/]+/?$'
-      - '^/api/download/blob/[^/]+/?$'
-      - '^/api/info/[^/]+/?$'
-      - '^/api/metadata/[^/]+/?$'
-      - '^/[^/]+\.js$'
-      - '^/[^/]+\.svg$'
-      - '^/[^/]+\.css$'
-      - '^/[^/]+\.woff2$'
-      - '^/[^/]+\.png$'
-      - '^/__heartbeat__/?$'
-      policy: bypass
     - domain: ln.$SERVICES_DOMAIN
       policy: bypass
     - domain: plausible.$SERVICES_DOMAIN # IGNORE INITIALLY
