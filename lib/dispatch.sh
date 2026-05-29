@@ -1,6 +1,12 @@
 #!/bin/bash
 set -euo pipefail
 
+_desc() {
+	local f="$1"
+	local d; d=$(sed -n 's/^# DESC: //p;q' "$f" 2>/dev/null)
+	if [ -n "$d" ]; then echo "  $d"; fi
+}
+
 atlas_dispatch() {
 	local cmd_args=("$@")
 
@@ -8,16 +14,6 @@ atlas_dispatch() {
 		validate)  validate "$TARGET"; exit $? ;;
 		list-domains) list_domains "$TARGET"; exit $? ;;
 	esac
-	if [ "${cmd_args[0]:-}" = "compose" ] && [ "${cmd_args[1]:-}" = "old-images" ]; then
-		docker images --no-trunc --format '{{.Repository}}:{{.Tag}}\t{{.CreatedAt}}' | while IFS=$'\t' read -r image created; do
-			created_ts=$(date -d "$created" +%s 2>/dev/null) || continue
-			days=$(( ($(date +%s) - created_ts) / 86400 ))
-			if [ "$days" -gt 60 ]; then
-				printf "%-50s %3d days\n" "$image" "$days"
-			fi
-		done | sort -k2 -n
-		exit $?
-	fi
 
 	local CMD_PATH="" CMD_RUNNER="bash" search_path="" found="" arg_idx=0
 	local search_dirs=("targets/$TARGET/commands" "commands")
@@ -54,18 +50,20 @@ _atlas_help() {
 	fi
 	echo "Available commands:"
 	echo ""
-	for f in commands/*.sh commands/*.py; do
+	echo "  validate            Check configs for errors"
+	echo "  list-domains        Show domains used by this target"
+	for f in commands/*.sh; do
 		[ -f "$f" ] || continue
-		printf '  %s\n' "$(basename "${f%.*}")"
+		printf '  %-19s' "$(basename "${f%.*}")"
+		_desc "$f"
 	done
-	echo "  list-domains"
-	echo "  validate"
 	for stack in compose k3s; do
 		[ -d "targets/$TARGET/$stack" ] || continue
 		echo ""
-		for f in "commands/$stack"/*.sh "commands/$stack"/*.py; do
+		for f in "commands/$stack"/*.sh; do
 			[ -f "$f" ] || continue
-			printf '  %s %s\n' "$stack" "$(basename "${f%.*}")"
+			printf '  %s %-15s' "$stack" "$(basename "${f%.*}")"
+			_desc "$f"
 		done
 	done
 	if $_err; then exit 1; fi

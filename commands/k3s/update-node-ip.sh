@@ -1,4 +1,5 @@
 #!/bin/bash
+# DESC: Update K3s node IP after a network change
 set -euo pipefail
 
 source "$ATLAS_ROOT/lib/common.sh"

@@ -84,7 +84,7 @@ _validate_compose() {
 	for f in "$ATLAS_ROOT/targets/$target/compose/compose.yaml" "$ATLAS_ROOT/targets/$target/compose/templates"/*; do
 		[ -f "$f" ] || continue
 		if [[ "$f" =~ \.(yaml|yml)$ ]]; then
-			if ! python3 -c "import yaml; yaml.safe_load(open('$f'))" >/dev/null 2>&1; then
+			if ! yq eval '.' "$f" >/dev/null 2>&1; then
 				echo "ERROR: $(basename "$f") has invalid YAML syntax"
 				errors=$((errors + 1))
 			fi

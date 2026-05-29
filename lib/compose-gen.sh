@@ -40,16 +40,34 @@ _generate_config() {
 	esac
 }
 
+_tmpl_mode() {
+	local path="$1"
+	local rel="${path#$ATLAS_ROOT/targets/*/compose/templates/}"
+	case "$rel" in
+		authelia/*) echo "authelia" ;;
+		traefik/*)   echo "traefik" ;;
+		*.secret)    echo "secret" ;;
+		*.plain)     echo "plain" ;;
+		*)           echo "normal" ;;
+	esac
+}
+
+_tmpl_dest() {
+	local path="$1"
+	local rel="${path#$ATLAS_ROOT/targets/*/compose/templates/}"
+	rel="${rel%.secret}"
+	rel="${rel%.plain}"
+	echo "$COMPOSE_STATE_DIR/$rel"
+}
+
 configure_compose_templates() {
 	local target="$1"
 	ensure_envsubst_vars
 	local template_dir="$ATLAS_ROOT/targets/$target/compose/templates"
 	[ -d "$template_dir" ] || return
-	local map_file="$template_dir/map"
-	[ -f "$map_file" ] || return
-	while IFS=: read -r mode src dest; do
-		if [[ "$mode" =~ ^# ]]; then continue; fi
-		if [ -z "$mode" ]; then continue; fi
-		_generate_config "$mode" "$template_dir/$src" "$COMPOSE_STATE_DIR/$dest"
-	done < "$map_file"
+	while IFS= read -r -d '' src; do
+		local mode; mode=$(_tmpl_mode "$src")
+		local dest; dest=$(_tmpl_dest "$src")
+		_generate_config "$mode" "$src" "$dest"
+	done < <(find "$template_dir" -type f -print0)
 }

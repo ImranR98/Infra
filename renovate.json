@@ -7,7 +7,7 @@
         "image:\\s*(?<depName>[^\\s@:\"']+):(?<currentValue>[^\\s@:\"'#]+)(?:@sha256:\\S+)?"
       ],
       "datasourceTemplate": "docker",
-      "versioningTemplate": "semver"
+      "versioningTemplate": "docker"
     },
     {
       "customType": "regex",
@@ -16,7 +16,7 @@
         "repository:\\s*(?<depName>\\S+)\\s*\\n(?:[^\\n]*\\n){0,10}?\\s*tag:\\s*(?<currentValue>\\S+)"
       ],
       "datasourceTemplate": "docker",
-      "versioningTemplate": "semver"
+      "versioningTemplate": "docker"
     },
     {
       "customType": "regex",
@@ -30,22 +30,10 @@
   ],
   "packageRules": [
     {
-      "description": "Pin floating tags (latest/stable/release) to digests",
+      "description": "Pin floating tags (latest|stable|release) to digests",
       "matchDatasources": ["docker"],
       "matchCurrentValue": "^(latest|stable|release)$",
       "pinDigests": true
-    },
-    {
-      "description": "Prefer amd64 tags on x86_64, never switch archs",
-      "matchDatasources": ["docker"],
-      "matchCurrentValue": "-amd64$",
-      "allowedVersions": "/-amd64$/"
-    },
-    {
-      "description": "Keep flavor suffixes (alpine, openssl, uclibc etc)",
-      "matchDatasources": ["docker"],
-      "matchCurrentValue": "-(alpine|openssl|uclibc|slim|bookworm|bullseye|noble|jammy|oracle|pgvector|vectorchord|amazoncorretto)$",
-      "allowedVersions": "/-(?:alpine|openssl|uclibc|slim|bookworm|bullseye|noble|jammy|oracle|pgvector|vectorchord|amazoncorretto)$/"
     }
   ]
 }

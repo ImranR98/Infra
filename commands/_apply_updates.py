@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
 """Apply updates discovered by Renovate to YAML files.
 
-Reads Renovate's debug log from stdin, finds all dependencies with
-available updates, and applies them to the source files using the
-autoReplaceStringTemplate provided by Renovate.
+Reads Renovate's debug log from stdin and applies version updates
+to source files, respecting # PRESERVE_FULL and # PRESERVE_MAJOR annotations.
 
-Usage: RENOVATE_LOG=<file> python3 _apply_updates.py [--dry-run]
+Usage: python3 _apply_updates.py [--dry-run] [--target=<name>] < renovate-log.json
 """
 import json
 import os
@@ -15,13 +14,17 @@ from pathlib import Path
 ATLAS_ROOT = Path(os.environ.get("ATLAS_ROOT", ".")).resolve()
 
 
-def _render_template(template, dep_name, new_value, new_digest=""):
-    result = template.replace("{{depName}}", dep_name)
-    nv = new_value or ""
-    if "{{#if newValue}}" in result:
-        result = result.replace("{{#if newValue}}", "").replace("{{/if}}", "")
-    result = result.replace("{{newValue}}", nv)
-    return result
+def _parse_flag(flag):
+    for arg in sys.argv:
+        if arg.startswith(flag + "="):
+            return arg.split("=", 1)[1]
+        if arg == flag:
+            return None
+    return None
+
+
+def _has_flag(flag):
+    return flag in sys.argv
 
 
 def _apply_file(package_file, deps, dry_run=False):
@@ -31,7 +34,6 @@ def _apply_file(package_file, deps, dry_run=False):
         return
 
     content = fpath.read_text()
-    original = content
     changed = False
 
     for dep in deps:
@@ -41,11 +43,31 @@ def _apply_file(package_file, deps, dry_run=False):
         update = updates[0]
         new_value = update.get("newValue", "")
         new_digest = update.get("newDigest", "")
+        current_val = dep.get("currentValue", "")
 
         dep_name = dep.get("depName", "")
-        template = dep.get("autoReplaceStringTemplate", "{{depName}}:{{newValue}}")
         old_str = dep.get("replaceString", "")
-        new_str = _render_template(template, dep_name, new_value, new_digest)
+
+        if not new_value or not current_val or not old_str:
+            continue
+
+        idx = content.find(old_str)
+        if idx >= 0:
+            line_start = content.rfind('\n', 0, idx) + 1
+            line_end = content.find('\n', idx)
+            if line_end < 0:
+                line_end = len(content)
+            line = content[line_start:line_end]
+            if "# PRESERVE_FULL" in line:
+                print(f"  {dep_name}: skipped (# PRESERVE_FULL)")
+                continue
+            if update.get("updateType") == "major" and "# PRESERVE_MAJOR" in line:
+                print(f"  {dep_name}: skipped major update (# PRESERVE_MAJOR)")
+                continue
+
+        new_str = old_str.replace(current_val, new_value, 1)
+        if new_digest and current_val in ("latest", "stable", "release"):
+            new_str = new_str.replace(new_value, new_value + "@" + new_digest, 1)
 
         if old_str == new_str:
             continue
@@ -63,7 +85,9 @@ def _apply_file(package_file, deps, dry_run=False):
 
 
 def main():
-    dry_run = "--dry-run" in sys.argv
+    dry_run = _has_flag("--dry-run")
+    target = _parse_flag("--target")
+
     log_line = None
 
     for line in sys.stdin:
@@ -104,6 +128,8 @@ def main():
                 continue
             pkg_file = entry.get("packageFile", "")
             if not pkg_file:
+                continue
+            if target and not pkg_file.startswith(f"targets/{target}/"):
                 continue
             dedup_key = (pkg_file, tuple(d.get("depName","") for d in deps))
             if dedup_key in _seen:

@@ -185,7 +185,7 @@ services:
 
     # Plausible - Web Analytics
     plausible_db:
-        image: postgres:16-alpine
+        image: postgres:16-alpine # PRESERVE_MAJOR
         container_name: plausible_db
         restart: unless-stopped
         mem_limit: 8G
@@ -200,7 +200,7 @@ services:
             - traefik
         logging: *logging
     plausible_events_db:
-        image: clickhouse/clickhouse-server:24.12-alpine
+        image: clickhouse/clickhouse-server:24.12-alpine # PRESERVE_MAJOR
         restart: unless-stopped
         mem_limit: 8G
         container_name: plausible_events_db
@@ -472,7 +472,7 @@ services:
             - "traefik.http.services.shlink.loadbalancer.server.port=8080"
         logging: *logging
     shlink_db:
-        image: postgres:17-alpine
+        image: postgres:17-alpine # PRESERVE_MAJOR
         container_name: shlink_db
         restart: unless-stopped
         user: "$MY_UID:$MY_UID"

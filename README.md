@@ -19,6 +19,38 @@ Atlas is a single-repo infrastructure manager. It deploys, configures, validates
 ./atlas.sh <target> validate               # Check configs for errors
 ```
 
+## Version updates
+
+```bash
+# Scan for Docker image and Helm chart updates across all stacks
+./atlas.sh <target> update --dry-run    # Preview
+./atlas.sh <target> update              # Apply
+
+# After updating fatedier/frpc, build and push the frps-with-multiuser image
+./atlas.sh sol compose build-frps lens
+```
+
+`update` uses [Renovate](https://docs.renovatebot.com) internally to discover newer Docker image tags and Helm chart versions. Traefik plugin versions are checked via the GitHub Releases API as part of the same run.
+
+### FRP update flow
+
+The `fatedier/frpc` image in `sol/compose/compose.yaml` is updated automatically by `update`. The matching `imranrdev/frps-with-multiuser` image in `lens/compose/compose.yaml` is a custom build that must be pushed to Docker Hub before it can be used. After `update` bumps `fatedier/frpc`, run:
+
+```bash
+./atlas.sh sol compose build-frps lens
+```
+
+This reads the new version from sol's compose, clones the [frps-with-multiuser-docker](https://github.com/ImranR98/frps-with-multiuser-docker) repo, builds the image, pushes it to Docker Hub, and updates lens's compose file.
+
+### Controlling updates
+
+Add annotations on the same line to restrict or prevent updates:
+
+```yaml
+image: postgres:16-alpine  # PRESERVE_MAJOR  — only minor/patch updates
+image: redis:7  # PRESERVE_FULL             — skip entirely, no updates
+```
+
 ## Architecture
 
 ### Directory structure
@@ -28,18 +60,19 @@ Atlas/
 ├── atlas.sh                  # Entry point — dispatcher with built-in commands
 ├── commands/                 # Generic commands (shared across targets)
 │   ├── prereqs.sh
-│   ├── update-traefik-plugins.py
+│   ├── prereqs.sh             # Install system prerequisites
+│   ├── update.sh              # Scan for updates via Renovate (all stacks)
 │   ├── compose/
-│   │   ├── install.sh
-│   │   ├── restart.sh
-│   │   ├── backup-state.sh
-│   │   ├── update-socket-proxy.sh
-│   │   └── update-frp.sh
+│   │   ├── install.sh         # Render templates, install systemd service
+│   │   ├── restart.sh         # Restart a specific Compose service
+│   │   ├── backup-state.sh    # Backup state (local or remote)
+│   │   ├── old-images.sh      # List stale Docker images
+│   │   └── build-frps.sh      # Build/push frps-with-multiuser image
 │   └── k3s/
 │       ├── setup.sh           # K3s cluster bootstrap
 │       ├── join.sh            # Join a worker node
-│       ├── install.sh         # Component deploy/delete
-│       ├── update.py          # Version pinning
+│       ├── install.sh         # Component deploy/delete/diff/yaml
+│       ├── group.sh           # Deploy/delete groups (base/apps)
 │       └── update-node-ip.sh  # IP change recovery
 ├── targets/                   # Per-machine definitions
 │   └── <name>/
@@ -50,7 +83,13 @@ Atlas/
 │       │       └── apps.sh    # Deploy all app components
 │       ├── compose/           # Docker Compose stack
 │       │   ├── compose.yaml
-│       │   └── templates/     # Config files with $VAR substitution
+│       │   └── templates/     # Convention-based: mirror of $COMPOSE_STATE_DIR
+│       │                       #   .secret suffix → envsubst + chmod 600
+│       │                       #   .plain suffix → plain copy
+│       │                       #   authelia/ prefix → authelia mode
+│       │                       #   traefik/ prefix → traefik mode
+│       └── k3s/               # Kubernetes components
+│           ├── groups.yaml    # Component ordering for base/apps groups
 │       └── k3s/               # Kubernetes components
 │           ├── <component>/
 │           │   ├── kustomization.yaml
@@ -62,12 +101,10 @@ Atlas/
 │   ├── common.sh              # Aggregator — sources all sub-modules
 │   ├── packages.sh            # Package manager helpers
 │   ├── vars.sh                # VARS file handling + envsubst
-│   ├── domains.sh             # Domain listing
-│   ├── images.sh              # Old Docker image listing
 │   ├── compose-gen.sh         # Compose config generation + render
 │   ├── validate.sh            # Stack validation logic
-│   ├── wait-for-crd.sh        # CRD wait helper for K3s post hooks
-│   └── k3s-common.sh          # K3s installer/helper functions
+│   ├── k3s-common.sh          # K3s installer/helper functions
+│   └── dispatch.sh            # Command discovery and dispatch
 ├── current_target/            # Runtime state (gitignored)
 └── VARS.<target>.sh           # User secrets/config (gitignored)
 ```
@@ -124,15 +161,6 @@ middlewares:
 ```
 
 When deploying with `APPLY_MODE=initial`, lines ending in `# IGNORE INITIALLY` are deleted from all component YAML files before kustomize runs. On the second run (without `initial`), the full file is applied unchanged.
-
-### `# PINNED`
-
-In HelmChart or image references, add `# PINNED` on the same line to prevent the `k3s update` command from upgrading a specific chart version or image tag. Useful for pinning to a known-good version.
-
-```yaml
-spec:
-  version: 0.11.5  # PINNED — do not autoupdate
-```
 
 ### `# POST_APPLY`
 

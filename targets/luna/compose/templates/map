@@ -1,4 +1,0 @@
-authelia:authelia.config.yaml:authelia/config/configuration.yml
-traefik:traefik.dynamic-configuration.yaml:traefik/dynamic-configuration.yaml
-plain:plausible.clickhouse-config.xml:plausible/config/clickhouse-config.xml
-normal:logtfy.config.json:logtfy/config.json

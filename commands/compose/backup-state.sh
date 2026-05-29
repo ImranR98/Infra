@@ -1,4 +1,5 @@
 #!/bin/bash
+# DESC: Backup Compose runtime state (local file or remote via SSH)
 set -euo pipefail
 source "$ATLAS_ROOT/lib/common.sh"
 
@@ -28,15 +29,15 @@ Remote format:
   <remote>  [user@]host:path (e.g. root@luna.example.org:~/Atlas)
   <t>       Target on the remote (e.g. luna)
 EOF
-	exit 1
 }
 
 case "${1:-}" in
-	-h|--help) usage ;;
+	-h|--help) usage; exit 0 ;;
 	*) ;;
 esac
 if [ $# -eq 1 ]; then
 	usage
+	exit 1
 fi
 
 # --- Remote mode ---

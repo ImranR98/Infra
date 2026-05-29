@@ -1,4 +1,5 @@
 #!/bin/bash
+# DESC: Deploy, delete, diff, or render a single K3s component
 set -euo pipefail
 
 : ${TARGET:="sol"}
@@ -75,7 +76,7 @@ _k3s_delete() {
 	local _YAML; _YAML=$(printf '%s\n' "$PROCESSED_YAML")
 
 	local _helmcharts
-	_helmcharts=$(printf '%s\n' "$_YAML" | python3 -c "import sys,yaml; docs=yaml.safe_load_all(sys.stdin); [print(f'{d[\"metadata\"][\"namespace\"]}/{d[\"metadata\"][\"name\"]}') for d in docs if d and d.get('kind')=='HelmChart']" 2>/dev/null)
+	_helmcharts=$(printf '%s\n' "$_YAML" | yq 'select(.kind == "HelmChart") | .metadata.namespace + "/" + .metadata.name' 2>/dev/null)
 	if [ -n "$_helmcharts" ]; then
 		while IFS="/" read -r ns chart; do
 			if [ -z "$chart" ]; then continue; fi
@@ -84,16 +85,16 @@ _k3s_delete() {
 		done <<< "$_helmcharts"
 	fi
 
-	printf '%s\n' "$_YAML" | python3 -c "import sys,yaml; docs=list(yaml.safe_load_all(sys.stdin)); yaml.dump_all([d for d in docs if d and d.get('kind')!='PersistentVolumeClaim'], sys.stdout)" 2>/dev/null | kubectl delete --wait -f - 2>/dev/null || true
+	printf '%s\n' "$_YAML" | yq 'select(.kind != "PersistentVolumeClaim")' 2>/dev/null | kubectl delete --wait -f - 2>/dev/null || true
 
 	local _pvcs
-	_pvcs=$(printf '%s\n' "$_YAML" | python3 -c "import sys,yaml; docs=yaml.safe_load_all(sys.stdin); [print(f'{d[\"metadata\"][\"namespace\"]}/{d[\"metadata\"][\"name\"]}') for d in docs if d and d.get('kind')=='PersistentVolumeClaim']" 2>/dev/null)
+	_pvcs=$(printf '%s\n' "$_YAML" | yq 'select(.kind == "PersistentVolumeClaim") | .metadata.namespace + "/" + .metadata.name' 2>/dev/null)
 	if [ -n "$_pvcs" ]; then
 		while IFS="/" read -r ns pvc_name; do
 			if [ -z "$pvc_name" ]; then continue; fi
 			echo "Deleting PVC $ns/$pvc_name..."
 			_delete_resource_with_timeout pvc "$ns" "$pvc_name"
-			kubectl get pv -o json 2>/dev/null | python3 -c "import sys,json; pvs=json.load(sys.stdin)['items']; [print(p['metadata']['name']) for p in pvs if p.get('status',{}).get('phase')=='Released' and p.get('spec',{}).get('claimRef',{}).get('name')=='$pvc_name' and p.get('spec',{}).get('claimRef',{}).get('namespace')=='$ns']" | while read -r pv; do
+			kubectl get pv -o json 2>/dev/null | jq -r --arg name "$pvc_name" --arg ns "$ns" '.items[] | select(.status.phase == "Released" and .spec.claimRef.name == $name and .spec.claimRef.namespace == $ns) | .metadata.name' | while read -r pv; do
 				kubectl patch pv "$pv" --type=json -p='[{"op": "remove", "path": "/spec/claimRef/uid"}]' 2>/dev/null || true
 			done
 		done <<< "$_pvcs"

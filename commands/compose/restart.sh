@@ -1,4 +1,5 @@
 #!/bin/bash
+# DESC: Restart a specific Compose service
 set -euo pipefail
 source "$ATLAS_ROOT/lib/common.sh"
 

@@ -1,4 +1,5 @@
 #!/bin/bash
+# DESC: Join this node to an existing K3s cluster as a worker
 set -euo pipefail
 
 source "$ATLAS_ROOT/lib/common.sh"

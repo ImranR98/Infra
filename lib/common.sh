@@ -2,6 +2,9 @@
 # Common library for Atlas — sourced by atlas.sh and all command scripts.
 # Provides all shared functionality as a single import point.
 
+[[ "${ATLAS_LIB_LOADED:-}" = true ]] && return 0
+ATLAS_LIB_LOADED=true
+
 _lib_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 : ${ATLAS_ROOT:="$(cd "$_lib_dir/.." >/dev/null 2>&1 && pwd)"}
 

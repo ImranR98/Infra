@@ -1,5 +1,5 @@
 #!/bin/bash
-# Installs k3s
+# DESC: Bootstrap a K3s control-plane node
 
 set -euo pipefail
 

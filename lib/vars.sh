@@ -56,10 +56,6 @@ get_envsubst_vars() {
 		vars="$vars $(grep -oP 'export \K[A-Z_][A-Z_0-9]*' "$vars_file" | tr '\n' ' ')"
 	fi
 
-	if [ -d "$ATLAS_ROOT/targets/$TARGET/k3s" ]; then
-		vars="$vars $(grep -rhoE '\$[A-Z_][A-Z_0-9]*|\$\{[A-Z_][A-Z_0-9]*\}' "$ATLAS_ROOT/targets/$TARGET/k3s" --include='*.yaml' 2>/dev/null | sed 's/[${}]//g' | tr '\n' ' ')"
-	fi
-
 	for v in MY_UID TARGET COMPOSE_STATE_DIR DOCKER_GID FRPC_USER; do
 		case " $vars " in *" $v "*) ;; *) vars="$vars $v" ;; esac
 	done

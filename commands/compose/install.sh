@@ -1,17 +1,11 @@
 #!/bin/bash
+# DESC: Render templates, install systemd service, start Compose stack
 set -euo pipefail
 source "$ATLAS_ROOT/lib/common.sh"
 ensure_envsubst_vars
 
 render_compose_yaml
-python3 -c "
-import yaml
-c=yaml.safe_load(open('$COMPOSE_STATE_DIR/compose.yaml','r'))
-for s in c.get('services',{}).values():
- for v in s.get('volumes',[]):
-  p=(v if isinstance(v,str) else v.get('source','')).split(':')[0]
-  if p.startswith('$COMPOSE_STATE_DIR'): print(p)
-" | while read -r host_path; do
+yq -r '.services[].volumes[] | (select(tag == "!!str") | split(":") | .[0]) // (select(tag == "!!map") | .source | split(":") | .[0])' "$COMPOSE_STATE_DIR/compose.yaml" | grep "^$COMPOSE_STATE_DIR" | while read -r host_path; do
 	name="$(basename "$host_path")"
 	if [[ "$name" =~ \.[a-zA-Z0-9]{1,5}$ ]]; then
 		mkdir -p "$(dirname "$host_path")"

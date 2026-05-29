@@ -1,0 +1,26 @@
+base:
+  - namespaces
+  - nfs-server
+  - csi-driver-nfs
+  - longhorn
+  - cert-manager
+  - traefik
+  - crowdsec
+  - authelia
+  - ntfy
+apps:
+  - immich
+  - logtfy
+  - jellyfin
+  - navidrome
+  - mdscl
+  - mosquitto
+  - homeassistant
+  - ollama
+  - nextcloud
+  - freshrss
+  - opodsync
+  - dscpln
+  - opencanary
+  - fmd
+  - syncthing
