@@ -2,6 +2,7 @@
 # DESC: Bootstrap a K3s control-plane node
 set -euo pipefail
 
+[ -z "${ATLAS_ROOT:-}" ] && ATLAS_ROOT="$(cd "$(dirname "$(readlink -f "$0")")/../.." && pwd)"
 source "$ATLAS_ROOT/lib/common.sh"
 
 if [ "$(id -u)" != 0 ]; then
