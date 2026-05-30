@@ -66,7 +66,7 @@ spec:
         fsGroup: 999
       initContainers:
         - name: volume-permissions
-          image: postgres:17.10-alpine
+          image: postgres:17.10-alpine # PRESERVE_MAJOR
           command:
             - sh
             - -c
@@ -85,7 +85,7 @@ spec:
               mountPath: /var/lib/postgresql/data
       containers:
         - name: postgresql
-          image: postgres:17.10-alpine
+          image: postgres:17.10-alpine # PRESERVE_MAJOR
           securityContext:
             runAsUser: 999
             runAsGroup: 999
