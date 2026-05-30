@@ -192,16 +192,37 @@ download_k3s_installer() {
 	chmod +x "$K3S_SCRIPT"
 }
 
-configure_firewall() {
-	if ! command -v firewall-cmd >/dev/null 2>&1; then
-		echo "Warning: firewall-cmd not found. Skipping firewall configuration."
-		echo "If using a different firewall, ensure interfaces cni0 and flannel.1 are trusted."
-	else
-		firewall-cmd --permanent --zone=trusted --add-interface=cni0 2>/dev/null || true
-		firewall-cmd --permanent --zone=trusted --add-interface=flannel.1 2>/dev/null || true
+configure_k3s_firewall() {
+	# Check for firewalld (RHEL/Fedora family)
+	if command -v firewall-cmd >/dev/null 2>&1; then
+		firewall-cmd --permanent --zone=trusted --add-source=10.42.0.0/16 2>/dev/null || true  # pod network CIDR
+		firewall-cmd --permanent --zone=trusted --add-source=10.43.0.0/16 2>/dev/null || true  # service CIDR
+		firewall-cmd --permanent --add-port=8472/udp 2>/dev/null || true   # Flannel VXLAN overlay
+		firewall-cmd --permanent --add-port=6443/tcp 2>/dev/null || true   # K3s API server
+		firewall-cmd --permanent --add-port=10250/tcp 2>/dev/null || true  # kubelet API
+		firewall-cmd --permanent --add-port=2379/tcp 2>/dev/null || true   # etcd client
+		firewall-cmd --permanent --add-port=2380/tcp 2>/dev/null || true   # etcd peer
+		firewall-cmd --permanent --add-port=443/tcp 2>/dev/null || true    # HTTPS ingress
 		firewall-cmd --reload
-		echo "Firewall configured. Note: VPNs may interfere with cluster networking and should run on an upstream router."
+		echo "Firewall configured (firewalld)."
+	# Check for ufw (Ubuntu/Debian family)
+	elif command -v ufw >/dev/null 2>&1; then
+		ufw allow from 10.42.0.0/16 2>/dev/null || true   # pod network CIDR
+		ufw allow from 10.43.0.0/16 2>/dev/null || true   # service CIDR
+		ufw allow 8472/udp 2>/dev/null || true            # Flannel VXLAN overlay
+		ufw allow 6443/tcp 2>/dev/null || true            # K3s API server
+		ufw allow 10250/tcp 2>/dev/null || true           # kubelet API
+		ufw allow 2379/tcp 2>/dev/null || true            # etcd client
+		ufw allow 2380/tcp 2>/dev/null || true            # etcd peer
+		ufw allow 443/tcp 2>/dev/null || true             # HTTPS ingress
+		echo "Firewall configured (ufw)."
+	else
+		echo "Warning: neither firewall-cmd nor ufw found. Skipping firewall configuration."
+		echo "If using a different firewall, ensure:"
+		echo "  - Pod CIDR 10.42.0.0/16 and Service CIDR 10.43.0.0/16 are trusted"
+		echo "  - Ports 8472/udp, 6443/tcp, 10250/tcp, 2379-2380/tcp, 443/tcp are open"
 	fi
+	echo "Note: VPNs may interfere with cluster networking and should run on an upstream router."
 }
 
 # ====== validate ======

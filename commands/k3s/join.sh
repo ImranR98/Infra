@@ -56,7 +56,7 @@ echo "=== Installing K3s agent ==="
 rm -f "$K3S_SCRIPT"
 
 echo "=== Configuring firewall ==="
-configure_firewall
+configure_k3s_firewall
 echo "K3s agent installed."
 ENDSCRIPT
 

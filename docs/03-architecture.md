@@ -112,7 +112,7 @@ Template processing rules in `configure_compose_templates()`:
 | Function | Description |
 |----------|-------------|
 | `download_k3s_installer()` | Downloads and SHA256-verifies the K3s install script |
-| `configure_firewall()` | Adds `cni0` and `flannel.1` interfaces to firewalld trusted zone |
+| `configure_k3s_firewall()` | Adds `cni0` and `flannel.1` interfaces to firewalld trusted zone |
 
 ### Validation (lines 207-323)
 
