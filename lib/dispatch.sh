@@ -3,7 +3,7 @@ set -euo pipefail
 
 _desc() {
 	local f="$1"
-	local d; d=$(sed -n 's/^# DESC: //p;q' "$f" 2>/dev/null)
+	local d; d=$(sed -n '2{s/^# DESC: //p;q}' "$f" 2>/dev/null)
 	if [ -n "$d" ]; then echo "  $d"; fi
 }
 
