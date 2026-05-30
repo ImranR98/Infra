@@ -1,61 +1,85 @@
 #!/bin/bash
-# DESC: Join this node to an existing K3s cluster as a worker
+# DESC: Join a remote node to the cluster via SSH (run from server)
 set -euo pipefail
 
 source "$ATLAS_ROOT/lib/common.sh"
 
-SERVER_IP="${1:-}"
-if [ -z "$SERVER_IP" ]; then
-	echo "Usage: $0 <server-ip>" >&2
-	echo "  Joins this node to an existing K3s cluster as a worker." >&2
+CLIENT_IP="${1:?Usage: $0 <client-ip> <ssh-user>}"
+SSH_USER="${2:?Usage: $0 <client-ip> <ssh-user>}"
+
+if ! command -v ssh >/dev/null 2>&1; then
+	echo "Error: ssh is required for remote join." >&2
+	exit 1
+fi
+if ! command -v kubectl >/dev/null 2>&1; then
+	echo "Error: kubectl not found. Are you on the control-plane node?" >&2
 	exit 1
 fi
 
+TOKEN=$(cat /var/lib/rancher/k3s/server/token 2>/dev/null) || {
+	echo "Error: cannot read K3s token. Are you on the control-plane node?" >&2
+	exit 1
+}
+SERVER_IP=$(kubectl get node "$(hostname)" -o jsonpath='{.status.addresses[?(@.type=="InternalIP")].address}' 2>/dev/null) || SERVER_IP=""
+SERVER_URL="https://${SERVER_IP}:6443"
+
+echo "Joining $CLIENT_IP to cluster..."
+echo "Server IP: $SERVER_IP"
+echo ""
+
+script=$(mktemp /tmp/k3s-join-script.XXXXXX)
+trap 'rm -f "$script"' EXIT
+
+{
+	echo '#!/bin/bash'
+	echo 'set -euo pipefail'
+	echo 'SERVER_URL="$1"'
+	echo 'TOKEN="$2"'
+
+	declare -f download_k3s_installer
+	declare -f configure_firewall
+
+	cat << 'BODY'
+
+SUDO=""
 if [ "$(id -u)" != 0 ]; then
-	exec $(get_sudo_cmd) bash "$0" "$@"
+	if command -v run0 >/dev/null 2>&1; then
+		SUDO="run0"
+	else
+		SUDO="sudo"
+	fi
 fi
 
 echo "=== Downloading K3s installer ==="
 download_k3s_installer
 
-echo ""
-read -rsp "Enter the K3s join token (found at /var/lib/rancher/k3s/server/token on the control-plane node): " TOKEN
-echo ""
-
-if [ -z "$TOKEN" ]; then
-	echo "Error: token must not be empty." >&2
-	rm -f "$K3S_SCRIPT"
-	exit 1
-fi
-
 echo "=== Installing K3s agent ==="
-"$K3S_SCRIPT" agent --server "https://$SERVER_IP:6443" --token "$TOKEN"
+$SUDO "$K3S_SCRIPT" agent --server "$SERVER_URL" --token "$TOKEN"
 rm -f "$K3S_SCRIPT"
 
+echo ""
+echo "=== Configuring firewall ==="
 configure_firewall
+echo "K3s agent installed."
+BODY
+} > "$script"
+
+scp "$script" "${SSH_USER}@${CLIENT_IP}:/tmp/k3s-join-script.sh"
+ssh -t "${SSH_USER}@${CLIENT_IP}" \
+	"bash /tmp/k3s-join-script.sh '${SERVER_URL}' '${TOKEN}'"
+ssh "${SSH_USER}@${CLIENT_IP}" "rm /tmp/k3s-join-script.sh" 2>/dev/null || true
 
 echo ""
-echo "Waiting for this node to appear in the cluster..."
+echo "Waiting for node to register..."
 for i in $(seq 1 30); do
-	if kubectl get nodes 2>/dev/null | grep -q "$(hostname)"; then
-		echo "Node $(hostname) joined the cluster successfully."
+	if kubectl get nodes --no-headers 2>/dev/null | awk '{print $2}' | grep -q Ready; then
+		echo "Ready nodes:"
+		kubectl get nodes
 		break
 	fi
-	if [ $i -eq 30 ]; then echo "Warning: node not detected after 150s. It may take longer to register."; fi
+	if [ $i -eq 30 ]; then
+		echo "Warning: node may take longer to register."
+	fi
 	sleep 5
 done
-
-# Copy kubeconfig from server so kubectl works on this worker.
-# Uncomment the block below if you want kubectl access on worker nodes.
-#
-# echo ""
-# echo "=== Copying kubeconfig from server ==="
-# mkdir -p ~/.kube
-# K3S_URL="${K3S_URL:-https://$SERVER_IP:6443}"
-# scp "root@$SERVER_IP:/etc/rancher/k3s/k3s.yaml" ~/.kube/config
-# sed -i "s|127.0.0.1|$SERVER_IP|g" ~/.kube/config
-# echo "kubeconfig written to ~/.kube/config"
-
-echo ""
-echo "Done. Worker node $(hostname) has joined the cluster."
-echo "Run 'kubectl get nodes' on the control-plane to confirm."
+echo "Done. Node join initiated."
