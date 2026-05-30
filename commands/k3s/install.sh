@@ -2,8 +2,19 @@
 # DESC: Deploy, delete, diff, or render a single K3s component
 set -euo pipefail
 
-COMPONENT="$1"
+COMPONENT="${1:-}"
 MODE="${2:-apply}"
+
+if [ -z "$COMPONENT" ]; then
+	echo "Error: No component specified." >&2
+	echo "Usage: $0 <component> [mode]" >&2
+	echo "Available components:" >&2
+	for d in "$ATLAS_ROOT/targets/$TARGET/k3s"/*/; do
+		[ -d "$d" ] || continue
+		printf '  %s\n' "$(basename "$d")"
+	done
+	exit 1
+fi
 
 COMPONENT_DIR="$ATLAS_ROOT/targets/$TARGET/k3s/$COMPONENT"
 

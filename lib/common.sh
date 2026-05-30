@@ -121,7 +121,7 @@ get_envsubst_vars() {
 		vars="$vars $(grep -oP 'export \K[A-Z_][A-Z_0-9]*' "$vars_file" | tr '\n' ' ')"
 	fi
 
-	for v in MY_UID TARGET COMPOSE_STATE_DIR DOCKER_GID; do
+	for v in MY_UID TARGET COMPOSE_STATE_DIR COMPOSE_STATE_BACKUP_DIR LONGHORN_BACKUP_DIR DOCKER_GID; do
 		case " $vars " in *" $v "*) ;; *) vars="$vars $v" ;; esac
 	done
 
