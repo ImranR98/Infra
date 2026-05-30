@@ -48,7 +48,6 @@ if [ "$vars_found" = true ]; then
 			[ -n "$DOCKER_GID" ] && export DOCKER_GID
 			;;
 	esac
-	export FRPC_USER="${TARGET,,}"
 elif [ -n "${1:-}" ]; then
 	case "$1" in compose|k3s)
 		if [ "${2:-}" != "backup-state" ]; then

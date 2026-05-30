@@ -26,8 +26,8 @@ Usage:
   atlas.sh <target> compose backup-state <remote> <t>  Remote backup
 
 Remote format:
-  <remote>  [user@]host:path (e.g. root@luna.example.org:~/Atlas)
-  <t>       Target on the remote (e.g. luna)
+  <remote>  [user@]host:path
+  <t>       Target on the remote
 EOF
 }
 

@@ -2,8 +2,6 @@
 # DESC: Deploy, delete, diff, or render a single K3s component
 set -euo pipefail
 
-: ${TARGET:="sol"}
-
 COMPONENT="$1"
 MODE="${2:-apply}"
 

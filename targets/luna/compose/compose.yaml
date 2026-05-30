@@ -93,7 +93,7 @@ services:
             - traefik
         labels:
             - "traefik.enable=true"
-            - "traefik.http.routers.authelia.rule=Host(`luna.$SERVICES_DOMAIN`)"
+            - "traefik.http.routers.authelia.rule=Host(`$TARGET.$SERVICES_DOMAIN`)"
             - "traefik.http.routers.authelia.entryPoints=websecure"
             - "traefik.http.routers.authelia.tls.certresolver=le"
             - "traefik.http.routers.authelia.tls=true"
@@ -171,7 +171,7 @@ services:
             - dockerproxy:/socket/:ro
         labels:
             - "traefik.enable=true"
-            - "traefik.http.routers.traefik-dashboard.rule=Host(`traefik.luna.$SERVICES_DOMAIN`)"
+            - "traefik.http.routers.traefik-dashboard.rule=Host(`traefik.$TARGET.$SERVICES_DOMAIN`)"
             - "traefik.http.routers.traefik-dashboard.entrypoints=websecure"
             - "traefik.http.routers.traefik-dashboard.tls.certresolver=le"
             - "traefik.http.routers.traefik-dashboard.tls=true"

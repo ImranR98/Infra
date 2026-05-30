@@ -1,5 +1,5 @@
 # NOTE: Any ending (strictly ending, not just containing) with the 'IGNORE INITIALLY' comment
-#       will be ignored by 'luna.sh install' when copying this file for the first time (but not when updating it later).
+#       will be ignored by atlas.sh when copying this file for the first time (but not when updating it later).
 #       The main use case for this is to avoid applying 'bypass' policies to some sites that
 #       should not be protected by Authelia once fully set up, but should be protected before
 #       some manual step is taken (usually manual creation of an admin account).
@@ -19,7 +19,7 @@ authentication_backend:
 access_control:
   default_policy: 'one_factor'
   rules:
-    - domain: luna.$SERVICES_DOMAIN
+    - domain: $TARGET.$SERVICES_DOMAIN
       policy: bypass
     - domain: pixelntfy.$SERVICES_DOMAIN
       policy: bypass
@@ -36,7 +36,7 @@ session:
   secret: '$AUTHELIA_SESSION_SECRET'
   cookies:
     - domain: $SERVICES_DOMAIN
-      authelia_url: https://luna.$SERVICES_DOMAIN
+      authelia_url: https://$TARGET.$SERVICES_DOMAIN
 
   redis:
     host: authelia-db

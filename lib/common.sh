@@ -121,7 +121,7 @@ get_envsubst_vars() {
 		vars="$vars $(grep -oP 'export \K[A-Z_][A-Z_0-9]*' "$vars_file" | tr '\n' ' ')"
 	fi
 
-	for v in MY_UID TARGET COMPOSE_STATE_DIR DOCKER_GID FRPC_USER; do
+	for v in MY_UID TARGET COMPOSE_STATE_DIR DOCKER_GID; do
 		case " $vars " in *" $v "*) ;; *) vars="$vars $v" ;; esac
 	done
 
@@ -299,7 +299,6 @@ _validate_compose() {
 	local known_vars; known_vars=$(_build_known_vars "$target" "MY_UID
 TARGET
 DOCKER_GID
-FRPC_USER
 COMPOSE_STATE_DIR")
 
 	local compose_files=("$ATLAS_ROOT/targets/$target/compose/compose.yaml")

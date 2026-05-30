@@ -9,9 +9,6 @@ case "$MODE" in apply|initial|delete) ;; *) echo "Usage: $0 <base|apps> [apply|i
 
 _groups_file="$ATLAS_ROOT/targets/$TARGET/k3s/groups.yaml"
 if [ ! -f "$_groups_file" ]; then
-	_groups_file="$ATLAS_ROOT/targets/sol/k3s/groups.yaml"
-fi
-if [ ! -f "$_groups_file" ]; then
 	echo "No groups.yaml found for target $TARGET." >&2
 	exit 1
 fi

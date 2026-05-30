@@ -5,7 +5,7 @@ source "$ATLAS_ROOT/lib/common.sh"
 
 TARGET_SERVER="$2"
 if [ -z "$TARGET_SERVER" ] || [ ! -f "$ATLAS_ROOT/targets/$TARGET_SERVER/compose/compose.yaml" ]; then
-	echo "FRPS target name (e.g. lens) must be specified!" >&2
+	echo "FRPS target name must be specified!" >&2
 	echo "Usage: $0 <target> compose build-frps <frps-target>" >&2
 	exit 1
 fi
