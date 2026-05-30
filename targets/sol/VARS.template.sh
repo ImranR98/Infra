@@ -34,6 +34,7 @@ export MDSCL_DEVICE_SYNC_PATH="$MAIN_PARENT_DIR/deviceSync"
 # --- Authelia ---
 # Use `docker run -it authelia/authelia:latest authelia crypto hash generate argon2` to generate the password hash
 # Indentation matters
+# For one-time 2FA registration: kubectl -n base exec -it "$(kubectl -n base get pod | grep -Eo '^authelia-[0-9][^ ]+')" -- cat /config/notification.txt 
 export AUTHELIA_USERS_DATABASE="users:
   admin:
     disabled: false
