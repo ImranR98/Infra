@@ -27,26 +27,24 @@ echo "Joining $CLIENT_IP to cluster..."
 echo "Server IP: $SERVER_IP"
 echo ""
 
-script=$(mktemp /tmp/k3s-join-script.XXXXXX)
-trap 'rm -f "$script"' EXIT
+installer=$(mktemp /tmp/k3s-agent-install.XXXXXX)
+trap 'rm -f "$installer"' EXIT
 
-{
-	echo '#!/bin/bash'
-	echo 'set -euo pipefail'
-	echo 'SERVER_URL="$1"'
-	echo 'TOKEN="$2"'
+cat > "$installer" << 'ENDSCRIPT'
+#!/bin/bash
+set -euo pipefail
+SERVER_URL="${1:?}"
+TOKEN="${2:?}"
 
-	declare -f download_k3s_installer
-	declare -f configure_firewall
+ATLAS_ROOT="$(cd "$(dirname "$0")" && pwd)"
+source "$ATLAS_ROOT/lib/common.sh"
 
-	cat << 'BODY'
-
-SUDO=""
 if [ "$(id -u)" != 0 ]; then
-	if command -v run0 >/dev/null 2>&1; then
-		SUDO="run0"
+	SUDOCMD=$(get_sudo_cmd)
+	if [ "$SUDOCMD" = "sudo" ]; then
+		exec sudo -E bash "$0" "$@"
 	else
-		SUDO="sudo"
+		exec run0 bash "$0" "$@"
 	fi
 fi
 
@@ -54,20 +52,25 @@ echo "=== Downloading K3s installer ==="
 download_k3s_installer
 
 echo "=== Installing K3s agent ==="
-$SUDO "$K3S_SCRIPT" agent --server "$SERVER_URL" --token "$TOKEN"
+"$K3S_SCRIPT" agent --server "$SERVER_URL" --token "$TOKEN"
 rm -f "$K3S_SCRIPT"
 
-echo ""
 echo "=== Configuring firewall ==="
 configure_firewall
 echo "K3s agent installed."
-BODY
-} > "$script"
+ENDSCRIPT
 
-scp "$script" "${SSH_USER}@${CLIENT_IP}:/tmp/k3s-join-script.sh"
+echo "Syncing files to client..."
+ssh "${SSH_USER}@${CLIENT_IP}" "mkdir -p /tmp/lib" 2>/dev/null
+rsync -az "$installer" "${SSH_USER}@${CLIENT_IP}:/tmp/agent-install.sh"
+rsync -az "$ATLAS_ROOT/lib/common.sh" "${SSH_USER}@${CLIENT_IP}:/tmp/lib/"
+
+echo "Running agent installer on client..."
 ssh -t "${SSH_USER}@${CLIENT_IP}" \
-	"bash /tmp/k3s-join-script.sh '${SERVER_URL}' '${TOKEN}'"
-ssh "${SSH_USER}@${CLIENT_IP}" "rm /tmp/k3s-join-script.sh" 2>/dev/null || true
+	"ATLAS_INTERACTIVE=true bash /tmp/agent-install.sh '${SERVER_URL}' '${TOKEN}'"
+
+echo "Cleaning up client..."
+ssh "${SSH_USER}@${CLIENT_IP}" "rm -rf /tmp/lib /tmp/agent-install.sh" 2>/dev/null || true
 
 echo ""
 echo "Waiting for node to register..."
