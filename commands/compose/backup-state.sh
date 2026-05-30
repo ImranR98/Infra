@@ -63,13 +63,8 @@ if [ $# -ge 2 ]; then
 	echo "  Output: $OUTPUT" >&2
 	echo "  SSH: ssh -T $remote_host \"cd $remote_path && ATLAS_BACKUP_STREAM=true ./atlas.sh $remote_target compose backup-state\"" >&2
 
-	pv_cmd=(cat)
-	if command -v pv >/dev/null 2>&1; then
-		pv_cmd=(pv -pterb)
-	fi
-
 	tar_exit=0
-	(umask 0077; ssh -T "$remote_host" "cd $remote_path && ATLAS_BACKUP_STREAM=true ./atlas.sh '$remote_target' compose backup-state" | "${pv_cmd[@]}" > "$OUTPUT") || tar_exit=$?
+	(umask 0077; ssh -T "$remote_host" "cd $remote_path && ATLAS_BACKUP_STREAM=true ./atlas.sh '$remote_target' compose backup-state" > "$OUTPUT") || tar_exit=$?
 	if [ $tar_exit -ge 2 ]; then
 		echo "Backup command failed on remote" >&2
 		rm -f "$OUTPUT"
@@ -115,15 +110,8 @@ if [ -t 1 ] && [ "${ATLAS_BACKUP_STREAM:-}" != "true" ]; then
 		echo "State directory size: $(numfmt --to=iec $dir_size 2>/dev/null || echo "$dir_size bytes")"
 	fi
 
-	pv_cmd=(cat)
-	if command -v pv >/dev/null 2>&1 && [ -n "$dir_size" ]; then
-		pv_cmd=(pv -pterb -s "$dir_size")
-	elif command -v pv >/dev/null 2>&1; then
-		pv_cmd=(pv -pterb)
-	fi
-
 	tar_exit=0
-	"${docker_tar_cmd[@]}" | "${pv_cmd[@]}" > "$OUTPUT" || tar_exit=$?
+	"${docker_tar_cmd[@]}" > "$OUTPUT" || tar_exit=$?
 	if [ $tar_exit -ge 2 ]; then
 		echo "Backup failed" >&2
 		rm -f "$OUTPUT"
@@ -145,15 +133,8 @@ else
 		echo "State directory size: $(numfmt --to=iec $dir_size 2>/dev/null || echo "$dir_size bytes")" >&2
 	fi
 
-	pv_cmd=(cat)
-	if command -v pv >/dev/null 2>&1 && [ -n "$dir_size" ]; then
-		pv_cmd=(pv -pterb -s "$dir_size")
-	elif command -v pv >/dev/null 2>&1; then
-		pv_cmd=(pv -pterb)
-	fi
-
 	tar_exit=0
-	"${docker_tar_cmd[@]}" | "${pv_cmd[@]}" || tar_exit=$?
+	"${docker_tar_cmd[@]}" || tar_exit=$?
 	if [ $tar_exit -ge 2 ]; then
 		exit $tar_exit
 	fi
