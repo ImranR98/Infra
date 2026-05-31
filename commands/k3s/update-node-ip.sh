@@ -6,22 +6,6 @@ source "$ATLAS_ROOT/lib/common.sh"
 
 SU="$(get_sudo_cmd)"
 
-get_primary_iface() {
-	local iface
-	iface=$(ip -4 route show default 2>/dev/null | awk '{print $5; exit}')
-	if [ -z "$iface" ]; then
-		echo "Error: no default route found, cannot determine primary interface" >&2
-		return 1
-	fi
-	echo "$iface"
-}
-
-get_current_ip() {
-	local iface="${1:-}"
-	[ -n "$iface" ] || iface=$(get_primary_iface) || return 1
-	ip -4 addr show "$iface" | grep -oP 'inet \K[\d.]+'
-}
-
 if ! command -v kubectl >/dev/null 2>&1; then
 	echo "Error: kubectl not found. Is K3s installed?" >&2
 	exit 1
@@ -33,8 +17,7 @@ if [ -z "$node_name" ]; then
 	exit 1
 fi
 
-iface=$(get_primary_iface)
-new_ip=$(get_current_ip "$iface")
+new_ip=$(get_node_ip) || { echo "Error: could not detect primary IP" >&2; exit 1; }
 current_node_ip=$(kubectl get node "$node_name" -o jsonpath='{.status.addresses[?(@.type=="InternalIP")].address}' 2>/dev/null)
 
 if [ "$current_node_ip" = "$new_ip" ]; then
@@ -65,5 +48,8 @@ done
 
 echo "Re-applying network policies with updated API server subnet..."
 bash "$ATLAS_ROOT/commands/k3s/install.sh" namespaces apply
+
+echo "Updating policy routing for new IP..."
+configure_k3s_routing
 
 echo "Done. K3s node IP updated to $new_ip."

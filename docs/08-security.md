@@ -175,13 +175,83 @@ automatically `chmod 600` when rendered to the state directory.
 Values for secrets are typically generated using `openssl rand`, and the
 generation commands are documented in the VARS template comments.
 
-## Firewall configuration
+## Host firewall and VPN coexistence
 
-For K3s, the host firewall (firewalld) is configured during setup:
-- `cni0` interface added to trusted zone (pod network bridge).
-- `flannel.1` interface added to trusted zone (overlay network VXLAN).
+**At configuration time** (`k3s setup` or `k3s join`), the host firewall is
+configured to allow K3s networking. Both firewalld (RHEL/Fedora) and ufw
+(Ubuntu/Debian) are supported.
 
-This is necessary because firewalld blocks forwarded traffic by default.
+### Firewall rules
+
+**CIDRs trusted unconditionally** (assigned to firewalld `trusted` zone, or
+allowed from any source with ufw):
+
+| CIDR | Purpose |
+|------|---------|
+| `10.42.0.0/16` | Pod network — all inter-pod traffic |
+| `10.43.0.0/16` | Service CIDR — virtual IPs for ClusterIP services |
+
+These CIDRs are trusted rather than specific interfaces (`cni0`, `flannel.1`)
+because in multi-node clusters, VXLAN-encapsulated pod traffic arrives on the
+**physical NIC** before the kernel decapsulates it. Trusting only the virtual
+interfaces would miss cross-node pod traffic.
+
+**Ports opened** (in the default/firewalld zone, or unrestricted with ufw):
+
+| Port | Protocol | Purpose |
+|------|----------|---------|
+| 8472 | UDP | Flannel VXLAN overlay — cross-node pod traffic |
+| 6443 | TCP | K3s API server — worker → control-plane registration |
+| 10250 | TCP | Kubelet API — logs, exec, metrics between nodes |
+| 2379 | TCP | etcd client — for HA control-plane |
+| 2380 | TCP | etcd peer replication — for HA control-plane |
+| 443 | TCP | HTTPS ingress — Traefik and LAN-accessible services |
+
+### Policy routing for VPN coexistence
+
+Many VPN clients (Mullvad, WireGuard, OpenVPN) install a default route
+and/or kill-switch rules that capture **all** traffic, breaking K3s networking.
+The `configure_k3s_routing()` function, called during setup and join, installs
+OS-level policy routing to protect K3s subnets:
+
+1. Detects the physical LAN interface and subnet (e.g. `192.168.8.0/24`)
+2. Adds `ip rule` entries at priority 32764–32765, which beats typical VPN
+   rules (~32766), forcing pod, service, and LAN traffic through the `main`
+   routing table instead of the VPN tunnel
+3. Installs a systemd oneshot service (`k3s-routing.service`) that re-applies
+   the rules at boot before `network-online.target`
+
+This means pod-to-pod, pod-to-service, and inter-node traffic always stays
+on the physical LAN regardless of what the VPN does with the default route.
+
+### VPN compatibility
+
+| VPN | Kill switch | Fix |
+|-----|:-----------:|-----|
+| Bare WireGuard (`wg-quick`) | None by default | Works out of the box |
+| Mullvad VPN app | On by default | `mullvad lockdown-mode set off` |
+| OpenVPN / other | Depends on config | Disable kill switch / block-outside-dns |
+
+Policy routing handles the routing conflict. The kill switch is a separate
+layer (iptables/nftables rules that DROP non-VPN traffic) and must be disabled
+separately — policy routing alone cannot override firewall rules.
+
+### Multi-node considerations
+
+On a single-node cluster, all traffic stays local to the host and the firewall
+rules are mostly belt-and-suspenders. On a multi-node cluster, every item above
+becomes critical:
+
+- **UDP 8472** must be open on every node — without it, Flannel VXLAN packets
+  from peer nodes are dropped and cross-node pod communication fails
+- **TCP 6443** must be open on server nodes — worker agents cannot register
+- **TCP 10250** must be open on every node — control-plane cannot reach
+  worker kubelet APIs
+- **Flannel interface discovery** is restricted to physical NICs via
+  `flannel-iface-regex: "^(eth|ens|enp|eno|enx|wlan|wlp|wlo|bond|ib)"`,
+  preventing Flannel from accidentally binding to VPN tunnel interfaces
+- **`node-ip`** is pinned to the physical LAN address, preventing the node
+  from registering with the VPN IP
 
 ## Validation as security
 

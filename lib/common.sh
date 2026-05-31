@@ -65,6 +65,22 @@ ensure_docker_repo() {
 	esac
 }
 
+# ====== networking ======
+
+get_node_ip() {
+	local iface
+	iface=$(ip -4 route show default 2>/dev/null | awk '{print $5; exit}')
+	[ -n "$iface" ] || return 1
+	ip -4 addr show "$iface" | grep -oP 'inet \K[\d.]+'
+}
+
+get_node_lan_subnet() {
+	local iface
+	iface=$(ip -4 route show default 2>/dev/null | awk '{print $5; exit}')
+	[ -n "$iface" ] || return 1
+	ip -4 -o addr show "$iface" | awk '{print $4}'
+}
+
 # ====== vars ======
 
 resolve_vars_file() {
@@ -222,7 +238,68 @@ configure_k3s_firewall() {
 		echo "  - Pod CIDR 10.42.0.0/16 and Service CIDR 10.43.0.0/16 are trusted"
 		echo "  - Ports 8472/udp, 6443/tcp, 10250/tcp, 2379-2380/tcp, 443/tcp are open"
 	fi
-	echo "Note: VPNs may interfere with cluster networking and should run on an upstream router."
+}
+
+configure_k3s_routing() {
+	local lan_subnet; lan_subnet=$(get_node_lan_subnet) || lan_subnet=""
+
+	if [ -z "$lan_subnet" ]; then
+		echo "Warning: could not detect LAN subnet. Skipping policy routing."
+		return
+	fi
+
+	if [ "$(id -u)" = 0 ]; then
+		SU=""
+	else
+		SU=$(get_sudo_cmd)
+	fi
+
+	local routing_script="/usr/local/bin/k3s-routing.sh"
+	$SU cat > "$routing_script" <<'ROUTEEOF'
+#!/bin/bash
+# K3s VPN-safe policy routing
+# Ensures pod, service, and LAN traffic bypasses VPN interfaces
+# Priority 32764-32765 beats typical VPN rules (~32766)
+
+# Pod CIDR
+ip rule del pref 32764 2>/dev/null || true
+ip rule add from 10.42.0.0/16 lookup main pref 32764
+ip rule add to 10.42.0.0/16 lookup main pref 32764
+
+# Service CIDR
+ip rule add from 10.43.0.0/16 lookup main pref 32764
+ip rule add to 10.43.0.0/16 lookup main pref 32764
+
+# LAN subnet (inter-node communication)
+${_lan_subnet_placeholder}
+ROUTEEOF
+
+	$SU sed -i "s|\${_lan_subnet_placeholder}|ip rule add from $lan_subnet lookup main pref 32765\nip rule add to $lan_subnet lookup main pref 32765|" "$routing_script"
+	$SU chmod +x "$routing_script"
+
+	# Apply immediately
+	$SU bash "$routing_script"
+
+	# Install systemd oneshot service for persistence across reboots
+	$SU mkdir -p /etc/systemd/system
+	$SU cat > /etc/systemd/system/k3s-routing.service <<SERVICEEOF
+[Unit]
+Description=K3s VPN-safe policy routing
+Before=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=$routing_script
+
+[Install]
+WantedBy=multi-user.target
+SERVICEEOF
+	$SU systemctl daemon-reload 2>/dev/null || true
+	$SU systemctl enable k3s-routing.service 2>/dev/null || true
+
+	echo "Policy routing configured: $lan_subnet and K3s subnets bypass VPN."
+	echo "If using Mullvad, run: mullvad lockdown-mode set off"
 }
 
 # ====== validate ======

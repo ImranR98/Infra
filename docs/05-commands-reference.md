@@ -185,10 +185,14 @@ Steps:
    - SELinux enabled
    - kubeconfig mode 0640
    - `cluster-init: true`
+   - `node-ip` &mdash; auto-detected from the default route interface
+   - `flannel-iface-regex` &mdash; restricts Flannel to physical/WiFi
+     interfaces, excluding VPN tunnel interfaces
    - Node labels: `hostpath-main=true`, `external-exposed=true`
 4. Runs the K3s installer.
 5. Creates a `kubectl` group and grants access to the invoking user.
-6. Configures the firewall (adds cni0 and flannel.1 to trusted zone).
+6. Configures the host firewall (firewalld or ufw) and installs
+   OS-level policy routing for VPN coexistence.
 7. Waits up to 150 seconds for the cluster to be ready.
 
 ### `k3s join`
@@ -202,7 +206,11 @@ Joins a remote node to the K3s cluster. Must be run on the control-plane node.
 Steps:
 1. Reads the K3s cluster token from `/var/lib/rancher/k3s/server/token`.
 2. Determines the server's internal IP from kubectl.
-3. Generates an agent install script that downloads and runs the K3s agent.
+3. Generates an agent install script that:
+   - Auto-detects the agent's physical IP and writes it to a config drop-in
+   - Sets `flannel-iface-regex` to exclude VPN interfaces
+   - Installs K3s as an agent, connecting to the control-plane
+   - Configures the host firewall and policy routing on the agent
 4. Syncs the script and `lib/common.sh` to the client via rsync.
 5. Executes the agent installer on the client via SSH.
 6. Waits for the node to appear as Ready.
@@ -263,9 +271,10 @@ Deploys or deletes an entire group of K3s components in order (from
 Updates the K3s node IP after a network change.
 
 Steps:
-1. Determines the primary network interface from the default route.
-2. Gets the current IP of that interface.
-3. Compares with the registered node IP in Kubernetes.
-4. If different: writes `node-ip` to a K3s config drop-in, restarts k3s,
-   waits for cluster readiness, and re-applies network policies with the
-   updated API server subnet.
+1. Determines the primary network interface from the default route
+   (using `get_node_ip` from `lib/common.sh`).
+2. Compares with the registered node IP in Kubernetes.
+3. If different: writes `node-ip` to a K3s config drop-in, restarts k3s,
+   waits for cluster readiness, re-applies network policies with the
+   updated API server subnet, and re-runs policy routing to update the
+   LAN subnet rules.

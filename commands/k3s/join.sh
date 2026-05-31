@@ -52,11 +52,19 @@ echo "=== Downloading K3s installer ==="
 download_k3s_installer
 
 echo "=== Installing K3s agent ==="
+NODE_IP=$(get_node_ip) || NODE_IP=""
+mkdir -p /etc/rancher/k3s/config.yaml.d
+cat > /etc/rancher/k3s/config.yaml.d/50-agent.yaml <<K3SEOF
+selinux: true
+node-ip: $NODE_IP
+flannel-iface-regex: "^(eth|ens|enp|eno|enx|wlan|wlp|wlo|bond|ib)"
+K3SEOF
 "$K3S_SCRIPT" agent --server "$SERVER_URL" --token "$TOKEN"
 rm -f "$K3S_SCRIPT"
 
 echo "=== Configuring firewall ==="
 configure_k3s_firewall
+configure_k3s_routing
 echo "K3s agent installed."
 ENDSCRIPT
 

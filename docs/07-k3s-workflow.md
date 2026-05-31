@@ -16,7 +16,13 @@ The `k3s setup` command creates a single-node K3s cluster:
 1. Downloads and verifies the official K3s install script (SHA256 check
    from GitHub).
 2. Writes server configuration drop-ins to
-   `/etc/rancher/k3s/config.yaml.d/10-server.yaml`.
+   `/etc/rancher/k3s/config.yaml.d/10-server.yaml`. This includes:
+   - `selinux: true` and `write-kubeconfig-mode: "0640"`
+   - `cluster-init: true` (embedded etcd for single-node or HA)
+   - `node-ip` &mdash; auto-detected from the default route interface
+   - `flannel-iface-regex` &mdash; restricts Flannel to physical/WiFi
+     interfaces (`eth`, `ens`, `enp`, `wlan`, `wlp`, etc.), preventing
+     accidental binding to VPN tunnel interfaces like `wg0` or `tun0`
 3. Runs the K3s installer, which:
    - Installs the `k3s` systemd service
    - Starts kubelet, containerd, and all core components
@@ -24,7 +30,12 @@ The `k3s setup` command creates a single-node K3s cluster:
    - Configures CoreDNS for cluster DNS
 4. Creates a `kubectl` Unix group for RBAC access to the cluster
    kubeconfig.
-5. Configures firewalld to trust the `cni0` and `flannel.1` interfaces.
+5. Configures the host firewall (firewalld or ufw) to trust pod and service
+   CIDRs and open required K3s ports. See [Host firewall and VPN
+   coexistence](08-security.md#host-firewall-and-vpn-coexistence) for details.
+6. Installs OS-level policy routing to protect K3s subnets from VPN
+   tunnels, ensuring pod, service, and LAN traffic bypass the VPN
+   regardless of the default route.
 
 ### `k3s join` &mdash; adding worker nodes
 
@@ -35,11 +46,16 @@ To add additional nodes to the cluster, run `k3s join` from the control-plane:
 ```
 
 This script:
-1. Reads the K3s cluster token.
-2. Generates an agent install script dynamically.
+1. Reads the K3s cluster token from `/var/lib/rancher/k3s/server/token`.
+2. Generates an agent install script dynamically that:
+   - Auto-detects the agent's physical IP and writes it as
+     `node-ip` to a K3s config drop-in (`50-agent.yaml`).
+   - Sets `flannel-iface-regex` to exclude VPN interfaces.
+   - Installs K3s as an agent, connecting to the control-plane via `6443`.
+   - Configures the host firewall and policy routing on the agent node.
 3. Syncs the script and `lib/common.sh` to the remote node via rsync.
 4. SSHes into the remote node and executes the agent installer.
-5. The remote node joins as a K3s agent (worker).
+5. Waits for the remote node to register as Ready in `kubectl get nodes`.
 
 ## Component structure
 
@@ -263,6 +279,8 @@ K3s is sensitive to IP address changes. If a node's IP changes:
 3. Restarts k3s.
 4. Re-applies the `namespaces` component to update NetworkPolicy rules
    that reference the API server subnet.
+5. Re-runs `configure_k3s_routing()` to update the LAN subnet in policy
+   routing rules and the systemd oneshot service.
 
 ## Example: Deploying a new K3s cluster
 

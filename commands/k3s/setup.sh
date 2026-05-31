@@ -32,11 +32,14 @@ download_k3s_installer
 # sed -i 's/# rpm_install_extra_args/rpm_install_extra_args/g' $K3S_SCRIPT
 
 # Write K3s config drop-in files before installing so the first start picks them up
+NODE_IP=$(get_node_ip) || NODE_IP=""
 mkdir -p /etc/rancher/k3s/config.yaml.d
-cat > /etc/rancher/k3s/config.yaml.d/10-server.yaml <<'K3SEOF'
+cat > /etc/rancher/k3s/config.yaml.d/10-server.yaml <<K3SEOF
 selinux: true
 write-kubeconfig-mode: "0640"
 cluster-init: true
+node-ip: $NODE_IP
+flannel-iface-regex: "^(eth|ens|enp|eno|enx|wlan|wlp|wlo|bond|ib)"
 node-label:
   - "hostpath-main=true"
   - "external-exposed=true"
@@ -64,6 +67,7 @@ echo "If this node has an AMD GPU, label it for GPU-accelerated workloads:"
 echo "  kubectl label node $(hostname) has-amdgpu=true --overwrite"
 
 configure_k3s_firewall
+configure_k3s_routing
 
 echo ""
 echo "Waiting for cluster to be ready..."
