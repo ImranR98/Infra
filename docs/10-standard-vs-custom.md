@@ -174,18 +174,6 @@ connectivity is a custom combination. The scripts orchestrate multiple
 tools (dracut-crypt-ssh, dracut-frpc, RPM-ostree kargs) in a way that's
 specific to this infrastructure setup.
 
-### Network policy: API server host IP workaround
-
-**What it is**: The `base-policies.yaml` includes the API server's host
-IP (auto-detected as `$K8S_API_SERVER_IP/32`) in egress rules.
-
-**Why it's custom**: This is a workaround for kube-proxy's DNAT behavior on
-K3s: traffic to the API server's ClusterIP gets rewritten to the node's
-physical IP *before* NetworkPolicy evaluation, so the service CIDR rule
-alone is insufficient. The auto-detection via kubectl endpoints and the
-envsubst-based injection into NetworkPolicy YAML is custom infrastructure
-glue.
-
 ### FRP version synchronization
 
 **What it is**: The `compose build-frps` command that reads the FRPC version

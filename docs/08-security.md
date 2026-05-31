@@ -28,47 +28,29 @@ container features. Only services that genuinely need host-level access
 (hostPath mounts, hostNetwork, hostPort) are placed in `*-privileged`
 namespaces.
 
-### NetworkPolicies: default-deny model
+### NetworkPolicies: ingress-only model
 
-Every namespace starts with a **default-deny-all** policy that blocks all
-ingress and egress traffic:
+Every namespace starts with a **deny-all-ingress** policy that blocks all
+ingress traffic. Egress is unrestricted:
 
 ```yaml
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: default-deny-all
+  name: deny-all-ingress
   namespace: base
 spec:
   podSelector: {}        # all pods in the namespace
   policyTypes:
     - Ingress            # deny all incoming
-    - Egress             # deny all outgoing
 ```
-
-This is then selectively relaxed by additional policies.
 
 ### Baseline policies (every namespace)
 
 Each namespace gets these common policies:
 
-**`allow-internal-egress`** &mdash; permits three categories of outbound traffic:
-1. **Pod network** (10.42.0.0/16): communication with other pods.
-2. **API server subnet**: required because kube-proxy DNAT rewrites ClusterIP
-   traffic to the API server's node IP *before* NetworkPolicy evaluation. The
-   service CIDR alone is insufficient.
-3. **All namespaces**: cross-namespace pod communication.
-4. **DNS** (UDP/TCP 53): queries to CoreDNS in kube-system.
-
 **`allow-traefik-ingress`** &mdash; allows HTTP ingress from Traefik pods in
 `kube-system`. This is the only way external traffic reaches services.
-
-**`allow-internet-egress`** &mdash; permits all pods in the namespace to
-reach:
-1. **Internet** (TCP 80 + 443 to any non-RFC1918 address) — for OAuth flows,
-   external APIs, plugin downloads, package registries.
-2. **LAN** (all ports to 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16) — for
-   IoT devices, smart home hardware, and other local services.
 
 ### Component-specific policies
 
@@ -81,9 +63,6 @@ Examples:
 - **ollama**: Ingress on port 11434 from Open WebUI.
 - **mosquitto**: Ingress on MQTT ports (1883, 8883, 9001) from HomeAssistant.
 
-Egress is handled by the namespace-wide `allow-internet-egress` and
-`allow-internal-egress` policies — no per-service egress policies are needed.
-
 ### Policy layering
 
 ```
@@ -91,13 +70,9 @@ Egress is handled by the namespace-wide `allow-internet-egress` and
 │         Per-service ingress policies      │
 │         (pod-to-pod communication)        │
 ├──────────────────────────────────────────┤
-│     allow-internet-egress (all namespaces)│
-├──────────────────────────────────────────┤
-│     allow-internal-egress (all namespaces)│
-├──────────────────────────────────────────┤
 │  allow-traefik-ingress (all namespaces)   │
 ├──────────────────────────────────────────┤
-│  default-deny-all (all namespaces)        │
+│  deny-all-ingress (all namespaces)        │
 └──────────────────────────────────────────┘
 ```
 

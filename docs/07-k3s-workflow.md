@@ -265,8 +265,8 @@ environment variables:
 | `K8S_API_SERVER_IP` | kubectl | The Kubernetes API server's IP address |
 | `K8S_API_SERVER_SUBNET` | Derived from above | API server IP with last octet set to `.0/24` |
 
-These are available in YAML templates and are critical for NetworkPolicy
-definitions that need to egress to the API server.
+These are available in YAML templates but are no longer required for
+NetworkPolicy definitions since egress policies have been removed.
 
 ## Node IP management
 
@@ -275,8 +275,7 @@ K3s is sensitive to IP address changes. If a node's IP changes:
 1. Run `k3s update-node-ip` to detect the change.
 2. Writes a K3s config drop-in with the new `node-ip`.
 3. Restarts k3s.
-4. Re-applies the `namespaces` component to update NetworkPolicy rules
-   that reference the API server subnet.
+4. Re-applies the `namespaces` component.
 
 ## Example: Deploying a new K3s cluster
 

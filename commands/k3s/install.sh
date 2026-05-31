@@ -27,11 +27,6 @@ source "$ATLAS_ROOT/lib/common.sh"
 source_env
 ensure_envsubst_vars
 
-_k8s_api_ip="$(kubectl get endpoints kubernetes -o jsonpath='{.subsets[0].addresses[0].ip}' 2>/dev/null)"
-export K8S_API_SERVER_IP="${K8S_API_SERVER_IP:-$_k8s_api_ip}"
-export K8S_API_SERVER_SUBNET="${K8S_API_SERVER_SUBNET:-${_k8s_api_ip%.*}.0/24}"
-ENVSUBST_VARS="$ENVSUBST_VARS"'$K8S_API_SERVER_IP $K8S_API_SERVER_SUBNET'
-
 _has_initial_markers=false
 grep -q '# IGNORE INITIALLY$' "$COMPONENT_DIR"/*.yaml 2>/dev/null && _has_initial_markers=true
 

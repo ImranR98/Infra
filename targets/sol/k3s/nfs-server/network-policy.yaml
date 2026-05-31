@@ -24,23 +24,3 @@ spec:
               app: longhorn-manager
   policyTypes:
     - Ingress
----
-apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
-metadata:
-  name: deny-nfs-egress
-  namespace: base-privileged
-spec:
-  podSelector:
-    matchLabels:
-      app: nfs-server
-  egress:
-    - to:
-        - namespaceSelector:
-            matchLabels:
-              kubernetes.io/metadata.name: kube-system
-        - namespaceSelector:
-            matchLabels:
-              kubernetes.io/metadata.name: longhorn-system
-  policyTypes:
-    - Egress

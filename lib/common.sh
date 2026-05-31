@@ -283,13 +283,11 @@ validate() {
 _validate_k3s() {
 	local target="$1" comp_dir="$ATLAS_ROOT/targets/$target/k3s" errors=0
 
-	local known_vars; known_vars=$(_build_known_vars "$target" "MY_UID
+ 	local known_vars; known_vars=$(_build_known_vars "$target" "MY_UID
 TARGET
 COMPOSE_STATE_DIR
 COMPOSE_STATE_BACKUP_DIR
 LONGHORN_BACKUP_DIR
-K8S_API_SERVER_IP
-K8S_API_SERVER_SUBNET
 NS
 PV
 PVC

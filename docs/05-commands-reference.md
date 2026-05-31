@@ -284,8 +284,7 @@ Steps:
    (using `get_node_ip` from `lib/common.sh`).
 2. Compares with the registered node IP in Kubernetes.
 3. If different: writes `node-ip` to a K3s config drop-in, restarts k3s,
-   waits for cluster readiness, and re-applies network policies with the
-   updated API server subnet.
+    waits for cluster readiness, and re-applies the `namespaces` component.
 
 ### `wireguard`
 

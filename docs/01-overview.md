@@ -31,7 +31,7 @@ deploying services, applying security policies, and scanning for updates.
    syntax, variable references, and Kubernetes manifests before anything
    touches production.
 
-5. **Defense in depth.** Kubernetes NetworkPolicies default-deny all traffic,
+5. **Defense in depth.** Kubernetes NetworkPolicies default-deny all ingress,
    then selectively allow only what each service needs. All web traffic goes
    through Traefik with Authelia SSO/MFA and CrowdSec intrusion prevention.
    See [Security Model](08-security.md).

@@ -5,20 +5,11 @@
 # └──────────────────────────────────────────────────────────────┘
 #
 # POLICY MODEL (per namespace):
-#   default-deny-all      — block all ingress + egress by default
-#   allow-internal-egress — DNS + pod CIDR + API server + all namespaces
-#   allow-traefik-ingress — HTTP from kube-system/traefik (where applicable)
-#   allow-helm-egress     — internet HTTPS for HelmChart install jobs
+#   deny-all-ingress      — block all ingress by default
+#   allow-traefik-ingress — HTTP from kube-system/traefik
 #
-# NOTE: allow-internal-egress includes the API server's host IP
-# ($K8S_API_SERVER_IP/32) because kube-proxy DNAT rewrites ClusterIP
-# traffic to the API server's node IP BEFORE network policy
-# evaluation. The service CIDR (10.43.0.0/16) rule alone is
-# insufficient because the rewritten destination is the node IP.
+# Egress is unrestricted — there are no egress NetworkPolicies.
 #
-# External internet access for running workloads is granted ONLY by
-# component-specific egress rules (e.g. cert-manager → Let's Encrypt,
-# ollama → registries). Those live in each component's own directory.
 # ───────────────────────────────────────────────────────────────────
 
 #
@@ -30,13 +21,12 @@
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: default-deny-all
+  name: deny-all-ingress
   namespace: base
 spec:
   podSelector: {}          # all pods in the namespace
   policyTypes:
     - Ingress              # deny all incoming unless explicitly allowed
-    - Egress               # deny all outgoing unless explicitly allowed
 ---
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
@@ -55,65 +45,6 @@ spec:
               app.kubernetes.io/name: traefik
   policyTypes:
     - Ingress
----
-apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
-metadata:
-  name: allow-internal-egress
-  namespace: base
-spec:
-  podSelector: {}          # all pods
-  egress:
-    - to:                  # cluster-internal: pod network + API server + cross-namespace
-        - ipBlock:
-            cidr: 10.42.0.0/16
-        - ipBlock:
-            cidr: $K8S_API_SERVER_IP/32  # API server host IP
-        - namespaceSelector: {}
-    - to:                  # DNS (CoreDNS in kube-system)
-        - namespaceSelector:
-            matchLabels:
-              kubernetes.io/metadata.name: kube-system
-          podSelector:
-            matchLabels:
-              k8s-app: kube-dns
-      ports:
-        - protocol: UDP
-          port: 53
-        - protocol: TCP
-          port: 53
-  policyTypes:
-    - Egress
----
-apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
-metadata:
-  name: allow-internet-egress
-  namespace: base
-spec:
-  podSelector: {}          # all pods
-  egress:
-    - to:                  # internet HTTPS + HTTP (any non-RFC1918 address)
-        - ipBlock:
-            cidr: 0.0.0.0/0
-            except:
-              - 10.0.0.0/8
-              - 172.16.0.0/12
-              - 192.168.0.0/16
-      ports:
-        - protocol: TCP
-          port: 443
-        - protocol: TCP
-          port: 80
-    - to:                  # all LAN (RFC 1918)
-        - ipBlock:
-            cidr: 10.0.0.0/8
-        - ipBlock:
-            cidr: 172.16.0.0/12
-        - ipBlock:
-            cidr: 192.168.0.0/16
-  policyTypes:
-    - Egress
 
 #
 # === base-privileged ===
@@ -123,89 +54,27 @@ spec:
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: default-deny-all
+  name: deny-all-ingress
   namespace: base-privileged
 spec:
   podSelector: {}
   policyTypes:
     - Ingress
-    - Egress
----
-apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
-metadata:
-  name: allow-internal-egress
-  namespace: base-privileged
-spec:
-  podSelector: {}
-  egress:
-    - to:                  # cluster-internal: pod network + API server + cross-namespace
-        - ipBlock:
-            cidr: 10.42.0.0/16
-        - ipBlock:
-            cidr: $K8S_API_SERVER_IP/32  # API server host IP
-        - namespaceSelector: {}
-    - to:                  # DNS
-        - namespaceSelector:
-            matchLabels:
-              kubernetes.io/metadata.name: kube-system
-          podSelector:
-            matchLabels:
-              k8s-app: kube-dns
-      ports:
-        - protocol: UDP
-          port: 53
-        - protocol: TCP
-          port: 53
-  policyTypes:
-    - Egress
----
-apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
-metadata:
-  name: allow-internet-egress
-  namespace: base-privileged
-spec:
-  podSelector: {}
-  egress:
-    - to:                  # internet HTTPS + HTTP
-        - ipBlock:
-            cidr: 0.0.0.0/0
-            except:
-              - 10.0.0.0/8
-              - 172.16.0.0/12
-              - 192.168.0.0/16
-      ports:
-        - protocol: TCP
-          port: 443
-        - protocol: TCP
-          port: 80
-    - to:                  # all LAN
-        - ipBlock:
-            cidr: 10.0.0.0/8
-        - ipBlock:
-            cidr: 172.16.0.0/12
-        - ipBlock:
-            cidr: 192.168.0.0/16
-  policyTypes:
-    - Egress
 
 #
 # === apps ===
 # User-facing applications: jellyfin, immich, nextcloud, ollama, etc.
-# Several use HelmCharts — allow-helm-egress covers install jobs.
 #
 ---
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: default-deny-all
+  name: deny-all-ingress
   namespace: apps
 spec:
   podSelector: {}
   policyTypes:
     - Ingress
-    - Egress
 ---
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
@@ -224,65 +93,6 @@ spec:
               app.kubernetes.io/name: traefik
   policyTypes:
     - Ingress
----
-apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
-metadata:
-  name: allow-internal-egress
-  namespace: apps
-spec:
-  podSelector: {}
-  egress:
-    - to:                  # cluster-internal: pod network + API server + cross-namespace
-        - ipBlock:
-            cidr: 10.42.0.0/16
-        - ipBlock:
-            cidr: $K8S_API_SERVER_IP/32  # API server host IP
-        - namespaceSelector: {}
-    - to:                  # DNS
-        - namespaceSelector:
-            matchLabels:
-              kubernetes.io/metadata.name: kube-system
-          podSelector:
-            matchLabels:
-              k8s-app: kube-dns
-      ports:
-        - protocol: UDP
-          port: 53
-        - protocol: TCP
-          port: 53
-  policyTypes:
-    - Egress
----
-apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
-metadata:
-  name: allow-internet-egress
-  namespace: apps
-spec:
-  podSelector: {}
-  egress:
-    - to:                  # internet HTTPS + HTTP
-        - ipBlock:
-            cidr: 0.0.0.0/0
-            except:
-              - 10.0.0.0/8
-              - 172.16.0.0/12
-              - 192.168.0.0/16
-      ports:
-        - protocol: TCP
-          port: 443
-        - protocol: TCP
-          port: 80
-    - to:                  # all LAN
-        - ipBlock:
-            cidr: 10.0.0.0/8
-        - ipBlock:
-            cidr: 172.16.0.0/12
-        - ipBlock:
-            cidr: 192.168.0.0/16
-  policyTypes:
-    - Egress
 
 #
 # === monitoring ===
@@ -292,13 +102,12 @@ spec:
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: default-deny-all
+  name: deny-all-ingress
   namespace: monitoring
 spec:
   podSelector: {}
   policyTypes:
     - Ingress
-    - Egress
 ---
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
@@ -317,65 +126,6 @@ spec:
               app.kubernetes.io/name: traefik
   policyTypes:
     - Ingress
----
-apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
-metadata:
-  name: allow-internal-egress
-  namespace: monitoring
-spec:
-  podSelector: {}
-  egress:
-    - to:                  # cluster-internal: pod network + API server + cross-namespace
-        - ipBlock:
-            cidr: 10.42.0.0/16
-        - ipBlock:
-            cidr: $K8S_API_SERVER_IP/32  # API server host IP
-        - namespaceSelector: {}
-    - to:                  # DNS
-        - namespaceSelector:
-            matchLabels:
-              kubernetes.io/metadata.name: kube-system
-          podSelector:
-            matchLabels:
-              k8s-app: kube-dns
-      ports:
-        - protocol: UDP
-          port: 53
-        - protocol: TCP
-          port: 53
-  policyTypes:
-    - Egress
----
-apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
-metadata:
-  name: allow-internet-egress
-  namespace: monitoring
-spec:
-  podSelector: {}
-  egress:
-    - to:                  # internet HTTPS + HTTP
-        - ipBlock:
-            cidr: 0.0.0.0/0
-            except:
-              - 10.0.0.0/8
-              - 172.16.0.0/12
-              - 192.168.0.0/16
-      ports:
-        - protocol: TCP
-          port: 443
-        - protocol: TCP
-          port: 80
-    - to:                  # all LAN
-        - ipBlock:
-            cidr: 10.0.0.0/8
-        - ipBlock:
-            cidr: 172.16.0.0/12
-        - ipBlock:
-            cidr: 192.168.0.0/16
-  policyTypes:
-    - Egress
 
 #
 # === apps-privileged ===
@@ -385,13 +135,12 @@ spec:
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: default-deny-all
+  name: deny-all-ingress
   namespace: apps-privileged
 spec:
   podSelector: {}
   policyTypes:
     - Ingress
-    - Egress
 ---
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
@@ -410,62 +159,3 @@ spec:
               app.kubernetes.io/name: traefik
   policyTypes:
     - Ingress
----
-apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
-metadata:
-  name: allow-internal-egress
-  namespace: apps-privileged
-spec:
-  podSelector: {}
-  egress:
-    - to:                  # cluster-internal: pod network + API server + cross-namespace
-        - ipBlock:
-            cidr: 10.42.0.0/16
-        - ipBlock:
-            cidr: $K8S_API_SERVER_IP/32  # API server host IP
-        - namespaceSelector: {}
-    - to:                  # DNS
-        - namespaceSelector:
-            matchLabels:
-              kubernetes.io/metadata.name: kube-system
-          podSelector:
-            matchLabels:
-              k8s-app: kube-dns
-      ports:
-        - protocol: UDP
-          port: 53
-        - protocol: TCP
-          port: 53
-  policyTypes:
-    - Egress
----
-apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
-metadata:
-  name: allow-internet-egress
-  namespace: apps-privileged
-spec:
-  podSelector: {}
-  egress:
-    - to:
-        - ipBlock:
-            cidr: 0.0.0.0/0
-            except:
-              - 10.0.0.0/8
-              - 172.16.0.0/12
-              - 192.168.0.0/16
-      ports:
-        - protocol: TCP
-          port: 443
-        - protocol: TCP
-          port: 80
-    - to:
-        - ipBlock:
-            cidr: 10.0.0.0/8
-        - ipBlock:
-            cidr: 172.16.0.0/12
-        - ipBlock:
-            cidr: 192.168.0.0/16
-  policyTypes:
-    - Egress
