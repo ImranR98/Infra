@@ -4,3 +4,4 @@ resources:
   - prereqs.yaml
   - ingress.yaml
   - helmchart.yaml
+  - network-policy.yaml
