@@ -19,3 +19,23 @@ spec:
         - port: 9001
   policyTypes:
     - Ingress
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-mosquitto-lan-egress
+  namespace: apps-privileged
+spec:
+  podSelector:
+    matchLabels:
+      app: mosquitto
+  egress:
+    - to:
+        - ipBlock:
+            cidr: 10.0.0.0/8
+        - ipBlock:
+            cidr: 172.16.0.0/12
+        - ipBlock:
+            cidr: 192.168.0.0/16
+  policyTypes:
+    - Egress
