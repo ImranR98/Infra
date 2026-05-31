@@ -49,6 +49,15 @@ fi
 echo "AllowedIPs pinned to 0.0.0.0/1, 128.0.0.0/1 to protect K3s subnets from the VPN."
 echo "Config deployed to /etc/wireguard/wg0.conf"
 
+# Ensure wg-quick starts before K3s so the VPN is fully up
+# before pods begin DNS resolution and network setup
+$SU mkdir -p /etc/systemd/system/wg-quick@wg0.service.d
+$SU tee /etc/systemd/system/wg-quick@wg0.service.d/order-before-k3s.conf >/dev/null <<EOF
+[Unit]
+Before=k3s.service
+EOF
+$SU systemctl daemon-reload 2>/dev/null || true
+
 $SU systemctl enable wg-quick@wg0 2>/dev/null || true
 $SU systemctl restart wg-quick@wg0
 echo "WireGuard interface wg0 started and enabled."
