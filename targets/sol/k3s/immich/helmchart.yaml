@@ -62,7 +62,7 @@ spec:
       # OAuth/OIDC with Authelia — configure via the Immich admin GUI after first login:
       #   Issuer URL:     https://auth.$SERVICES_DOMAIN/.well-known/openid-configuration
       #   Client ID:      immich
-      #   Client Secret:  <value of IMMICH_OAUTH_CLIENT_SECRET from secrets.sh>
+      #   Client Secret:  <value of AUTHELIA_IMMICH_CLIENT_SECRET from secrets.sh>
       #   Auto Register:  true
 
     # External media library — mounted at /external inside the server container.
