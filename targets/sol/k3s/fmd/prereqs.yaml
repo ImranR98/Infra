@@ -19,4 +19,4 @@ metadata:
   namespace: apps
 type: Opaque
 stringData:
-  FMD_REGISTRATION_TOKEN: "$FMD_REGISTRATION_TOKEN"
+  FMD_REGISTRATIONTOKEN: "$FMD_REGISTRATIONTOKEN"

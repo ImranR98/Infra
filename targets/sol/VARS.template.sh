@@ -79,7 +79,7 @@ export DSCPLN_BUDGET_INIT_AMT="2400"
 export DSCPLN_FIRST_WEEK_BIAS_INIT_AMT="1400"
 
 # --- FMD ---
-export FMD_REGISTRATION_TOKEN="change_me" # openssl rand -base64 32
+export FMD_REGISTRATIONTOKEN="change_me" # openssl rand -base64 32
 
 # --- Nextcloud ---
 export NEXTCLOUD_ADMIN_USER="admin"

@@ -36,11 +36,11 @@ spec:
             timeoutSeconds: 5
             failureThreshold: 3
           env:
-            - name: FMD_REGISTRATION_TOKEN
+            - name: FMD_REGISTRATIONTOKEN
               valueFrom:
                 secretKeyRef:
                   name: fmd-secret
-                  key: FMD_REGISTRATION_TOKEN
+                  key: FMD_REGISTRATIONTOKEN
           volumeMounts:
             - name: fmd-data
               mountPath: /var/lib/fmd-server/db/
