@@ -23,4 +23,5 @@ apps:
   - dscpln
   - opencanary
   - fmd
+  - send
   - syncthing

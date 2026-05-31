@@ -171,6 +171,16 @@ spec:
             - '^/api([/?].*)?$'
             - '^/p/i/?$'
             policy: bypass
+          - domain: send.$SERVICES_DOMAIN
+            resources:
+            - '^/download([/?].*)?$'
+            - '^/api/download([/?].*)?$'
+            - '^/api/info([/?].*)?$'
+            - '^/api/metadata([/?].*)?$'
+            - '^/__heartbeat__/?$'
+            - '^/assets([/?].*)?$'
+            - '^/[^/]+\.(js|svg|css|woff2|png|ico)$'
+            policy: bypass
           - domain: '*.$SERVICES_DOMAIN'
             policy: two_factor
       regulation:

@@ -1,0 +1,19 @@
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-send-redis-ingress
+  namespace: apps
+spec:
+  podSelector:
+    matchLabels:
+      app: send-redis
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: send
+      ports:
+        - port: 6379
+  policyTypes:
+    - Ingress
