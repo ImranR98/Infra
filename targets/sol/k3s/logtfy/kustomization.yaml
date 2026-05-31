@@ -3,4 +3,3 @@ kind: Kustomization
 resources:
   - prereqs.yaml
   - logtfy.yaml
-  - network-policy.yaml

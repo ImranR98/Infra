@@ -5,4 +5,3 @@ kind: Kustomization
 # because they depend on cert-manager CRDs being available in the cluster.
 resources:
   - helmchart.yaml
-  - network-policy.yaml

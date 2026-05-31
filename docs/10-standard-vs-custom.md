@@ -177,7 +177,7 @@ specific to this infrastructure setup.
 ### Network policy: API server host IP workaround
 
 **What it is**: The `base-policies.yaml` includes the API server's host
-subnet (auto-detected as `$K8S_API_SERVER_SUBNET`) in egress rules.
+IP (auto-detected as `$K8S_API_SERVER_IP/32`) in egress rules.
 
 **Why it's custom**: This is a workaround for kube-proxy's DNAT behavior on
 K3s: traffic to the API server's ClusterIP gets rewritten to the node's

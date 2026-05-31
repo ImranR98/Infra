@@ -3,4 +3,3 @@ kind: Kustomization
 resources:
   - prereqs.yaml
   - syncthing.yaml
-  - network-policy.yaml

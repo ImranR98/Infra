@@ -63,36 +63,42 @@ Each namespace gets these common policies:
 **`allow-traefik-ingress`** &mdash; allows HTTP ingress from Traefik pods in
 `kube-system`. This is the only way external traffic reaches services.
 
-**`allow-helm-egress`** (base and apps namespaces only) &mdash; allows
-HelmChart install jobs to reach the internet on port 443 for downloading
-Helm charts. Uses a pod selector matching `helmcharts.helm.cattle.io/chart`.
-Restricts egress to non-RFC1918 addresses (public internet only).
+**`allow-internet-egress`** &mdash; permits all pods in the namespace to
+reach:
+1. **Internet** (TCP 80 + 443 to any non-RFC1918 address) — for OAuth flows,
+   external APIs, plugin downloads, package registries.
+2. **LAN** (all ports to 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16) — for
+   IoT devices, smart home hardware, and other local services.
 
 ### Component-specific policies
 
-Components that need additional network access define their own
-`network-policy.yaml`. Examples:
+Components define per-service **ingress** rules in their own
+`network-policy.yaml` for pod-to-pod communication within the cluster.
+Examples:
 
-- **cert-manager**: Egress to the internet on ports 80 and 443 for Let's
-  Encrypt ACME challenges and OCSP stapling.
-- **ollama**: Egress to container registries for pulling LLM images.
-- **mosquitto**: Ingress on MQTT ports from specific sources.
+- **immich**: Ingress on postgres (5432), valkey (6379), and ML (3003)
+  from the immich server pod.
+- **ollama**: Ingress on port 11434 from Open WebUI.
+- **mosquitto**: Ingress on MQTT ports (1883, 8883, 9001) from HomeAssistant.
+
+Egress is handled by the namespace-wide `allow-internet-egress` and
+`allow-internal-egress` policies — no per-service egress policies are needed.
 
 ### Policy layering
 
 ```
-┌────────────────────────────────────────┐
-│          Component-specific policies    │
-│          (added on top of baseline)     │
-├────────────────────────────────────────┤
-│     allow-helm-egress (base + apps)     │
-├────────────────────────────────────────┤
-│  allow-traefik-ingress (all namespaces) │
-├────────────────────────────────────────┤
-│  allow-internal-egress (all namespaces) │
-├────────────────────────────────────────┤
-│  default-deny-all (all namespaces)      │
-└────────────────────────────────────────┘
+┌──────────────────────────────────────────┐
+│         Per-service ingress policies      │
+│         (pod-to-pod communication)        │
+├──────────────────────────────────────────┤
+│     allow-internet-egress (all namespaces)│
+├──────────────────────────────────────────┤
+│     allow-internal-egress (all namespaces)│
+├──────────────────────────────────────────┤
+│  allow-traefik-ingress (all namespaces)   │
+├──────────────────────────────────────────┤
+│  default-deny-all (all namespaces)        │
+└──────────────────────────────────────────┘
 ```
 
 The final policy set for any pod is the union of all matching policies.

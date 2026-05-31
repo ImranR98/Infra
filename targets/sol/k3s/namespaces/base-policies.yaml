@@ -11,7 +11,7 @@
 #   allow-helm-egress     — internet HTTPS for HelmChart install jobs
 #
 # NOTE: allow-internal-egress includes the API server's host IP
-# (192.168.8.XX/32) because kube-proxy DNAT rewrites ClusterIP
+# ($K8S_API_SERVER_IP/32) because kube-proxy DNAT rewrites ClusterIP
 # traffic to the API server's node IP BEFORE network policy
 # evaluation. The service CIDR (10.43.0.0/16) rule alone is
 # insufficient because the rewritten destination is the node IP.
@@ -68,7 +68,7 @@ spec:
         - ipBlock:
             cidr: 10.42.0.0/16
         - ipBlock:
-            cidr: $K8S_API_SERVER_SUBNET  # API server host subnet (auto-detected)
+            cidr: $K8S_API_SERVER_IP/32  # API server host IP
         - namespaceSelector: {}
     - to:                  # DNS (CoreDNS in kube-system)
         - namespaceSelector:
@@ -88,16 +88,13 @@ spec:
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: allow-helm-egress
+  name: allow-internet-egress
   namespace: base
 spec:
-  podSelector:             # HelmChart install jobs (e.g. helm-install-cert-manager)
-    matchExpressions:
-      - key: helmcharts.helm.cattle.io/chart
-        operator: Exists
+  podSelector: {}          # all pods
   egress:
-    - to:
-        - ipBlock:         # internet (any non-RFC1918 address)
+    - to:                  # internet HTTPS + HTTP (any non-RFC1918 address)
+        - ipBlock:
             cidr: 0.0.0.0/0
             except:
               - 10.0.0.0/8
@@ -106,6 +103,15 @@ spec:
       ports:
         - protocol: TCP
           port: 443
+        - protocol: TCP
+          port: 80
+    - to:                  # all LAN (RFC 1918)
+        - ipBlock:
+            cidr: 10.0.0.0/8
+        - ipBlock:
+            cidr: 172.16.0.0/12
+        - ipBlock:
+            cidr: 192.168.0.0/16
   policyTypes:
     - Egress
 
@@ -137,7 +143,7 @@ spec:
         - ipBlock:
             cidr: 10.42.0.0/16
         - ipBlock:
-            cidr: 192.168.8.XX/32  # API server host IP
+            cidr: $K8S_API_SERVER_IP/32  # API server host IP
         - namespaceSelector: {}
     - to:                  # DNS
         - namespaceSelector:
@@ -151,6 +157,36 @@ spec:
           port: 53
         - protocol: TCP
           port: 53
+  policyTypes:
+    - Egress
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-internet-egress
+  namespace: base-privileged
+spec:
+  podSelector: {}
+  egress:
+    - to:                  # internet HTTPS + HTTP
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except:
+              - 10.0.0.0/8
+              - 172.16.0.0/12
+              - 192.168.0.0/16
+      ports:
+        - protocol: TCP
+          port: 443
+        - protocol: TCP
+          port: 80
+    - to:                  # all LAN
+        - ipBlock:
+            cidr: 10.0.0.0/8
+        - ipBlock:
+            cidr: 172.16.0.0/12
+        - ipBlock:
+            cidr: 192.168.0.0/16
   policyTypes:
     - Egress
 
@@ -201,7 +237,7 @@ spec:
         - ipBlock:
             cidr: 10.42.0.0/16
         - ipBlock:
-            cidr: 192.168.8.XX/32  # API server host IP
+            cidr: $K8S_API_SERVER_IP/32  # API server host IP
         - namespaceSelector: {}
     - to:                  # DNS
         - namespaceSelector:
@@ -221,15 +257,12 @@ spec:
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: allow-helm-egress
+  name: allow-internet-egress
   namespace: apps
 spec:
-  podSelector:
-    matchExpressions:
-      - key: helmcharts.helm.cattle.io/chart
-        operator: Exists
+  podSelector: {}
   egress:
-    - to:
+    - to:                  # internet HTTPS + HTTP
         - ipBlock:
             cidr: 0.0.0.0/0
             except:
@@ -239,6 +272,15 @@ spec:
       ports:
         - protocol: TCP
           port: 443
+        - protocol: TCP
+          port: 80
+    - to:                  # all LAN
+        - ipBlock:
+            cidr: 10.0.0.0/8
+        - ipBlock:
+            cidr: 172.16.0.0/12
+        - ipBlock:
+            cidr: 192.168.0.0/16
   policyTypes:
     - Egress
 
@@ -288,7 +330,7 @@ spec:
         - ipBlock:
             cidr: 10.42.0.0/16
         - ipBlock:
-            cidr: 192.168.8.XX/32  # API server host IP
+            cidr: $K8S_API_SERVER_IP/32  # API server host IP
         - namespaceSelector: {}
     - to:                  # DNS
         - namespaceSelector:
@@ -302,6 +344,36 @@ spec:
           port: 53
         - protocol: TCP
           port: 53
+  policyTypes:
+    - Egress
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-internet-egress
+  namespace: monitoring
+spec:
+  podSelector: {}
+  egress:
+    - to:                  # internet HTTPS + HTTP
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except:
+              - 10.0.0.0/8
+              - 172.16.0.0/12
+              - 192.168.0.0/16
+      ports:
+        - protocol: TCP
+          port: 443
+        - protocol: TCP
+          port: 80
+    - to:                  # all LAN
+        - ipBlock:
+            cidr: 10.0.0.0/8
+        - ipBlock:
+            cidr: 172.16.0.0/12
+        - ipBlock:
+            cidr: 192.168.0.0/16
   policyTypes:
     - Egress
 
@@ -351,7 +423,7 @@ spec:
         - ipBlock:
             cidr: 10.42.0.0/16
         - ipBlock:
-            cidr: 192.168.8.XX/32  # API server host IP
+            cidr: $K8S_API_SERVER_IP/32  # API server host IP
         - namespaceSelector: {}
     - to:                  # DNS
         - namespaceSelector:
@@ -365,5 +437,35 @@ spec:
           port: 53
         - protocol: TCP
           port: 53
+  policyTypes:
+    - Egress
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-internet-egress
+  namespace: apps-privileged
+spec:
+  podSelector: {}
+  egress:
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except:
+              - 10.0.0.0/8
+              - 172.16.0.0/12
+              - 192.168.0.0/16
+      ports:
+        - protocol: TCP
+          port: 443
+        - protocol: TCP
+          port: 80
+    - to:
+        - ipBlock:
+            cidr: 10.0.0.0/8
+        - ipBlock:
+            cidr: 172.16.0.0/12
+        - ipBlock:
+            cidr: 192.168.0.0/16
   policyTypes:
     - Egress
