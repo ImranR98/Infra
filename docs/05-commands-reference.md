@@ -82,6 +82,16 @@ Flow:
 See [Updates and Maintenance](09-updates-and-maintenance.md) for the full
 update system documentation.
 
+### `wireguard`
+
+```
+./atlas.sh <target> wireguard <config-file>
+```
+
+Installs WireGuard and deploys a standard config file. Works with any provider
+(Mullvad, ProtonVPN, self-hosted, etc.).  See the detailed entry under
+[K3s commands](#wireguard) for the full description.
+
 ---
 
 ## Compose commands
@@ -191,8 +201,7 @@ Steps:
    - Node labels: `hostpath-main=true`, `external-exposed=true`
 4. Runs the K3s installer.
 5. Creates a `kubectl` group and grants access to the invoking user.
-6. Configures the host firewall (firewalld or ufw) and installs
-   OS-level policy routing for VPN coexistence.
+6. Configures the host firewall (firewalld or ufw).
 7. Waits up to 150 seconds for the cluster to be ready.
 
 ### `k3s join`
@@ -210,7 +219,7 @@ Steps:
    - Auto-detects the agent's physical IP and writes it to a config drop-in
    - Sets `flannel-iface-regex` to exclude VPN interfaces
    - Installs K3s as an agent, connecting to the control-plane
-   - Configures the host firewall and policy routing on the agent
+    - Configures the host firewall on the agent
 4. Syncs the script and `lib/common.sh` to the client via rsync.
 5. Executes the agent installer on the client via SSH.
 6. Waits for the node to appear as Ready.
@@ -275,6 +284,25 @@ Steps:
    (using `get_node_ip` from `lib/common.sh`).
 2. Compares with the registered node IP in Kubernetes.
 3. If different: writes `node-ip` to a K3s config drop-in, restarts k3s,
-   waits for cluster readiness, re-applies network policies with the
-   updated API server subnet, and re-runs policy routing to update the
-   LAN subnet rules.
+   waits for cluster readiness, and re-applies network policies with the
+   updated API server subnet.
+
+### `wireguard`
+
+```
+./atlas.sh <target> wireguard <config-file>
+```
+
+Installs WireGuard and deploys a config file.  Works with any standard
+WireGuard config (Mullvad, ProtonVPN, self-hosted, etc.).
+
+The command automatically:
+- Installs `wireguard-tools` if missing.
+- Rewrites `AllowedIPs` to `0.0.0.0/1, 128.0.0.0/1` so K3s subnets
+  and the LAN stay on the physical NIC.
+- Adds `PostUp`/`PreDown` routes for the endpoint to prevent a routing
+  dead loop.
+- Enables and starts `wg-quick@wg0`, which auto-connects at boot.
+
+VPN apps (Mullvad GUI, OpenVPN client, etc.) are not recommended — export
+their WireGuard config and use this command instead.

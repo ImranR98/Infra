@@ -33,9 +33,7 @@ The `k3s setup` command creates a single-node K3s cluster:
 5. Configures the host firewall (firewalld or ufw) to trust pod and service
    CIDRs and open required K3s ports. See [Host firewall and VPN
    coexistence](08-security.md#host-firewall-and-vpn-coexistence) for details.
-6. Installs OS-level policy routing to protect K3s subnets from VPN
-   tunnels, ensuring pod, service, and LAN traffic bypass the VPN
-   regardless of the default route.
+.
 
 ### `k3s join` &mdash; adding worker nodes
 
@@ -52,7 +50,7 @@ This script:
      `node-ip` to a K3s config drop-in (`50-agent.yaml`).
    - Sets `flannel-iface-regex` to exclude VPN interfaces.
    - Installs K3s as an agent, connecting to the control-plane via `6443`.
-   - Configures the host firewall and policy routing on the agent node.
+    - Configures the host firewall on the agent node.
 3. Syncs the script and `lib/common.sh` to the remote node via rsync.
 4. SSHes into the remote node and executes the agent installer.
 5. Waits for the remote node to register as Ready in `kubectl get nodes`.
@@ -279,8 +277,6 @@ K3s is sensitive to IP address changes. If a node's IP changes:
 3. Restarts k3s.
 4. Re-applies the `namespaces` component to update NetworkPolicy rules
    that reference the API server subnet.
-5. Re-runs `configure_k3s_routing()` to update the LAN subnet in policy
-   routing rules and the systemd oneshot service.
 
 ## Example: Deploying a new K3s cluster
 
@@ -299,4 +295,7 @@ K3s is sensitive to IP address changes. If a node's IP changes:
 
 # 5. Deploy applications
 ./atlas.sh myhost k3s group apps apply
+
+# 6. Optionally deploy a VPN alongside K3s
+./atlas.sh myhost wireguard ~/my-vpn.conf
 ```

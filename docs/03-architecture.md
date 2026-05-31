@@ -115,7 +115,6 @@ Template processing rules in `configure_compose_templates()`:
 | `configure_k3s_firewall()` | Configures firewalld or ufw to trust pod/service CIDRs, open K3s ports (8472/udp, 6443/tcp, 10250/tcp, 2379-2380/tcp, 443/tcp) |
 | `get_node_ip()` | Detects the primary IPv4 address from the default route interface (used by setup, join, and update-node-ip) |
 | `get_node_lan_subnet()` | Detects the LAN subnet (CIDR) from the default route interface |
-| `configure_k3s_routing()` | Installs OS-level policy routing to protect K3s subnets from VPN tunnels, with a systemd oneshot service for persistence |
 
 ### Validation (lines 207-323)
 

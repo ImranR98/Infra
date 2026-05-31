@@ -207,34 +207,26 @@ interfaces would miss cross-node pod traffic.
 | 2380 | TCP | etcd peer replication — for HA control-plane |
 | 443 | TCP | HTTPS ingress — Traefik and LAN-accessible services |
 
-### Policy routing for VPN coexistence
+### Using a VPN alongside K3s
 
-Many VPN clients (Mullvad, WireGuard, OpenVPN) install a default route
-and/or kill-switch rules that capture **all** traffic, breaking K3s networking.
-The `configure_k3s_routing()` function, called during setup and join, installs
-OS-level policy routing to protect K3s subnets:
+The recommended approach is to use bare WireGuard (`wg-quick`) with a split
+tunnel.  Run `./atlas.sh <target> wireguard <config-file>` to deploy any
+standard WireGuard config.  The command automatically:
 
-1. Detects the physical LAN interface and subnet (e.g. `192.168.8.0/24`)
-2. Adds `ip rule` entries at priority 32764–32765, which beats typical VPN
-   rules (~32766), forcing pod, service, and LAN traffic through the `main`
-   routing table instead of the VPN tunnel
-3. Installs a systemd oneshot service (`k3s-routing.service`) that re-applies
-   the rules at boot before `network-online.target`
+1. Installs `wireguard-tools` if missing.
+2. Rewrites `AllowedIPs` to `0.0.0.0/1, 128.0.0.0/1` — these cover all
+   IPv4 internet traffic but are less specific than the directly-connected
+   `/24` routes for K3s subnets and the LAN, so pod, service, and inter-node
+   traffic stays on the physical NIC.
+3. Adds `PostUp`/`PreDown` routes to keep the WireGuard endpoint reachable
+   through the physical gateway, preventing a dead loop.
+4. Enables and starts `wg-quick@wg0`, which auto-connects at boot.
 
-This means pod-to-pod, pod-to-service, and inter-node traffic always stays
-on the physical LAN regardless of what the VPN does with the default route.
-
-### VPN compatibility
-
-| VPN | Kill switch | Fix |
-|-----|:-----------:|-----|
-| Bare WireGuard (`wg-quick`) | None by default | Works out of the box |
-| Mullvad VPN app | On by default | `mullvad lockdown-mode set off` |
-| OpenVPN / other | Depends on config | Disable kill switch / block-outside-dns |
-
-Policy routing handles the routing conflict. The kill switch is a separate
-layer (iptables/nftables rules that DROP non-VPN traffic) and must be disabled
-separately — policy routing alone cannot override firewall rules.
+The VPN app approach (Mullvad GUI, OpenVPN, etc.) is **not recommended**
+because these apps often install kill switches and kernel-level DNS
+interception that break K3s networking in ways that cannot be fixed with
+routing alone.  Export the provider's WireGuard config and use
+`./atlas.sh <target> wireguard` instead.
 
 ### Multi-node considerations
 

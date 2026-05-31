@@ -67,7 +67,6 @@ echo "If this node has an AMD GPU, label it for GPU-accelerated workloads:"
 echo "  kubectl label node $(hostname) has-amdgpu=true --overwrite"
 
 configure_k3s_firewall
-configure_k3s_routing
 
 echo ""
 echo "Waiting for cluster to be ready..."

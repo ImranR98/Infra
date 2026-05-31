@@ -49,7 +49,4 @@ done
 echo "Re-applying network policies with updated API server subnet..."
 bash "$ATLAS_ROOT/commands/k3s/install.sh" namespaces apply
 
-echo "Updating policy routing for new IP..."
-configure_k3s_routing
-
 echo "Done. K3s node IP updated to $new_ip."
