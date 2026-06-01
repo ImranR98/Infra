@@ -9,7 +9,7 @@ spec:
     - ReadWriteOnce
   resources:
     requests:
-      storage: 4Gi
+      storage: 5Gi
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -22,7 +22,7 @@ spec:
     - ReadWriteOnce
   resources:
     requests:
-      storage: 8Gi
+      storage: 50Gi
 ---
 # External media library — existing photos/videos on the host filesystem.
 # Immich can index these via the "External Library" feature (mounted at /external in the container).
@@ -32,7 +32,7 @@ metadata:
   name: immich-external-pv
 spec:
   capacity:
-    storage: 4000Gi
+    storage: 4096Gi
   volumeMode: Filesystem
   accessModes:
     - ReadWriteMany
@@ -57,7 +57,7 @@ spec:
   volumeName: immich-external-pv
   resources:
     requests:
-      storage: 4000Gi
+      storage: 4096Gi
 
 ---
 apiVersion: v1
@@ -137,7 +137,7 @@ spec:
       - name: dshm
         emptyDir:
           medium: Memory
-          sizeLimit: 512Mi
+          sizeLimit: 5Gi
 ---
 apiVersion: v1
 kind: Service

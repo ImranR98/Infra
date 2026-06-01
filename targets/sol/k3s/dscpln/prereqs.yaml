@@ -4,7 +4,7 @@ metadata:
   name: dscpln-data-pv
 spec:
   capacity:
-    storage: 4000Gi
+    storage: 4096Gi
   volumeMode: Filesystem
   accessModes:
     - ReadWriteMany
@@ -29,5 +29,5 @@ spec:
   volumeName: dscpln-data-pv
   resources:
     requests:
-      storage: 4000Gi
+      storage: 4096Gi
 

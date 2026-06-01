@@ -127,7 +127,7 @@ spec:
             allowPrivilegeEscalation: false
           resources:
             limits:
-              memory: 256Mi
+              memory: 2Gi
             requests:
               memory: 128Mi
       volumes:

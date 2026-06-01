@@ -24,7 +24,7 @@ services:
         container_name: logtfy
         hostname: $TARGET
         restart: unless-stopped
-        mem_limit: 256M
+        mem_limit: 2G
         volumes:
           - $COMPOSE_STATE_DIR/logtfy/config.json:/logtfy/config.json:ro
           - /var/log/journal:/var/log/journal:ro

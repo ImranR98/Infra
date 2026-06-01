@@ -7,7 +7,7 @@ x-socket-proxy: &socket-proxy
     image: wollomatic/socket-proxy:1
     restart: unless-stopped
     read_only: true
-    mem_limit: 64M
+    mem_limit: 512M
     cap_drop:
         - ALL
     security_opt:
@@ -67,7 +67,7 @@ services:
     watchtower:
         container_name: watchtower
         restart: unless-stopped
-        mem_limit: 128M
+        mem_limit: 512M
         image: nickfedor/watchtower
         volumes:
             - dockerproxy_priv:/socket/:ro
@@ -101,7 +101,7 @@ services:
         expose:
             - 9091
         restart: unless-stopped
-        mem_limit: 256M
+        mem_limit: 2G
         healthcheck:
             test: ["CMD-SHELL", "wget --no-verbose --tries=1 -O - http://127.0.0.1:9091/api/health || exit 1"]
             interval: 30s
@@ -121,7 +121,7 @@ services:
         expose:
             - 6379
         restart: unless-stopped
-        mem_limit: 128M
+        mem_limit: 512M
         healthcheck:
             test: ["CMD-SHELL", "redis-cli ping || exit 1"]
             start_period: 1m
@@ -178,7 +178,7 @@ services:
             - "traefik.http.routers.traefik-dashboard.service=api@internal"
             - "traefik.http.routers.traefik-dashboard.middlewares=authelia@file,geoblock@file"
         restart: unless-stopped
-        mem_limit: 256M
+        mem_limit: 2G
         networks:
             - traefik
         logging: *logging
@@ -280,7 +280,7 @@ services:
         container_name: pixelntfy
         image: imranrdev/pixel-ntfy
         restart: unless-stopped
-        mem_limit: 128M
+        mem_limit: 512M
         depends_on:
             - traefik
         labels:
@@ -305,7 +305,7 @@ services:
         container_name: isbn-lookup
         image: imranrdev/isbn-lookup
         restart: unless-stopped
-        mem_limit: 128M
+        mem_limit: 512M
         depends_on:
             - traefik
         labels:
@@ -334,7 +334,7 @@ services:
         depends_on:
             - traefik
         restart: unless-stopped
-        mem_limit: 256M
+        mem_limit: 2G
         labels:
             - "traefik.enable=true"
             - "traefik.http.routers.metube.rule=Host(`ytdl.$SERVICES_DOMAIN`)"
@@ -361,7 +361,7 @@ services:
         networks:
             - traefik
         restart: unless-stopped
-        mem_limit: 128M
+        mem_limit: 512M
         logging: *logging
 
     # IKOM - IKOM
@@ -383,7 +383,7 @@ services:
         networks:
             - traefik
         restart: unless-stopped
-        mem_limit: 256M
+        mem_limit: 2G
         logging: *logging
 
     # SB25 - private birthday page
@@ -406,7 +406,7 @@ services:
         networks:
             - traefik
         restart: unless-stopped
-        mem_limit: 128M
+        mem_limit: 512M
         logging: *logging
 
     # Logtfy - Log Monitoring and ntfy Alerting
@@ -415,7 +415,7 @@ services:
         container_name: logtfy
         hostname: $TARGET
         restart: unless-stopped
-        mem_limit: 256M
+        mem_limit: 2G
         depends_on:
             - dockerproxy
         volumes:
@@ -431,7 +431,7 @@ services:
         image: syncthing/relaysrv:latest
         container_name: strelaysrv
         restart: unless-stopped
-        mem_limit: 512M
+        mem_limit: 2G
         volumes:
             - strelaysrv:/var/strelaysrv
         command:
@@ -461,7 +461,7 @@ services:
             - traefik
             - shlink_db
         restart: unless-stopped
-        mem_limit: 256M
+        mem_limit: 2G
         labels:
             - "traefik.enable=true"
             - "traefik.http.routers.shlink.rule=Host(`ln.$SERVICES_DOMAIN`)"
@@ -476,7 +476,7 @@ services:
         container_name: shlink_db
         restart: unless-stopped
         user: "$MY_UID:$MY_UID"
-        mem_limit: 512M
+        mem_limit: 2G
         volumes:
             - $COMPOSE_STATE_DIR/shlink/db:/var/lib/postgresql/data
         environment:
@@ -500,7 +500,7 @@ services:
             - traefik
             - shlink
         restart: unless-stopped
-        mem_limit: 128M
+        mem_limit: 512M
         labels:
             - "traefik.enable=true"
             - "traefik.http.routers.shlink_web_client.rule=Host(`ui.ln.$SERVICES_DOMAIN`)"
@@ -516,7 +516,7 @@ services:
         image: louislam/uptime-kuma:2
         container_name: uptime
         restart: unless-stopped
-        mem_limit: 256M
+        mem_limit: 2G
         depends_on:
             - traefik
         environment:

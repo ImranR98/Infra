@@ -22,7 +22,7 @@ spec:
     pipelines:
       persistence:
         storageClass: longhorn
-        size: 1Gi
+        size: 5Gi
     extraEnvVars:
       - name: ENABLE_OAUTH_SIGNUP
         value: "true"

@@ -9,7 +9,7 @@ spec:
     - ReadWriteOnce
   resources:
     requests:
-      storage: 1Gi
+      storage: 5Gi
 ---
 apiVersion: v1
 kind: PersistentVolume
@@ -17,7 +17,7 @@ metadata:
   name: navidrome-music-pv
 spec:
   capacity:
-    storage: 4000Gi
+    storage: 4096Gi
   volumeMode: Filesystem
   accessModes:
     - ReadWriteMany
@@ -42,4 +42,4 @@ spec:
   volumeName: navidrome-music-pv
   resources:
     requests:
-      storage: 4000Gi
+      storage: 4096Gi

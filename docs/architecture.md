@@ -113,4 +113,25 @@ targets/<target>/k3s/*/kustomization.yaml
     │
     ▼
 kubectl kustomize  ──►  YAML  ──envsubst──►  kubectl apply -f -
+
+## Resource sizing conventions
+
+All memory and storage sizes follow a small set of preset tiers. Every service is assigned to the closest matching tier — no ad-hoc values.
+
+### Memory tiers
+
+| Tier | K8s limits | K8s requests | Compose `mem_limit` | Used for |
+|------|-----------|-------------|-------------------|----------|
+| small | 512Mi | 128Mi | 512M | Sidecars, init containers, CSI components |
+| medium | 2Gi | 128Mi | 2G | Most app containers, all database pods |
+| large | 8Gi | 2Gi | 8G | Plausible stack (app, Postgres, ClickHouse) |
+
+### Storage tiers
+
+| Tier | PVC size | Used for |
+|------|---------|----------|
+| small | 5Gi | All small-payload PVCs (databases, config, small app data) |
+| medium | 50Gi | Immich library (metadata cache, thumbnails) |
+| large | 200Gi | Ollama models, Send file uploads |
+| 4Ti | 4096Gi | All NFS/hostPath volumes (media libraries, device sync, backups) |
 ```

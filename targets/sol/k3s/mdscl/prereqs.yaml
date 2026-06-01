@@ -4,7 +4,7 @@ metadata:
   name: mdscl-camera-src-pv
 spec:
   capacity:
-    storage: 4000Gi
+    storage: 4096Gi
   volumeMode: Filesystem
   accessModes:
     - ReadWriteOnce
@@ -32,7 +32,7 @@ spec:
   storageClassName: hostpath
   resources:
     requests:
-      storage: 4000Gi
+      storage: 4096Gi
   volumeName: mdscl-camera-src-pv
 ---
 apiVersion: v1
@@ -41,7 +41,7 @@ metadata:
   name: mdscl-camera-dst-pv
 spec:
   capacity:
-    storage: 4000Gi
+    storage: 4096Gi
   volumeMode: Filesystem
   accessModes:
     - ReadWriteOnce
@@ -69,7 +69,7 @@ spec:
   storageClassName: hostpath
   resources:
     requests:
-      storage: 4000Gi
+      storage: 4096Gi
   volumeName: mdscl-camera-dst-pv
 ---
 apiVersion: v1
@@ -78,7 +78,7 @@ metadata:
   name: mdscl-screenshots-src-pv
 spec:
   capacity:
-    storage: 4000Gi
+    storage: 4096Gi
   volumeMode: Filesystem
   accessModes:
     - ReadWriteOnce
@@ -106,7 +106,7 @@ spec:
   storageClassName: hostpath
   resources:
     requests:
-      storage: 4000Gi
+      storage: 4096Gi
   volumeName: mdscl-screenshots-src-pv
 ---
 apiVersion: v1
@@ -115,7 +115,7 @@ metadata:
   name: mdscl-screenshots-dst-pv
 spec:
   capacity:
-    storage: 4000Gi
+    storage: 4096Gi
   volumeMode: Filesystem
   accessModes:
     - ReadWriteOnce
@@ -143,7 +143,7 @@ spec:
   storageClassName: hostpath
   resources:
     requests:
-      storage: 4000Gi
+      storage: 4096Gi
   volumeName: mdscl-screenshots-dst-pv
 ---
 apiVersion: v1
@@ -152,7 +152,7 @@ metadata:
   name: mdscl-screenrecs-src-pv
 spec:
   capacity:
-    storage: 4000Gi
+    storage: 4096Gi
   volumeMode: Filesystem
   accessModes:
     - ReadWriteOnce
@@ -180,7 +180,7 @@ spec:
   storageClassName: hostpath
   resources:
     requests:
-      storage: 4000Gi
+      storage: 4096Gi
   volumeName: mdscl-screenrecs-src-pv
 ---
 apiVersion: v1
@@ -189,7 +189,7 @@ metadata:
   name: mdscl-screenrecs-dst-pv
 spec:
   capacity:
-    storage: 4000Gi
+    storage: 4096Gi
   volumeMode: Filesystem
   accessModes:
     - ReadWriteOnce
@@ -217,6 +217,6 @@ spec:
   storageClassName: hostpath
   resources:
     requests:
-      storage: 4000Gi
+      storage: 4096Gi
   volumeName: mdscl-screenrecs-dst-pv
 

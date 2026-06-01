@@ -9,7 +9,7 @@ spec:
     - ReadWriteOnce
   resources:
     requests:
-      storage: 3Gi
+      storage: 5Gi
 ---
 apiVersion: v1
 kind: PersistentVolume
@@ -17,7 +17,7 @@ metadata:
   name: jellyfin-tv-pv
 spec:
   capacity:
-    storage: 4000Gi
+    storage: 4096Gi
   volumeMode: Filesystem
   accessModes:
     - ReadWriteMany
@@ -42,7 +42,7 @@ spec:
   volumeName: jellyfin-tv-pv
   resources:
     requests:
-      storage: 4000Gi
+      storage: 4096Gi
 ---
 apiVersion: v1
 kind: PersistentVolume
@@ -50,7 +50,7 @@ metadata:
   name: jellyfin-youtube-pv
 spec:
   capacity:
-    storage: 4000Gi
+    storage: 4096Gi
   volumeMode: Filesystem
   accessModes:
     - ReadWriteMany
@@ -75,4 +75,4 @@ spec:
   volumeName: jellyfin-youtube-pv
   resources:
     requests:
-      storage: 4000Gi
+      storage: 4096Gi

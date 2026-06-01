@@ -22,7 +22,7 @@ spec:
     - ReadWriteOnce
   resources:
     requests:
-      storage: 1Gi
+      storage: 5Gi
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -60,9 +60,9 @@ spec:
               mountPath: /data
           resources:
             limits:
-              memory: 256Mi
+              memory: 2Gi
             requests:
-              memory: 64Mi
+              memory: 128Mi
       volumes:
         - name: data
           persistentVolumeClaim:
