@@ -23,7 +23,6 @@ spec:
   resources:
     requests:
       storage: 5Gi
-
 ---
 apiVersion: v1
 kind: Secret
@@ -88,6 +87,43 @@ spec:
             - /bitnami/postgresql
           securityContext:
             runAsUser: 0
+          resources:
+            limits:
+              memory: 2Gi
+            requests:
+              memory: 128Mi
+          volumeMounts:
+            - name: data
+              mountPath: /bitnami/postgresql
+      containers:
+        - name: postgresql
+          image: docker.io/bitnami/postgresql:latest@sha256:ac855a024049fc14d6b73e38ae3b53cf2d93ae69bf7c6174eda550a5de6f5227
+          ports:
+            - name: tcp-postgresql
+              containerPort: 5432
+          readinessProbe:
+            exec:
+              command:
+                - pg_isready
+                - -U
+                - authelia
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+            initialDelaySeconds: 15
+          env:
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: authelia-postgresql
+                  key: password
+            - name: POSTGRES_USER
+              value: authelia
+            - name: POSTGRES_DATABASE
+              value: authelia
+          volumeMounts:
+            - name: data
+              mountPath: /bitnami/postgresql
           resources:
             limits:
               memory: 2Gi
