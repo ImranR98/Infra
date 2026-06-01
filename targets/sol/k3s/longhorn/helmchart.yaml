@@ -20,7 +20,7 @@ spec:
       defaultReplicaCount: "1"
       defaultDataPath: "/var/lib/rancher/longhorn"
       storageMinimalAvailablePercentage: 5
-      storageOverProvisioningPercentage: 200
+      storageOverProvisioningPercentage: 1000
       replicaSoftAntiAffinity: true
     resources:
       limits:
