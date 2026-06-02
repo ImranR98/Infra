@@ -12,6 +12,9 @@ spec:
   valuesContent: |-
     container_runtime: containerd
 
+    tls:
+      enabled: true
+
     appsec:
       enabled: true
       acquisitions:
@@ -74,6 +77,8 @@ spec:
       dashboard:
         enabled: false
       env:
+        - name: AGENTS_ALLOWED_OU
+          value: agent-ou,appsec-ou
         - name: BOUNCER_KEY_traefik
           valueFrom:
             secretKeyRef:
