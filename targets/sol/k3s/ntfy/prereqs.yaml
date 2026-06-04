@@ -25,6 +25,7 @@ stringData:
     attachment-cache-dir: "/home/ntfy/attachments"
     behind-proxy: true
     listen-http: ":3000"
+    auth-default-access: deny-all
 
 ---
 apiVersion: v1
