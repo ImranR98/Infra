@@ -1,0 +1,14 @@
+x-logging: &logging
+    options:
+        max-size: 10m
+        max-file: 5
+services:
+
+    frps:
+        image: fatedier/frps:v0.69.0
+        container_name: frps
+        restart: always
+        volumes:
+          - $COMPOSE_STATE_DIR/frps/frps.toml:/frps.toml
+        network_mode: host
+        logging: *logging
