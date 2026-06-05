@@ -5,7 +5,7 @@ source "$ATLAS_ROOT/lib/common.sh"
 ensure_envsubst_vars
 
 render_compose_yaml
-yq -r '.services[].volumes[] | (.source? // .) | split(":") | .[0]' "$COMPOSE_STATE_DIR/compose.yaml" | grep "^$COMPOSE_STATE_DIR" | while read -r host_path; do
+yq -r '.services[].volumes?[] | (.source? // .) | split(":") | .[0]' "$COMPOSE_STATE_DIR/compose.yaml" | grep "^$COMPOSE_STATE_DIR" | while read -r host_path; do
 	name="$(basename "$host_path")"
 	if [[ "$name" =~ \.[a-zA-Z0-9]{1,5}$ ]]; then
 		mkdir -p "$(dirname "$host_path")"
