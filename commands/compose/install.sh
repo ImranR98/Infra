@@ -39,9 +39,9 @@ RestartSec=30
 WantedBy=multi-user.target
 EOF
 SU=$(get_sudo_cmd)
-$SU mv "$COMPOSE_STATE_DIR/$TARGET.service" "/etc/systemd/system/$TARGET.service"
-command -v chcon &>/dev/null && $SU chcon -t systemd_unit_file_t /etc/systemd/system/$TARGET.service 2>/dev/null || true
-$SU systemctl daemon-reload && $SU systemctl enable $TARGET.service
-$SU systemctl restart $TARGET.service 2>/dev/null || $SU systemctl start $TARGET.service
+$SU bash -c 'mv "$1" "$2"' _ "$COMPOSE_STATE_DIR/$TARGET.service" "/etc/systemd/system/$TARGET.service"
+command -v chcon &>/dev/null && $SU bash -c 'chcon -t "$1" "$2"' _ systemd_unit_file_t "/etc/systemd/system/$TARGET.service" 2>/dev/null || true
+$SU bash -c 'systemctl daemon-reload' && $SU bash -c "systemctl enable $TARGET.service"
+$SU bash -c "systemctl restart $TARGET.service" 2>/dev/null || $SU bash -c "systemctl start $TARGET.service"
 
 echo "Installed and started $TARGET service."

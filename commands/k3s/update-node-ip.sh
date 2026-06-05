@@ -28,12 +28,12 @@ fi
 echo "Updating K3s node IP: $current_node_ip → $new_ip"
 
 config_dir="/etc/rancher/k3s/config.yaml.d"
-$SU mkdir -p "$config_dir"
-printf 'node-ip: %s\n' "$new_ip" | $SU tee "$config_dir/20-node-ip.yaml" >/dev/null
+$SU bash -c 'mkdir -p "$1"' _ "$config_dir"
+printf 'node-ip: %s\n' "$new_ip" | $SU bash -c 'tee "$1" >/dev/null' _ "$config_dir/20-node-ip.yaml"
 
-$SU systemctl daemon-reload
+$SU bash -c 'systemctl daemon-reload'
 if systemctl is-active --quiet k3s.service 2>/dev/null; then
-	$SU systemctl restart k3s.service
+	$SU bash -c 'systemctl restart k3s.service'
 fi
 
 echo "Waiting for cluster to be ready..."

@@ -7,21 +7,21 @@ SU=$(get_sudo_cmd)
 PKG_MGR=$(detect_pkgmgr)
 
 case "$PKG_MGR" in
-	apt) $SU apt-get update -qq ;;
-	dnf) $SU dnf check-update -q || true ;;
-	rpm-ostree) $SU rpm-ostree refresh-md ;;
+	apt) $SU bash -c 'apt-get update -qq' ;;
+	dnf) $SU bash -c 'dnf check-update -q' || true ;;
+	rpm-ostree) rpm-ostree refresh-md ;;
 esac
 
 if ! command -v docker >/dev/null 2>&1 || ! docker compose version >/dev/null 2>&1; then
 	printf "Installing Docker and Docker Compose..."
 	ensure_docker_repo "$SU" "$PKG_MGR"
 	if [ "$PKG_MGR" = "rpm-ostree" ]; then
-		$SU rpm-ostree install --apply-live --assumeyes docker-ce docker-ce-cli containerd.io docker-compose-plugin && echo " done" || { echo ""; echo "Docker install failed. Install manually: https://docs.docker.com/engine/install/" >&2; }
+		rpm-ostree install --apply-live --assumeyes docker-ce docker-ce-cli containerd.io docker-compose-plugin && echo " done" || { echo ""; echo "Docker install failed. Install manually: https://docs.docker.com/engine/install/" >&2; }
 	else
 		install_pkgs "$SU" "$PKG_MGR" docker-ce docker-ce-cli containerd.io docker-compose-plugin && echo " done" || { echo ""; echo "Docker install failed. Install manually: https://docs.docker.com/engine/install/" >&2; }
 	fi
-	$SU systemctl enable docker 2>/dev/null || true
-	$SU systemctl start docker 2>/dev/null || true
+	$SU bash -c 'systemctl enable docker' 2>/dev/null || true
+	$SU bash -c 'systemctl start docker' 2>/dev/null || true
 else
 	echo "Docker already installed."
 fi
