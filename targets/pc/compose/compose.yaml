@@ -53,8 +53,8 @@ services:
             - "--providers.docker.endpoint=unix:///socket/docker.sock"
             - "--providers.docker.network=traefik"
         ports:
-            - "443:443"
-            - "1935:1935"
+            - "127.0.0.1:443:443"
+            - "127.0.0.1:1935:1935"
         volumes:
             - dockerproxy:/socket/:ro
             - $COMPOSE_STATE_DIR/traefik/acme:/acme
@@ -81,6 +81,9 @@ services:
         mem_limit: 2G
         depends_on:
             - traefik
+        ports:
+            - "127.0.0.1:8080:8080"
+            - "127.0.0.1:1936:1935"
         volumes:
             - $COMPOSE_STATE_DIR/owncast:/app/data
         labels:
