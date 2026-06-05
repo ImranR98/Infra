@@ -89,7 +89,7 @@ services:
         logging: *logging
 
     owncast:
-        image: owncast/owncast:latest
+        image: owncast/owncast:0.2.5
         container_name: owncast
         restart: unless-stopped
         mem_limit: 2G
