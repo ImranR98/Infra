@@ -17,7 +17,7 @@ authentication_backend:
     path: /config/users_database.yml
 
 access_control:
-  default_policy: 'one_factor'
+  default_policy: 'deny'
   rules:
     - domain: $TARGET.$SERVICES_DOMAIN
       policy: bypass
@@ -31,6 +31,7 @@ access_control:
       policy: bypass
     - domain: plausible.$SERVICES_DOMAIN # IGNORE INITIALLY
       policy: bypass # IGNORE INITIALLY
+    - domain: 
 
 session:
   secret: '$AUTHELIA_SESSION_SECRET'

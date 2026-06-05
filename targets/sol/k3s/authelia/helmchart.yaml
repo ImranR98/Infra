@@ -183,6 +183,8 @@ spec:
             policy: bypass
           - domain: '*.$SERVICES_DOMAIN'
             policy: two_factor
+            subject:
+            - 'group:admins'
       regulation:
         max_retries: 3
         find_time: 120
