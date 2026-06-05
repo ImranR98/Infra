@@ -37,12 +37,17 @@ services:
             - "--log.level=INFO"
             - "--providers.docker=true"
             - "--providers.docker.exposedByDefault=false"
+            - "--entryPoints.web=true"
+            - "--entryPoints.web.address=:80"
+            - "--entryPoints.web.http.redirections.entryPoint.to=websecure"
+            - "--entryPoints.web.http.redirections.entryPoint.scheme=https"
+            - "--entryPoints.web.http.redirections.entryPoint.permanent=true"
             - "--entryPoints.websecure=true"
             - "--entryPoints.websecure.address=:443"
             - "--entryPoints.rtmp=true"
             - "--entryPoints.rtmp.address=:1935"
             - "--certificatesresolvers.le.acme.email=$DOMAIN_OWNER_EMAIL"
-            - "--certificatesresolvers.le.acme.storage=/acme.json"
+            - "--certificatesresolvers.le.acme.storage=/acme/acme.json"
             - "--certificatesresolvers.le.acme.tlschallenge=true"
             - "--providers.docker.endpoint=unix:///socket/docker.sock"
             - "--providers.docker.network=traefik"
@@ -51,7 +56,7 @@ services:
             - "1935:1935"
         volumes:
             - dockerproxy:/socket/:ro
-            - $COMPOSE_STATE_DIR/traefik/acme.json:/acme.json
+            - $COMPOSE_STATE_DIR/traefik/acme:/acme
         networks:
             - traefik
         restart: unless-stopped
@@ -84,7 +89,7 @@ services:
             - "traefik.http.routers.owncast.tls.certresolver=le"
             - "traefik.http.routers.owncast.tls=true"
             - "traefik.http.services.owncast.loadbalancer.server.port=8080"
-            - "traefik.tcp.routers.owncast-rtmp.rule=HostSNI(`*`)"
+            - "traefik.tcp.routers.owncast-rtmp.rule=HostSNI(`owncast.$SERVICES_DOMAIN`)"
             - "traefik.tcp.routers.owncast-rtmp.entrypoints=rtmp"
             - "traefik.tcp.routers.owncast-rtmp.service=owncast-rtmp"
             - "traefik.tcp.routers.owncast-rtmp.tls=true"
