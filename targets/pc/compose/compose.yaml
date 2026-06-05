@@ -35,6 +35,7 @@ services:
         command:
             - "--global.sendAnonymousUsage=false"
             - "--log.level=INFO"
+            - "--accesslog=true"
             - "--providers.docker=true"
             - "--providers.docker.exposedByDefault=false"
             - "--entryPoints.web=true"
