@@ -74,6 +74,20 @@ services:
         logging: *logging
         command: "-c /frpc.toml"
 
+    owncast-auth:
+        image: python:3-alpine
+        container_name: owncast-auth
+        restart: unless-stopped
+        mem_limit: 64M
+        command: python3 /app/auth.py
+        environment:
+            - OWNCAST_ACCESS_TOKEN=$OWNCAST_ACCESS_TOKEN
+        volumes:
+            - $COMPOSE_STATE_DIR/owncast-auth/auth.py:/app/auth.py:ro
+        networks:
+            - traefik
+        logging: *logging
+
     owncast:
         image: owncast/owncast:latest
         container_name: owncast
@@ -92,6 +106,8 @@ services:
             - "traefik.http.routers.owncast.entrypoints=websecure"
             - "traefik.http.routers.owncast.tls.certresolver=le"
             - "traefik.http.routers.owncast.tls=true"
+            - "traefik.http.routers.owncast.middlewares=owncast-auth"
+            - "traefik.http.middlewares.owncast-auth.forwardauth.address=http://owncast-auth:3000/"
             - "traefik.http.services.owncast.loadbalancer.server.port=8080"
             - "traefik.tcp.routers.owncast-rtmp.rule=HostSNI(`owncast.$SERVICES_DOMAIN`)"
             - "traefik.tcp.routers.owncast-rtmp.entrypoints=rtmp"
