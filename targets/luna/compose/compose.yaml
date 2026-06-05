@@ -155,7 +155,7 @@ services:
             - "--entryPoints.websecure=true"
             - "--entryPoints.websecure.address=:443"
             - "--certificatesresolvers.le.acme.email=$DOMAIN_OWNER_EMAIL"
-            - "--certificatesresolvers.le.acme.storage=/acme.json"
+            - "--certificatesresolvers.le.acme.storage=/acme/acme.json"
             - "--certificatesresolvers.le.acme.tlschallenge=true"
             - "--experimental.plugins.geoblock.modulename=github.com/PascalMinder/geoblock"
             - "--experimental.plugins.geoblock.version=v0.3.7"
@@ -165,7 +165,7 @@ services:
             - "80:80"
             - "443:443"
         volumes:
-            - $COMPOSE_STATE_DIR/traefik/acme.json:/acme.json
+            - $COMPOSE_STATE_DIR/traefik/acme:/acme
             - $COMPOSE_STATE_DIR/traefik/dynamic-configuration.yaml:/etc/traefik/dynamic-configuration.yaml
             - $COMPOSE_STATE_DIR/traefik/logs:/var/log/traefik/
             - dockerproxy:/socket/:ro
