@@ -462,7 +462,7 @@ services:
             - "$MAIN_PARENT_DIR/Main/Media/YouTube:/media/YouTube"
             - $STATE_DIR/jellyfin/config:/config
             - $STATE_DIR/jellyfin/cache:/cache
-            - /mnt/ssd2/temp_jellyfin_stuff:/media/TempShows
+            - /mnt/ssd2/jellyfin_less_important_media:/media/TempShows
         labels:
             - "traefik.enable=true"
             - "traefik.http.routers.jellyfin.rule=Host(`tv.$SERVICES_DOMAIN`)"
