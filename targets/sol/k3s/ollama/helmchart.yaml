@@ -9,7 +9,7 @@ spec:
   targetNamespace: apps
   createNamespace: false
   failurePolicy: abort
-  version: 1.57.0
+  version: 1.59.0
   valuesContent: |-
     image:
       tag: latest

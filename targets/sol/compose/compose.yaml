@@ -6,7 +6,7 @@ x-logging: &logging
 services:
 
     frpc:
-        image: fatedier/frpc:v0.69.0
+        image: fatedier/frpc:v0.69.1
         container_name: frpc
         restart: always
         volumes:

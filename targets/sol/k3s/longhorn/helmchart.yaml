@@ -9,7 +9,7 @@ spec:
   failurePolicy: abort
   targetNamespace: longhorn-system
   createNamespace: true
-  version: 1.11.2
+  version: 1.12.0
   valuesContent: |-
     # Single replica is intentional for single-node cluster.
     # Increase defaultClassReplicaCount + defaultReplicaCount when adding additional nodes.

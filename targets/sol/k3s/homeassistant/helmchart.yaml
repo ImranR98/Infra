@@ -9,7 +9,7 @@ spec:
   targetNamespace: apps
   createNamespace: false
   failurePolicy: abort
-  version: 0.3.61
+  version: 0.3.63
   valuesContent: |-
     deploymentStrategy: Recreate
     controller:
