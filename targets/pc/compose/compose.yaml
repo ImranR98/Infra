@@ -52,6 +52,9 @@ services:
             - "--certificatesresolvers.le.acme.tlschallenge=true"
             - "--providers.docker.endpoint=unix:///socket/docker.sock"
             - "--providers.docker.network=traefik"
+            - "--entryPoints.websecure.proxyProtocol.trustedIPs=172.19.0.1/32"
+            - "--entryPoints.web.proxyProtocol.trustedIPs=172.19.0.1/32"
+            - "--entryPoints.rtmp.proxyProtocol.trustedIPs=172.19.0.1/32"
         ports:
             - "127.0.0.1:443:443"
             - "127.0.0.1:1935:1935"
