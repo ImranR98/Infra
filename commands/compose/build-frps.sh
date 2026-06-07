@@ -3,7 +3,7 @@
 set -euo pipefail
 source "$ATLAS_ROOT/lib/common.sh"
 
-TARGET_SERVER="$2"
+TARGET_SERVER="$1"
 if [ -z "$TARGET_SERVER" ] || [ ! -f "$ATLAS_ROOT/targets/$TARGET_SERVER/compose/compose.yaml" ]; then
 	echo "FRPS target name must be specified!" >&2
 	echo "Usage: $0 <target> compose build-frps <frps-target>" >&2
