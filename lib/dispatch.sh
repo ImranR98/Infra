@@ -57,11 +57,23 @@ _atlas_help() {
 		printf '  %-19s' "$(basename "${f%.*}")"
 		_desc "$f"
 	done
+	for f in "targets/$TARGET"/commands/*.sh; do
+		[ -f "$f" ] || continue
+		printf '  %-19s' "$(basename "${f%.*}")"
+		_desc "$f"
+	done
 	for stack in compose k3s; do
 		[ -d "targets/$TARGET/$stack" ] || continue
-		echo ""
+		local has_cmds=false
 		for f in "commands/$stack"/*.sh; do
 			[ -f "$f" ] || continue
+			[ "$has_cmds" = false ] && echo "" && has_cmds=true
+			printf '  %s %-15s' "$stack" "$(basename "${f%.*}")"
+			_desc "$f"
+		done
+		for f in "targets/$TARGET"/commands/"$stack"/*.sh; do
+			[ -f "$f" ] || continue
+			[ "$has_cmds" = false ] && echo "" && has_cmds=true
 			printf '  %s %-15s' "$stack" "$(basename "${f%.*}")"
 			_desc "$f"
 		done
