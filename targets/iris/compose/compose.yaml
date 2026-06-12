@@ -1,0 +1,20 @@
+x-logging: &logging
+    options:
+        max-size: 10m
+        max-file: 5
+services:
+
+    frps-with-multiuser:
+        image: imranrdev/frps-with-multiuser:v0.69.1
+        container_name: frps-with-multiuser
+        restart: always
+        volumes:
+          - $COMPOSE_STATE_DIR/frps/tokens.txt:/workdir/service-data/frps-tokens.txt:ro
+        network_mode: host
+        healthcheck:
+            test: ["CMD-SHELL", "wget --no-verbose --tries=1 -O - http://127.0.0.1:7500/healthz || exit 1"]
+            interval: 30s
+            timeout: 10s
+            start_period: 1m
+            retries: 3
+        logging: *logging
