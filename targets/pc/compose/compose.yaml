@@ -99,8 +99,8 @@ services:
         depends_on:
             - traefik
         ports:
-            - "127.0.0.1:8080:8080"
-            - "127.0.0.1:1936:1935"
+            - "8080:8080"
+            - "1936:1935"
         volumes:
             - $COMPOSE_STATE_DIR/owncast:/app/data
         labels:
