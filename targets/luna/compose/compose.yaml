@@ -576,7 +576,7 @@ services:
             - MICROBIN_DEFAULT_BURN_AFTER=0
             - MICROBIN_MAX_FILE_SIZE_ENCRYPTED_MB=5120
             - MICROBIN_MAX_FILE_SIZE_UNENCRYPTED_MB=10240
-            - MICROBIN_PUBLIC_PATH="https://bin.example.org/"
+            - MICROBIN_PUBLIC_PATH="https://bin.example.org"
             - MICROBIN_HASH_IDS=true
             - MICROBIN_NO_LISTING=false
             - MICROBIN_PURE_HTML=false
