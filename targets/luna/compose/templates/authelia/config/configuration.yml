@@ -40,6 +40,8 @@ access_control:
       policy: one_factor
       subject:
       - 'group:family'
+    - domain: bin.$SERVICES_DOMAIN
+      policy: bypass
     - domain: '*.$SERVICES_DOMAIN'
       policy: one_factor
       subject:

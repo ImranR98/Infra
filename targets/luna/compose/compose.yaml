@@ -538,6 +538,31 @@ services:
         # May be needed for uptime to reach services on the same machine:
         # ufw allow from 172.19.0.0/24 to any port 443 proto tcp
 
+    # Microbin - Pastebin Service
+    microbin:
+        container_name: microbin
+        image: danielszabo99/microbin:latest
+        restart: unless-stopped
+        mem_limit: 512M
+        depends_on:
+            - traefik
+        labels:
+            - "traefik.enable=true"
+            - "traefik.http.routers.microbin.rule=Host(`bin.$SERVICES_DOMAIN`)"
+            - "traefik.http.routers.microbin.entrypoints=websecure"
+            - "traefik.http.routers.microbin.tls.certresolver=le"
+            - "traefik.http.routers.microbin.tls=true"
+            - "traefik.http.routers.microbin.middlewares=authelia@file"
+            - "traefik.http.services.microbin.loadbalancer.server.port=8080"
+        environment:
+            - MICROBIN_HOME=https://bin.$SERVICES_DOMAIN
+            - MICROBIN_ADMIN_PASSWORD=$MICROBIN_ADMIN_PASSWORD
+        volumes:
+            - microbin_data:/app/microbin_data
+        networks:
+            - traefik
+        logging: *logging
+
 networks:
     traefik:
         name: traefik
@@ -558,4 +583,5 @@ volumes:
             type: tmpfs
             device: tmpfs
             o: size=1k,uid=65534,gid=0,mode=0700,noexec
+    microbin_data:
     strelaysrv:
