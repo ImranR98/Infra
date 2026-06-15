@@ -51,3 +51,4 @@ export GEOLITE_LICENSE_KEY="" # (optional, see Shlink docs)
 
 # --- Microbin ---
 export MICROBIN_ADMIN_PASSWORD="change_me" # openssl rand -hex 16
+export MICROBIN_UPLOADER_PASSWORD="change_me"
