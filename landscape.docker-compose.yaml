@@ -246,6 +246,7 @@ services:
             - "--experimental.plugins.bouncer.version=v1.6.0"
             - "--providers.docker.endpoint=unix:///socket/docker.sock"
             - "--providers.docker.network=traefik"
+            - "--entrypoints.websecure.transport.respondingtimeouts.readtimeout=300" # For Gokapi
         ports:
             - "127.0.0.1:80:80"
             - "127.0.0.1:443:443"
