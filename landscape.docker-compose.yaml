@@ -372,33 +372,18 @@ services:
             - "9418:9418"
         logging: *logging
 
-    # Send - File Sharing
-    send:
-        container_name: send
-        image: registry.gitlab.com/timvisee/send:latest
+    # Gokapi - File Sharing
+    gokapi:
+        container_name: gokapi
+        image: f0rc3/gokapi:latest
         restart: unless-stopped
         depends_on:
             - traefik
-            - send-db
         volumes:
-            - $STATE_DIR/send/uploads:/uploads
+            - $STATE_DIR/gokapi/data:/app/data
+            - $STATE_DIR/gokapi/config:/app/config
         environment:
-            - VIRTUAL_HOST=send.$SERVICES_DOMAIN
-            - VIRTUAL_PORT=80
-            - DHPARAM_GENERATION=false
-            - NODE_ENV=production
-            - BASE_URL=https://send.$SERVICES_DOMAIN
-            - PORT=80
-            - REDIS_HOST=send-db
-            - FILE_DIR=/uploads
-            - MAX_FILES_PER_ARCHIVE=512
-            - MAX_FILE_SIZE=137438953472 # 128 GB
-            - MAX_EXPIRE_SECONDS=31536000 # 365 days
-            - MAX_DOWNLOADS=1000000000 # 1 billion
-            - DOWNLOAD_COUNTS=10,1,2,5,10,15,25,50,100,1000,1000000000
-            - EXPIRE_TIMES_SECONDS=3600,86400,604800,2592000,31536000
-            - DEFAULT_DOWNLOADS=100
-            - DEFAULT_EXPIRE_SECONDS=2592000
+            - TZ=UTC
         labels:
             - "traefik.enable=true"
             - "traefik.http.routers.send.rule=Host(`send.$SERVICES_DOMAIN`)"
@@ -406,16 +391,7 @@ services:
             - "traefik.http.routers.send.middlewares=authelia@docker"
             - "traefik.http.routers.send.tls.certresolver=le"
             - "traefik.http.routers.send.tls=true"
-            - "traefik.http.services.send.loadbalancer.server.port=80"
-        networks:
-            - traefik
-        logging: *logging
-    send-db:
-        container_name: send-db
-        image: "redis:alpine"
-        restart: unless-stopped
-        volumes:
-            - $STATE_DIR/send/db:/data
+            - "traefik.http.services.send.loadbalancer.server.port=53842"
         networks:
             - traefik
         logging: *logging
