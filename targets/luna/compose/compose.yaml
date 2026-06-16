@@ -538,57 +538,6 @@ services:
         # May be needed for uptime to reach services on the same machine:
         # ufw allow from 172.19.0.0/24 to any port 443 proto tcp
 
-    # Microbin - Pastebin Service
-    microbin:
-        container_name: microbin
-        image: danielszabo99/microbin:latest
-        restart: unless-stopped
-        mem_limit: 512M
-        depends_on:
-            - traefik
-        labels:
-            - "traefik.enable=true"
-            - "traefik.http.routers.microbin.rule=Host(`bin.$SERVICES_DOMAIN`)"
-            - "traefik.http.routers.microbin.entrypoints=websecure"
-            - "traefik.http.routers.microbin.tls.certresolver=le"
-            - "traefik.http.routers.microbin.tls=true"
-            - "traefik.http.routers.microbin.middlewares=authelia@file"
-            - "traefik.http.services.microbin.loadbalancer.server.port=8080"
-        environment:
-            - MICROBIN_ADMIN_PASSWORD=$MICROBIN_ADMIN_PASSWORD
-            - MICROBIN_THREADS=2
-            - MICROBIN_PRIVATE=true
-            - MICROBIN_ENABLE_READONLY=true
-            - MICROBIN_ENCRYPTION_CLIENT_SIDE=true
-            - MICROBIN_ENCRYPTION_SERVER_SIDE=true
-            - MICROBIN_DEFAULT_PRIVACY=readonly
-            - MICROBIN_ENABLE_BURN_AFTER=true
-            - MICROBIN_ETERNAL_PASTA=true
-            - MICROBIN_QR=true
-            - MICROBIN_SHOW_READ_STATS=true
-            - MICROBIN_NO_FILE_UPLOAD=false
-            - MICROBIN_READONLY=true
-            - MICROBIN_UPLOADER_PASSWORD=$MICROBIN_UPLOADER_PASSWORD
-            - MICROBIN_EDITABLE=true
-            - MICROBIN_DEFAULT_EXPIRY=1week
-            - MICROBIN_MAX_EXPIRY=never
-            - MICROBIN_GC_DAYS=0
-            - MICROBIN_DEFAULT_BURN_AFTER=0
-            - MICROBIN_MAX_FILE_SIZE_ENCRYPTED_MB=5120
-            - MICROBIN_MAX_FILE_SIZE_UNENCRYPTED_MB=10240
-            - MICROBIN_PUBLIC_PATH=https://bin.example.org
-            - MICROBIN_HASH_IDS=true
-            - MICROBIN_NO_LISTING=false
-            - MICROBIN_PURE_HTML=false
-            - MICROBIN_DISABLE_UPDATE_CHECKING=false
-            - MICROBIN_DISABLE_TELEMETRY=true
-            - MICROBIN_LIST_SERVER=false
-        volumes:
-            - microbin_data:/app/microbin_data
-        networks:
-            - traefik
-        logging: *logging
-
 networks:
     traefik:
         name: traefik
@@ -609,5 +558,4 @@ volumes:
             type: tmpfs
             device: tmpfs
             o: size=1k,uid=65534,gid=0,mode=0700,noexec
-    microbin_data:
     strelaysrv:
