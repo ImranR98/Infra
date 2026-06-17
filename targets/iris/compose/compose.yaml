@@ -33,11 +33,6 @@ services:
             - /var/run/docker.sock:/var/run/docker.sock:ro
         labels:
             - "traefik.enable=true"
-            - "traefik.http.routers.pc-http.rule=Host(`pc.$SERVICES_DOMAIN`) || Host(`*.pc.$SERVICES_DOMAIN`)"
-            - "traefik.http.routers.pc-http.entrypoints=web"
-            - "traefik.http.routers.pc-http.priority=100"
-            - "traefik.http.routers.pc-http.service=pc-http-frps"
-            - "traefik.http.services.pc-http-frps.loadbalancer.server.url=http://frps-with-multiuser:8080"
         restart: unless-stopped
         mem_limit: 512M
         networks:

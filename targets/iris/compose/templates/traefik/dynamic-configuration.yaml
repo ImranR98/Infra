@@ -1,17 +1,30 @@
+http:
+  routers:
+    http-to-frps:
+      rule: "Host(`pc.$SERVICES_DOMAIN`) || Host(`*.pc.$SERVICES_DOMAIN`)"
+      entryPoints: [web]
+      service: http-frps
+      priority: 100
+  services:
+    http-frps:
+      loadBalancer:
+        servers:
+          - url: "http://frps-with-multiuser:8080"
+
 tcp:
   serversTransports:
     frps-proxy:
       proxyProtocol:
         version: 2
   routers:
-    pc-https:
+    https-to-frps:
       rule: "HostSNI(`pc.$SERVICES_DOMAIN`) || HostSNI(`*.pc.$SERVICES_DOMAIN`)"
       entryPoints: [websecure]
-      service: pc-https-frps
+      service: https-frps
       tls:
         passthrough: true
   services:
-    pc-https-frps:
+    https-frps:
       loadBalancer:
         serversTransport: frps-proxy
         servers:
