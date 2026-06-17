@@ -1,0 +1,92 @@
+x-logging: &logging
+    options:
+        max-size: 10m
+        max-file: 5
+
+services:
+    # Traefik - Reverse Proxy
+    traefik:
+        image: traefik:v3
+        container_name: traefik
+        command:
+            - "--providers.docker=true"
+            - "--providers.docker.exposedByDefault=false"
+            - "--entryPoints.web=true"
+            - "--entryPoints.web.address=:80"
+            - "--entryPoints.web.http.redirections.entryPoint.to=websecure"
+            - "--entryPoints.web.http.redirections.entryPoint.scheme=https"
+            - "--entryPoints.web.http.redirections.entryPoint.permanent=true"
+            - "--entryPoints.websecure=true"
+            - "--entryPoints.websecure.address=:443"
+            - "--certificatesresolvers.le.acme.email=$DOMAIN_OWNER_EMAIL"
+            - "--certificatesresolvers.le.acme.storage=/acme/acme.json"
+            - "--certificatesresolvers.le.acme.tlschallenge=true"
+        ports:
+            - "80:80"
+            - "443:443"
+        volumes:
+            - $COMPOSE_STATE_DIR/traefik/acme:/acme
+            - /var/run/docker.sock:/var/run/docker.sock:ro
+        labels:
+            - "traefik.enable=true"
+            - "traefik.http.routers.traefik-dashboard.rule=Host(`traefik.iris.$SERVICES_DOMAIN`)"
+            - "traefik.http.routers.traefik-dashboard.entrypoints=websecure"
+            - "traefik.http.routers.traefik-dashboard.tls.certresolver=le"
+            - "traefik.http.routers.traefik-dashboard.tls=true"
+            - "traefik.http.routers.traefik-dashboard.service=api@internal"
+            - "traefik.http.routers.pc-http.rule=Host(`pc.$SERVICES_DOMAIN`) || HostRegexp(`{subdomain:[a-zA-Z0-9-]+}.pc.$SERVICES_DOMAIN`)"
+            - "traefik.http.routers.pc-http.entrypoints=web"
+            - "traefik.http.routers.pc-http.priority=100"
+            - "traefik.http.routers.pc-http.service=pc-http-frps"
+            - "traefik.http.services.pc-http-frps.loadbalancer.server.url=http://127.0.0.1:8080"
+            - "traefik.tcp.routers.pc-https.rule=HostSNI(`pc.$SERVICES_DOMAIN`) || HostSNIRegexp(`{subdomain:[a-zA-Z0-9-]+}.pc.$SERVICES_DOMAIN`)"
+            - "traefik.tcp.routers.pc-https.entrypoints=websecure"
+            - "traefik.tcp.routers.pc-https.tls.passthrough=true"
+            - "traefik.tcp.routers.pc-https.service=pc-https-frps"
+            - "traefik.tcp.services.pc-https-frps.loadbalancer.proxyProtocol.version=2"
+            - "traefik.tcp.services.pc-https-frps.loadbalancer.server.address=127.0.0.1:8443"
+        restart: unless-stopped
+        mem_limit: 512M
+        networks:
+            - traefik
+        logging: *logging
+
+    # hello world service
+    hello:
+        image: nginx:alpine
+        container_name: hello
+        restart: unless-stopped
+        mem_limit: 256M
+        networks:
+            - traefik
+        labels:
+            - "traefik.enable=true"
+            - "traefik.http.routers.hello.rule=Host(`iris.$SERVICES_DOMAIN`)"
+            - "traefik.http.routers.hello.entrypoints=websecure"
+            - "traefik.http.routers.hello.tls.certresolver=le"
+            - "traefik.http.routers.hello.tls=true"
+            - "traefik.http.services.hello.loadbalancer.server.port=80"
+        logging: *logging
+
+    # FRP server - reverse proxy tunnel for pc
+    frps-with-multiuser:
+        image: imranrdev/frps-with-multiuser:v0.69.1
+        container_name: frps-with-multiuser
+        restart: always
+        volumes:
+          - $COMPOSE_STATE_DIR/frps/tokens.txt:/workdir/service-data/frps-tokens.txt:ro
+        network_mode: host
+        healthcheck:
+            test: ["CMD-SHELL", "wget --no-verbose --tries=1 -O - http://127.0.0.1:7500/healthz || exit 1"]
+            interval: 30s
+            timeout: 10s
+            start_period: 1m
+            retries: 3
+        logging: *logging
+
+networks:
+    traefik:
+        name: traefik
+        ipam:
+            config:
+                - subnet: 172.19.0.0/24
