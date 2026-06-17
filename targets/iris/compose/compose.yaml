@@ -11,6 +11,7 @@ services:
         command:
             - "--providers.docker=true"
             - "--providers.docker.exposedByDefault=false"
+            - "--providers.file.filename=/etc/traefik/dynamic-configuration.yaml"
             - "--entryPoints.web=true"
             - "--entryPoints.web.address=:80"
             - "--entryPoints.web.http.redirections.entryPoint.to=websecure"
@@ -26,6 +27,7 @@ services:
             - "443:443"
         volumes:
             - $COMPOSE_STATE_DIR/traefik/acme:/acme
+            - $COMPOSE_STATE_DIR/traefik/dynamic-configuration.yaml:/etc/traefik/dynamic-configuration.yaml:ro
             - /var/run/docker.sock:/var/run/docker.sock:ro
         labels:
             - "traefik.enable=true"
@@ -34,13 +36,6 @@ services:
             - "traefik.http.routers.pc-http.priority=100"
             - "traefik.http.routers.pc-http.service=pc-http-frps"
             - "traefik.http.services.pc-http-frps.loadbalancer.server.url=http://127.0.0.1:8080"
-            - "traefik.tcp.routers.pc-https.rule=HostSNI(`pc.$SERVICES_DOMAIN`) || HostSNIRegexp(`{subdomain:[a-zA-Z0-9-]+}.pc.$SERVICES_DOMAIN`)"
-            - "traefik.tcp.routers.pc-https.entrypoints=websecure"
-            - "traefik.tcp.routers.pc-https.tls.passthrough=true"
-            - "traefik.tcp.routers.pc-https.service=pc-https-frps"
-            - "traefik.tcp.services.pc-https-frps.loadbalancer.proxyProtocol.version=2"
-            - "traefik.tcp.services.pc-https-frps.loadbalancer.server.address=127.0.0.1:8443"
-        restart: unless-stopped
         mem_limit: 512M
         networks:
             - traefik

@@ -1,0 +1,15 @@
+tcp:
+  routers:
+    pc-https:
+      rule: "HostSNI(`pc.$SERVICES_DOMAIN`) || HostSNIRegexp(`{subdomain:[a-zA-Z0-9-]+}.pc.$SERVICES_DOMAIN`)"
+      entryPoints: [websecure]
+      service: pc-https-frps
+      tls:
+        passthrough: true
+  services:
+    pc-https-frps:
+      loadBalancer:
+        proxyProtocol:
+          version: 2
+        servers:
+          - address: "127.0.0.1:8443"
