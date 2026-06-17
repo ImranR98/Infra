@@ -9,7 +9,9 @@ services:
         image: traefik:v3
         container_name: traefik
         command:
-            - "--log.level=DEBUG"
+            - "--global.sendAnonymousUsage=false"
+            - "--log.level=INFO"
+            - "--accesslog=true"
             - "--providers.docker=true"
             - "--providers.docker.exposedByDefault=false"
             - "--providers.file.filename=/etc/traefik/dynamic-configuration.yaml"

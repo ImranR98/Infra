@@ -1,7 +1,7 @@
 tcp:
   routers:
     pc-https:
-      rule: "HostSNI(`pc.$SERVICES_DOMAIN`) || HostSNIRegexp(`{subdomain:[a-zA-Z0-9-]+}.pc.$SERVICES_DOMAIN`)"
+      rule: "HostSNI(`pc.$SERVICES_DOMAIN`) || HostSNI(`*.pc.$SERVICES_DOMAIN`)"
       entryPoints: [websecure]
       service: pc-https-frps
       tls:
