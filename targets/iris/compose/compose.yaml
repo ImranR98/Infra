@@ -29,11 +29,6 @@ services:
             - /var/run/docker.sock:/var/run/docker.sock:ro
         labels:
             - "traefik.enable=true"
-            - "traefik.http.routers.traefik-dashboard.rule=Host(`traefik.iris.$SERVICES_DOMAIN`)"
-            - "traefik.http.routers.traefik-dashboard.entrypoints=websecure"
-            - "traefik.http.routers.traefik-dashboard.tls.certresolver=le"
-            - "traefik.http.routers.traefik-dashboard.tls=true"
-            - "traefik.http.routers.traefik-dashboard.service=api@internal"
             - "traefik.http.routers.pc-http.rule=Host(`pc.$SERVICES_DOMAIN`) || HostRegexp(`{subdomain:[a-zA-Z0-9-]+}.pc.$SERVICES_DOMAIN`)"
             - "traefik.http.routers.pc-http.entrypoints=web"
             - "traefik.http.routers.pc-http.priority=100"
