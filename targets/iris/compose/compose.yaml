@@ -9,6 +9,8 @@ services:
         image: traefik:v3
         container_name: traefik
         command:
+            - "--api=true"
+            - "--api.dashboard=true"
             - "--global.sendAnonymousUsage=false"
             - "--log.level=INFO"
             - "--accesslog=true"
@@ -17,14 +19,11 @@ services:
             - "--providers.file.filename=/etc/traefik/dynamic-configuration.yaml"
             - "--entryPoints.web=true"
             - "--entryPoints.web.address=:80"
-            - "--entryPoints.web.http.redirections.entryPoint.to=websecure"
-            - "--entryPoints.web.http.redirections.entryPoint.scheme=https"
-            - "--entryPoints.web.http.redirections.entryPoint.permanent=true"
             - "--entryPoints.websecure=true"
             - "--entryPoints.websecure.address=:443"
             - "--certificatesresolvers.le.acme.email=$DOMAIN_OWNER_EMAIL"
             - "--certificatesresolvers.le.acme.storage=/acme/acme.json"
-            - "--certificatesresolvers.le.acme.tlschallenge=true"
+            - "--certificatesresolvers.le.acme.httpChallenge.entryPoint=web"
         ports:
             - "80:80"
             - "443:443"
@@ -34,11 +33,12 @@ services:
             - /var/run/docker.sock:/var/run/docker.sock:ro
         labels:
             - "traefik.enable=true"
-            - "traefik.http.routers.pc-http.rule=Host(`pc.$SERVICES_DOMAIN`) || HostRegexp(`{subdomain:[a-zA-Z0-9-]+}.pc.$SERVICES_DOMAIN`)"
+            - "traefik.http.routers.pc-http.rule=Host(`pc.$SERVICES_DOMAIN`) || Host(`*.pc.$SERVICES_DOMAIN`)"
             - "traefik.http.routers.pc-http.entrypoints=web"
             - "traefik.http.routers.pc-http.priority=100"
             - "traefik.http.routers.pc-http.service=pc-http-frps"
-            - "traefik.http.services.pc-http-frps.loadbalancer.server.url=http://127.0.0.1:8080"
+            - "traefik.http.services.pc-http-frps.loadbalancer.server.url=http://frps-with-multiuser:8080"
+        restart: unless-stopped
         mem_limit: 512M
         networks:
             - traefik
@@ -68,7 +68,11 @@ services:
         restart: always
         volumes:
           - $COMPOSE_STATE_DIR/frps/tokens.txt:/workdir/service-data/frps-tokens.txt:ro
-        network_mode: host
+        ports:
+            - "7000:7000"
+            - "1935:1935"
+        networks:
+            - traefik
         healthcheck:
             test: ["CMD-SHELL", "wget --no-verbose --tries=1 -O - http://127.0.0.1:7500/healthz || exit 1"]
             interval: 30s

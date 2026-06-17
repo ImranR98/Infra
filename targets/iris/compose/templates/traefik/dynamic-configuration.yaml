@@ -1,4 +1,8 @@
 tcp:
+  serversTransports:
+    frps-proxy:
+      proxyProtocol:
+        version: 2
   routers:
     pc-https:
       rule: "HostSNI(`pc.$SERVICES_DOMAIN`) || HostSNI(`*.pc.$SERVICES_DOMAIN`)"
@@ -9,7 +13,6 @@ tcp:
   services:
     pc-https-frps:
       loadBalancer:
-        proxyProtocol:
-          version: 2
+        serversTransport: frps-proxy
         servers:
-          - address: "127.0.0.1:8443"
+          - address: "frps-with-multiuser:8443"
