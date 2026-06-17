@@ -23,5 +23,5 @@ apps:
   - dscpln
   - opencanary
   - fmd
-  - send
+  - gokapi
   - syncthing

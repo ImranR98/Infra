@@ -1,0 +1,59 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gokapi
+  namespace: apps
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: gokapi
+  template:
+    metadata:
+      labels:
+        app: gokapi
+    spec:
+      securityContext:
+        fsGroup: $MY_UID
+      containers:
+        - name: gokapi
+          image: f0rc3/gokapi:latest
+          securityContext:
+            allowPrivilegeEscalation: false
+          ports:
+            - containerPort: 53842
+          env:
+            - name: TZ
+              value: "UTC"
+          volumeMounts:
+            - name: data
+              mountPath: /app/data
+            - name: config
+              mountPath: /app/config
+          resources:
+            limits:
+              memory: 2Gi
+            requests:
+              memory: 128Mi
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: gokapi-data
+        - name: config
+          persistentVolumeClaim:
+            claimName: gokapi-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: gokapi
+  namespace: apps
+spec:
+  ports:
+    - port: 53842
+      targetPort: 53842
+  selector:
+    app: gokapi

@@ -2,10 +2,10 @@
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
-  name: send-prod-tls
+  name: gokapi-prod-tls
   namespace: apps
 spec:
-  secretName: send-prod-tls
+  secretName: gokapi-prod-tls
   issuerRef:
     name: letsencrypt-prod
     kind: ClusterIssuer
@@ -15,7 +15,7 @@ spec:
 apiVersion: traefik.io/v1alpha1
 kind: IngressRoute
 metadata:
-  name: send-ingress
+  name: gokapi-ingress
   namespace: apps
 spec:
   entryPoints:
@@ -29,7 +29,7 @@ spec:
         - name: forwardauth-authelia
           namespace: base
       services:
-        - name: send
-          port: 80
+        - name: gokapi
+          port: 53842
   tls:
-    secretName: send-prod-tls
+    secretName: gokapi-prod-tls
