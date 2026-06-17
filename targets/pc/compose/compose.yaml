@@ -96,14 +96,14 @@ services:
             - $COMPOSE_STATE_DIR/owncast:/app/data
         labels:
             - "traefik.enable=true"
-            - "traefik.http.routers.owncast.rule=Host(`owncast.pc.$SERVICES_DOMAIN`)"
+            - "traefik.http.routers.owncast.rule=Host(`owncast.$SERVICES_DOMAIN`)"
             - "traefik.http.routers.owncast.entrypoints=websecure"
             - "traefik.http.routers.owncast.tls.certresolver=le"
             - "traefik.http.routers.owncast.tls=true"
             - "traefik.http.routers.owncast.middlewares=owncast-auth"
             - "traefik.http.middlewares.owncast-auth.forwardauth.address=http://owncast-auth:3000/"
             - "traefik.http.services.owncast.loadbalancer.server.port=8080"
-            - "traefik.tcp.routers.owncast-rtmp.rule=HostSNI(`owncast.pc.$SERVICES_DOMAIN`)"
+            - "traefik.tcp.routers.owncast-rtmp.rule=HostSNI(`owncast.$SERVICES_DOMAIN`)"
             - "traefik.tcp.routers.owncast-rtmp.entrypoints=rtmp"
             - "traefik.tcp.routers.owncast-rtmp.service=owncast-rtmp"
             - "traefik.tcp.routers.owncast-rtmp.tls=true"
