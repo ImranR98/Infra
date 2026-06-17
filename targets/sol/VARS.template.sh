@@ -1,5 +1,5 @@
 # --- Domain ---
-export SERVICES_DOMAIN="staging.example.org"
+export SERVICES_DOMAIN="home.example.org"
 export DOMAIN_OWNER_EMAIL="contact@example.org"
 
 # --- Ntfy ---
@@ -9,7 +9,7 @@ export NTFY_ADMIN_PASSWORD_HASH="change_me" # docker run --rm -it binwiederhier/
 export NTFY_WRITE_ONLY_ACCOUNT_PASSWORD_HASH="change_me" # docker run --rm -it binwiederhier/ntfy user hash
 
 # --- FRP ---
-export PROXY_HOST="lens.$SERVICES_DOMAIN"
+export PROXY_HOST="luna.$SERVICES_DOMAIN"
 export FRPC_TOKEN="change_me" # openssl rand -hex 128
 export FRPC_PREBOOT_TOKEN="change_me" # openssl rand -hex 128
 export FRPC_ADMIN_PASSWORD="change_me" # openssl rand -hex 16

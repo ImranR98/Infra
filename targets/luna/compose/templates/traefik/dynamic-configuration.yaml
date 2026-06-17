@@ -25,3 +25,33 @@ http:
           allowUnknownCountries: false
           unknownCountryApiResponse: "nil"
           $GEOBLOCK_CONFIG_SUBSET
+  routers:
+    http-to-frps:
+      rule: "Host(`home.$SERVICES_DOMAIN`) || Host(`*.home.$SERVICES_DOMAIN`)"
+      entryPoints: [web]
+      service: http-frps
+      priority: 100
+  services:
+    http-frps:
+      loadBalancer:
+        servers:
+          - url: "http://frps-with-multiuser:8080"
+
+tcp:
+  serversTransports:
+    frps-proxy:
+      proxyProtocol:
+        version: 2
+  routers:
+    https-to-frps:
+      rule: "HostSNI(`home.$SERVICES_DOMAIN`) || HostSNI(`*.home.$SERVICES_DOMAIN`)"
+      entryPoints: [websecure]
+      service: https-frps
+      tls:
+        passthrough: true
+  services:
+    https-frps:
+      loadBalancer:
+        serversTransport: frps-proxy
+        servers:
+          - address: "frps-with-multiuser:8443"
