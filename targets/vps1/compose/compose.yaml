@@ -49,14 +49,14 @@ services:
             - traefik
         labels:
             - "traefik.enable=true"
-            - "traefik.http.routers.hello.rule=Host(`iris.$SERVICES_DOMAIN`)"
+            - "traefik.http.routers.hello.rule=Host(`vps1.$SERVICES_DOMAIN`)"
             - "traefik.http.routers.hello.entrypoints=websecure"
             - "traefik.http.routers.hello.tls.certresolver=le"
             - "traefik.http.routers.hello.tls=true"
             - "traefik.http.services.hello.loadbalancer.server.port=80"
         logging: *logging
 
-    # FRP server - reverse proxy tunnel for pc
+    # FRP server - reverse proxy tunnel for pc0
     frps-with-multiuser:
         image: imranrdev/frps-with-multiuser:v0.69.1
         container_name: frps-with-multiuser

@@ -103,4 +103,4 @@ A target can override any global command by providing a script at the correspond
 - Source the global script and extend it
 - Add target-specific setup before/after calling the global script
 
-Example: `targets/sol/commands/compose/install-preboot.sh` is a sol-specific command for installing FRPC/dracut-crypt-ssh in the initramfs — a setup that only makes sense when the root disk is LUKS-encrypted.
+Example: `targets/srv0/commands/compose/install-preboot.sh` is a srv0-specific command for installing FRPC/dracut-crypt-ssh in the initramfs — a setup that only makes sense when the root disk is LUKS-encrypted.

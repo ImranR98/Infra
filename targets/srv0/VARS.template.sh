@@ -9,7 +9,7 @@ export NTFY_ADMIN_PASSWORD_HASH="change_me" # docker run --rm -it binwiederhier/
 export NTFY_WRITE_ONLY_ACCOUNT_PASSWORD_HASH="change_me" # docker run --rm -it binwiederhier/ntfy user hash
 
 # --- FRP ---
-export PROXY_HOST="luna.example.org"
+export PROXY_HOST="vps0.example.org"
 export FRPC_TOKEN="change_me" # openssl rand -hex 128
 export FRPC_PREBOOT_TOKEN="change_me" # openssl rand -hex 128
 export FRPC_ADMIN_PASSWORD="change_me" # openssl rand -hex 16

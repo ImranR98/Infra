@@ -36,7 +36,7 @@ The runtime state directory (`current_target/compose_live_state/`) is fully giti
 
 ### Remote unlock with preboot FRPC
 
-When LUKS is detected, the sol-specific `compose install-preboot` command sets up an SSH server and FRP client in the initramfs. This enables remote LUKS passphrase entry:
+When LUKS is detected, the srv0-specific `compose install-preboot` command sets up an SSH server and FRP client in the initramfs. This enables remote LUKS passphrase entry:
 
 1. **dracut-crypt-ssh** embeds an SSH server in the initramfs that listens for connections before the root filesystem is available
 2. **frpc-preboot** embeds an FRP client in the initramfs that tunnels SSH (port 8887) through the FRP server

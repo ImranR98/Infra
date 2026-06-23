@@ -7,20 +7,19 @@ Atlas manages networking at multiple layers: WireGuard VPN for secure connectivi
 ```
                           Internet
                              │
-                     ┌───────┴───────┐
-                     │               │
-                   lens             luna
-               (FRP server)     (Web VPS)
-                     │          Traefik :80/:443
-                FRPS :7000         │
-                     │         Authelia, Plausible,
-                FRPS :7500    Watchtower, Uptime Kuma...
-                     │
-                     │  FRP tunnel
-                     │
-                     ▼
-                    sol
-              (Home server)
+                             ▼
+                           vps0
+                 (Web VPS + FRP server)
+                   Traefik :80/:443
+                   Authelia, Plausible,
+                   Watchtower, Uptime Kuma...
+                   FRPS :7000 / :7500
+                             │
+                             │  FRP tunnel
+                             │
+                             ▼
+                           srv0
+                     (Home server)
            ┌───── K3s (Kubernetes) ─────┐
            │  Traefik Ingress :80/:443   │
            │  ~20 application workloads  │
@@ -85,15 +84,15 @@ This guarantees the VPN is up before pods begin DNS resolution and network setup
 
 FRP provides NAT traversal for the home server. The flow:
 
-1. **lens** runs `frps` (FRP server) on a public VPS, listening on port 7000
-2. **sol** runs `frpc` (FRP client) as a Docker Compose sidecar, connecting to lens
-3. **lens** forwards incoming traffic on ports 80, 443, and 8887 (SSH) through the tunnel to **sol**
+1. **vps0** runs `frps` (FRP server) on a public VPS, listening on port 7000
+2. **srv0** runs `frpc` (FRP client) as a Docker Compose sidecar, connecting to vps0
+3. **vps0** forwards incoming traffic on ports 80, 443, and 8887 (SSH) through the tunnel to **srv0**
 
-This lets sol, which sits behind NAT, expose its services without a public IP.
+This lets srv0, which sits behind NAT, expose its services without a public IP.
 
 ### Authentication
 
-FRP uses token-based authentication. The tokens (`FRPC_TOKEN`, `FRPC_PREBOOT_TOKEN`) are configured in both the FRPS server (lens) and FRPC client (sol). The custom `frps-with-multiuser` image supports multiple tokens for different authentication contexts.
+FRP uses token-based authentication. The tokens (`FRPC_TOKEN`, `FRPC_PREBOOT_TOKEN`) are configured in both the FRPS server (vps0) and FRPC client (srv0). The custom `frps-with-multiuser` image supports multiple tokens for different authentication contexts.
 
 ### Health checks
 
@@ -113,9 +112,9 @@ This allows the home server to boot unattended: the initramfs starts FRPC, tunne
 
 ```
 Boot → initramfs loads → preboot FRPC starts
-  → FRPC connects to lens:7000 (FRPS)
-  → lens exposes port 8887 → forwarded to sol's SSH in initramfs
-  → Operator SSHs to lens:8887 → reaches sol's initramfs SSH
+  → FRPC connects to vps0:7000 (FRPS)
+  → vps0 exposes port 8887 → forwarded to srv0's SSH in initramfs
+  → Operator SSHs to vps0:8887 → reaches srv0's initramfs SSH
   → Provides LUKS passphrase → root unlocks → boot continues
 ```
 

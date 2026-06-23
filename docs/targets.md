@@ -16,7 +16,7 @@ The actual secrets live outside the target directory, at the repo root, as `VARS
 
 This documentation is generated at a point in time. Targets may be added, removed, or reconfigured. Check `targets/` for the authoritative list.
 
-### sol — Primary home server
+### srv0 — Primary home server
 
 The main homelab server. Runs a full K3s cluster with ~20 application workloads, plus a small Docker Compose sidecar for FRPC tunneling.
 
@@ -26,19 +26,12 @@ The main homelab server. Runs a full K3s cluster with ~20 application workloads,
 - **Compose:** FRPC sidecar (tunnels K3s services through the FRP server)
 - **Special:** LUKS-aware preboot FRPC for remote SSH unlock of encrypted root filesystem
 
-### luna — Web-services VPS
+### vps0 — Web-services VPS
 
 A VPS running a Docker Compose stack of public-facing web services.
 
 - **Orchestrator:** Docker Compose
 - **Services:** Traefik reverse proxy, Authelia SSO, Plausible analytics, socket-proxy (Docker socket security), Watchtower auto-updater, Shlink URL shortener, Uptime Kuma, metube, ISBN lookup, PixelNtfy, Syncthing relay server, logtfy
-
-### lens — FRP server VPS
-
-A VPS dedicated to running the FRP server (frps) that acts as the public entry point for sol's tunnels.
-
-- **Orchestrator:** Docker Compose
-- **Services:** frps-with-multiuser (custom FRP server with per-user token auth), logtfy
 
 ## Target configuration patterns
 
@@ -64,7 +57,7 @@ Targets that use Kubernetes have:
 
 ### Target-specific commands
 
-Any target can override a global command by placing a script at `targets/<name>/commands/<path>/<cmd>.sh`. The dispatch system checks here first. For example, `sol` overrides `compose install-preboot` with LUKS-aware logic that doesn't apply to other targets.
+Any target can override a global command by placing a script at `targets/<name>/commands/<path>/<cmd>.sh`. The dispatch system checks here first. For example, `srv0` overrides `compose install-preboot` with LUKS-aware logic that doesn't apply to other targets.
 
 ## Adding a new target
 
