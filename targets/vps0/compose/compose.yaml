@@ -372,12 +372,12 @@ services:
     # Obtainium Apps
     obtainium_apps:
         container_name: obtainium_apps
-        image: imranrdev/apps.obtainium.example.org
+        image: imranrdev/apps.example.org
         depends_on:
             - traefik
         labels:
             - "traefik.enable=true"
-            - "traefik.http.routers.obtainium_apps.rule=Host(`example.org`)"
+            - "traefik.http.routers.obtainium_apps.rule=Host(`apps.example.org`)"
             - "traefik.http.routers.obtainium_apps.entrypoints=websecure"
             - "traefik.http.routers.obtainium_apps.tls.certresolver=le"
             - "traefik.http.routers.obtainium_apps.tls=true"
