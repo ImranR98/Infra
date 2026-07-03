@@ -377,7 +377,7 @@ services:
             - traefik
         labels:
             - "traefik.enable=true"
-            - "traefik.http.routers.obtainium_apps.rule=Host(`apps.obtainium.example.org`)"
+            - "traefik.http.routers.obtainium_apps.rule=Host(`apps.obtainium.$SERVICES_DOMAIN`)"
             - "traefik.http.routers.obtainium_apps.entrypoints=websecure"
             - "traefik.http.routers.obtainium_apps.tls.certresolver=le"
             - "traefik.http.routers.obtainium_apps.tls=true"
