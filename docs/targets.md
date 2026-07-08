@@ -26,12 +26,12 @@ The main homelab server. Runs a full K3s cluster with ~20 application workloads,
 - **Compose:** FRPC sidecar (tunnels K3s services through the FRP server)
 - **Special:** LUKS-aware preboot FRPC for remote SSH unlock of encrypted root filesystem
 
-### vps0 — Web-services VPS
+### vps0 — Web-services VPS + FRP server
 
-A VPS running a Docker Compose stack of public-facing web services.
+A VPS running a Docker Compose stack of public-facing web services and the FRP server that provides NAT traversal for srv0.
 
 - **Orchestrator:** Docker Compose
-- **Services:** Traefik reverse proxy, Authelia SSO, Plausible analytics, socket-proxy (Docker socket security), Watchtower auto-updater, Shlink URL shortener, Uptime Kuma, metube, ISBN lookup, PixelNtfy, Syncthing relay server, logtfy
+- **Services:** Traefik reverse proxy, FRP server (frps-with-multiuser), Authelia SSO, Plausible analytics, socket-proxy (Docker socket security), Watchtower auto-updater, Shlink URL shortener, Uptime Kuma, metube, ISBN lookup, PixelNtfy, Syncthing relay server, logtfy
 
 ## Target configuration patterns
 

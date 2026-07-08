@@ -5,30 +5,36 @@ Atlas manages networking at multiple layers: WireGuard VPN for secure connectivi
 ## Network architecture
 
 ```
-                          Internet
-                             │
-                             ▼
-                           vps0
-                 (Web VPS + FRP server)
-                   Traefik :80/:443
-                   Authelia, Plausible,
-                   Watchtower, Uptime Kuma...
-                   FRPS :7000 / :7500
-                             │
-                             │  FRP tunnel
-                             │
-                             ▼
-                           srv0
-                     (Home server)
-           ┌───── K3s (Kubernetes) ─────┐
-           │  Traefik Ingress :80/:443   │
-           │  ~20 application workloads  │
-           └─────────────────────────────┘
-                FRPC sidecar (Compose)
-                     │
-                WireGuard VPN
-                     │
-              (split-tunnel)
+                           Internet
+                              │
+                         ┌────┴────┐
+                         │ :80     │ :443
+                         ▼         ▼
+                    ┌────── vps0 ──────┐
+                    │   Traefik        │
+                    │   routes by      │
+                    │   Host / SNI     │
+                    │   │        │     │
+                    │   ▼        ▼     │
+                    │ local    FRPS    │
+                    │ apps   :8080     │
+                    │        :8443     │
+                    │   ports :7000    │
+                    │         :8887    │
+                    └─────────│────────┘
+                              │ FRP tunnel
+                    ┌─────────┴────────┐
+                    │                  │
+                    │       srv0       │
+                    │ Traefik :80:443  │
+                    │ cert-manager TLS │
+                    │ K3s apps         │
+                    │ FRPC sidecar     │
+                    └──────────────────┘
+                         │
+                    WireGuard VPN
+                         │
+                   (split-tunnel)
 ```
 
 ## WireGuard
@@ -82,13 +88,36 @@ This guarantees the VPN is up before pods begin DNS resolution and network setup
 
 ## FRP (Fast Reverse Proxy)
 
-FRP provides NAT traversal for the home server. The flow:
+FRP provides NAT traversal for the home server. **vps0** runs `frps` (FRP server) on a public VPS. **srv0** runs `frpc` (FRP client) as a Docker Compose sidecar, connecting to vps0 on port 7000. The tunnel carries HTTP, HTTPS, and SSH traffic from vps0 to srv0, letting a machine behind NAT expose services without a public IP.
 
-1. **vps0** runs `frps` (FRP server) on a public VPS, listening on port 7000
-2. **srv0** runs `frpc` (FRP client) as a Docker Compose sidecar, connecting to vps0
-3. **vps0** forwards incoming traffic on ports 80, 443, and 8887 (SSH) through the tunnel to **srv0**
+### Traffic routing
 
-This lets srv0, which sits behind NAT, expose its services without a public IP.
+vps0 runs a single Traefik instance that receives all public HTTP and HTTPS traffic on ports 80 and 443. Traefik inspects the `Host` header (HTTP) or SNI (HTTPS) and splits traffic by domain:
+
+**vps0-local services** — served directly by containers running on vps0:
+
+- `authelia.$TARGET.$SERVICES_DOMAIN` — Authelia SSO admin
+- `plausible.$SERVICES_DOMAIN` — Plausible analytics
+- `uptime.$SERVICES_DOMAIN` — Uptime Kuma monitoring
+- `ln.$SERVICES_DOMAIN` / `ui.ln.$SERVICES_DOMAIN` — Shlink URL shortener and web client
+- `isbn.$SERVICES_DOMAIN`, `ytdl.$SERVICES_DOMAIN`, `ikom.$SERVICES_DOMAIN`, `pixelntfy.$SERVICES_DOMAIN`, `apps.obtainium.$SERVICES_DOMAIN`, `sb25.$SERVICES_DOMAIN`
+
+These are configured via Docker container labels on the Traefik provider. Each `Host(...)` label tells Traefik to load-balance to the matching Docker container on the internal `traefik` network.
+
+**srv0-proxied services** — requests for `home.$SERVICES_DOMAIN` and `*.home.$SERVICES_DOMAIN` are forwarded through the FRP tunnel to srv0's K3s Traefik ingress. This routing is defined in Traefik's file provider (`dynamic-configuration.yaml`) rather than Docker labels, because the destination (FRPS) is the intermediary, not a direct container:
+
+- **HTTP** (`:80`): Traefik routes `Host(home.$SERVICES_DOMAIN) || Host(*.home.$SERVICES_DOMAIN)` on the `web` entrypoint to `http://frps-with-multiuser:8080`. FRPS receives the plain HTTP request and proxies it through the FRP tunnel to srv0's K3s Traefik ingress.
+- **HTTPS** (`:443`): Traefik routes `HostSNI(home.$SERVICES_DOMAIN) || HostSNI(*.home.$SERVICES_DOMAIN)` on the `websecure` entrypoint to `frps-with-multiuser:8443` with `tls.passthrough: true`. vps0's Traefik does **not** terminate TLS — it forwards the raw encrypted TCP stream with Proxy Protocol v2. TLS termination, certificate issuance, and renewal are handled entirely by cert-manager on srv0's K3s cluster.
+
+TLS passthrough is used for srv0 traffic so that both targets don't need to coordinate certificates. If vps0 terminated TLS, it would need to hold and renew srv0's certificates, creating a coupling between independent targets. Instead, vps0 treats the TLS stream as opaque bytes and srv0's cert-manager maintains its own Let's Encrypt lifecycle independently.
+
+**Non-HTTP ports** — FRPS binds several ports directly on the vps0 host (bypassing Traefik entirely):
+
+| Port | Purpose |
+|------|---------|
+| 7000 | FRP control channel — frpc on srv0 connects here to establish and maintain the tunnel |
+| 8887 | Preboot SSH — forwarded through the tunnel to srv0's initramfs SSH server for remote LUKS passphrase entry |
+| 8888 | Additional tunnel port (e.g., TCP service forwarding) |
 
 ### Authentication
 
@@ -96,7 +125,7 @@ FRP uses token-based authentication. The tokens (`FRPC_TOKEN`, `FRPC_PREBOOT_TOK
 
 ### Health checks
 
-Both frpc and frps have health checks hitting their respective admin API healthz endpoints. This allows Docker (and systemd) to detect and restart unhealthy tunnels.
+Both frpc and frps have health checks hitting their respective admin API healthz endpoints (`:7400` and `:7500`). This allows Docker (and systemd) to detect and restart unhealthy tunnels.
 
 ## Preboot FRPC (LUKS unlock)
 

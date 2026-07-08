@@ -113,6 +113,7 @@ targets/<target>/k3s/*/kustomization.yaml
     │
     ▼
 kubectl kustomize  ──►  YAML  ──envsubst──►  kubectl apply -f -
+```
 
 ## Resource sizing conventions
 
@@ -134,4 +135,3 @@ All memory and storage sizes follow a small set of preset tiers. Every service i
 | medium | 50Gi | Immich library (metadata cache, thumbnails) |
 | large | 200Gi | Ollama models, Send file uploads |
 | 4Ti | 4096Gi | All NFS/hostPath volumes (media libraries, device sync, backups) |
-```
