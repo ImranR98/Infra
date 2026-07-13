@@ -28,8 +28,8 @@ echo "=== Downloading K3s installer ==="
 download_k3s_installer
 
 # Only needed on secureblue
-# semodule --disable=userns_deny_unconfined_relabels # Required for K3s Flannel unfortunately
-# sed -i 's/# rpm_install_extra_args/rpm_install_extra_args/g' $K3S_SCRIPT
+semodule --disable=userns_deny_unconfined_relabels # Required for K3s Flannel unfortunately
+sed -i 's/# rpm_install_extra_args/rpm_install_extra_args/g' $K3S_SCRIPT
 
 # Write K3s config drop-in files before installing so the first start picks them up
 NODE_IP=$(get_node_ip) || NODE_IP=""
@@ -56,7 +56,7 @@ if ! grep -E '^kubectl:' /etc/group >/dev/null 2>&1; then
 	grep -E '^kubectl:' /usr/lib/group | tee -a /etc/group >/dev/null
 fi
 chgrp -R kubectl /etc/rancher/k3s
-K3S_CONFIG_OWNER="$(logname 2>/dev/null || echo "${SUDO_USER:-$USER}")"
+K3S_CONFIG_OWNER="$(echo "${SUDO_USER:-$USER}")"
 usermod -aG kubectl "$K3S_CONFIG_OWNER"
 echo "Added $K3S_CONFIG_OWNER to the kubectl group."
 echo "Log out and back in for group membership to take effect, or use: newgrp kubectl"
