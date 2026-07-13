@@ -55,7 +55,7 @@ if ! grep -E '^kubectl:' /etc/group >/dev/null 2>&1; then
 	# Workaround for secureblue
 	grep -E '^kubectl:' /usr/lib/group | tee -a /etc/group >/dev/null
 fi
-chgrp kubectl /etc/rancher/k3s/k3s.yaml
+chgrp -R kubectl /etc/rancher/k3s
 K3S_CONFIG_OWNER="$(logname 2>/dev/null || echo "${SUDO_USER:-$USER}")"
 usermod -aG kubectl "$K3S_CONFIG_OWNER"
 echo "Added $K3S_CONFIG_OWNER to the kubectl group."
