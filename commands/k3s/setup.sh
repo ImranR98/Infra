@@ -70,6 +70,7 @@ configure_k3s_firewall
 
 echo ""
 echo "Waiting for cluster to be ready..."
+systemctl enable --now k3s
 CLUSTER_READY=false
 for i in $(seq 1 30); do
 	if kubectl get nodes >/dev/null 2>&1; then
