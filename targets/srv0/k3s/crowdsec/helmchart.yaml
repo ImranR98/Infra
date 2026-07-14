@@ -14,6 +14,9 @@ spec:
 
     tls:
       enabled: true
+      # The CrowdSec chart v0.24.0 generates cert-manager Certificate resources
+      # with null secretTemplate values when no annotations are set (a chart bug).
+      # Providing at least one annotation prevents the null rendering.
       certManager:
         secretTemplate:
           annotations:

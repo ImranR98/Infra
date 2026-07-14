@@ -174,6 +174,9 @@ services:
             - "--entryPoints.websecure.address=:443"
             - "--certificatesresolvers.le.acme.email=$DOMAIN_OWNER_EMAIL"
             - "--certificatesresolvers.le.acme.storage=/acme/acme.json"
+            # TLS-ALPN-01 instead of HTTP01: HTTP01 would intercept all
+            # /.well-known/acme-challenge/ paths on port 80, blocking srv0's
+            # cert-manager challenges from passing through the FRP tunnel.
             - "--certificatesresolvers.le.acme.tlsChallenge=true"
             - "--experimental.plugins.geoblock.modulename=github.com/PascalMinder/geoblock"
             - "--experimental.plugins.geoblock.version=v0.3.7"

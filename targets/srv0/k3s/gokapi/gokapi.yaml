@@ -46,6 +46,9 @@ spec:
           persistentVolumeClaim:
             claimName: gokapi-config
 ---
+# Named 'gokapi-svc' rather than 'gokapi' to avoid Kubernetes injecting
+# GOKAPI_PORT=tcp://... into the pod, which gokapi's Go config parser
+# maps to its WebServerPort integer field, causing a parse error.
 apiVersion: v1
 kind: Service
 metadata:

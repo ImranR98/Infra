@@ -159,6 +159,8 @@ render_compose_yaml() {
 configure_compose_templates() {
 	local target="$1"
 	ensure_envsubst_vars
+	# ${PROXY_HOST:-} guarded because not all targets define PROXY_HOST
+	# (e.g. vps0 is itself the proxy), and set -u would fatal.
 	if [ -n "${PROXY_HOST:-}" ]; then
 		PROXY_IP="$(getent hosts "$PROXY_HOST" 2>/dev/null | awk '{print $1; exit}')"
 		if [ -z "$PROXY_IP" ]; then
