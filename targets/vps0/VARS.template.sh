@@ -18,15 +18,15 @@ export GEOBLOCK_CONFIG_SUBSET='
 
 # --- Authelia ---
 # Use `docker run -it authelia/authelia:latest authelia crypto hash generate argon2` to generate the password hash
-# Indentation matters
+# Indentation matters: each nested level must be 4 spaces to match the block scalar in prereqs.yaml
 export AUTHELIA_USERS_DATABASE="users:
-  admin:
-    disabled: false
-    displayname: \"Admin\"
-    password: \"\$argon2id\$v=19\$m=65536,t=3,p=abc\"
-    email: $DOMAIN_OWNER_EMAIL
-    groups:
-      - admins"
+    admin:
+        disabled: false
+        displayname: \"Admin\"
+        password: \"\$argon2id\$v=19\$m=65536,t=3,p=abc\"
+        email: $DOMAIN_OWNER_EMAIL
+        groups:
+            - admins"
 export AUTHELIA_DB_ENCRYPTION_KEY="change_me" # openssl rand -hex 128
 export AUTHELIA_SESSION_SECRET="change_me" # openssl rand -hex 128
 export AUTHELIA_JWT_SECRET="change_me" # openssl rand -hex 128
