@@ -25,6 +25,8 @@ stringData:
     attachment-cache-dir: "/home/ntfy/attachments"
     behind-proxy: true
     listen-http: ":3000"
+    # auth-file must be explicitly set: without it auth-default-access has no
+    # effect and ntfy silently allows all writes.
     auth-file: "/home/ntfy/user.db"
     auth-default-access: deny-all
 

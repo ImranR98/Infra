@@ -84,6 +84,8 @@ spec:
       dashboard:
         enabled: false
       env:
+        # Without TLS and AGENTS_ALLOWED_OU, the appsec component enters an
+        # "unknown" state after reboot and never recovers.
         - name: AGENTS_ALLOWED_OU
           value: agent-ou,appsec-ou
         - name: BOUNCER_KEY_traefik
