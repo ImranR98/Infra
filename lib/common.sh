@@ -159,7 +159,7 @@ render_compose_yaml() {
 configure_compose_templates() {
 	local target="$1"
 	ensure_envsubst_vars
-	if [ -n "$PROXY_HOST" ]; then
+	if [ -n "${PROXY_HOST:-}" ]; then
 		PROXY_IP="$(getent hosts "$PROXY_HOST" 2>/dev/null | awk '{print $1; exit}')"
 		if [ -z "$PROXY_IP" ]; then
 			echo "Warning: could not resolve PROXY_HOST='$PROXY_HOST' to an IP address" >&2
