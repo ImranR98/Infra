@@ -42,7 +42,7 @@ _build_yaml() {
 	else
 		RAW_YAML=$(kubectl kustomize "$COMPONENT_DIR")
 	fi
-	PROCESSED_YAML=$(printf '%s\n' "$RAW_YAML" | envsubst "$ENVSUBST_VARS")
+	PROCESSED_YAML=$(printf '%s\n' "$RAW_YAML" | envsubst "$ENVSUBST_VARS" | sed -E 's/^(\s+value: )([+-]?[0-9]+)$/\1"\2"/')
 }
 
 _run_hook() {
