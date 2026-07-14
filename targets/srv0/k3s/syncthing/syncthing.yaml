@@ -17,7 +17,8 @@ spec:
     spec:
       hostNetwork: true
       securityContext:
-        fsGroup: $MY_UID
+        runAsUser: $MY_UID
+        runAsGroup: $MY_UID
       containers:
         - name: syncthing
           image: syncthing/syncthing:2.1.2
