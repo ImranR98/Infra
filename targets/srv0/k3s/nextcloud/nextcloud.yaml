@@ -19,7 +19,7 @@ spec:
         fsGroup: 33
       containers:
         - name: nextcloud
-          image: nextcloud:34.0.0
+          image: nextcloud:34.0.1
           securityContext:
             allowPrivilegeEscalation: false
           ports:
