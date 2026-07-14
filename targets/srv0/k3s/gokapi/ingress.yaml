@@ -29,7 +29,29 @@ spec:
         - name: forwardauth-authelia
           namespace: base
       services:
-        - name: gokapi
+        - name: gokapi-svc
           port: 53842
   tls:
     secretName: gokapi-prod-tls
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: gokapi-ingress-local
+  namespace: apps
+spec:
+  entryPoints:
+    - websecure
+  tls:
+    secretName: local-tls
+  routes:
+    - match: Host(`send.lan.localhost`)
+      kind: Rule
+      middlewares:
+        - name: lan-whitelist
+          namespace: base
+        - name: forwardauth-authelia # IGNORE INITIALLY
+          namespace: base # IGNORE INITIALLY
+      services:
+        - name: gokapi-svc
+          port: 53842
