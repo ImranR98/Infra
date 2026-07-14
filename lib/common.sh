@@ -139,7 +139,7 @@ get_envsubst_vars() {
 		vars="$vars $(grep -oP 'export \K[A-Z_][A-Z_0-9]*' "$vars_file" | tr '\n' ' ')"
 	fi
 
-	for v in MY_UID TARGET COMPOSE_STATE_DIR COMPOSE_STATE_BACKUP_DIR LONGHORN_BACKUP_DIR DOCKER_GID; do
+	for v in MY_UID TARGET COMPOSE_STATE_DIR COMPOSE_STATE_BACKUP_DIR LONGHORN_BACKUP_DIR DOCKER_GID PROXY_IP; do
 		case " $vars " in *" $v "*) ;; *) vars="$vars $v" ;; esac
 	done
 
@@ -159,6 +159,14 @@ render_compose_yaml() {
 configure_compose_templates() {
 	local target="$1"
 	ensure_envsubst_vars
+	if [ -n "$PROXY_HOST" ]; then
+		PROXY_IP="$(getent hosts "$PROXY_HOST" 2>/dev/null | awk '{print $1; exit}')"
+		if [ -z "$PROXY_IP" ]; then
+			echo "Warning: could not resolve PROXY_HOST='$PROXY_HOST' to an IP address" >&2
+		else
+			export PROXY_IP
+		fi
+	fi
 	local template_dir="$ATLAS_ROOT/targets/$target/compose/templates"
 	[ -d "$template_dir" ] || return
 
