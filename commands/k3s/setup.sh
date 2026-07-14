@@ -28,8 +28,8 @@ echo "=== Downloading K3s installer ==="
 download_k3s_installer
 
 # Only needed on secureblue
-semodule --disable=userns_deny_unconfined_relabels # Required for K3s Flannel unfortunately
-sed -i 's/# rpm_install_extra_args/rpm_install_extra_args/g' $K3S_SCRIPT
+# semodule --disable=userns_deny_unconfined_relabels # Required for K3s Flannel unfortunately
+# sed -i 's/# rpm_install_extra_args/rpm_install_extra_args/g' $K3S_SCRIPT
 
 # Write K3s config drop-in files before installing so the first start picks them up
 NODE_IP=$(get_node_ip) || NODE_IP=""
