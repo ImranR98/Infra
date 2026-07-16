@@ -45,8 +45,8 @@ The template serves as:
 The variable list `ENVSUBST_VARS` controls which variables envsubst expands. It's built by `get_envsubst_vars()`, which collects:
 
 - All `export`ed variables from the real vars file
-- Built-in variables: `MY_UID`, `TARGET`, `COMPOSE_STATE_DIR`, `COMPOSE_STATE_BACKUP_DIR`, `LONGHORN_BACKUP_DIR`
-- `DOCKER_GID` (when applicable)
+- Built-in variables: `MY_UID`, `TARGET`, `COMPOSE_STATE_DIR`, `COMPOSE_STATE_BACKUP_DIR`, `MAYASTOR_POOL_DIR`, `PVC_BACKUP_DIR`
+- `DOCKER_GID` and `PROXY_IP` (when applicable)
 
 The final format is a space-separated list with `$` prefixes: `$VAR1 $VAR2 $VAR3...`. This is passed to `envsubst` so that only known variables are expanded — any `$OTHER` reference left over after rendering indicates a missing variable, which validation catches.
 
@@ -124,7 +124,8 @@ Known variables include:
 | `ATLAS_INTERACTIVE` | Detected from stdin | `true` if running in a terminal |
 | `TARGET` | CLI argument | Name of current target |
 | `COMPOSE_STATE_DIR` | Hardcoded | Path to rendered Compose state |
-| `LONGHORN_BACKUP_DIR` | Hardcoded | Path for Longhorn backups |
+| `MAYASTOR_POOL_DIR` | Hardcoded | Path for Mayastor storage pool backing file |
+| `PVC_BACKUP_DIR` | Hardcoded | Path for K3s PVC backup archives |
 | `MY_UID` | `id -u` | Current user's UID (1000 if root) |
 | `DOCKER_GID` | `getent group docker` | Docker group GID |
 

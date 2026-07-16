@@ -36,7 +36,7 @@ User runs:  ./atlas.sh <target> <command> [args...]
 | `lib/` | Shared library code. `common.sh` has reusable functions; `dispatch.sh` has the command router. |
 | `commands/` | Global command implementations. Shared across all targets. |
 | `targets/` | Per-machine configuration. Each subdirectory is one target with its Compose and/or K3s definitions. |
-| `current_target/` | Runtime state directory (gitignored). Holds rendered Compose files, secrets, Longhorn backups. |
+| `current_target/` | Runtime state directory (gitignored). Holds rendered Compose files, secrets, K3s PVC backups. |
 | `cache/` | Runtime cache (gitignored). Renovate cache, etc. |
 
 ## The dispatch system
@@ -84,6 +84,8 @@ Template files (*.secret, *.plain) under `compose/templates/` are rendered into 
 - `ATLAS_ROOT` — absolute path to the repo root, always available
 - `TARGET` — name of the current target, always available
 - `COMPOSE_STATE_DIR` — where rendered Compose files live at runtime
+- `PVC_BACKUP_DIR` — path for K3s PVC backup archives
+- `MAYASTOR_POOL_DIR` — path for Mayastor storage pool backing file
 - `ENVSUBST_VARS` — space-separated list of `$VARIABLE` names for envsubst
 - `.secret` — file extension marking templates that should be rendered with restricted permissions
 - `.plain` — file extension marking templates that should be copied verbatim without envsubst

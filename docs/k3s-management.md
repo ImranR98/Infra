@@ -31,6 +31,8 @@ Two behaviors, depending on context:
 
 This lets a greenfield cluster deploy partially, get dependencies up, then complete the deployment.
 
+The `mayastor` component does not use this pattern — it uses a `post.sh` hook instead to wait for CRDs and provision DiskPools after the HelmChart applies.
+
 ## Group-based deployment (`groups.yaml`)
 
 Components are organized into ordered groups:
@@ -38,11 +40,15 @@ Components are organized into ordered groups:
 ```yaml
 base:
   - namespaces
+  - nfs-server
+  - csi-driver-nfs
+  - mayastor
   - cert-manager
   - traefik
-  # ... infrastructure
+  # ... more infrastructure
 
 apps:
+  - pvc-backup
   - immich
   - jellyfin
   # ... applications
@@ -95,14 +101,54 @@ Runs before the standard deletion pipeline. The standard pipeline deletes HelmCh
 ## Node management commands
 
 ```
-./atlas.sh <target> k3s setup              # Bootstrap control-plane
-./atlas.sh <target> k3s join <ip> <user>   # Join agent via SSH
-./atlas.sh <target> k3s update-node-ip     # Reconfigure after IP change
+./atlas.sh <target> k3s setup                  # Bootstrap control-plane
+./atlas.sh <target> k3s join <ip> <user>       # Join agent node (default)
+./atlas.sh <target> k3s join <ip> <user> server  # Join additional control-plane node
+./atlas.sh <target> k3s update-node-ip         # Reconfigure after IP change
 ```
 
-**`setup`** — Downloads the K3s installer (with SHA256 verification against GitHub), writes config drop-ins (node IP auto-detected, SELinux on, node labels set), runs the installer, creates a `kubectl` group, and configures the firewall (supports both firewalld and ufw).
+**`setup`** — Downloads the K3s installer (with SHA256 verification against GitHub), writes config drop-ins (node IP auto-detected, SELinux on, node labels set), runs host preparation scripts (`prep-node.sh` loads nvme_tcp module, `prep-control-plane.sh` allocates hugepages and creates the Mayastor backing file), then runs the installer. Because prep runs before K3s starts, kubelet discovers hugepages at first boot — no restart needed. Creates a `kubectl` group and configures the firewall.
 
-**`join`** — Runs from the control-plane. Reads the cluster token, generates an installer script bundled with `lib/common.sh` (so the agent can use Atlas functions), syncs everything to the remote agent via rsync, and runs the installer over SSH.
+**`join`** — Runs from the control-plane. Reads the cluster token, syncs and runs `prep-node.sh` on the remote (loads nvme_tcp), optionally also syncs `prep-control-plane.sh` if joining as a `server`, then installs K3s agent or server via SSH. The optional third argument `[agent|server]` defaults to `agent`.
 
-**`update-node-ip`** — Detects the node's new IP (from the default route interface), compares it to the current Kubernetes node address, writes a config drop-in, restarts K3s, and re-applies network policies.
+**`update-node-ip`** — Detects the node's new IP, writes a config drop-in, restarts K3s, and re-applies network policies. Uses the shared `wait_for_k3s_cluster()` helper from common.sh.
+
+## Host preparation scripts
+
+Atlas includes reusable host preparation scripts that run on every node during setup/join, BEFORE K3s starts. This avoids restarts and keeps the `mayastor` component's `prep.sh` lightweight (validation-only).
+
+**`prep-node.sh`** — Runs on all nodes (control-plane and workers). Loads the `nvme_tcp` kernel module and persists it via `/etc/modules-load.d/`. Required for Mayastor's CSI node plugin to mount NVMe-oF TCP volumes.
+
+**`prep-control-plane.sh`** — Runs on control-plane nodes only. Allocates 2GiB of 2MiB hugepages (runtime + persistent via GRUB and sysctl), creates the Mayastor backing file (`$MAYASTOR_POOL_DIR/pool.img`) as a 100G sparse file. Idempotent — safe to re-run.
+
+## PVC backup and restore
+
+A CronJob backs up labeled PVCs to the host filesystem. Restore is a separate Atlas command.
+
+### Backup
+
+The `pvc-backup` component in the `apps` group runs a nightly CronJob at 3AM. For each PVC labeled `auto-backup: "true"`, it:
+1. Scales down all workloads referencing the PVC
+2. Creates a temporary pod that mounts the PVC and a hostPath backup destination
+3. Archives the PVC contents as a `.tar.gz` (with a `timestamp.txt` inside)
+4. Deletes the temp pod and scales workloads back up
+
+Backups are stored at `$PVC_BACKUP_DIR/<pvc-name>.tar.gz` (inside `current_target/`, gitignored). The filename is constant — each run overwrites the previous copy.
+
+Manual trigger (zero code duplication):
+```bash
+kubectl create job backup-manual --from=cronjob/pvc-backup -n apps
+```
+
+### Restore
+
+```bash
+./atlas.sh <target> k3s restore-pvc <pvc-name> [-y]
+```
+
+The restore script:
+1. Finds the backup archive at `$PVC_BACKUP_DIR/<name>.tar.gz`
+2. Discovers all workloads using the PVC
+3. Prompts for confirmation (skipped with `-y`)
+4. Scales workloads to 0, extracts the archive into the PVC via a temp pod, scales back up
 
