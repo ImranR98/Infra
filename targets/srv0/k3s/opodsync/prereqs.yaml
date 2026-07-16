@@ -3,6 +3,8 @@ kind: PersistentVolumeClaim
 metadata:
   name: opodsync-pvc
   namespace: apps
+  labels:
+    auto-backup: "true"
 spec:
   storageClassName: mayastor-install-single-replica
   accessModes:

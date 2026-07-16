@@ -9,6 +9,7 @@ base:
   - authelia
   - ntfy
 apps:
+  - pvc-backup
   - immich
   - logtfy
   - jellyfin

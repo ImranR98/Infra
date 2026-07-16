@@ -1,0 +1,143 @@
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: pvc-backup
+  namespace: apps
+spec:
+  schedule: "0 3 * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          serviceAccountName: pvc-backup
+          restartPolicy: Never
+          containers:
+            - name: backup
+              image: bitnami/kubectl:latest
+              env:
+                - name: BACKUP_DIR
+                  value: "$PVC_BACKUP_DIR"
+                - name: MY_UID
+                  value: "$MY_UID"
+              command:
+                - sh
+                - -c
+                - |
+                  set -eu
+                  LABEL="auto-backup=true"
+                  TIMESTAMP=$(date -Iseconds)
+                  mkdir -p "$BACKUP_DIR"
+
+                  for pvc in $(kubectl get pvc -A -l "$LABEL" -o jsonpath='{range .items[*]}{.metadata.namespace}/{.metadata.name}{"\n"}{end}'); do
+                    ns="${pvc%%/*}"
+                    name="${pvc##*/}"
+                    echo "=== Backing up $ns/$name ==="
+
+                    # Find workloads using this PVC and scale to 0
+                    workloads=$(kubectl get deploy,sts -n "$ns" -o json 2>/dev/null | \
+                      jq -r --arg pvc "$name" \
+                      '.items[] | select(.spec.template.spec.volumes[]?.persistentVolumeClaim.claimName == $pvc) | "\(.kind)/\(.metadata.name)"' 2>/dev/null || true)
+
+                    scaled_replicas=""
+                    for w in $workloads; do
+                      wkind="${w%%/*}"
+                      wname="${w##*/}"
+                      reps=$(kubectl get "$wkind" "$wname" -n "$ns" -o jsonpath='{.spec.replicas}' 2>/dev/null || echo 1)
+                      scaled_replicas="$scaled_replicas $wkind/$wname/$reps"
+                      kubectl scale "$wkind" "$wname" -n "$ns" --replicas=0
+                      echo "  Scaled $wkind/$wname to 0"
+                    done
+
+                    sleep 5
+
+                    # Create temp backup pod
+                    podname="backup-$(echo "$name" | tr '_' '-')"
+                    cat <<PODEOF | kubectl apply -f -
+                    apiVersion: v1
+                    kind: Pod
+                    metadata:
+                      name: $podname
+                      namespace: $ns
+                      labels:
+                        app: pvc-backup-temp
+                    spec:
+                      restartPolicy: Never
+                      containers:
+                      - name: backup
+                        image: alpine:3.21
+                        command:
+                        - sh
+                        - -c
+                        - |
+                          echo "$TIMESTAMP" > /tmp/timestamp.txt
+                          tar czf /backup/"$name".tar.gz -C /tmp timestamp.txt -C /data .
+                          chown ${MY_UID}:${MY_UID} /backup/"$name".tar.gz 2>/dev/null || true
+                        volumeMounts:
+                        - name: data
+                          mountPath: /data
+                        - name: backup-dest
+                          mountPath: /backup
+                      volumes:
+                      - name: data
+                        persistentVolumeClaim:
+                          claimName: $name
+                      - name: backup-dest
+                        hostPath:
+                          path: $BACKUP_DIR
+                          type: DirectoryOrCreate
+                    PODEOF
+
+                    echo "  Waiting for temp pod..."
+                    kubectl wait --for=jsonpath='{.status.phase}'=Succeeded "pod/$podname" -n "$ns" --timeout=600s
+                    kubectl delete pod "$podname" -n "$ns"
+
+                    # Scale workloads back up
+                    for entry in $scaled_replicas; do
+                      wkind=$(echo "$entry" | cut -d/ -f1)
+                      wname=$(echo "$entry" | cut -d/ -f2)
+                      reps=$(echo "$entry" | cut -d/ -f3)
+                      kubectl scale "$wkind" "$wname" -n "$ns" --replicas="$reps"
+                      echo "  Scaled $wkind/$wname back to $reps"
+                    done
+                    echo "  Done: $name"
+                  done
+                  echo "=== Backup complete ==="
+      backoffLimit: 2
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: pvc-backup
+  namespace: apps
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: pvc-backup
+rules:
+  - apiGroups: [""]
+    resources: ["persistentvolumeclaims"]
+    verbs: ["get", "list"]
+  - apiGroups: ["apps"]
+    resources: ["deployments", "deployments/scale", "statefulsets", "statefulsets/scale"]
+    verbs: ["get", "list", "patch"]
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["create", "get", "delete", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: pvc-backup
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: pvc-backup
+subjects:
+  - kind: ServiceAccount
+    name: pvc-backup
+    namespace: apps

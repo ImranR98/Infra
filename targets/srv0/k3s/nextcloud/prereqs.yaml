@@ -22,6 +22,8 @@ kind: PersistentVolumeClaim
 metadata:
   name: nextcloud-data-pvc
   namespace: apps
+  labels:
+    auto-backup: "true"
 spec:
   storageClassName: mayastor-install-single-replica
   accessModes:
@@ -35,6 +37,8 @@ kind: PersistentVolumeClaim
 metadata:
   name: nextcloud-db-pvc
   namespace: apps
+  labels:
+    auto-backup: "true"
 spec:
   storageClassName: mayastor-install-single-replica
   accessModes:
