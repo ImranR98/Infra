@@ -45,7 +45,7 @@ echo "K3s config drop-in written to /etc/rancher/k3s/config.yaml.d/10-server.yam
 
 echo ""
 echo "=== Host preparation ==="
-export MAYASTOR_POOL_DIR="${MAYASTOR_POOL_DIR:-$ATLAS_ROOT/current_target/mayastor}"
+export MAYASTOR_POOL_DIR="${MAYASTOR_POOL_DIR:-/var/local/mayastor-install/io-engine}"
 bash "$ATLAS_ROOT/commands/k3s/prep-node.sh"
 bash "$ATLAS_ROOT/commands/k3s/prep-control-plane.sh"
 

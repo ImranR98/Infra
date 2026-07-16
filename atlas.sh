@@ -13,7 +13,7 @@ export ATLAS_INTERACTIVE
 
 export COMPOSE_STATE_DIR="$ATLAS_ROOT/current_target/compose_live_state"
 export COMPOSE_STATE_BACKUP_DIR="$ATLAS_ROOT/compose_state_backups"
-export MAYASTOR_POOL_DIR="$ATLAS_ROOT/current_target/mayastor"
+export MAYASTOR_POOL_DIR="/var/local/mayastor-install/io-engine"
 
 if [ "${1:-}" = "" ]; then
 	echo "Usage: $0 <target> <command...>" >&2
