@@ -18,6 +18,7 @@ spec:
       interruptMode:
         enabled: true
         nvmeIoQueuePollPeriod: "1000us"
+      envcontext: "iova-mode=pa"
     etcd:
       replicaCount: 1
     loki:
@@ -36,4 +37,4 @@ spec:
         enabled: false
     csi:
       node:
-        kubeletDir: /var/lib/rancher/k3s/agent/kubelet
+        kubeletDir: /var/lib/kubelet
