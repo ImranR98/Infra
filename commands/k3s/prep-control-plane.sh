@@ -28,5 +28,5 @@ grep -q "vm.nr_hugepages" /etc/sysctl.conf 2>/dev/null \
 MAYASTOR_POOL_DIR="${MAYASTOR_POOL_DIR:?MAYASTOR_POOL_DIR must be set}"
 mkdir -p "$MAYASTOR_POOL_DIR"
 if [ ! -f "$MAYASTOR_POOL_DIR/pool.img" ]; then
-	truncate -s 100G "$MAYASTOR_POOL_DIR/pool.img"
+	truncate -s 1T "$MAYASTOR_POOL_DIR/pool.img"
 fi

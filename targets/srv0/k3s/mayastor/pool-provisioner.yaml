@@ -30,9 +30,10 @@ spec:
               metadata:
                 name: ${name}-pool
                 namespace: openebs
-              spec:
-                node: ${name}
-                disks: ["${POOL_DISK_URI}"]
+               spec:
+                 node: ${name}
+                 disks: ["${POOL_DISK_URI}"]
+                 maxExpansion: "250TB"
               EOF
               done
 ---
