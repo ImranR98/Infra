@@ -22,10 +22,7 @@ spec:
     etcd:
       replicaCount: 1
     loki:
-      singleBinary:
-        replicas: 1
-      minio:
-        replicas: 1
+      enabled: false
     nats:
       cluster:
         replicas: 1
