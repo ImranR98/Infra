@@ -18,10 +18,10 @@ spec:
     persistence:
       enabled: true
       existingClaim: openwebui-data-pvc
-      storageClass: openebs-single-replica
+      storageClass: mayastor-install-single-replica
     pipelines:
       persistence:
-        storageClass: openebs-single-replica
+        storageClass: mayastor-install-single-replica
         size: 5Gi
     extraEnvVars:
       - name: ENABLE_OAUTH_SIGNUP

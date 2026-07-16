@@ -4,7 +4,7 @@ metadata:
   name: gokapi-data
   namespace: apps
 spec:
-  storageClassName: openebs-single-replica
+  storageClassName: mayastor-install-single-replica
   accessModes:
     - ReadWriteOnce
   resources:
@@ -17,7 +17,7 @@ metadata:
   name: gokapi-config
   namespace: apps
 spec:
-  storageClassName: openebs-single-replica
+  storageClassName: mayastor-install-single-replica
   accessModes:
     - ReadWriteOnce
   resources:

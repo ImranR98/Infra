@@ -23,7 +23,7 @@ metadata:
   name: nextcloud-data-pvc
   namespace: apps
 spec:
-  storageClassName: openebs-single-replica
+  storageClassName: mayastor-install-single-replica
   accessModes:
     - ReadWriteOnce
   resources:
@@ -36,7 +36,7 @@ metadata:
   name: nextcloud-db-pvc
   namespace: apps
 spec:
-  storageClassName: openebs-single-replica
+  storageClassName: mayastor-install-single-replica
   accessModes:
     - ReadWriteOnce
   resources:

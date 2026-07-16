@@ -4,7 +4,7 @@ metadata:
   name: mosquitto-data-pvc
   namespace: apps-privileged
 spec:
-  storageClassName: openebs-single-replica
+  storageClassName: mayastor-install-single-replica
   accessModes:
     - ReadWriteOnce
   resources:

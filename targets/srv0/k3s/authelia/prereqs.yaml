@@ -4,7 +4,7 @@ metadata:
   name: authelia-db-pvc
   namespace: base
 spec:
-  storageClassName: openebs-single-replica
+  storageClassName: mayastor-install-single-replica
   accessModes:
     - ReadWriteOnce
   resources:
@@ -17,7 +17,7 @@ metadata:
   name: authelia-session-pvc
   namespace: base
 spec:
-  storageClassName: openebs-single-replica
+  storageClassName: mayastor-install-single-replica
   accessModes:
     - ReadWriteOnce
   resources:
