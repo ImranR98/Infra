@@ -19,6 +19,8 @@ spec:
           memory: 2Gi
         requests:
           memory: 128Mi
+      startupProbe:
+        failureThreshold: 30
       extraVolumeMounts:
         - name: users-database
           mountPath: "/config/users"
