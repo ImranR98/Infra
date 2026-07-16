@@ -1,0 +1,39 @@
+apiVersion: helm.cattle.io/v1
+kind: HelmChart
+metadata:
+  name: mayastor-install
+  namespace: kube-system
+spec:
+  chart: mayastor
+  repo: https://openebs.github.io/mayastor-extensions
+  failurePolicy: abort
+  targetNamespace: openebs
+  createNamespace: true
+  version: 2.11.1
+  valuesContent: |-
+    io_engine:
+      cpuCount: "1"
+      nodeSelector:
+        node-role.kubernetes.io/control-plane: "true"
+      interruptMode:
+        enabled: true
+        nvmeIoQueuePollPeriod: "1000us"
+    etcd:
+      replicaCount: 1
+    loki:
+      singleBinary:
+        replicas: 1
+      minio:
+        replicas: 1
+    nats:
+      cluster:
+        replicas: 1
+    obs:
+      callhome:
+        enabled: false
+    agents:
+      ha:
+        enabled: false
+    csi:
+      node:
+        kubeletDir: /var/lib/rancher/k3s/agent/kubelet

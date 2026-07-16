@@ -2,7 +2,7 @@
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: allow-longhorn-nfs-ingress
+  name: allow-nfs-ingress
   namespace: base-privileged
 spec:
   podSelector:
@@ -16,11 +16,5 @@ spec:
           podSelector:
             matchLabels:
               app: csi-nfs-node
-        - namespaceSelector:
-            matchLabels:
-              kubernetes.io/metadata.name: longhorn-system
-          podSelector:
-            matchLabels:
-              app: longhorn-manager
   policyTypes:
     - Ingress

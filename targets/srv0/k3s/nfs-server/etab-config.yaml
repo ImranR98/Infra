@@ -6,9 +6,8 @@ metadata:
 data:
   etab: |
     /exports *(rw,fsid=0,crossmnt,no_subtree_check,insecure,root_squash)
-    /exports/longhorn-backup *(rw,fsid=1,no_subtree_check,insecure,root_squash)
-    /exports/music *(ro,fsid=2,no_subtree_check,insecure,root_squash)
-    /exports/jellyfin-tv *(ro,fsid=3,no_subtree_check,insecure,root_squash)
-    /exports/jellyfin-youtube *(ro,fsid=4,no_subtree_check,insecure,root_squash)
-    /exports/dscpln *(rw,fsid=5,no_subtree_check,insecure,root_squash)
-    /exports/immich *(ro,fsid=6,no_subtree_check,insecure,root_squash)
+    /exports/music *(ro,fsid=1,no_subtree_check,insecure,root_squash)
+    /exports/jellyfin-tv *(ro,fsid=2,no_subtree_check,insecure,root_squash)
+    /exports/jellyfin-youtube *(ro,fsid=3,no_subtree_check,insecure,root_squash)
+    /exports/dscpln *(rw,fsid=4,no_subtree_check,insecure,root_squash)
+    /exports/immich *(ro,fsid=5,no_subtree_check,insecure,root_squash)

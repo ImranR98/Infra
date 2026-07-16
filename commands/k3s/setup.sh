@@ -18,11 +18,8 @@ cleanup() {
 }
 trap cleanup EXIT
 
-if [ -t 0 ]; then
-	read -p "WARNING: YOU MUST HAVE A FIXED IP ON THIS NETWORK (ENSURE THIS IS SET IN YOUR OS SETTINGS).
-A CHANGE IN IP WILL BREAK K3S NETWORKING! If that does happen, you can update the cluster with: ./atlas.sh <target> k3s update-node-ip
-Press Enter to continue..." ANYTHING
-fi
+echo "NOTE: K3s requires a fixed IP on this network. If the IP changes, run: ./atlas.sh <target> k3s update-node-ip"
+echo ""
 
 echo "=== Downloading K3s installer ==="
 download_k3s_installer
@@ -46,6 +43,13 @@ node-label:
 K3SEOF
 echo "K3s config drop-in written to /etc/rancher/k3s/config.yaml.d/10-server.yaml"
 
+echo ""
+echo "=== Host preparation ==="
+bash "$ATLAS_ROOT/commands/k3s/prep-node.sh"
+bash "$ATLAS_ROOT/commands/k3s/prep-control-plane.sh"
+
+echo ""
+echo "=== Installing K3s server ==="
 "$K3S_SCRIPT"
 
 echo ""
@@ -71,20 +75,7 @@ configure_k3s_firewall
 echo ""
 echo "Waiting for cluster to be ready..."
 systemctl enable --now k3s
-CLUSTER_READY=false
-for i in $(seq 1 30); do
-	if kubectl get nodes >/dev/null 2>&1; then
-		echo "Kubernetes cluster is ready."
-		CLUSTER_READY=true
-		break
-	fi
-	echo "Waiting... ($i/30)"
-	sleep 5
-done
-if [ "$CLUSTER_READY" = false ]; then
-	echo "Error: Could not connect to Kubernetes cluster after 150 seconds." >&2
-	exit 1
-fi
+wait_for_k3s_cluster
 
 DID_COMPLETE=true
 echo "Done. K3s control-plane node initialized."

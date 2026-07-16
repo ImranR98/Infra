@@ -4,7 +4,7 @@ metadata:
   name: crowdsec-pvc
   namespace: base
 spec:
-  storageClassName: longhorn
+  storageClassName: openebs-single-replica
   accessModes:
     - ReadWriteOnce
   resources:

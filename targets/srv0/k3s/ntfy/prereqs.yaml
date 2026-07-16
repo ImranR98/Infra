@@ -4,7 +4,7 @@ metadata:
   name: ntfy-pvc
   namespace: base
 spec:
-  storageClassName: longhorn
+  storageClassName: openebs-single-replica
   accessModes:
     - ReadWriteOnce
   resources:

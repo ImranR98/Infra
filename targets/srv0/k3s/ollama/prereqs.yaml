@@ -4,7 +4,7 @@ metadata:
   name: ollama-models-pvc
   namespace: apps
 spec:
-  storageClassName: longhorn
+  storageClassName: openebs-single-replica
   accessModes:
     - ReadWriteOnce
   resources:
@@ -17,7 +17,7 @@ metadata:
   name: openwebui-data-pvc
   namespace: apps
 spec:
-  storageClassName: longhorn
+  storageClassName: openebs-single-replica
   accessModes:
     - ReadWriteOnce
   resources:

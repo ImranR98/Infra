@@ -1,0 +1,68 @@
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: pool-provisioner
+  namespace: kube-system
+spec:
+  ttlSecondsAfterFinished: 1
+  template:
+    spec:
+      serviceAccountName: pool-provisioner
+      restartPolicy: Never
+      containers:
+        - name: provisioner
+          image: bitnami/kubectl:latest
+          env:
+            - name: POOL_DISK_URI
+              value: "aio:///$MAYASTOR_POOL_DIR/pool.img"
+          command:
+            - sh
+            - -c
+            - |
+              for node in $(kubectl get nodes \
+                -l node-role.kubernetes.io/control-plane \
+                -o name); do
+                name=$(basename "$node")
+                kubectl apply -f - <<EOF
+              apiVersion: openebs.io/v1beta3
+              kind: DiskPool
+              metadata:
+                name: ${name}-pool
+                namespace: openebs
+              spec:
+                node: ${name}
+                disks: ["${POOL_DISK_URI}"]
+              EOF
+              done
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: pool-provisioner
+  namespace: kube-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: pool-provisioner
+rules:
+  - apiGroups: [""]
+    resources: ["nodes"]
+    verbs: ["get", "list"]
+  - apiGroups: ["openebs.io"]
+    resources: ["diskpools"]
+    verbs: ["create", "get", "list", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: pool-provisioner
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: pool-provisioner
+subjects:
+  - kind: ServiceAccount
+    name: pool-provisioner
+    namespace: kube-system

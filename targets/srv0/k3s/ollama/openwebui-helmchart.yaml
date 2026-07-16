@@ -18,10 +18,10 @@ spec:
     persistence:
       enabled: true
       existingClaim: openwebui-data-pvc
-      storageClass: longhorn
+      storageClass: openebs-single-replica
     pipelines:
       persistence:
-        storageClass: longhorn
+        storageClass: openebs-single-replica
         size: 5Gi
     extraEnvVars:
       - name: ENABLE_OAUTH_SIGNUP

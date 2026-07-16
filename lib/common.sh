@@ -139,7 +139,7 @@ get_envsubst_vars() {
 		vars="$vars $(grep -oP 'export \K[A-Z_][A-Z_0-9]*' "$vars_file" | tr '\n' ' ')"
 	fi
 
-	for v in MY_UID TARGET COMPOSE_STATE_DIR COMPOSE_STATE_BACKUP_DIR LONGHORN_BACKUP_DIR DOCKER_GID PROXY_IP; do
+	for v in MY_UID TARGET COMPOSE_STATE_DIR COMPOSE_STATE_BACKUP_DIR MAYASTOR_POOL_DIR DOCKER_GID PROXY_IP; do
 		case " $vars " in *" $v "*) ;; *) vars="$vars $v" ;; esac
 	done
 
@@ -252,6 +252,21 @@ configure_k3s_firewall() {
 	fi
 }
 
+wait_for_k3s_cluster() {
+	local timeout_secs="${1:-150}"
+	local max_tries=$(( timeout_secs / 5 ))
+	for i in $(seq 1 "$max_tries"); do
+		if kubectl get nodes >/dev/null 2>&1; then
+			echo "Cluster ready."
+			return 0
+		fi
+		echo "Waiting... ($i/$max_tries)"
+		sleep 5
+	done
+	echo "Error: Could not connect to Kubernetes cluster after ${timeout_secs} seconds." >&2
+	return 1
+}
+
 # ====== validate ======
 
 _build_known_vars() {
@@ -299,7 +314,7 @@ _validate_k3s() {
 TARGET
 COMPOSE_STATE_DIR
 COMPOSE_STATE_BACKUP_DIR
-LONGHORN_BACKUP_DIR
+MAYASTOR_POOL_DIR
 NS
 PV
 PVC

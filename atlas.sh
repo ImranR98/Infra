@@ -13,7 +13,7 @@ export ATLAS_INTERACTIVE
 
 export COMPOSE_STATE_DIR="$ATLAS_ROOT/current_target/compose_live_state"
 export COMPOSE_STATE_BACKUP_DIR="$ATLAS_ROOT/compose_state_backups"
-export LONGHORN_BACKUP_DIR="$ATLAS_ROOT/current_target/k3s_longhorn_backups"
+export MAYASTOR_POOL_DIR="$ATLAS_ROOT/current_target/mayastor"
 
 if [ "${1:-}" = "" ]; then
 	echo "Usage: $0 <target> <command...>" >&2

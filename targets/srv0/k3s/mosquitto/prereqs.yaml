@@ -4,7 +4,7 @@ metadata:
   name: mosquitto-data-pvc
   namespace: apps-privileged
 spec:
-  storageClassName: longhorn
+  storageClassName: openebs-single-replica
   accessModes:
     - ReadWriteOnce
   resources:
