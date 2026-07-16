@@ -30,8 +30,3 @@ mkdir -p "$MAYASTOR_POOL_DIR"
 if [ ! -f "$MAYASTOR_POOL_DIR/pool.img" ]; then
 	truncate -s 100G "$MAYASTOR_POOL_DIR/pool.img"
 fi
-
-if [ -n "${ATLAS_ROOT:-}" ] && [ -d "$ATLAS_ROOT" ]; then
-	mkdir -p "$ATLAS_ROOT/current_target/mayastor"
-	ln -sf "$MAYASTOR_POOL_DIR/pool.img" "$ATLAS_ROOT/current_target/mayastor/pool.img"
-fi
