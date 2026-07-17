@@ -27,9 +27,9 @@ spec:
   accessModes:
     - ReadWriteMany
   volumeName: dscpln-data-pv
-   resources:
-     requests:
-       storage: 4096Gi
+  resources:
+    requests:
+      storage: 4096Gi
 ---
 apiVersion: v1
 kind: Secret
