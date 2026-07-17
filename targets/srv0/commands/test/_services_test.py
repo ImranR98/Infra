@@ -84,22 +84,18 @@ def main() -> None:
 
         # Step 1-2: navigate to traefik, detect auth redirect
         print(f"Opening https://{traefik}/ ...")
-        page.goto(f"https://{traefik}/", wait_until="domcontentloaded")
-        page.wait_for_timeout(2000)
+        page.goto(f"https://{traefik}/", wait_until="commit")
+        page.wait_for_timeout(500)
 
-        current_url = page.url
-        if "authelia" in current_url:
+        # wait for the redirect chain to settle
+        try:
+            page.wait_for_url(f"**/authelia.**", timeout=8000)
             print("\nRedirected to Authelia.")
             print("Please log in manually in the browser window.")
             print(f"Waiting for redirect back to {traefik} (up to {LOGIN_TIMEOUT_MS // 60_000} min)...\n")
-            try:
-                page.wait_for_url(f"**/{traefik}**", timeout=LOGIN_TIMEOUT_MS)
-            except PlaywrightTimeout:
-                print("\nLogin timed out. Exiting.", file=sys.stderr)
-                browser.close()
-                sys.exit(1)
+            page.wait_for_url(f"**/{traefik}**", timeout=LOGIN_TIMEOUT_MS)
             print("Authenticated!\n")
-        else:
+        except PlaywrightTimeout:
             print("Already authenticated.\n")
 
         # Step 4: test all domains
