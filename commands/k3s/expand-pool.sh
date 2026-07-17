@@ -47,7 +47,8 @@ case "$confirm" in [yY]*) ;; *) echo "Aborted."; exit 0 ;; esac
 # --- grow backing file ---
 echo "Growing backing file..."
 SUDO=$(get_sudo_cmd)
-$SUDO truncate -s "$NEW_SIZE" "$HOST_PATH"
+NEW_SIZE_BYTES=$(numfmt --from=iec "$NEW_SIZE" 2>/dev/null || { echo "ERROR: invalid size format '$NEW_SIZE'" >&2; exit 1; })
+$SUDO truncate -s "$NEW_SIZE_BYTES" "$HOST_PATH"
 
 # --- trigger expansion ---
 echo "Triggering pool expansion..."
