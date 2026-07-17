@@ -56,8 +56,8 @@ _run_hook() {
 
 _check_initial_prereqs() {
 	$_has_initial_markers || return 0
-	kubectl get crd certificates.cert-manager.io >/dev/null 2>&1 && kubectl get ns openebs >/dev/null 2>&1 && return 0
-	echo "WARNING: Cluster may not be fully initialized. Run with 'initial' first if this is a fresh install." >&2
+	kubectl get crd certificates.cert-manager.io >/dev/null 2>&1 && return 0
+	echo "WARNING: cert-manager may not be ready. Run with 'initial' first if this is a fresh install." >&2
 }
 
 _initial_reminder() {

@@ -406,6 +406,19 @@ list_domains() {
 		grep -rohP "Host\(\x60[^\x60]+\x60\)" "$@" 2>/dev/null | \
 			sed "s/.*\x60\([^\x60]*\)\x60.*/\1/" | \
 			grep -v '\.localhost'
+	}
+
+	if [ -d "$ATLAS_ROOT/targets/$target/k3s" ]; then
+		_extract_hosts --include='*.yaml' "$ATLAS_ROOT/targets/$target/k3s" | \
+			sed "s/\\\$SERVICES_DOMAIN/${sd}/g" | \
+			sort -u
+	fi
+
+	if [ -f "$ATLAS_ROOT/targets/$target/compose/compose.yaml" ]; then
+		sed -n 's/.*Host(`\([^`]*\)`).*/\1/p' "$ATLAS_ROOT/targets/$target/compose/compose.yaml" | \
+			sed "s/\\\$SERVICES_DOMAIN/${sd}/g" | \
+			sort -u
+	fi
 }
 
 # ====== retry ======
@@ -466,19 +479,6 @@ K3SEOF
 	fi
 }
 
-	if [ -d "$ATLAS_ROOT/targets/$target/k3s" ]; then
-		_extract_hosts --include='*.yaml' "$ATLAS_ROOT/targets/$target/k3s" | \
-			sed "s/\\\$SERVICES_DOMAIN/${sd}/g" | \
-			sort -u
-	fi
-
-	if [ -f "$ATLAS_ROOT/targets/$target/compose/compose.yaml" ]; then
-		sed -n 's/.*Host(`\([^`]*\)`).*/\1/p' "$ATLAS_ROOT/targets/$target/compose/compose.yaml" | \
-			sed "s/\\\$SERVICES_DOMAIN/${sd}/g" | \
-			sort -u
-	fi
-}
-
 # ====== wait ======
 
 wait_for_crds() {
@@ -486,10 +486,17 @@ wait_for_crds() {
 	local max_tries=$(( timeout_secs / 5 ))
 	shift
 
+	local all_ok=true
 	for crd in "$@"; do
+		local crd_ok=false
 		for _ in $(seq 1 "$max_tries"); do
-			kubectl wait --for condition=established "crd/$crd" --timeout=10s 2>/dev/null && break
+			kubectl wait --for condition=established "crd/$crd" --timeout=10s 2>/dev/null && { crd_ok=true; break; }
 			sleep 5
 		done
+		if [ "$crd_ok" = false ]; then
+			echo "ERROR: CRD $crd not established after ${timeout_secs}s" >&2
+			all_ok=false
+		fi
 	done
+	$all_ok
 }

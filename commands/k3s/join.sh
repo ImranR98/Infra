@@ -80,7 +80,6 @@ if [ "$ROLE" = "server" ]; then
 else
 	write_k3s_config agent "$NODE_IP" /etc/rancher/k3s/config.yaml.d/50-agent.yaml false
 	"$K3S_SCRIPT" agent --server "$SERVER_URL" --token "$TOKEN"
-	"$K3S_SCRIPT" agent --server "$SERVER_URL" --token "$TOKEN"
 fi
 rm -f "$K3S_SCRIPT"
 
