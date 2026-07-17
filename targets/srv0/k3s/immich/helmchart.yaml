@@ -67,7 +67,7 @@ spec:
             main:
               image:
                 repository: ghcr.io/immich-app/immich-machine-learning
-                tag: release-rocm
+                tag: v3.0.3-rocm
       defaultPodOptions:
         affinity:
           nodeAffinity:
@@ -97,4 +97,11 @@ spec:
           existingClaim: immich-library-pvc
 
     valkey:
+      controllers:
+        main:
+          containers:
+            main:
+              image:
+                repository: docker.io/valkey/valkey
+                tag: "9.1"
       enabled: true
