@@ -81,6 +81,9 @@ spec:
           hostPathType: Directory
           globalMounts:
             - path: /dev/dri
+
+    immich:
+      persistence:
         library:
           existingClaim: immich-library-pvc
 
