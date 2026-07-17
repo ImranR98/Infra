@@ -1,0 +1,14 @@
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: local-tls
+  namespace: kube-system
+spec:
+  secretName: local-tls
+  issuerRef:
+    name: ca-issuer
+    kind: ClusterIssuer
+  dnsNames:
+    - "*.cluster.localhost"
+    - "*.lan.localhost"
