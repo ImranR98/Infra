@@ -19,6 +19,9 @@ spec:
           memory: 2Gi
         requests:
           memory: 128Mi
+      probes:
+        startup:
+          failureThreshold: 30
       extraVolumeMounts:
         - name: users-database
           mountPath: "/config/users"
@@ -30,9 +33,6 @@ spec:
             items:
               - key: users-database.yaml
                 path: users-database.yaml
-    probes:
-      startup:
-        failureThreshold: 30
     configMap:
       authentication_backend:
         ldap:
