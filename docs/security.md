@@ -129,3 +129,17 @@ export CROWDSEC_BOUNCER_KEY="change_me"  # openssl rand -hex 32
 ```
 
 All secrets are generated with cryptographically secure random values (`openssl rand`) rather than hardcoded defaults.
+
+## HelmChart CR secret exposure
+
+K3s `HelmChart` custom resources embed `valuesContent` directly in the CR spec, which is stored in the Kubernetes API (etcd/SQLite). This means any value passed to a Helm chart via `valuesContent` — including database passwords, encryption keys, JWKS private keys, and OIDC client secrets — is readable by anyone with `get` access to `helmcharts.helm.cattle.io` resources in the relevant namespace.
+
+In a default K3s deployment, HelmChart CR access is restricted to cluster-admin and the `helm-controller` service account. For a single-user homelab, this exposure is acceptable but should be audited before granting namespace-level access to additional users or service accounts.
+
+Affected charts: authelia (Redis password, DB password, encryption key, OIDC HMAC secret, JWKS key, OIDC client secrets), crowdsec (LAPI secret).
+
+## NVMe-TCP encryption
+
+Mayastor uses the NVMe-oF TCP protocol for all storage I/O between the io-engine and CSI node plugins. The NVMe/TCP specification supports TLS 1.3, but Mayastor does not currently implement it. On a single-node cluster, all NVMe-TCP traffic stays on localhost — no network exposure. On multi-node clusters, all storage replication and volume mount I/O traverses the network in cleartext.
+
+Mitigations for multi-node deployments: use an isolated storage VLAN between nodes, deploy WireGuard tunnels between storage nodes, or monitor Mayastor for TLS support (tracked upstream).

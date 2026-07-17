@@ -3,6 +3,7 @@
 set -euo pipefail
 
 source "$ATLAS_ROOT/lib/common.sh"
+source_env
 
 PVC_NAME="${1:?Usage: $0 <pvc-name> [-y]}"
 shift
@@ -45,12 +46,26 @@ if [ "$AUTO_YES" = false ]; then
 	case "$confirm" in [yY]*) ;; *) echo "Aborted."; exit 0 ;; esac
 fi
 
-SCALED_REPLICAS=""
+SCALED_FILE=$(mktemp)
+trap 'restore_workloads; rm -f "$SCALED_FILE"' EXIT
+
+restore_workloads() {
+	if [ -f "$SCALED_FILE" ]; then
+		while IFS= read -r entry; do
+			wkind=$(echo "$entry" | cut -d/ -f1)
+			wname=$(echo "$entry" | cut -d/ -f2)
+			reps=$(echo "$entry" | cut -d/ -f3)
+			kubectl scale "$wkind" "$wname" -n "$PVC_NS" --replicas="$reps" 2>/dev/null || true
+		done < "$SCALED_FILE"
+	fi
+	kubectl delete pod -n "$PVC_NS" -l app=pvc-restore-temp --wait=false 2>/dev/null || true
+}
+
 for w in $WORKLOADS; do
 	wkind="${w%%/*}"
 	wname="${w##*/}"
 	reps=$(kubectl get "$wkind" "$wname" -n "$PVC_NS" -o jsonpath='{.spec.replicas}' 2>/dev/null || echo 1)
-	SCALED_REPLICAS="$SCALED_REPLICAS $wkind/$wname/$reps"
+	echo "$wkind/$wname/$reps" >> "$SCALED_FILE"
 	echo "Scaling $wkind/$wname to 0..."
 	kubectl scale "$wkind" "$wname" -n "$PVC_NS" --replicas=0
 done
@@ -105,16 +120,26 @@ spec:
 PODEOF
 
 echo "Waiting for restore pod to complete..."
-kubectl wait --for=jsonpath='{.status.phase}'=Succeeded "pod/$RESTORE_POD" -n "$PVC_NS" --timeout=600s
+if ! kubectl wait --for=jsonpath='{.status.phase}'=Succeeded "pod/$RESTORE_POD" -n "$PVC_NS" --timeout=600s 2>/dev/null; then
+	echo "ERROR: restore pod did not succeed" >&2
+	exit 1
+fi
 kubectl delete pod "$RESTORE_POD" -n "$PVC_NS"
 
+# On success, remove scaled state so trap skips restore (workloads already handled)
+rm -f "$SCALED_FILE"
+
 # Scale workloads back up
-for entry in $SCALED_REPLICAS; do
-	wkind=$(echo "$entry" | cut -d/ -f1)
-	wname=$(echo "$entry" | cut -d/ -f2)
-	reps=$(echo "$entry" | cut -d/ -f3)
-	echo "Scaling $wkind/$wname back to $reps..."
-	kubectl scale "$wkind" "$wname" -n "$PVC_NS" --replicas="$reps"
+for w in $WORKLOADS; do
+	wkind="${w%%/*}"
+	wname="${w##*/}"
+	reps=$(kubectl get "$wkind" "$wname" -n "$PVC_NS" -o jsonpath='{.spec.replicas}' 2>/dev/null || echo 1)
+	if [ "$reps" -eq 0 ]; then
+		# read original replica count from the deploy/statefulset directly
+		original=$(kubectl get "$wkind" "$wname" -n "$PVC_NS" -o jsonpath='{.spec.replicas}' 2>/dev/null || echo 1)
+		echo "Scaling $wkind/$wname back to 1..."
+		kubectl scale "$wkind" "$wname" -n "$PVC_NS" --replicas=1
+	fi
 done
 
 echo ""

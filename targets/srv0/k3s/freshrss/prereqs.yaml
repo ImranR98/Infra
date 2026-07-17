@@ -27,4 +27,13 @@ spec:
   resources:
     requests:
       storage: 5Gi
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: freshrss-user-credentials
+  namespace: apps
+type: Opaque
+stringData:
+  password: "$FRESHRSS_PASSWORD"
 

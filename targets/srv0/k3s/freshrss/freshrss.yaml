@@ -39,6 +39,11 @@ spec:
               value: "America/New_York"
             - name: CRON_MIN
               value: "2,32"
+            - name: FRESHRSS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: freshrss-user-credentials
+                  key: password
             - name: FRESHRSS_ENV
               value: "production"
             - name: TRUSTED_PROXIES
@@ -51,10 +56,10 @@ spec:
                 --language en
             - name: FRESHRSS_USER
               value: |-
-                --api-password $FRESHRSS_PASSWORD
+                --api-password \$FRESHRSS_PASSWORD
                 --email $DOMAIN_OWNER_EMAIL
                 --language en
-                --password $FRESHRSS_PASSWORD
+                --password \$FRESHRSS_PASSWORD
                 --user admin
           volumeMounts:
             - name: freshrss-data

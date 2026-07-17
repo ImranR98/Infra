@@ -41,13 +41,23 @@ echo "New size:      $NEW_SIZE"
 echo "Max expand:    $MAX_EXPAND"
 echo ""
 
+NEW_SIZE_BYTES=$(numfmt --from=iec "$NEW_SIZE" 2>/dev/null || { echo "ERROR: invalid size format '$NEW_SIZE'" >&2; exit 1; })
+if [ "$NEW_SIZE_BYTES" -le "$CUR_SIZE" ]; then
+	echo "ERROR: new size must be larger than current size" >&2
+	exit 1
+fi
+MAX_EXPAND_BYTES=$(numfmt --from=iec "${MAX_EXPAND// /}" 2>/dev/null || echo 0)
+if [ "$MAX_EXPAND_BYTES" -gt 0 ] && [ "$NEW_SIZE_BYTES" -gt "$MAX_EXPAND_BYTES" ]; then
+	echo "ERROR: requested size exceeds max expandable size ($MAX_EXPAND)" >&2
+	exit 1
+fi
+
 read -p "Expand pool? [y/N] " confirm
 case "$confirm" in [yY]*) ;; *) echo "Aborted."; exit 0 ;; esac
 
 # --- grow backing file ---
 echo "Growing backing file..."
 SUDO=$(get_sudo_cmd)
-NEW_SIZE_BYTES=$(numfmt --from=iec "$NEW_SIZE" 2>/dev/null || { echo "ERROR: invalid size format '$NEW_SIZE'" >&2; exit 1; })
 $SUDO truncate -s "$NEW_SIZE_BYTES" "$HOST_PATH"
 
 # --- trigger expansion ---

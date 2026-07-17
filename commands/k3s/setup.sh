@@ -78,5 +78,7 @@ echo "Waiting for cluster to be ready..."
 systemctl enable --now k3s
 wait_for_k3s_cluster
 
+kubectl label node "$(hostname)" openebs.io/engine=mayastor --overwrite
+
 DID_COMPLETE=true
 echo "Done. K3s control-plane node initialized."

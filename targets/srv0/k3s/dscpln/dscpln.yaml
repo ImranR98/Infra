@@ -43,7 +43,10 @@ spec:
             - name: WEEKLY_LIMIT_NTFY_URL
               value: "http://ntfy.base.svc.cluster.local:3000/${TARGET}_services_dscpln"
             - name: NTFY_TOKEN
-              value: "$NTFY_WRITE_ONLY_ACCOUNT_TOKEN"
+              valueFrom:
+                secretKeyRef:
+                  name: dscpln-ntfy-token
+                  key: token
             - name: TEXTFILE_BUDGET_INIT_AMT
               value: "$DSCPLN_BUDGET_INIT_AMT"
             - name: TEXTFILE_FIRST_WEEK_BIAS_INIT_AMT

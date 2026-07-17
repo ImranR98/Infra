@@ -29,7 +29,10 @@ spec:
             - name: NTFY_URL
               value: "http://ntfy.base.svc.cluster.local:3000/${TARGET}_services_mdscl_errors"
             - name: NTFY_TOKEN
-              value: "$NTFY_WRITE_ONLY_ACCOUNT_TOKEN"
+              valueFrom:
+                secretKeyRef:
+                  name: mdscl-ntfy-token
+                  key: token
           resources:
             limits:
               memory: 2Gi
@@ -79,7 +82,10 @@ spec:
             - name: NTFY_URL
               value: "http://ntfy.base.svc.cluster.local:3000/${TARGET}_services_mdscl_errors"
             - name: NTFY_TOKEN
-              value: "$NTFY_WRITE_ONLY_ACCOUNT_TOKEN"
+              valueFrom:
+                secretKeyRef:
+                  name: mdscl-ntfy-token
+                  key: token
           resources:
             limits:
               memory: 2Gi
@@ -129,7 +135,10 @@ spec:
             - name: NTFY_URL
               value: "http://ntfy.base.svc.cluster.local:3000/${TARGET}_services_mdscl_errors"
             - name: NTFY_TOKEN
-              value: "$NTFY_WRITE_ONLY_ACCOUNT_TOKEN"
+              valueFrom:
+                secretKeyRef:
+                  name: mdscl-ntfy-token
+                  key: token
           resources:
             limits:
               memory: 2Gi

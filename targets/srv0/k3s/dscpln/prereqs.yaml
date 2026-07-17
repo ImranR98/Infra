@@ -27,7 +27,16 @@ spec:
   accessModes:
     - ReadWriteMany
   volumeName: dscpln-data-pv
-  resources:
-    requests:
-      storage: 4096Gi
+   resources:
+     requests:
+       storage: 4096Gi
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: dscpln-ntfy-token
+  namespace: apps
+type: Opaque
+stringData:
+  token: "$NTFY_WRITE_ONLY_ACCOUNT_TOKEN"
 

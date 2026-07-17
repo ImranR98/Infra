@@ -3,3 +3,4 @@ kind: Kustomization
 resources:
   - namespaces.yaml
   - base-policies.yaml
+  - kube-system-policies.yaml

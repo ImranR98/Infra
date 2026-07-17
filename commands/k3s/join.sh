@@ -112,6 +112,12 @@ ssh "${SSH_USER}@${CLIENT_IP}" "rm -rf /tmp/lib /tmp/agent-install.sh /tmp/prep-
 
 echo ""
 wait_for_k3s_cluster
+
+if [ "$ROLE" = "server" ]; then
+	NODE_NAME=$(ssh "${SSH_USER}@${CLIENT_IP}" "hostname -s" 2>/dev/null || true)
+	[ -n "$NODE_NAME" ] && kubectl label node "$NODE_NAME" openebs.io/engine=mayastor --overwrite 2>/dev/null || true
+fi
+
 echo "Ready nodes:"
 kubectl get nodes
 echo "Done. Node join completed."

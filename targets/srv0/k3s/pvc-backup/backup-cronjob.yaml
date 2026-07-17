@@ -32,6 +32,25 @@ spec:
                   TIMESTAMP=$(date -Iseconds)
                   mkdir -p "$BACKUP_DIR"
 
+                  SCALED_FILE=$(mktemp)
+                  trap 'restore_workloads; rm -f "$SCALED_FILE"' EXIT
+
+                  restore_workloads() {
+                    if [ -f "$SCALED_FILE" ]; then
+                      while IFS= read -r entry; do
+                        ns=$(echo "$entry" | cut -d/ -f1)
+                        kind=$(echo "$entry" | cut -d/ -f2)
+                        wname=$(echo "$entry" | cut -d/ -f3)
+                        reps=$(echo "$entry" | cut -d/ -f4)
+                        kubectl scale "$kind" "$wname" -n "$ns" --replicas="$reps" 2>/dev/null || true
+                      done < "$SCALED_FILE"
+                    fi
+                    kubectl delete pod -A -l app=pvc-backup-temp --wait=false 2>/dev/null || true
+                  }
+
+                  # Clean up any orphaned temp pods from previous failed runs
+                  kubectl delete pod -A -l app=pvc-backup-temp --wait=false 2>/dev/null || true
+
                   for pvc in $(kubectl get pvc -A -l "$LABEL" -o jsonpath='{range .items[*]}{.metadata.namespace}/{.metadata.name}{"\n"}{end}'); do
                     ns="${pvc%%/*}"
                     name="${pvc##*/}"
@@ -48,6 +67,7 @@ spec:
                       wname="${w##*/}"
                       reps=$(kubectl get "$wkind" "$wname" -n "$ns" -o jsonpath='{.spec.replicas}' 2>/dev/null || echo 1)
                       scaled_replicas="$scaled_replicas $wkind/$wname/$reps"
+                      echo "$ns/$wkind/$wname/$reps" >> "$SCALED_FILE"
                       kubectl scale "$wkind" "$wname" -n "$ns" --replicas=0
                       echo "  Scaled $wkind/$wname to 0"
                     done
@@ -95,14 +115,6 @@ spec:
                     kubectl wait --for=jsonpath='{.status.phase}'=Succeeded "pod/$podname" -n "$ns" --timeout=600s
                     kubectl delete pod "$podname" -n "$ns"
 
-                    # Scale workloads back up
-                    for entry in $scaled_replicas; do
-                      wkind=$(echo "$entry" | cut -d/ -f1)
-                      wname=$(echo "$entry" | cut -d/ -f2)
-                      reps=$(echo "$entry" | cut -d/ -f3)
-                      kubectl scale "$wkind" "$wname" -n "$ns" --replicas="$reps"
-                      echo "  Scaled $wkind/$wname back to $reps"
-                    done
                     echo "  Done: $name"
                   done
                   echo "=== Backup complete ==="
