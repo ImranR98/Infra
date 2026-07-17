@@ -22,6 +22,7 @@
       "customType": "regex",
       "fileMatch": ["targets/.+/k3s/.*\\.yaml$"],
       "matchStrings": [
+        "chart:\\s*oci://(?<depName>\\S+)\\s*\\n(?:[^\\n]*\\n){0,5}?\\s*version:\\s*(?<currentValue>\\S+)",
         "chart:\\s*(?<depName>\\S+)\\s*\\n(?:[^\\n]*\\n){0,5}?\\s*repo:\\s*(?<registryUrl>\\S+)\\s*\\n(?:[^\\n]*\\n){0,10}?\\s*version:\\s*(?<currentValue>\\S+)"
       ],
       "datasourceTemplate": "helm",
