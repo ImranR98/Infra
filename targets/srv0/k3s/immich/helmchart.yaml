@@ -76,13 +76,11 @@ spec:
         kfd:
           type: hostPath
           hostPath: /dev/kfd
-          hostPathType: CharDevice
           globalMounts:
             - path: /dev/kfd
         dri:
           type: hostPath
           hostPath: /dev/dri
-          hostPathType: Directory
           globalMounts:
             - path: /dev/dri
 
