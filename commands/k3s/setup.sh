@@ -35,7 +35,7 @@ cat > /etc/rancher/k3s/config.yaml.d/10-server.yaml <<K3SEOF
 selinux: true
 write-kubeconfig-mode: "0640"
 cluster-init: true
-flannel-backend: wireguard
+flannel-backend: wireguard-native
 node-ip: $NODE_IP
 flannel-iface-regex: "^(eth|ens|enp|eno|enx|wlan|wlp|wlo|bond|ib)"
 node-label:
