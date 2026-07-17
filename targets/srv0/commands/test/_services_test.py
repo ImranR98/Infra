@@ -5,17 +5,20 @@ Usage (via Atlas dispatch):
     ./atlas.sh srv0 test services
 
 Expects SERVICES_DOMAIN and a domains list file as arguments.
+Reads COOKIES_FILE env var for persistent auth storage.
 """
 
+import json
+import os
 import sys
-import time
 from pathlib import Path
 
-from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeout
+from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeout, Error as PlaywrightError
 
 SKIP = {"traefik", "authelia", "mosquitto"}
 TIMEOUT_MS = 30_000
 LOGIN_TIMEOUT_MS = 600_000
+COOKIES_FILE = os.environ.get("COOKIES_FILE", "")
 
 
 def load_domains(path: str) -> list[str]:
@@ -58,12 +61,14 @@ def check_page(page, domain: str) -> str:
     return f"OK    {domain:<30}  {title}"
 
 
-def column_format(entries: list[tuple[int, str, str]]) -> str:
-    """Render a three-column table: status code, domain, message."""
-    lines = []
-    for code, domain, msg in entries:
-        lines.append(f"  {domain:<32} {msg}")
-    return "\n".join(lines)
+def save_cookies(context, path: str) -> None:
+    if path:
+        try:
+            cookies = context.storage_state()
+            with open(path, "w") as f:
+                json.dump(cookies, f)
+        except Exception:
+            pass
 
 
 def main() -> None:
@@ -82,27 +87,36 @@ def main() -> None:
     traefik = f"traefik.{services_domain}"
 
     with sync_playwright() as p:
+        storage_state = COOKIES_FILE if COOKIES_FILE and os.path.exists(COOKIES_FILE) else None
+
         browser = p.chromium.launch(headless=False)
-        context = browser.new_context(ignore_https_errors=True)
+        context = browser.new_context(ignore_https_errors=True, storage_state=storage_state)
         page = context.new_page()
 
-        # Step 1-2: navigate to traefik, detect auth redirect
+        needs_auth = False
         print(f"Opening https://{traefik}/ ...")
         page.goto(f"https://{traefik}/", wait_until="commit")
         page.wait_for_timeout(500)
 
-        # wait for the redirect chain to settle
         try:
             page.wait_for_url(f"**/auth.**", timeout=8000)
+            needs_auth = True
+        except PlaywrightTimeout:
+            print("Using saved session.\n")
+
+        if needs_auth:
             print("\nRedirected to Authelia.")
             print("Please log in manually in the browser window.")
             print(f"Waiting for redirect back to {traefik} (up to {LOGIN_TIMEOUT_MS // 60_000} min)...\n")
-            page.wait_for_url(f"**/{traefik}**", timeout=LOGIN_TIMEOUT_MS)
+            try:
+                page.wait_for_url(f"**/{traefik}**", timeout=LOGIN_TIMEOUT_MS)
+            except (PlaywrightTimeout, PlaywrightError):
+                print("\nLogin did not complete. Exiting.", file=sys.stderr)
+                browser.close()
+                sys.exit(1)
             print("Authenticated!\n")
-        except PlaywrightTimeout:
-            print("Already authenticated.\n")
+            save_cookies(context, COOKIES_FILE)
 
-        # Step 4: test all domains
         results: list[str] = []
         ok_count = 0
         fail_count = 0
@@ -118,6 +132,8 @@ def main() -> None:
                 fail_count += 1
             print(result)
             page.wait_for_timeout(5000)
+
+        save_cookies(context, COOKIES_FILE)
 
         print(f"\n{'=' * 60}")
         print(f"Results: {ok_count} OK, {fail_count} FAIL out of {total}")

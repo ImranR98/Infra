@@ -5,6 +5,7 @@
 ~*
 **/__pycache__
 .venv/
+.cookies.json
 /cache/
 /.stfolder/
 /.stignore

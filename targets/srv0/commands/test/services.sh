@@ -26,6 +26,8 @@ fi
 
 list_domains srv0 > "$DOMAINS_FILE"
 
+export COOKIES_FILE="$SCRIPT_DIR/.cookies.json"
+
 if command -v ujust >/dev/null 2>&1; then
 	ujust with-standard-malloc python3 "$SCRIPT_DIR/_services_test.py" "$SERVICES_DOMAIN" "$DOMAINS_FILE"
 else
