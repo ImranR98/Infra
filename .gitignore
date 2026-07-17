@@ -4,6 +4,7 @@
 /VARS.*.sh
 ~*
 **/__pycache__
+.venv/
 /cache/
 /.stfolder/
 /.stignore
