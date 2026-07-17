@@ -54,9 +54,13 @@ spec:
               readOnly: true
 
     machine-learning:
-      image:
-        repository: ghcr.io/immich-app/immich-machine-learning
-        tag: release
+      controllers:
+        main:
+          containers:
+            main:
+              image:
+                repository: ghcr.io/immich-app/immich-machine-learning
+                tag: release
       defaultPodOptions:
         affinity:
           nodeAffinity:
