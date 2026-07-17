@@ -46,7 +46,14 @@ spec:
               image:
                 repository: ghcr.io/immich-app/immich-server
                 tag: v3.0.3
+              env:
+                HWACCEL_VAAPI_ENABLED: "true"
       persistence:
+        dri:
+          type: hostPath
+          hostPath: /dev/dri
+          globalMounts:
+            - path: /dev/dri
         external:
           existingClaim: immich-external-pvc
           globalMounts:
