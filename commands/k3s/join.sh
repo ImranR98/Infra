@@ -59,8 +59,8 @@ ATLAS_ROOT="$(cd "$(dirname "$0")" && pwd)"
 source "$ATLAS_ROOT/lib/common.sh"
 
 if [ "$(id -u)" != 0 ]; then
-	SUDOCMD=$(get_sudo_cmd)
-	if [ "$SUDOCMD" = "sudo" ]; then
+	SU=$(get_sudo_cmd)
+	if [ "$SU" = "sudo" ]; then
 		exec sudo -E bash "$0" "$@"
 	else
 		exec run0 bash "$0" "$@"
@@ -75,23 +75,11 @@ NODE_IP=$(get_node_ip) || NODE_IP=""
 mkdir -p /etc/rancher/k3s/config.yaml.d
 
 if [ "$ROLE" = "server" ]; then
-	cat > /etc/rancher/k3s/config.yaml.d/10-server-join.yaml <<K3SEOF
-selinux: true
-flannel-backend: wireguard-native
-node-ip: $NODE_IP
-flannel-iface-regex: "^(eth|ens|enp|eno|enx|wlan|wlp|wlo|bond|ib)"
-node-label:
-  - "external-exposed=true"
-  - "hostpath-main=true"
-K3SEOF
+	write_k3s_config server "$NODE_IP" /etc/rancher/k3s/config.yaml.d/10-server-join.yaml false
 	"$K3S_SCRIPT" server --server "$SERVER_URL" --token "$TOKEN"
 else
-	cat > /etc/rancher/k3s/config.yaml.d/50-agent.yaml <<K3SEOF
-selinux: true
-flannel-backend: wireguard-native
-node-ip: $NODE_IP
-flannel-iface-regex: "^(eth|ens|enp|eno|enx|wlan|wlp|wlo|bond|ib)"
-K3SEOF
+	write_k3s_config agent "$NODE_IP" /etc/rancher/k3s/config.yaml.d/50-agent.yaml false
+	"$K3S_SCRIPT" agent --server "$SERVER_URL" --token "$TOKEN"
 	"$K3S_SCRIPT" agent --server "$SERVER_URL" --token "$TOKEN"
 fi
 rm -f "$K3S_SCRIPT"

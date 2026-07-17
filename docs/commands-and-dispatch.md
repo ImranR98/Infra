@@ -80,6 +80,9 @@ The second line of each `.sh` command file starts with `# DESC:` followed by a h
 | `k3s install <component> [mode]` | Deploy, delete, diff, or render a K3s component |
 | `k3s group <base\|apps> [mode]` | Deploy or delete a group of components |
 | `k3s update-node-ip` | Update K3s node IP after a network change |
+| `k3s expand-pool <size>` | Grow the Mayastor storage pool (online, zero downtime) |
+| `k3s restore-pvc <name> [-y]` | Restore a PVC from a backup archive |
+| `k3s test services` | (srv0 only) Browser-based integration test for all exposed services |
 
 ## Writing a new command
 

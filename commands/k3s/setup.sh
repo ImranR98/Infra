@@ -31,17 +31,7 @@ download_k3s_installer
 # Write K3s config drop-in files before installing so the first start picks them up
 NODE_IP=$(get_node_ip) || NODE_IP=""
 mkdir -p /etc/rancher/k3s/config.yaml.d
-cat > /etc/rancher/k3s/config.yaml.d/10-server.yaml <<K3SEOF
-selinux: true
-write-kubeconfig-mode: "0640"
-cluster-init: true
-flannel-backend: wireguard-native
-node-ip: $NODE_IP
-flannel-iface-regex: "^(eth|ens|enp|eno|enx|wlan|wlp|wlo|bond|ib)"
-node-label:
-  - "hostpath-main=true"
-  - "external-exposed=true"
-K3SEOF
+write_k3s_config server "$NODE_IP" /etc/rancher/k3s/config.yaml.d/10-server.yaml true
 echo "K3s config drop-in written to /etc/rancher/k3s/config.yaml.d/10-server.yaml"
 
 echo ""

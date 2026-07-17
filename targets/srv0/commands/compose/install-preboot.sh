@@ -1,4 +1,5 @@
 #!/bin/bash
+# DESC: Install preboot FRPC for remote LUKS unlock via SSH
 set -euo pipefail
 source "$ATLAS_ROOT/lib/common.sh"
 configure_compose_templates "$TARGET"

@@ -121,6 +121,23 @@ Atlas includes reusable host preparation scripts that run on every node during s
 
 **`prep-control-plane.sh`** — Runs on control-plane nodes only. Allocates 2GiB of 2MiB hugepages (runtime + persistent via GRUB and sysctl), creates the Mayastor backing file (`$MAYASTOR_POOL_DIR/pool.img`) as a 100G sparse file. Idempotent — safe to re-run.
 
+## Mayastor pool expansion
+
+```bash
+./atlas.sh <target> k3s expand-pool <size>
+```
+
+Expands the Mayastor DiskPool backing file and triggers an online resize. No downtime — the pool grows while volumes are running. The script:
+
+1. Validates the pool is online and the new size is larger than current
+2. Checks against `maxExpandableSize` (set at pool creation, immutable)
+3. Prompts for confirmation
+4. Grows the backing file (`truncate -s`)
+5. Annotates the DiskPool to trigger Mayastor expansion
+6. Waits for the pool to report the new capacity
+
+Size format supports any `numfmt`-compatible value: `1.5T`, `2000G`, `1500000000000`.
+
 ## PVC backup and restore
 
 A CronJob backs up labeled PVCs to the host filesystem. Restore is a separate Atlas command.

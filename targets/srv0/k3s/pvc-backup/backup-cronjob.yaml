@@ -32,6 +32,8 @@ spec:
                   TIMESTAMP=$(date -Iseconds)
                   mkdir -p "$BACKUP_DIR"
 
+                  # --- trap: on any exit (success or failure), restore all
+                  #     scaled workloads and clean up temp pods ---
                   SCALED_FILE=$(mktemp)
                   trap 'restore_workloads; rm -f "$SCALED_FILE"' EXIT
 
@@ -51,12 +53,15 @@ spec:
                   # Clean up any orphaned temp pods from previous failed runs
                   kubectl delete pod -A -l app=pvc-backup-temp --wait=false 2>/dev/null || true
 
+                  # --- main loop: iterate every PVC with the auto-backup label ---
                   for pvc in $(kubectl get pvc -A -l "$LABEL" -o jsonpath='{range .items[*]}{.metadata.namespace}/{.metadata.name}{"\n"}{end}'); do
                     ns="${pvc%%/*}"
                     name="${pvc##*/}"
                     echo "=== Backing up $ns/$name ==="
 
-                    # Find workloads using this PVC and scale to 0
+                    # --- scale down: find all Deployments/StatefulSets that
+                    #     reference this PVC, record their replica counts,
+                    #     and scale them to 0 ---
                     workloads=$(kubectl get deploy,sts -n "$ns" -o json 2>/dev/null | \
                       jq -r --arg pvc "$name" \
                       '.items[] | select(.spec.template.spec.volumes[]?.persistentVolumeClaim.claimName == $pvc) | "\(.kind)/\(.metadata.name)"' 2>/dev/null || true)
@@ -74,7 +79,9 @@ spec:
 
                     sleep 5
 
-                    # Create temp backup pod
+                    # --- backup pod: creates a temp pod that mounts both
+                    #     the PVC (read-only via tar) and a hostPath backup dir.
+                    #     Archives PVC contents + timestamp into a .tar.gz ---
                     podname="backup-$(echo "$name" | tr '_' '-')"
                     cat <<PODEOF | kubectl apply -f -
                     apiVersion: v1
@@ -111,6 +118,8 @@ spec:
                           type: DirectoryOrCreate
                     PODEOF
 
+                    # --- cleanup: wait for pod to succeed, delete it,
+                    #     then on to the next PVC ---
                     echo "  Waiting for temp pod..."
                     kubectl wait --for=jsonpath='{.status.phase}'=Succeeded "pod/$podname" -n "$ns" --timeout=600s
                     kubectl delete pod "$podname" -n "$ns"

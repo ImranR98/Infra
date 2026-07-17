@@ -47,9 +47,9 @@ if [ "$AUTO_YES" = false ]; then
 fi
 
 SCALED_FILE=$(mktemp)
-trap 'restore_workloads; rm -f "$SCALED_FILE"' EXIT
+trap '_restore_workloads; rm -f "$SCALED_FILE"' EXIT
 
-restore_workloads() {
+_restore_workloads() {
 	if [ -f "$SCALED_FILE" ]; then
 		while IFS= read -r entry; do
 			wkind=$(echo "$entry" | cut -d/ -f1)
@@ -126,21 +126,6 @@ if ! kubectl wait --for=jsonpath='{.status.phase}'=Succeeded "pod/$RESTORE_POD" 
 fi
 kubectl delete pod "$RESTORE_POD" -n "$PVC_NS"
 
-# On success, remove scaled state so trap skips restore (workloads already handled)
-rm -f "$SCALED_FILE"
-
-# Scale workloads back up
-for w in $WORKLOADS; do
-	wkind="${w%%/*}"
-	wname="${w##*/}"
-	reps=$(kubectl get "$wkind" "$wname" -n "$PVC_NS" -o jsonpath='{.spec.replicas}' 2>/dev/null || echo 1)
-	if [ "$reps" -eq 0 ]; then
-		# read original replica count from the deploy/statefulset directly
-		original=$(kubectl get "$wkind" "$wname" -n "$PVC_NS" -o jsonpath='{.spec.replicas}' 2>/dev/null || echo 1)
-		echo "Scaling $wkind/$wname back to 1..."
-		kubectl scale "$wkind" "$wname" -n "$PVC_NS" --replicas=1
-	fi
-done
-
+# On success, workloads are still at 0 — trap restores them on exit
 echo ""
 echo "Restore of $PVC_NAME complete."

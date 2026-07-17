@@ -3,8 +3,10 @@
 # Runs after prep-node.sh. Idempotent. Called by setup.sh and join.sh BEFORE K3s starts.
 set -euo pipefail
 
-HUGEPAGE_COUNT=1024
-HUGEPAGE_PATH=/sys/kernel/mm/hugepages/hugepages-2048kB/nr_hugepages
+source "$(dirname "$(readlink -f "$0")")/../../lib/common.sh"
+
+HUGEPAGE_COUNT="$MAYASTOR_HUGEPAGE_COUNT"
+HUGEPAGE_PATH="$MAYASTOR_HUGEPAGE_PATH"
 
 # --- hugepages: allocate now ---
 allocated=$(cat "$HUGEPAGE_PATH" 2>/dev/null || echo 0)

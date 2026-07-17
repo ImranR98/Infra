@@ -352,7 +352,7 @@ VOLUMES")
 _validate_compose() {
 	local target="$1" errors=0
 
-	for f in "$ATLAS_ROOT/targets/$target/compose/compose.yaml" "$ATLAS_ROOT/targets/$target/compose/templates"/*; do
+	for f in "$ATLAS_ROOT/targets/$target/compose/compose.yaml"; do
 		[ -f "$f" ] || continue
 		if [[ "$f" =~ \.(yaml|yml)$ ]]; then
 			if ! yq eval '.' "$f" >/dev/null 2>&1; then
@@ -361,6 +361,13 @@ _validate_compose() {
 			fi
 		fi
 	done
+	while IFS= read -r -d '' f; do
+		[[ "$f" =~ \.(yaml|yml)$ ]] || continue
+		if ! yq eval '.' "$f" >/dev/null 2>&1; then
+			echo "ERROR: $(basename "$f") has invalid YAML syntax"
+			errors=$((errors + 1))
+		fi
+	done < <(find "$ATLAS_ROOT/targets/$target/compose/templates" -type f -print0 2>/dev/null)
 
 	local known_vars; known_vars=$(_build_known_vars "$target" "MY_UID
 TARGET
@@ -399,7 +406,65 @@ list_domains() {
 		grep -rohP "Host\(\x60[^\x60]+\x60\)" "$@" 2>/dev/null | \
 			sed "s/.*\x60\([^\x60]*\)\x60.*/\1/" | \
 			grep -v '\.localhost'
-	}
+}
+
+# ====== retry ======
+
+retry() {
+	local tries="${1:-30}"
+	local delay="${2:-5}"
+	shift 2
+	for _ in $(seq 1 "$tries"); do
+		eval "$*" 2>/dev/null && return 0
+		sleep "$delay"
+	done
+	return 1
+}
+
+# ====== constants ======
+
+MAYASTOR_HUGEPAGE_PATH="/sys/kernel/mm/hugepages/hugepages-2048kB/nr_hugepages"
+MAYASTOR_HUGEPAGE_COUNT=1024
+
+# ====== k3s config ======
+
+write_k3s_config() {
+	local role="${1:-server}"
+	local node_ip="${2:-}"
+	local config_file="$3"
+	local cluster_init="${4:-false}"
+
+	if [ "$cluster_init" = true ]; then
+		cat > "$config_file" <<K3SEOF
+selinux: true
+write-kubeconfig-mode: "0640"
+cluster-init: true
+flannel-backend: wireguard-native
+node-ip: $node_ip
+flannel-iface-regex: "^(eth|ens|enp|eno|enx|wlan|wlp|wlo|bond|ib)"
+node-label:
+  - "hostpath-main=true"
+  - "external-exposed=true"
+K3SEOF
+	elif [ "$role" = "server" ]; then
+		cat > "$config_file" <<K3SEOF
+selinux: true
+flannel-backend: wireguard-native
+node-ip: $node_ip
+flannel-iface-regex: "^(eth|ens|enp|eno|enx|wlan|wlp|wlo|bond|ib)"
+node-label:
+  - "hostpath-main=true"
+  - "external-exposed=true"
+K3SEOF
+	else
+		cat > "$config_file" <<K3SEOF
+selinux: true
+flannel-backend: wireguard-native
+node-ip: $node_ip
+flannel-iface-regex: "^(eth|ens|enp|eno|enx|wlan|wlp|wlo|bond|ib)"
+K3SEOF
+	fi
+}
 
 	if [ -d "$ATLAS_ROOT/targets/$target/k3s" ]; then
 		_extract_hosts --include='*.yaml' "$ATLAS_ROOT/targets/$target/k3s" | \
