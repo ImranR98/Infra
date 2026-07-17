@@ -44,6 +44,10 @@ def check_page(page, domain: str) -> str:
     title = page.title().strip()
     body = page.content().lower() if status < 400 else ""
 
+    content_type = response.headers.get("content-type", "") if response else ""
+    if content_type.startswith("text/plain"):
+        return f"FAIL  {domain:<30}  text/plain: {body[:80]}"
+
     if "502 bad gateway" in body:
         return f"FAIL  {domain:<30}  Bad Gateway"
     if "internal server error" in body:
@@ -113,6 +117,7 @@ def main() -> None:
             else:
                 fail_count += 1
             print(result)
+            page.wait_for_timeout(5000)
 
         print(f"\n{'=' * 60}")
         print(f"Results: {ok_count} OK, {fail_count} FAIL out of {total}")
