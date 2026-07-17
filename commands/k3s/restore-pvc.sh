@@ -27,7 +27,7 @@ fi
 
 # Find workloads using this PVC
 echo "Discovering workloads using $PVC_NS/$PVC_NAME..."
-WORKLOADS=$(kubectl get deploy,sts -n "$PVC_NS" -o json 2>/dev/null | jq -r --arg pvc "$PVC_NAME" \
+WORKLOADS=$(kubectl get deploy,sts,ds -n "$PVC_NS" -o json 2>/dev/null | jq -r --arg pvc "$PVC_NAME" \
 	'.items[] | select(.spec.template.spec.volumes[]?.persistentVolumeClaim.claimName == $pvc) | "\(.kind)/\(.metadata.name)"' 2>/dev/null || true)
 
 if [ -z "$WORKLOADS" ]; then

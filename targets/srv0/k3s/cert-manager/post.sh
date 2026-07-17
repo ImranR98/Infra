@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 
-COMP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
+COMP_DIR="$ATLAS_ROOT/targets/$TARGET/k3s/cert-manager"
 source "$ATLAS_ROOT/lib/common.sh"
 
 echo "Waiting for cert-manager CRDs..."

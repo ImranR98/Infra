@@ -62,7 +62,7 @@ spec:
                     # --- scale down: find all Deployments/StatefulSets that
                     #     reference this PVC, record their replica counts,
                     #     and scale them to 0 ---
-                    workloads=$(kubectl get deploy,sts -n "$ns" -o json 2>/dev/null | \
+                    workloads=$(kubectl get deploy,sts,ds -n "$ns" -o json 2>/dev/null | \
                       jq -r --arg pvc "$name" \
                       '.items[] | select(.spec.template.spec.volumes[]?.persistentVolumeClaim.claimName == $pvc) | "\(.kind)/\(.metadata.name)"' 2>/dev/null || true)
 

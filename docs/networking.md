@@ -156,4 +156,3 @@ The built-in `list-domains` command extracts all `Host(...)` domains from Ingres
 `lib/common.sh` provides networking utilities used throughout the codebase:
 
 - `get_node_ip()` — detects the primary IPv4 address by looking at the default route interface
-- `get_node_lan_subnet()` — returns the CIDR subnet of the primary interface (used for LAN whitelist middleware)

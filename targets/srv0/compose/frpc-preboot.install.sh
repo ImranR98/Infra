@@ -1,5 +1,5 @@
 #!/bin/bash
-set -e
+set -euo pipefail
 
 COMPOSE_STATE_DIR="$1"
 if [ -z "$COMPOSE_STATE_DIR" ]; then exit 1; fi

@@ -76,13 +76,6 @@ get_node_ip() {
 	ip -4 addr show "$iface" | grep -oP 'inet \K[\d.]+'
 }
 
-get_node_lan_subnet() {
-	local iface
-	iface=$(ip -4 route show default 2>/dev/null | awk '{print $5; exit}')
-	[ -n "$iface" ] || return 1
-	ip -4 -o addr show "$iface" | awk '{print $4}'
-}
-
 # ====== vars ======
 
 resolve_vars_file() {
@@ -462,6 +455,7 @@ K3SEOF
 	elif [ "$role" = "server" ]; then
 		cat > "$config_file" <<K3SEOF
 selinux: true
+write-kubeconfig-mode: "0640"
 flannel-backend: wireguard-native
 node-ip: $node_ip
 flannel-iface-regex: "^(eth|ens|enp|eno|enx|wlan|wlp|wlo|bond|ib)"

@@ -47,6 +47,7 @@ if [ $# -ge 2 ]; then
 
 	if [[ "$remote_spec" != *:* ]]; then
 		usage
+		exit 1
 	fi
 	if ! command -v ssh >/dev/null 2>&1; then
 		echo "ssh is required for remote backup but is not installed." >&2
