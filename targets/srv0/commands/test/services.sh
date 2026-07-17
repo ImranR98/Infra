@@ -25,4 +25,9 @@ if ! python3 -c "import playwright" 2>/dev/null; then
 fi
 
 list_domains srv0 > "$DOMAINS_FILE"
-python3 "$SCRIPT_DIR/_services_test.py" "$SERVICES_DOMAIN" "$DOMAINS_FILE"
+
+if command -v ujust >/dev/null 2>&1; then
+	ujust with-standard-malloc python3 "$SCRIPT_DIR/_services_test.py" "$SERVICES_DOMAIN" "$DOMAINS_FILE"
+else
+	python3 "$SCRIPT_DIR/_services_test.py" "$SERVICES_DOMAIN" "$DOMAINS_FILE"
+fi

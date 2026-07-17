@@ -123,7 +123,10 @@ def main() -> None:
         print(f"{'=' * 60}")
 
         print("\nBrowser stays open for manual inspection. Close it when done.")
-        input("Press Enter to close the browser and exit...")
+        try:
+            input("Press Enter to close the browser and exit...")
+        except (EOFError, KeyboardInterrupt):
+            pass
 
         browser.close()
 
