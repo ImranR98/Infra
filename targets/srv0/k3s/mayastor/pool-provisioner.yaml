@@ -20,9 +20,7 @@ spec:
             - sh
             - -c
             - |
-              for node in $(kubectl get nodes \
-                -l node-role.kubernetes.io/control-plane \
-                -o name); do
+              for node in $(kubectl get nodes -l node-role.kubernetes.io/control-plane -o name); do
                 name=$(basename "$node")
                 kubectl apply -f - <<EOF
               apiVersion: openebs.io/v1beta3
@@ -30,10 +28,10 @@ spec:
               metadata:
                 name: ${name}-pool
                 namespace: openebs
-               spec:
-                 node: ${name}
-                 disks: ["${POOL_DISK_URI}"]
-                 maxExpansion: "250TB"
+              spec:
+                node: ${name}
+                disks: ["${POOL_DISK_URI}"]
+                maxExpansion: "250x"
               EOF
               done
 ---
