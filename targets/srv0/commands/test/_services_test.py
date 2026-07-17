@@ -89,7 +89,7 @@ def main() -> None:
 
         # wait for the redirect chain to settle
         try:
-            page.wait_for_url(f"**/authelia.**", timeout=8000)
+            page.wait_for_url(f"**/auth.**", timeout=8000)
             print("\nRedirected to Authelia.")
             print("Please log in manually in the browser window.")
             print(f"Waiting for redirect back to {traefik} (up to {LOGIN_TIMEOUT_MS // 60_000} min)...\n")
