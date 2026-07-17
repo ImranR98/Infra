@@ -31,7 +31,7 @@ spec:
               spec:
                 node: ${name}
                 disks: ["${POOL_DISK_URI}"]
-                maxExpansion: "10x"
+                maxExpansion: "250x"
               EOF
               done
 ---

@@ -11,6 +11,8 @@ spec:
   createNamespace: true
   version: 2.11.1
   valuesContent: |-
+    base:
+      default_req_timeout: 120s
     io_engine:
       cpuCount: "1"
       nodeSelector:
