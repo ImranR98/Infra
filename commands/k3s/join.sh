@@ -77,6 +77,7 @@ mkdir -p /etc/rancher/k3s/config.yaml.d
 if [ "$ROLE" = "server" ]; then
 	cat > /etc/rancher/k3s/config.yaml.d/10-server-join.yaml <<K3SEOF
 selinux: true
+flannel-backend: wireguard
 node-ip: $NODE_IP
 flannel-iface-regex: "^(eth|ens|enp|eno|enx|wlan|wlp|wlo|bond|ib)"
 node-label:
@@ -87,6 +88,7 @@ K3SEOF
 else
 	cat > /etc/rancher/k3s/config.yaml.d/50-agent.yaml <<K3SEOF
 selinux: true
+flannel-backend: wireguard
 node-ip: $NODE_IP
 flannel-iface-regex: "^(eth|ens|enp|eno|enx|wlan|wlp|wlo|bond|ib)"
 K3SEOF
