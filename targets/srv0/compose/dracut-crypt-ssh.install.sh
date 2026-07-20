@@ -63,43 +63,111 @@ install() {
         inst "$f"
     done
 
-    # Include WiFi kernel modules + firmware (instmods pulls firmware automatically)
     instmods iwlwifi iwlmvm mac80211 cfg80211
-
-    # NM in initramfs needs wpa_supplicant + WiFi device plugin
-    # NM's D-Bus poke for fi.w1.wpa_supplicant1 never gets answered
-    # because D-Bus auto-activation is unreliable in initramfs.
-    # Instead, start wpa_supplicant as a systemd service before NM.
     inst_multiple wpa_supplicant
     for plugin in /usr/lib64/NetworkManager/*/libnm-device-plugin-wifi.so; do
         [ -f "$plugin" ] && inst "$plugin"
     done
 
+    # Generate wpa_supplicant.conf from ALL NM connection profiles.
+    # Also write a net.conf with the first profile's IP settings (used as default).
+    inst_hook initqueue 10 "$moddir/network-start.sh"
     inst_hook initqueue 10 "$moddir/neednet.sh"
+    mkdir -p "$initdir/etc/wpa_supplicant"
 
-    # Systemd service to start wpa_supplicant before nm-initrd
-    inst_simple "$moddir/wpa_supplicant-initrd.service" /etc/systemd/system/wpa_supplicant-initrd.service
-    mkdir -p "$initdir/etc/systemd/system/initrd.target.wants"
-    ln -sf /etc/systemd/system/wpa_supplicant-initrd.service "$initdir/etc/systemd/system/initrd.target.wants/"
+    local first_ssid="" first_psk=""
+    local wpa_conf="ctrl_interface=/var/run/wpa_supplicant"$'\n'
+    local first=true
+
+    for f in /etc/NetworkManager/system-connections/*.nmconnection; do
+        [ -f "$f" ] || continue
+        local ssid psk
+        ssid=$(grep -E "^ssid=" "$f" | cut -d= -f2-)
+        psk=$(grep -E "^psk=" "$f" | cut -d= -f2-)
+        if [ -n "$ssid" ] && [ -n "$psk" ]; then
+            wpa_conf+="network={"$'\n'
+            wpa_conf+="    ssid=\"$ssid\""$'\n'
+            wpa_conf+="    psk=\"$psk\""$'\n'
+            wpa_conf+="}"$'\n'
+            if $first; then
+                first_ssid="$ssid"; first_psk="$psk"
+                first=false
+            fi
+        fi
+    done
+
+    if [ -n "$first_ssid" ] && [ -n "$first_psk" ]; then
+        printf '%s\n' "$wpa_conf" > "$initdir/etc/wpa_supplicant/wpa_supplicant.conf"
+    fi
 }
 DRACUT_EOF
 
-cat > "$DRACUT_MODULE_DIR/99nm-wifi/wpa_supplicant-initrd.service" << 'DRACUT_EOF'
-[Unit]
-Description=WPA Supplicant (initrd)
-DefaultDependencies=no
-After=dbus.service
-Before=nm-initrd.service
+cat > "$DRACUT_MODULE_DIR/99nm-wifi/network-start.sh" << 'DRACUT_EOF'
+#!/usr/bin/sh
+# Bring up networking using any available method:
+# 1. Ethernet/DHCP: handled by NM daemon running in parallel
+# 2. WiFi: manual wpa_supplicant (bypasses D-Bus), always DHCP
+# Retries WiFi every 15s, supports all networks in wpa_supplicant.conf
 
-[Service]
-Type=dbus
-BusName=fi.w1.wpa_supplicant1
-ExecStart=/usr/sbin/wpa_supplicant -u
-KillMode=process
-Restart=on-failure
+MAX_WAIT=60
+start=$(cat /proc/uptime | cut -d. -f1)
+last_wifi_attempt=0
+wifi_pid=""
+wifi_iface=""
+has_wifi=false
 
-[Install]
-WantedBy=initrd.target
+# Find the wireless interface
+for iface in /sys/class/net/*; do
+    [ -d "$iface" ] || continue
+    name=$(basename "$iface")
+    [ "$name" = "lo" ] && continue
+    if [ -d "/sys/class/net/$name/wireless" ] || [ -d "/sys/class/net/$name/phy80211" ]; then
+        wifi_iface="$name"
+        has_wifi=true
+        break
+    fi
+done
+
+while true; do
+    now=$(cat /proc/uptime | cut -d. -f1)
+    elapsed=$(( now - start ))
+    [ $elapsed -ge $MAX_WAIT ] && break
+
+    # Check if any interface has an IP (Ethernet via NM, or our WiFi with DHCP)
+    got_ip=false
+    for iface in /sys/class/net/*; do
+        [ -d "$iface" ] || continue
+        name=$(basename "$iface")
+        [ "$name" = "lo" ] && continue
+        if ip -4 addr show "$name" 2>/dev/null | grep -q "inet "; then
+            got_ip=true; break
+        fi
+    done
+    if $got_ip; then
+        > /tmp/net.ready
+        exit 0
+    fi
+
+    # No IP yet. After 10s, try WiFi with wpa_supplicant + DHCP.
+    # Retry every 15s if connection doesn't stick.
+    if $has_wifi && [ -f /etc/wpa_supplicant/wpa_supplicant.conf ] && [ "$elapsed" -ge 10 ]; then
+        if [ -z "$wifi_pid" ] || [ $(( elapsed - last_wifi_attempt )) -ge 15 ]; then
+            [ -n "$wifi_pid" ] && kill "$wifi_pid" 2>/dev/null
+            ip link set "$wifi_iface" up 2>/dev/null
+            wpa_supplicant -B -i "$wifi_iface" -c /etc/wpa_supplicant/wpa_supplicant.conf
+            wifi_pid=$(pgrep -f "wpa_supplicant.*$wifi_iface" | head -1)
+            sleep 3
+            # Always use DHCP in initramfs regardless of post-boot IP config
+            dhclient -v "$wifi_iface" 2>/dev/null &
+            last_wifi_attempt=$elapsed
+        fi
+    fi
+
+    sleep 2
+done
+
+> /tmp/net.ready
+exit 0
 DRACUT_EOF
 
 cat > "$DRACUT_MODULE_DIR/99nm-wifi/neednet.sh" << 'DRACUT_EOF'
@@ -111,7 +179,7 @@ mkdir -p /run/NetworkManager/initrd
 > /run/NetworkManager/initrd/neednet
 DRACUT_EOF
 
-chmod +x "$DRACUT_MODULE_DIR/99nm-wifi/module-setup.sh" "$DRACUT_MODULE_DIR/99nm-wifi/neednet.sh"
+chmod +x "$DRACUT_MODULE_DIR/99nm-wifi/module-setup.sh" "$DRACUT_MODULE_DIR/99nm-wifi/neednet.sh" "$DRACUT_MODULE_DIR/99nm-wifi/network-start.sh"
 
 cat > /etc/dracut.conf.d/network-manager.conf << 'DRACUT_EOF'
 add_dracutmodules+=" network-manager "
