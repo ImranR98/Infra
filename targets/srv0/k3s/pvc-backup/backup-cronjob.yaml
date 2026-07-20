@@ -25,9 +25,6 @@ spec:
                   value: "$PVC_BACKUP_DIR"
                 - name: MY_UID
                   value: "$MY_UID"
-              volumeMounts:
-                - name: backup-dest
-                  mountPath: /backup-dest
               command:
                 - sh
                 - -c
@@ -35,8 +32,6 @@ spec:
                   set -eu
                   LABEL="auto-backup=true"
                   TIMESTAMP=$(date -Iseconds)
-                  mkdir -p /backup-dest
-                  chmod 777 /backup-dest 2>/dev/null || true
 
                   # --- trap: on any exit (success or failure), restore all
                   #     scaled workloads and clean up temp pods ---
@@ -136,11 +131,6 @@ spec:
                     echo "  Done: $name"
                   done
                   echo "=== Backup complete ==="
-          volumes:
-            - name: backup-dest
-              hostPath:
-                path: $PVC_BACKUP_DIR
-                type: DirectoryOrCreate
       backoffLimit: 2
 ---
 apiVersion: v1
