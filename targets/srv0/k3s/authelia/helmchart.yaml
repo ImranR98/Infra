@@ -101,7 +101,8 @@ spec:
             value: '$AUTHELIA_OIDC_HMAC_SECRET'
           jwks:
             - key:
-                path: '/secrets/oidc/jwks.private-key.pem'
+                value: |
+                  $AUTHELIA_JWKS_KEY
           clients:
           - client_id: 'immich'
             client_name: 'immich'
