@@ -34,8 +34,8 @@ trap 'rm -rf "$OUTDIR"' EXIT
 echo "Generating CA..."
 generate_frp_ca "$OUTDIR"
 
-echo "Generating server certificate for $SERVER_HOSTNAME..."
-generate_server_cert "$OUTDIR" "$OUTDIR/ca.crt" "$OUTDIR/ca.key" "$SERVER_HOSTNAME"
+echo "Generating server certificate..."
+generate_server_cert "$OUTDIR" "$OUTDIR/ca.crt" "$OUTDIR/ca.key" "frps-server"
 
 echo "Generating client certificate for $CLIENT_TARGET..."
 generate_client_cert "$OUTDIR" "$OUTDIR/ca.crt" "$OUTDIR/ca.key" "$CLIENT_TARGET-client"
