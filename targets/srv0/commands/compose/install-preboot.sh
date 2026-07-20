@@ -6,15 +6,25 @@ COMP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../compose" >/dev/null 2>&1 &&
 
 echo "=== Check if root partition is LUKS-encrypted ==="
 if bash "$COMP_DIR/check_root_luks.sh"; then
-	echo "LUKS detected. Installing preboot FRPC and dracut-crypt-ssh..."
-	configure_compose_templates "$TARGET"
-	$(get_sudo_cmd) bash "$COMP_DIR/dracut-crypt-ssh.install.sh" "$(logname 2>/dev/null || echo "${SUDO_USER:-$USER}")"
-	$(get_sudo_cmd) bash "$COMP_DIR/frpc-preboot.install.sh" "$COMPOSE_STATE_DIR"
-	echo ""
-	echo "Preboot FRPC installed. The initramfs has been rebuilt."
-	echo "On the next boot, FRPC will start before root is mounted,"
-	echo "tunneling SSH to the FRPS server on port 8887."
+    echo "LUKS detected. Installing remote unlock..."
+    configure_compose_templates "$TARGET"
+
+    TMPDIR="$(mktemp -d)"
+    trap 'rm -rf "$TMPDIR"' EXIT
+    git clone --depth 1 https://github.com/ImranR98/dracut-remote-luks-unlock.git "$TMPDIR"
+    $(get_sudo_cmd) bash "$TMPDIR/setup.sh" \
+        --frpc-config "$COMPOSE_STATE_DIR/frpc/frpc-preboot.toml" \
+        --frpc-cert   "$COMPOSE_STATE_DIR/frpc/preboot-client.crt" \
+        --frpc-key    "$COMPOSE_STATE_DIR/frpc/preboot-client.key" \
+        --frpc-ca     "$COMPOSE_STATE_DIR/frpc/ca.crt" \
+        --user        "$(logname 2>/dev/null || echo "${SUDO_USER:-$USER}")"
+    rm -rf "$TMPDIR"
+
+    echo ""
+    echo "Preboot FRPC installed. The initramfs has been rebuilt."
+    echo "On the next boot, FRPC will start before root is mounted,"
+    echo "tunneling SSH to the FRPS server on port 8887."
 else
-	echo "Root partition is not LUKS-encrypted. Skipping preboot setup."
-	echo "If you add LUKS later, re-run this command."
+    echo "Root partition is not LUKS-encrypted. Skipping preboot setup."
+    echo "If you add LUKS later, re-run this command."
 fi
