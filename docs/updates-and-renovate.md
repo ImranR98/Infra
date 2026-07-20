@@ -85,17 +85,6 @@ image: other/image:v1.2.3  # PRESERVE_MAJOR   ← minor/patch only
 image: another/image:v1.2.3                    ← full auto-update
 ```
 
-## FRPC version synchronization
-
-When the FRPC Docker image is updated, the update command prints a reminder:
-
-```
-FRPC was updated. Run the following to build the matching frps-with-multiuser image:
-  ./atlas.sh <target> compose build-frps <frps target>
-```
-
-This is necessary because the FRP client and server must run the same protocol version. See [compose-management.md](compose-management.md) for the build-frps workflow.
-
 ## Post-update workflow
 
 After running `update`:

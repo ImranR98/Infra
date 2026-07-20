@@ -108,8 +108,8 @@ Compose services typically use:
 
 - The join command uses temporary SSH connections that don't leave persistent credentials
 - The backup-state remote mode uses one-shot SSH sessions (`ssh -T`)
-- Preboot SSH for LUKS unlock uses a dedicated port (8887) separate from the main SSH service
-- FRP tunnel authentication uses randomly generated 128-byte hex tokens
+- Preboot FRPC uses a separate client certificate for credential isolation
+- FRP tunnel authentication uses mutual TLS with per-pair CAs and X.509 certificates
 
 ## TLS / Let's Encrypt
 
@@ -123,12 +123,12 @@ Compose services typically use:
 The `VARS.template.sh` files include comments with generation commands for each secret:
 
 ```bash
-export FRPC_TOKEN="change_me"            # openssl rand -hex 128
-export AUTHELIA_DB_PASSWORD="change_me"  # openssl rand -base64 32
-export CROWDSEC_BOUNCER_KEY="change_me"  # openssl rand -hex 32
+export FRP_CLIENT_CERT="change_me"         # ./atlas.sh <target> compose generate-frp-certs <server>
+export AUTHELIA_DB_PASSWORD="change_me"    # openssl rand -base64 32
+export CROWDSEC_BOUNCER_KEY="change_me"    # openssl rand -hex 32
 ```
 
-All secrets are generated with cryptographically secure random values (`openssl rand`) rather than hardcoded defaults.
+All secrets are generated with cryptographically secure random values or X.509 certificates rather than hardcoded defaults.
 
 ## HelmChart CR secret exposure
 

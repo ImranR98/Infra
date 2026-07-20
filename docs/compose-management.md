@@ -55,13 +55,13 @@ Creates a `.tar` of `current_target/compose_live_state/` via an Alpine Docker co
 
 SSHs into a remote Atlas instance and streams the tar back. The remote end sets `ATLAS_BACKUP_STREAM=true`, which makes the backup script write tar to stdout instead of a file. The local end captures stdout to disk. Old backups are pruned by `$BACKUP_RETENTION` (default: keep 1).
 
-## `compose build-frps`
+## `compose generate-frp-certs`
 
 ```bash
-./atlas.sh <target> compose build-frps <frps-target>
+./atlas.sh <client-target> compose generate-frp-certs <server-target>
 ```
 
-Atlas-specific version sync: when the FRPC image is updated, this command reads the FRPC version from the client's `compose.yaml`, clones the `frps-with-multiuser-docker` repo, builds a matching FRPS image, pushes it, and updates the FRPS target's compose file. FRP client and server must match protocol versions.
+Generates mTLS certificates for an FRP client↔server pair. Creates a per-pair CA, a server certificate for the VPS target, and client certificates for the current target (including a preboot-specific client cert if `FRP_PREBOOT_CLIENT_CERT` is in the template). Outputs copy-paste blocks for both targets' VARS files. VARS files are never modified automatically.
 
 ## `compose restart`
 

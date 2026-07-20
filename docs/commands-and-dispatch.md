@@ -67,7 +67,7 @@ The second line of each `.sh` command file starts with `# DESC:` followed by a h
 |---------|------------|
 | `compose install` | Render templates, install systemd service, start Compose stack |
 | `compose backup-state` | Backup Compose runtime state (local file or remote via SSH) |
-| `compose build-frps <target>` | Build and push the frps-with-multiuser Docker image |
+| `compose generate-frp-certs <target>` | Generate mTLS certificates for an FRP client↔server pair |
 | `compose restart <service>` | Restart a specific Compose service |
 
 ### K3s subcommands

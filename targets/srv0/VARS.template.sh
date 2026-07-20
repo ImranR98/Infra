@@ -10,9 +10,13 @@ export NTFY_WRITE_ONLY_ACCOUNT_PASSWORD_HASH="change_me" # docker run --rm -it b
 
 # --- FRP ---
 export PROXY_HOST="vps0.example.org"
-export FRPC_TOKEN="change_me" # openssl rand -hex 128
-export FRPC_PREBOOT_TOKEN="change_me" # openssl rand -hex 128
-export FRPC_ADMIN_PASSWORD="change_me" # openssl rand -hex 16
+# Generate with: ./atlas.sh srv0 compose generate-frp-certs vps0
+export FRP_CA_CERT="change_me" # PEM-encoded CA certificate for this FRP pair
+export FRP_CA_KEY="change_me" # PEM-encoded CA private key (keep on operator machine)
+export FRP_CLIENT_CERT="change_me" # PEM-encoded client certificate
+export FRP_CLIENT_KEY="change_me" # PEM-encoded client private key
+export FRP_PREBOOT_CLIENT_CERT="change_me" # PEM-encoded preboot client certificate
+export FRP_PREBOOT_CLIENT_KEY="change_me" # PEM-encoded preboot client private key
 
 # --- Geoblock (Traefik middleware) ---
 # Indentation matters

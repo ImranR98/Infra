@@ -22,12 +22,15 @@ x-socket-proxy: &socket-proxy
 
 services:
     # FRP server - reverse proxy tunnel for home server
-    frps-with-multiuser:
-        image: imranrdev/frps-with-multiuser:v0.70.0
-        container_name: frps-with-multiuser
+    frps:
+        image: fatedier/frps:v0.70.0
+        container_name: frps
         restart: always
         volumes:
-          - $COMPOSE_STATE_DIR/frps/tokens.txt:/workdir/service-data/frps-tokens.txt:ro
+          - $COMPOSE_STATE_DIR/frps/frps.toml:/frps.toml:ro
+          - $COMPOSE_STATE_DIR/frps/server.crt:/etc/frp/server.crt:ro
+          - $COMPOSE_STATE_DIR/frps/server.key:/etc/frp/server.key:ro
+          - $COMPOSE_STATE_DIR/frps/ca.crt:/etc/frp/ca.crt:ro
         ports:
             - "7000:7000"
             - "8887:8887"
@@ -41,6 +44,7 @@ services:
             start_period: 1m
             retries: 3
         logging: *logging
+        command: "-c /frps.toml"
 
     # https://github.com/wollomatic/socket-proxy for Traefik and other read-only needs
     dockerproxy:

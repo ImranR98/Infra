@@ -82,9 +82,9 @@ The `detect_pkgmgr()` / `install_pkgs()` / `ensure_docker_repo()` functions hand
 
 The plugin version checker in `update.sh` that queries the GitHub Releases API and replaces version strings in YAML files is custom. It handles plugins that Renovate can't scan (because they're in `additionalArguments` strings, not structured YAML).
 
-### FRP version synchronization
+### FRP certificate generation
 
-The `build-frps` command that reads an FRPC version, builds a matching FRPS image, and updates the compose file is specific to the custom `frps-with-multiuser` Docker image.
+The `generate-frp-certs` command generates per-pair CA and X.509 certificates for mTLS authentication between FRP clients and servers. It supports preboot-specific client certificates, and outputs copy-paste blocks for VARS files.
 
 ### Preboot FRPC + dracut-crypt-ssh
 

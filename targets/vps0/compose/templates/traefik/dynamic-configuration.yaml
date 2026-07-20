@@ -35,7 +35,7 @@ http:
     http-frps:
       loadBalancer:
         servers:
-          - url: "http://frps-with-multiuser:8080"
+          - url: "http://frps:8080"
 
 tcp:
   serversTransports:
@@ -54,4 +54,4 @@ tcp:
       loadBalancer:
         serversTransport: frps-proxy
         servers:
-          - address: "frps-with-multiuser:8443"
+          - address: "frps:8443"

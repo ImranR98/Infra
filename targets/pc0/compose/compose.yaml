@@ -119,9 +119,12 @@ services:
         restart: always
         volumes:
             - $COMPOSE_STATE_DIR/frpc/frpc.toml:/frpc.toml
+            - $COMPOSE_STATE_DIR/frpc/ca.crt:/etc/frp/ca.crt:ro
+            - $COMPOSE_STATE_DIR/frpc/client.crt:/etc/frp/client.crt:ro
+            - $COMPOSE_STATE_DIR/frpc/client.key:/etc/frp/client.key:ro
         network_mode: host
         healthcheck:
-            test: ["CMD-SHELL", "wget --no-verbose --tries=1 -O - http://127.0.0.1:7400/healthz || exit 1"]
+            test: ["CMD", "pgrep", "frpc"]
             interval: 30s
             timeout: 10s
             start_period: 1m

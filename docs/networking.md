@@ -88,7 +88,7 @@ This guarantees the VPN is up before pods begin DNS resolution and network setup
 
 ## FRP (Fast Reverse Proxy)
 
-FRP provides NAT traversal for the home server. **vps0** runs `frps` (FRP server) on a public VPS. **srv0** runs `frpc` (FRP client) as a Docker Compose sidecar, connecting to vps0 on port 7000. The tunnel carries HTTP, HTTPS, and SSH traffic from vps0 to srv0, letting a machine behind NAT expose services without a public IP.
+FRP provides NAT traversal for the home server. **vps0** runs `frps` (FRP server) on a public VPS using the official `fatedier/frps` Docker image. **srv0** runs `frpc` (FRP client) as a Docker Compose sidecar, connecting to vps0 on port 7000. The tunnel carries HTTP, HTTPS, and SSH traffic from vps0 to srv0, letting a machine behind NAT expose services without a public IP.
 
 ### Traffic routing
 
@@ -106,8 +106,8 @@ These are configured via Docker container labels on the Traefik provider. Each `
 
 **srv0-proxied services** — requests for `home.$SERVICES_DOMAIN` and `*.home.$SERVICES_DOMAIN` are forwarded through the FRP tunnel to srv0's K3s Traefik ingress. This routing is defined in Traefik's file provider (`dynamic-configuration.yaml`) rather than Docker labels, because the destination (FRPS) is the intermediary, not a direct container:
 
-- **HTTP** (`:80`): Traefik routes `Host(home.$SERVICES_DOMAIN) || Host(*.home.$SERVICES_DOMAIN)` on the `web` entrypoint to `http://frps-with-multiuser:8080`. FRPS receives the plain HTTP request and proxies it through the FRP tunnel to srv0's K3s Traefik ingress.
-- **HTTPS** (`:443`): Traefik routes `HostSNI(home.$SERVICES_DOMAIN) || HostSNI(*.home.$SERVICES_DOMAIN)` on the `websecure` entrypoint to `frps-with-multiuser:8443` with `tls.passthrough: true`. vps0's Traefik does **not** terminate TLS — it forwards the raw encrypted TCP stream with Proxy Protocol v2. TLS termination, certificate issuance, and renewal are handled entirely by cert-manager on srv0's K3s cluster.
+- **HTTP** (`:80`): Traefik routes `Host(home.$SERVICES_DOMAIN) || Host(*.home.$SERVICES_DOMAIN)` on the `web` entrypoint to `http://frps:8080`. FRPS receives the plain HTTP request and proxies it through the FRP tunnel to srv0's K3s Traefik ingress.
+- **HTTPS** (`:443`): Traefik routes `HostSNI(home.$SERVICES_DOMAIN) || HostSNI(*.home.$SERVICES_DOMAIN)` on the `websecure` entrypoint to `frps:8443` with `tls.passthrough: true`. vps0's Traefik does **not** terminate TLS — it forwards the raw encrypted TCP stream with Proxy Protocol v2. TLS termination, certificate issuance, and renewal are handled entirely by cert-manager on srv0's K3s cluster.
 
 TLS passthrough is used for srv0 traffic so that both targets don't need to coordinate certificates. If vps0 terminated TLS, it would need to hold and renew srv0's certificates, creating a coupling between independent targets. Instead, vps0 treats the TLS stream as opaque bytes and srv0's cert-manager maintains its own Let's Encrypt lifecycle independently.
 
@@ -121,11 +121,15 @@ TLS passthrough is used for srv0 traffic so that both targets don't need to coor
 
 ### Authentication
 
-FRP uses token-based authentication. The tokens (`FRPC_TOKEN`, `FRPC_PREBOOT_TOKEN`) are configured in both the FRPS server (vps0) and FRPC client (srv0). The custom `frps-with-multiuser` image supports multiple tokens for different authentication contexts.
+FRP uses mutual TLS (mTLS) for authentication. A per-pair CA issues client and server certificates. The server (`frps`) verifies the client's certificate against the CA and the client verifies the server's certificate likewise. Each FRP pair (srv0↔vps0, pc0↔vps1) uses a separate CA with no cross-pair trust. Preboot and post-boot FRPC on srv0 use different client certificates for credential isolation.
+
+### Certificate generation
+
+Use `./atlas.sh <client-target> compose generate-frp-certs <server-target>` to generate certificates for a client↔server pair. The command outputs copy-paste blocks for the VARS files of both targets. See `commands/compose/generate-frp-certs.sh`.
 
 ### Health checks
 
-Both frpc and frps have health checks hitting their respective admin API healthz endpoints (`:7400` and `:7500`). This allows Docker (and systemd) to detect and restart unhealthy tunnels.
+frps has a health check hitting its admin API healthz endpoint (`:7500`). frpc uses a process-level health check (`pgrep frpc`). This allows Docker (and systemd) to detect and restart unhealthy tunnels.
 
 ## Preboot FRPC (LUKS unlock)
 

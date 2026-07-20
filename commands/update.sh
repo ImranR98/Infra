@@ -55,12 +55,6 @@ else
 fi
 echo "$_APPLY_OUT"
 
-if echo "$_APPLY_OUT" | grep -q 'fatedier/frpc.*->'; then
-	echo ""
-	echo "FRPC was updated. Run the following to build the matching frps-with-multiuser image:"
-	echo "  ./atlas.sh $TARGET compose build-frps <frps target>"
-fi
-
 echo ""
 echo "Checking Traefik plugins..."
 for f in "$ATLAS_ROOT/targets/$TARGET/compose/compose.yaml" "$ATLAS_ROOT/targets/$TARGET/k3s/traefik/traefik.yaml"; do

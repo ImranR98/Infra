@@ -57,12 +57,15 @@ services:
         logging: *logging
 
     # FRP server - reverse proxy tunnel for pc0
-    frps-with-multiuser:
-        image: imranrdev/frps-with-multiuser:v0.69.1
-        container_name: frps-with-multiuser
+    frps:
+        image: fatedier/frps:v0.69.1
+        container_name: frps
         restart: always
         volumes:
-          - $COMPOSE_STATE_DIR/frps/tokens.txt:/workdir/service-data/frps-tokens.txt:ro
+          - $COMPOSE_STATE_DIR/frps/frps.toml:/frps.toml:ro
+          - $COMPOSE_STATE_DIR/frps/server.crt:/etc/frp/server.crt:ro
+          - $COMPOSE_STATE_DIR/frps/server.key:/etc/frp/server.key:ro
+          - $COMPOSE_STATE_DIR/frps/ca.crt:/etc/frp/ca.crt:ro
         ports:
             - "7000:7000"
             - "1935:1935"
@@ -75,6 +78,7 @@ services:
             start_period: 1m
             retries: 3
         logging: *logging
+        command: "-c /frps.toml"
 
 networks:
     traefik:
