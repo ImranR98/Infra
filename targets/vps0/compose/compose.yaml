@@ -157,8 +157,6 @@ services:
         image: traefik:v3
         container_name: traefik
         depends_on:
-            authelia:
-                condition: service_healthy
             dockerproxy:
                 condition: service_started
         command:
