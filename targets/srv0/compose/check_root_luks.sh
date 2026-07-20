@@ -4,7 +4,7 @@ set -euo pipefail
 # Get the root filesystem source device and clean up any appended subvol/path
 root_source=$(findmnt -n -o SOURCE /sysroot 2>/dev/null | sed 's/\[.*//') || true # Remove [subvol] or [/path] suffixes
 if [[ -z "$root_source" ]]; then
-    root_source=$(findmnt -n -o SOURCE / | sed 's/\[.*//')
+    root_source=$(findmnt -n -o SOURCE / 2>/dev/null | sed 's/\[.*//') || true
 fi
 if [[ -z "$root_source" ]]; then
     echo "Error: Could not determine root device." >&2

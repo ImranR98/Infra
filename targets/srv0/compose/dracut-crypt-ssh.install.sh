@@ -7,9 +7,8 @@ if [ -z "$USERNAME" ]; then exit 1; fi
 if ! command -v rpm-ostree >/dev/null 2>&1; then
     dnf copr enable uriesk/dracut-crypt-ssh -y
     dnf install dracut-crypt-ssh -y
-    if ! grep -q "rd.neednet=1" /etc/default/grub 2>/dev/null; then
-        sed -i 's/^\(GRUB_CMDLINE_LINUX=".*\)"/\1 rd.neednet=1 ip=dhcp"/' /etc/default/grub
-        grub2-mkconfig --output /etc/grub2.cfg
+    if ! grep -q "rd.neednet=1" /proc/cmdline 2>/dev/null; then
+        grubby --update-kernel=ALL --args="rd.neednet=1 ip=dhcp" || true
     fi
 else
     FEDORA_VERSION=$(rpm -E %fedora)
@@ -24,33 +23,31 @@ else
     fi
 fi
 
-sed -i '/^#[[:space:]]*install_items/s/^#[[:space:]]*//' /etc/dracut.conf.d/crypt-ssh.conf # Ensure cryptsetup is included
-sed -i 's/"222"/"22"/g' /etc/dracut.conf.d/crypt-ssh.conf                                  # Change to port 22
-sed -i '/^#[[:space:]]*dropbear_port/s/^#[[:space:]]*//' /etc/dracut.conf.d/crypt-ssh.conf # Uncomment to use custom port
-sed -i '/^#[[:space:]]*dropbear_acl/s/^#[[:space:]]*//' /etc/dracut.conf.d/crypt-ssh.conf  # Uncomment to use custom authorized_keys path
-sed -i 's/\/root\/.ssh/\/etc\/.ssh/g' /etc/dracut.conf.d/crypt-ssh.conf
+# Configure dracut-crypt-ssh in one pass
+sed -i \
+    -e '/^#[[:space:]]*install_items/s/^#[[:space:]]*//' \
+    -e 's/"222"/"22"/g' \
+    -e '/^#[[:space:]]*dropbear_port/s/^#[[:space:]]*//' \
+    -e '/^#[[:space:]]*dropbear_acl/s/^#[[:space:]]*//' \
+    -e 's|/root/.ssh|/etc/.ssh|g' \
+    -e 's/# dropbear_ed25519_key="GENERATE"/dropbear_ed25519_key="\/etc\/dracut-crypt-ssh-keys\/ssh_dracut_ed25519_key"/g' \
+    /etc/dracut.conf.d/crypt-ssh.conf
+
 (
     umask 0077
-    mkdir -p /etc/dracut-crypt-ssh-keys # Generate keys if needed
-    test -f /etc/dracut-crypt-ssh-keys/ssh_dracut_rsa_key || ssh-keygen -t rsa -m PEM -f /etc/dracut-crypt-ssh-keys/ssh_dracut_rsa_key -N "" || { echo "Error: Failed to generate RSA key for dracut-crypt-ssh" >&2; exit 1; }
-    test -f /etc/dracut-crypt-ssh-keys/ssh_dracut_ecdsa_key || ssh-keygen -t ecdsa -m PEM -f /etc/dracut-crypt-ssh-keys/ssh_dracut_ecdsa_key -N "" || { echo "Error: Failed to generate ECDSA key for dracut-crypt-ssh" >&2; exit 1; }
-    test -f /etc/dracut-crypt-ssh-keys/ssh_dracut_ed25519_key || ssh-keygen -t ed25519 -m PEM -f /etc/dracut-crypt-ssh-keys/ssh_dracut_ed25519_key -N "" || { echo "Error: Failed to generate ed25519 key for dracut-crypt-ssh" >&2; exit 1; }
+    mkdir -p /etc/dracut-crypt-ssh-keys
+    test -f /etc/dracut-crypt-ssh-keys/ssh_dracut_ed25519_key || \
+        ssh-keygen -t ed25519 -m PEM -f /etc/dracut-crypt-ssh-keys/ssh_dracut_ed25519_key -N "" || \
+        { echo "Error: Failed to generate ed25519 key for dracut-crypt-ssh" >&2; exit 1; }
     mkdir -p /etc/.ssh
-    if [ -f "/home/$USERNAME/.ssh/authorized_keys" ]; then cp "/home/$USERNAME/.ssh/authorized_keys" /etc/.ssh/; fi
+    if [ -f "/home/$USERNAME/.ssh/authorized_keys" ]; then
+        cp "/home/$USERNAME/.ssh/authorized_keys" /etc/.ssh/
+    fi
 )
-sed -i 's/# dropbear_ed25519_key="GENERATE"/dropbear_ed25519_key="\/etc\/dracut-crypt-ssh-keys\/ssh_dracut_ed25519_key"/g' /etc/dracut.conf.d/crypt-ssh.conf # Tell it where to find keys
-sed -i 's/# dropbear_rsa_key="GENERATE"/dropbear_rsa_key="\/etc\/dracut-crypt-ssh-keys\/ssh_dracut_rsa_key"/g' /etc/dracut.conf.d/crypt-ssh.conf
-sed -i 's/# dropbear_ecdsa_key="GENERATE"/dropbear_ecdsa_key="\/etc\/dracut-crypt-ssh-keys\/ssh_dracut_ecdsa_key"/g' /etc/dracut.conf.d/crypt-ssh.conf
 
-# --- Install dracut-net-wifi module (WiFi + Ethernet via NM in initramfs) ---
+# Install dracut-net-wifi module (delegates rebuild to frpc-preboot step)
 TMPDIR="$(mktemp -d)"
 trap 'rm -rf "$TMPDIR"' EXIT
 git clone --depth 1 https://github.com/ImranR98/dracut-net-wifi.git "$TMPDIR"
-bash "$TMPDIR/setup.sh"
+bash "$TMPDIR/setup.sh" --no-rebuild
 rm -rf "$TMPDIR"
-
-if ! command -v rpm-ostree >/dev/null 2>&1; then
-    dracut --force
-else
-    rpm-ostree initramfs || true
-fi
