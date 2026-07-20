@@ -67,12 +67,16 @@ spec:
                       jq -r --arg pvc "$name" \
                       '.items[] | select(.spec.template.spec.volumes[]?.persistentVolumeClaim.claimName == $pvc) | "\(.kind)/\(.metadata.name)"' 2>/dev/null || true)
 
-                    scaled_replicas=""
                     for w in $workloads; do
                       wkind="${w%%/*}"
                       wname="${w##*/}"
+                      key="$ns/$wkind/$wname"
+                      if grep -q "^$key/" "$SCALED_FILE" 2>/dev/null; then
+                        echo "  $wkind/$wname already scaled; skipping"
+                        continue
+                      fi
                       reps=$(kubectl get "$wkind" "$wname" -n "$ns" -o jsonpath='{.spec.replicas}' 2>/dev/null || echo 1)
-                      echo "$ns/$wkind/$wname/$reps" >> "$SCALED_FILE"
+                      echo "$key/$reps" >> "$SCALED_FILE"
                       kubectl scale "$wkind" "$wname" -n "$ns" --replicas=0
                       echo "  Scaled $wkind/$wname to 0"
                     done
