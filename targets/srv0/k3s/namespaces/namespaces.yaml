@@ -22,16 +22,7 @@ metadata:
   name: apps
   labels:
     pod-security.kubernetes.io/audit: baseline
-    pod-security.kubernetes.io/warn: baseline
-    pod-security.kubernetes.io/enforce: privileged
----
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: apps-privileged
-  labels:
-    pod-security.kubernetes.io/audit: baseline
-    pod-security.kubernetes.io/warn: baseline
+    pod-security.kubernetes.io/warn: privileged
     pod-security.kubernetes.io/enforce: privileged
 ---
 apiVersion: v1
@@ -42,4 +33,3 @@ metadata:
     pod-security.kubernetes.io/audit: baseline
     pod-security.kubernetes.io/warn: baseline
     pod-security.kubernetes.io/enforce: baseline
-

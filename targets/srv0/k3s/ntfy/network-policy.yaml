@@ -27,13 +27,13 @@ spec:
               app: logtfy
         - namespaceSelector:
             matchLabels:
-              kubernetes.io/metadata.name: apps-privileged
+              kubernetes.io/metadata.name: apps
           podSelector:
             matchLabels:
               app.kubernetes.io/component: mdscl
         - namespaceSelector:
             matchLabels:
-              kubernetes.io/metadata.name: apps-privileged
+              kubernetes.io/metadata.name: apps
           podSelector:
             matchLabels:
               app: opencanary
