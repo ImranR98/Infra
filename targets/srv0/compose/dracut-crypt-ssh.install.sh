@@ -67,7 +67,9 @@ install() {
     instmods iwlwifi iwlmvm mac80211 cfg80211
 
     # NM in initramfs needs wpa_supplicant + WiFi device plugin
+    # The D-Bus service file auto-launches wpa_supplicant when NM pokes it
     inst_multiple wpa_supplicant
+    inst /usr/share/dbus-1/system-services/fi.w1.wpa_supplicant1.service
     for plugin in /usr/lib64/NetworkManager/*/libnm-device-plugin-wifi.so; do
         [ -f "$plugin" ] && inst "$plugin"
     done
