@@ -93,6 +93,10 @@ spec:
                       labels:
                         app: pvc-backup-temp
                     spec:
+                      securityContext:
+                        runAsUser: ${MY_UID}
+                        runAsGroup: ${MY_UID}
+                        fsGroup: ${MY_UID}
                       restartPolicy: Never
                       containers:
                       - name: backup
