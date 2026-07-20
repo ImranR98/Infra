@@ -47,21 +47,6 @@ spec:
     - Ingress
 
 #
-# === base-privileged ===
-# Privileged base namespace: NFS server (needs privileged: true, hostPath mounts).
-#
----
-apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
-metadata:
-  name: deny-all-ingress
-  namespace: base-privileged
-spec:
-  podSelector: {}
-  policyTypes:
-    - Ingress
-
-#
 # === apps ===
 # User-facing applications: jellyfin, immich, nextcloud, ollama, etc.
 #

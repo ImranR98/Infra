@@ -14,7 +14,7 @@ spec:
     driver: nfs.csi.k8s.io
     volumeHandle: dscpln-data
     volumeAttributes:
-      server: nfs-server.base-privileged.svc.cluster.local
+      server: nfs-server.base.svc.cluster.local
       share: /dscpln
 ---
 apiVersion: v1

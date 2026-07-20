@@ -3,7 +3,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: nfs-server
-  namespace: base-privileged
+  namespace: base
 spec:
   replicas: 1
   strategy:
