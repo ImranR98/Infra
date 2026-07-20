@@ -57,7 +57,7 @@ if [ "$vars_found" = true ]; then
 	esac
 elif [ -n "${1:-}" ]; then
 	case "$1" in compose|k3s)
-		if [ "${2:-}" != "backup-state" ]; then
+		if [ "${2:-}" != "backup-state" ] && [ "${2:-}" != "generate-frp-certs" ]; then
 			echo "No VARS.$TARGET.sh or VARS.sh found. Create VARS.$TARGET.sh with variables from targets/$TARGET/VARS.template.sh." >&2
 			exit 1
 		fi
