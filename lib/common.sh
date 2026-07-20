@@ -183,7 +183,7 @@ configure_compose_templates() {
 				else
 					envsubst "$ENVSUBST_VARS" < "$src" > "$dst"
 				fi
-				printf '%s\n' "$AUTHELIA_USERS_DATABASE" > "$COMPOSE_STATE_DIR/authelia/config/users_database.yml" ;;
+				printf '%s\n' "$AUTHELIA_USERS_DATABASE" | awk 'NR==1{print} NR>1&&/./{print "  " $0} NR>1&&!/./{print}' > "$COMPOSE_STATE_DIR/authelia/config/users_database.yml" ;;
 			traefik/*)
 				[ -f "$COMPOSE_STATE_DIR/traefik/acme.json" ] || { echo '{}' > "$COMPOSE_STATE_DIR/traefik/acme.json"; chmod 600 "$COMPOSE_STATE_DIR/traefik/acme.json"; }
 				envsubst "$ENVSUBST_VARS" < "$src" > "$dst" ;;
