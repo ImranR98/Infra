@@ -63,6 +63,9 @@ install() {
         inst "$f"
     done
 
+    # Include WiFi kernel modules + firmware (instmods pulls firmware automatically)
+    instmods iwlwifi iwlmvm mac80211 cfg80211
+
     inst_hook initqueue 10 "$moddir/neednet.sh"
 }
 DRACUT_EOF
@@ -80,7 +83,7 @@ chmod +x "$DRACUT_MODULE_DIR/99nm-wifi/module-setup.sh" "$DRACUT_MODULE_DIR/99nm
 
 cat > /etc/dracut.conf.d/network-manager.conf << 'DRACUT_EOF'
 add_dracutmodules+=" network-manager "
-add_drivers+=" iwlwifi iwlmvm mac80211 cfg80211 "
+install_items+=" /usr/lib/firmware/iwlwifi-* "
 DRACUT_EOF
 
 if ! command -v rpm-ostree >/dev/null 2>&1; then
