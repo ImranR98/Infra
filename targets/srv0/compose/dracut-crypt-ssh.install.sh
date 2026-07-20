@@ -42,6 +42,40 @@ sed -i 's/# dropbear_ed25519_key="GENERATE"/dropbear_ed25519_key="\/etc\/dracut-
 sed -i 's/# dropbear_rsa_key="GENERATE"/dropbear_rsa_key="\/etc\/dracut-crypt-ssh-keys\/ssh_dracut_rsa_key"/g' /etc/dracut.conf.d/crypt-ssh.conf
 sed -i 's/# dropbear_ecdsa_key="GENERATE"/dropbear_ecdsa_key="\/etc\/dracut-crypt-ssh-keys\/ssh_dracut_ecdsa_key"/g' /etc/dracut.conf.d/crypt-ssh.conf
 
+# --- WiFi + NetworkManager support for initramfs ---
+# Swaps the default wired-only 'network' dracut module for 'network-manager'
+# which handles WiFi (WPA), Ethernet, and tries all saved NM connection profiles.
+
+DRACUT_MODULE_DIR="/usr/lib/dracut/modules.d"
+if [ ! -w "$DRACUT_MODULE_DIR" ]; then
+    DRACUT_MODULE_DIR="/etc/dracut/modules.d"
+fi
+
+mkdir -p "$DRACUT_MODULE_DIR/99nm-wifi"
+cat > "$DRACUT_MODULE_DIR/99nm-wifi/module-setup.sh" << 'DRACUT_EOF'
+#!/usr/bin/bash
+check() { return 0; }
+depends() { echo network-manager; return 0; }
+install() {
+    inst_dir /etc/NetworkManager/system-connections
+    for f in /etc/NetworkManager/system-connections/*.nmconnection; do
+        [ -f "$f" ] || continue
+        inst "$f"
+    done
+}
+DRACUT_EOF
+chmod +x "$DRACUT_MODULE_DIR/99nm-wifi/module-setup.sh"
+
+cat > /etc/dracut.conf.d/network-manager.conf << 'DRACUT_EOF'
+add_dracutmodules+=" network-manager "
+omit_dracutmodules+=" network "
+add_drivers+=" iwlwifi iwlmvm mac80211 cfg80211 "
+DRACUT_EOF
+
 if ! command -v rpm-ostree >/dev/null 2>&1; then
     dracut --force
+else
+    # rpm-ostree: regenerate initramfs with new modules+config. The --enable
+    # was already done above; this rebuilds the current deployment's initramfs.
+    rpm-ostree initramfs || true
 fi
