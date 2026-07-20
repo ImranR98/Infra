@@ -66,6 +66,9 @@ install() {
     # Include WiFi kernel modules + firmware (instmods pulls firmware automatically)
     instmods iwlwifi iwlmvm mac80211 cfg80211
 
+    # NM in initramfs needs wpa_supplicant for WPA WiFi auth
+    inst_multiple wpa_supplicant
+
     inst_hook initqueue 10 "$moddir/neednet.sh"
 }
 DRACUT_EOF
