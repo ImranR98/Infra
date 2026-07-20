@@ -117,7 +117,7 @@ spec:
                         hostPath:
                           path: $BACKUP_DIR
                           type: DirectoryOrCreate
-                    PODEOF
+                  PODEOF
 
                     # --- cleanup: wait for pod to succeed, delete it,
                     #     then on to the next PVC ---
