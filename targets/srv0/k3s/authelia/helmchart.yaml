@@ -101,6 +101,9 @@ spec:
             value: '$AUTHELIA_OIDC_HMAC_SECRET'
           jwks:
             - key:
+                # NOTE: Authelia chart v0.11.6 does not support path: for
+                # CryptographicKey objects — the PEM must be embedded as value:.
+                # OIDC client secrets below use path: (simple strings are supported).
                 value: |
                   $AUTHELIA_JWKS_KEY
           clients:
