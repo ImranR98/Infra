@@ -13,14 +13,14 @@ if ! command -v rpm-ostree >/dev/null 2>&1; then
     fi
 else
     FEDORA_VERSION=$(rpm -E %fedora)
-    wget -nv "https://copr.fedorainfracloud.org/coprs/uriesk/dracut-crypt-ssh/repo/fedora-${FEDORA_VERSION}/uriesk-dracut-crypt-ssh-fedora-${FEDORA_VERSION}.repo" -O /etc/yum.repos.d/dracut-crypt-ssh.repo
-    rpm-ostree initramfs --enable || :
-    rpm-ostree refresh-md
+    wget -nv "https://copr.fedorainfracloud.org/coprs/uriesk/dracut-crypt-ssh/repo/fedora-${FEDORA_VERSION}/uriesk-dracut-crypt-ssh-fedora-${FEDORA_VERSION}.repo" -O /etc/yum.repos.d/dracut-crypt-ssh.repo || true
+    rpm-ostree initramfs --enable || true
+    rpm-ostree refresh-md || true
     if ! rpm-ostree status | grep dracut-crypt-ssh; then
-        rpm-ostree install --apply-live --assumeyes dracut-crypt-ssh
+        rpm-ostree install --apply-live --assumeyes dracut-crypt-ssh || true
     fi
     if ! rpm-ostree kargs | grep -q neednet; then
-        rpm-ostree kargs --append "rd.neednet=1 ip=dhcp"
+        rpm-ostree kargs --append "rd.neednet=1 ip=dhcp" || true
     fi
 fi
 
