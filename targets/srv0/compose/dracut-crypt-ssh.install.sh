@@ -71,17 +71,21 @@ install() {
         [ -f "$plugin" ] && inst "$plugin"
     done
 
-    # wpa_supplicant: include the systemd unit, D-Bus service file, and binary.
-    # Patch the unit for initramfs (DefaultDependencies=no, After=dbus.service).
+    # wpa_supplicant: include the systemd unit, D-Bus service file,
+    # D-Bus policy config, and binary. Patch the unit for initramfs.
     # NM's nm-initrd.service will D-Bus-activate wpa_supplicant on demand.
     inst_multiple wpa_supplicant wpa_cli
     inst /usr/share/dbus-1/system-services/fi.w1.wpa_supplicant1.service
+    inst /usr/share/dbus-1/system.d/wpa_supplicant.conf
+    [ -f /etc/wpa_supplicant/wpa_supplicant.conf ] && inst /etc/wpa_supplicant/wpa_supplicant.conf
     if [ -f "$systemdsystemunitdir/wpa_supplicant.service" ]; then
         inst "$systemdsystemunitdir/wpa_supplicant.service"
         sed -i -e \
             '/^\[Unit\]/aDefaultDependencies=no\nConflicts=shutdown.target\nBefore=shutdown.target\nAfter=dbus.service' \
             "$initdir/$systemdsystemunitdir/wpa_supplicant.service"
-        $SYSTEMCTL -q --root "$initdir" enable wpa_supplicant.service
+        mkdir -p "$initdir/etc/systemd/system/initrd.target.wants"
+        ln -sf "$systemdsystemunitdir/wpa_supplicant.service" \
+            "$initdir/etc/systemd/system/initrd.target.wants/wpa_supplicant.service"
     fi
 
     # Simple initqueue hook: signal ready when any interface has an IP
