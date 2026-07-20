@@ -68,7 +68,6 @@ chmod +x "$DRACUT_MODULE_DIR/99nm-wifi/module-setup.sh"
 
 cat > /etc/dracut.conf.d/network-manager.conf << 'DRACUT_EOF'
 add_dracutmodules+=" network-manager "
-omit_dracutmodules+=" network "
 add_drivers+=" iwlwifi iwlmvm mac80211 cfg80211 "
 DRACUT_EOF
 
