@@ -97,16 +97,19 @@ spec:
                         runAsGroup: ${MY_UID}
                         fsGroup: ${MY_UID}
                       restartPolicy: Never
-                      containers:
-                      - name: backup
-                        image: alpine:3.21
-                        command:
-                        - sh
-                        - -c
-                        - |
-                          echo "$TIMESTAMP" > /tmp/timestamp.txt
-                          tar czf /backup/"$name".tar.gz -C /tmp timestamp.txt -C /data .
-                          chown ${MY_UID}:${MY_UID} /backup/"$name".tar.gz 2>/dev/null || true
+                       containers:
+                       - name: backup
+                         image: alpine:3.21
+                         securityContext:
+                           seLinuxOptions:
+                             level: s0
+                         command:
+                         - sh
+                         - -c
+                         - |
+                           echo "$TIMESTAMP" > /tmp/timestamp.txt
+                           tar czf /backup/"$name".tar.gz -C /tmp timestamp.txt -C /data .
+                           chown ${MY_UID}:${MY_UID} /backup/"$name".tar.gz 2>/dev/null || true
                         volumeMounts:
                         - name: data
                           mountPath: /data
