@@ -71,7 +71,6 @@ spec:
                       wkind="${w%%/*}"
                       wname="${w##*/}"
                       reps=$(kubectl get "$wkind" "$wname" -n "$ns" -o jsonpath='{.spec.replicas}' 2>/dev/null || echo 1)
-                      scaled_replicas="$scaled_replicas $wkind/$wname/$reps"
                       echo "$ns/$wkind/$wname/$reps" >> "$SCALED_FILE"
                       kubectl scale "$wkind" "$wname" -n "$ns" --replicas=0
                       echo "  Scaled $wkind/$wname to 0"

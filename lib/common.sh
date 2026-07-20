@@ -218,9 +218,9 @@ configure_k3s_firewall() {
 	if command -v firewall-cmd >/dev/null 2>&1; then
 		firewall-cmd --permanent --zone=trusted --add-source=10.42.0.0/16 2>/dev/null || true  # pod network CIDR
 		firewall-cmd --permanent --zone=trusted --add-source=10.43.0.0/16 2>/dev/null || true  # service CIDR
-	firewall-cmd --permanent --add-port=8472/udp 2>/dev/null || true   # Flannel VXLAN overlay
-	firewall-cmd --permanent --add-port=51820/udp 2>/dev/null || true  # Flannel WireGuard backend
-	firewall-cmd --permanent --add-port=6443/tcp 2>/dev/null || true   # K3s API server
+		firewall-cmd --permanent --add-port=8472/udp 2>/dev/null || true   # Flannel VXLAN overlay
+		firewall-cmd --permanent --add-port=51820/udp 2>/dev/null || true  # Flannel WireGuard backend
+		firewall-cmd --permanent --add-port=6443/tcp 2>/dev/null || true   # K3s API server
 		firewall-cmd --permanent --add-port=10250/tcp 2>/dev/null || true  # kubelet API
 		firewall-cmd --permanent --add-port=2379/tcp 2>/dev/null || true   # etcd client
 		firewall-cmd --permanent --add-port=2380/tcp 2>/dev/null || true   # etcd peer
@@ -231,9 +231,9 @@ configure_k3s_firewall() {
 	elif command -v ufw >/dev/null 2>&1; then
 		ufw allow from 10.42.0.0/16 2>/dev/null || true   # pod network CIDR
 		ufw allow from 10.43.0.0/16 2>/dev/null || true   # service CIDR
-	ufw allow 8472/udp 2>/dev/null || true            # Flannel VXLAN overlay
-	ufw allow 51820/udp 2>/dev/null || true           # Flannel WireGuard backend
-	ufw allow 6443/tcp 2>/dev/null || true            # K3s API server
+		ufw allow 8472/udp 2>/dev/null || true            # Flannel VXLAN overlay
+		ufw allow 51820/udp 2>/dev/null || true           # Flannel WireGuard backend
+		ufw allow 6443/tcp 2>/dev/null || true            # K3s API server
 		ufw allow 10250/tcp 2>/dev/null || true           # kubelet API
 		ufw allow 2379/tcp 2>/dev/null || true            # etcd client
 		ufw allow 2380/tcp 2>/dev/null || true            # etcd peer

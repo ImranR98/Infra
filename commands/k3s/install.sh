@@ -73,6 +73,7 @@ _k3s_apply() {
 _delete_resource_with_timeout() {
 	local kind="$1" ns="$2" name="$3" timeout="${4:-30s}"
 	kubectl delete "$kind" "$name" -n "$ns" --wait=false 2>/dev/null || true
+	kubectl get "$kind" "$name" -n "$ns" >/dev/null 2>&1 || return 0
 	kubectl wait --for=delete "$kind" "$name" -n "$ns" --timeout="$timeout" >/dev/null 2>&1 && return 0
 	echo "ERROR: $kind $ns/$name did not finish deleting within $timeout" >&2
 	exit 1
