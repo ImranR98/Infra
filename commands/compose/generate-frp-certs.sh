@@ -18,20 +18,9 @@ CLIENT_TARGET="$TARGET"
 CLIENT_VARS_TPL="$ATLAS_ROOT/targets/$CLIENT_TARGET/VARS.template.sh"
 SERVER_VARS_TPL="$ATLAS_ROOT/targets/$SERVER_TARGET/VARS.template.sh"
 
-# Determine server hostname from actual VARS file (real PROXY_HOST), fall back to template
-PROXY_HOST_VAL=""
-_actual_vars=$(resolve_vars_file "$CLIENT_TARGET" 2>/dev/null || echo "")
-if [ -n "$_actual_vars" ] && [ -f "$_actual_vars" ]; then
-    PROXY_HOST_VAL=$(grep "^export PROXY_HOST=" "$_actual_vars" | sed 's/^export PROXY_HOST=//; s/"//g' | head -1)
-fi
-if [ -z "$PROXY_HOST_VAL" ]; then
-    PROXY_HOST_VAL=$(grep "^export PROXY_HOST=" "$CLIENT_VARS_TPL" | sed 's/^export PROXY_HOST=//; s/"//g' | head -1)
-fi
-SERVER_HOSTNAME="${PROXY_HOST_VAL:-$SERVER_TARGET}"
-
 echo "=== FRP mTLS Certificate Generator ==="
 echo "Client: $CLIENT_TARGET"
-echo "Server: $SERVER_TARGET ($SERVER_HOSTNAME)"
+echo "Server: $SERVER_TARGET"
 echo ""
 
 if ! command -v openssl >/dev/null 2>&1; then
