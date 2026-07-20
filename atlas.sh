@@ -33,7 +33,13 @@ shift
 source "$ATLAS_ROOT/lib/common.sh"
 
 vars_found=false
-if [ -n "$(resolve_vars_file "$TARGET")" ]; then
+_skip_source=false
+case "${1:-}" in
+	compose) case "${2:-}" in
+		generate-frp-certs) _skip_source=true ;;
+	esac ;;
+esac
+if [ -n "$(resolve_vars_file "$TARGET")" ] && [ "$_skip_source" != true ]; then
 	source_env "$TARGET"
 	vars_found=true
 	export ENVSUBST_VARS="$(get_envsubst_vars)"
