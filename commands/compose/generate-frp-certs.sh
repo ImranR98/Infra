@@ -15,13 +15,17 @@ if [ -z "$SERVER_TARGET" ] || [ ! -f "$ATLAS_ROOT/targets/$SERVER_TARGET/VARS.te
 fi
 
 CLIENT_TARGET="$TARGET"
-CLIENT_VARS="$ATLAS_ROOT/targets/$CLIENT_TARGET/VARS.template.sh"
-SERVER_VARS="$ATLAS_ROOT/targets/$SERVER_TARGET/VARS.template.sh"
+CLIENT_VARS_TPL="$ATLAS_ROOT/targets/$CLIENT_TARGET/VARS.template.sh"
+SERVER_VARS_TPL="$ATLAS_ROOT/targets/$SERVER_TARGET/VARS.template.sh"
 
-# Determine server hostname from VARS template or use PROXY_HOST
+# Determine server hostname from actual VARS file (real PROXY_HOST), fall back to template
 PROXY_HOST_VAL=""
-if grep -q "^export PROXY_HOST=" "$CLIENT_VARS" 2>/dev/null; then
-    PROXY_HOST_VAL=$(grep "^export PROXY_HOST=" "$CLIENT_VARS" | sed 's/^export PROXY_HOST=//; s/"//g' | head -1)
+_actual_vars=$(resolve_vars_file "$CLIENT_TARGET" 2>/dev/null || echo "")
+if [ -n "$_actual_vars" ] && [ -f "$_actual_vars" ]; then
+    PROXY_HOST_VAL=$(grep "^export PROXY_HOST=" "$_actual_vars" | sed 's/^export PROXY_HOST=//; s/"//g' | head -1)
+fi
+if [ -z "$PROXY_HOST_VAL" ]; then
+    PROXY_HOST_VAL=$(grep "^export PROXY_HOST=" "$CLIENT_VARS_TPL" | sed 's/^export PROXY_HOST=//; s/"//g' | head -1)
 fi
 SERVER_HOSTNAME="${PROXY_HOST_VAL:-$SERVER_TARGET}"
 
@@ -48,7 +52,7 @@ echo "Generating client certificate for $CLIENT_TARGET..."
 generate_client_cert "$OUTDIR" "$OUTDIR/ca.crt" "$OUTDIR/ca.key" "$CLIENT_TARGET-client"
 
 HAS_PREBOOT=false
-if grep -q "FRP_PREBOOT_CLIENT_CERT" "$CLIENT_VARS" 2>/dev/null; then
+if grep -q "FRP_PREBOOT_CLIENT_CERT" "$CLIENT_VARS_TPL" 2>/dev/null; then
     HAS_PREBOOT=true
     echo "Generating preboot client certificate for $CLIENT_TARGET..."
     generate_client_cert "$OUTDIR" "$OUTDIR/ca.crt" "$OUTDIR/ca.key" "$CLIENT_TARGET-preboot"
