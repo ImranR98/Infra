@@ -12,7 +12,7 @@ spec:
   version: 2.11.1
   valuesContent: |-
     base:
-      default_req_timeout: 120s
+      default_req_timeout: 300s
     io_engine:
       cpuCount: "1"
       interruptMode:
