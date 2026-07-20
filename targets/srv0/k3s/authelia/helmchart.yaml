@@ -26,6 +26,9 @@ spec:
         - name: users-database
           mountPath: "/config/users"
           readOnly: true
+        - name: oidc-secrets
+          mountPath: "/secrets/oidc"
+          readOnly: true
       extraVolumes:
         - name: users-database
           secret:
@@ -33,6 +36,9 @@ spec:
             items:
               - key: users-database.yaml
                 path: users-database.yaml
+        - name: oidc-secrets
+          secret:
+            secretName: authelia-oidc-secrets
     configMap:
       authentication_backend:
         ldap:
@@ -95,12 +101,12 @@ spec:
             value: '$AUTHELIA_OIDC_HMAC_SECRET'
           jwks:
             - key:
-                value: |
-                  $AUTHELIA_JWKS_KEY
+                path: '/secrets/oidc/jwks.private-key.pem'
           clients:
           - client_id: 'immich'
             client_name: 'immich'
-            client_secret: '$plaintext$$AUTHELIA_IMMICH_CLIENT_SECRET'
+            client_secret:
+               path: '/secrets/oidc/oidc.immich.client-secret'
             public: false
             authorization_policy: 'two_factor'
             redirect_uris:
@@ -116,7 +122,8 @@ spec:
             token_endpoint_auth_method: 'client_secret_post'
           - client_id: 'open-webui'
             client_name: 'Open WebUI'
-            client_secret: '$plaintext$$AUTHELIA_OPENWEBUI_CLIENT_SECRET'
+            client_secret:
+               path: '/secrets/oidc/oidc.openwebui.client-secret'
             public: false
             authorization_policy: 'two_factor'
             require_pkce: true

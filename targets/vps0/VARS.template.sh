@@ -34,6 +34,7 @@ export AUTHELIA_JWT_SECRET="change_me" # openssl rand -hex 128
 # --- Plausible Analytics ---
 export PLAUSIBLE_SECRET_KEY="change_me" # openssl rand -base64 48
 export PLAUSIBLE_TOTP_VAULT_KEY="change_me" # openssl rand -base64 32
+export PLAUSIBLE_DB_PASSWORD="change_me" # openssl rand -hex 16
 
 # --- PixelNtfy ---
 export PIXELNTFY_TOPIC="change_me" # openssl rand -hex 16

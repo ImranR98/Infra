@@ -219,7 +219,7 @@ services:
         volumes:
             - $COMPOSE_STATE_DIR/plausible/db:/var/lib/postgresql/data
         environment:
-            - POSTGRES_PASSWORD=postgres
+            - POSTGRES_PASSWORD=$PLAUSIBLE_DB_PASSWORD
         healthcheck:
             test: ["CMD-SHELL", "pg_isready -U postgres"]
             start_period: 1m
