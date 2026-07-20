@@ -136,11 +136,11 @@ spec:
                     echo "  Done: $name"
                   done
                   echo "=== Backup complete ==="
-      volumes:
-        - name: backup-dest
-          hostPath:
-            path: $PVC_BACKUP_DIR
-            type: DirectoryOrCreate
+          volumes:
+            - name: backup-dest
+              hostPath:
+                path: $PVC_BACKUP_DIR
+                type: DirectoryOrCreate
       backoffLimit: 2
 ---
 apiVersion: v1
