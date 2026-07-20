@@ -62,9 +62,21 @@ install() {
         [ -f "$f" ] || continue
         inst "$f"
     done
+
+    inst_hook initqueue 10 "$moddir/neednet.sh"
 }
 DRACUT_EOF
-chmod +x "$DRACUT_MODULE_DIR/99nm-wifi/module-setup.sh"
+
+cat > "$DRACUT_MODULE_DIR/99nm-wifi/neednet.sh" << 'DRACUT_EOF'
+#!/usr/bin/sh
+# Signal dracut that networking is needed, even when
+# the default rd.neednet/ip= chain doesn't propagate correctly.
+# This tells NetworkManager's initrd hook to run.
+mkdir -p /run/NetworkManager/initrd
+> /run/NetworkManager/initrd/neednet
+DRACUT_EOF
+
+chmod +x "$DRACUT_MODULE_DIR/99nm-wifi/module-setup.sh" "$DRACUT_MODULE_DIR/99nm-wifi/neednet.sh"
 
 cat > /etc/dracut.conf.d/network-manager.conf << 'DRACUT_EOF'
 add_dracutmodules+=" network-manager "
