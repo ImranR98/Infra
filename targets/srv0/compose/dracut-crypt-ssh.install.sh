@@ -106,7 +106,7 @@ while true; do
 
     for iface in /sys/class/net/*; do
         [ -d "$iface" ] || continue
-        name=$(basename "$iface")
+        name=${iface##*/}
         [ "$name" = "lo" ] && continue
         if ip -4 addr show "$name" 2>/dev/null | grep -q "inet "; then
             > /tmp/net.ready
