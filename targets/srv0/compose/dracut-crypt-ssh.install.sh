@@ -67,15 +67,39 @@ install() {
     instmods iwlwifi iwlmvm mac80211 cfg80211
 
     # NM in initramfs needs wpa_supplicant + WiFi device plugin
-    # The D-Bus service file auto-launches wpa_supplicant when NM pokes it
+    # NM's D-Bus poke for fi.w1.wpa_supplicant1 never gets answered
+    # because D-Bus auto-activation is unreliable in initramfs.
+    # Instead, start wpa_supplicant as a systemd service before NM.
     inst_multiple wpa_supplicant
-    inst /usr/share/dbus-1/system-services/fi.w1.wpa_supplicant1.service
     for plugin in /usr/lib64/NetworkManager/*/libnm-device-plugin-wifi.so; do
         [ -f "$plugin" ] && inst "$plugin"
     done
 
     inst_hook initqueue 10 "$moddir/neednet.sh"
+
+    # Systemd service to start wpa_supplicant before nm-initrd
+    inst_simple "$moddir/wpa_supplicant-initrd.service" /etc/systemd/system/wpa_supplicant-initrd.service
+    mkdir -p "$initdir/etc/systemd/system/initrd.target.wants"
+    ln -sf /etc/systemd/system/wpa_supplicant-initrd.service "$initdir/etc/systemd/system/initrd.target.wants/"
 }
+DRACUT_EOF
+
+cat > "$DRACUT_MODULE_DIR/99nm-wifi/wpa_supplicant-initrd.service" << 'DRACUT_EOF'
+[Unit]
+Description=WPA Supplicant (initrd)
+DefaultDependencies=no
+After=dbus.service
+Before=nm-initrd.service
+
+[Service]
+Type=dbus
+BusName=fi.w1.wpa_supplicant1
+ExecStart=/usr/sbin/wpa_supplicant -u
+KillMode=process
+Restart=on-failure
+
+[Install]
+WantedBy=initrd.target
 DRACUT_EOF
 
 cat > "$DRACUT_MODULE_DIR/99nm-wifi/neednet.sh" << 'DRACUT_EOF'
