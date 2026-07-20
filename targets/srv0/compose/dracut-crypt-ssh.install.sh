@@ -104,63 +104,36 @@ DRACUT_EOF
 
 cat > "$DRACUT_MODULE_DIR/99nm-wifi/network-start.sh" << 'DRACUT_EOF'
 #!/usr/bin/sh
-# Bring up networking using any available method:
-# 1. Ethernet/DHCP: handled by NM daemon running in parallel
-# 2. WiFi: manual wpa_supplicant (bypasses D-Bus), always DHCP
-# Retries WiFi every 15s, supports all networks in wpa_supplicant.conf
+# Start wpa_supplicant in D-Bus mode so NM can take over WiFi + DHCP.
+# Avoids systemd (seccomp crash), avoids manual DHCP (no dhclient).
+# NM retries D-Bus every ~13s; once it finds wpa_supplicant,
+# it handles association, IP config, and default route automatically.
+# Ethernet works via NM the entire time with zero additional config.
 
-MAX_WAIT=60
+MAX_WAIT=90
 start=$(cat /proc/uptime | cut -d. -f1)
-last_wifi_attempt=0
-wifi_pid=""
-wifi_iface=""
-has_wifi=false
-
-# Find the wireless interface
-for iface in /sys/class/net/*; do
-    [ -d "$iface" ] || continue
-    name=$(basename "$iface")
-    [ "$name" = "lo" ] && continue
-    if [ -d "/sys/class/net/$name/wireless" ] || [ -d "/sys/class/net/$name/phy80211" ]; then
-        wifi_iface="$name"
-        has_wifi=true
-        break
-    fi
-done
+wpa_started=false
 
 while true; do
     now=$(cat /proc/uptime | cut -d. -f1)
     elapsed=$(( now - start ))
     [ $elapsed -ge $MAX_WAIT ] && break
 
-    # Check if any interface has an IP (Ethernet via NM, or our WiFi with DHCP)
-    got_ip=false
+    # Did any interface get an IP yet? (Ethernet via NM, or WiFi via NM)
     for iface in /sys/class/net/*; do
         [ -d "$iface" ] || continue
         name=$(basename "$iface")
         [ "$name" = "lo" ] && continue
         if ip -4 addr show "$name" 2>/dev/null | grep -q "inet "; then
-            got_ip=true; break
+            > /tmp/net.ready
+            exit 0
         fi
     done
-    if $got_ip; then
-        > /tmp/net.ready
-        exit 0
-    fi
 
-    # No IP yet. After 10s, try WiFi with wpa_supplicant + DHCP.
-    # Retry every 15s if connection doesn't stick.
-    if $has_wifi && [ -f /etc/wpa_supplicant/wpa_supplicant.conf ] && [ "$elapsed" -ge 10 ]; then
-        if [ -z "$wifi_pid" ] || [ $(( elapsed - last_wifi_attempt )) -ge 15 ]; then
-            [ -n "$wifi_pid" ] && kill "$wifi_pid" 2>/dev/null
-            ip link set "$wifi_iface" up 2>/dev/null
-            wpa_supplicant -B -i "$wifi_iface" -c /etc/wpa_supplicant/wpa_supplicant.conf
-            wifi_pid=$(pgrep -f "wpa_supplicant.*$wifi_iface" | head -1)
-            sleep 3
-            # Always use DHCP in initramfs regardless of post-boot IP config
-            dhclient -v "$wifi_iface" 2>/dev/null &
-            last_wifi_attempt=$elapsed
-        fi
+    # After 10s: start wpa_supplicant -u so NM can use it via D-Bus
+    if ! $wpa_started && [ "$elapsed" -ge 10 ] && [ -f /etc/wpa_supplicant/wpa_supplicant.conf ]; then
+        wpa_supplicant -u 2>/dev/null &
+        wpa_started=true
     fi
 
     sleep 2
