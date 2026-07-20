@@ -39,10 +39,12 @@ case "${1:-}" in
 		generate-frp-certs) _skip_source=true ;;
 	esac ;;
 esac
-if [ -n "$(resolve_vars_file "$TARGET")" ] && [ "$_skip_source" != true ]; then
-	source_env "$TARGET"
+if [ -n "$(resolve_vars_file "$TARGET")" ]; then
 	vars_found=true
-	export ENVSUBST_VARS="$(get_envsubst_vars)"
+	if [ "$_skip_source" != true ]; then
+		source_env "$TARGET"
+		export ENVSUBST_VARS="$(get_envsubst_vars)"
+	fi
 fi
 if [ "$vars_found" = true ]; then
 	DOCKER_GID="$(getent group docker | cut -d: -f3)" || true
