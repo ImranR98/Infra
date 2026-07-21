@@ -22,7 +22,7 @@ spec:
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: gokapi-data-pv
+  name: gokapi-data-pvc
   namespace: apps
 spec:
   accessModes:
@@ -57,7 +57,7 @@ spec:
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: gokapi-config-pv
+  name: gokapi-config-pvc
   namespace: apps
   labels:
     auto-backup: "true"

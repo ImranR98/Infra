@@ -65,7 +65,7 @@ if [ $# -ge 2 ]; then
     echo "  SSH: ssh -T $remote_host \"cd $remote_path && ATLAS_BACKUP_STREAM=true ./atlas.sh $remote_target compose backup-state\"" >&2
 
     tar_exit=0
-    (umask 0077; ssh -T "$remote_host" "cd $remote_path && ATLAS_BACKUP_STREAM=true ./atlas.sh '$remote_target' compose backup-state" > "$OUTPUT") || tar_exit=$?
+    (umask 0077; ssh -T "$remote_host" "cd '$remote_path' && ATLAS_BACKUP_STREAM=true ./atlas.sh '$remote_target' compose backup-state" > "$OUTPUT") || tar_exit=$?
     if [ $tar_exit -ge 2 ]; then
         echo "Backup command failed on remote" >&2
         rm -f "$OUTPUT"

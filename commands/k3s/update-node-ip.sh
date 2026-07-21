@@ -11,7 +11,7 @@ if ! command -v kubectl >/dev/null 2>&1; then
     exit 1
 fi
 
-node_name=$(kubectl get nodes -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
+node_name=$(kubectl get node "$(hostname)" -o jsonpath='{.metadata.name}' 2>/dev/null)
 if [ -z "$node_name" ]; then
     echo "Error: no K3s nodes found. Is the cluster running?" >&2
     exit 1

@@ -20,6 +20,8 @@ atlas_dispatch() {
 
     while [ $arg_idx -lt ${#cmd_args[@]} ]; do
         local arg="${cmd_args[$arg_idx]}"; found=""
+        # search_path accumulates subdirectory navigation (e.g. "compose").
+        # ${search_path:+/$search_path} prepends "/<path>" only when search_path is non-empty.
         for base in "${search_dirs[@]}"; do
             local shf="$ATLAS_ROOT/${base}${search_path:+/$search_path}/$arg.sh"
             local pyf="$ATLAS_ROOT/${base}${search_path:+/$search_path}/$arg.py"

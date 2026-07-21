@@ -32,6 +32,7 @@ detect_pkgmgr() {
 install_pkgs() {
     local su="$1"; local pkgmgr="$2"; shift 2
     local cmd_str
+    # Build a shell-escaped argument string safe for embedding in bash -c
     printf -v cmd_str '%q ' "$@"
     case "$pkgmgr" in
         apt) $su bash -c "apt-get install -y $cmd_str" || return 1 ;;
@@ -200,14 +201,14 @@ download_k3s_installer() {
     K3S_SCRIPT="$(mktemp /tmp/k3s-install.XXXXXX)"
     curl -fsSL --connect-timeout 30 --max-time 120 --retry 3 https://get.k3s.io -o "$K3S_SCRIPT"
 
-    K3S_SCRIPT_SHA256=$(curl -fsSL --connect-timeout 10 --max-time 30 https://github.com/k3s-io/k3s/raw/main/install.sh 2>/dev/null | sha256sum | cut -d' ' -f1)
+    EXPECTED_K3S_SCRIPT_SHA256=$(curl -fsSL --connect-timeout 10 --max-time 30 https://github.com/k3s-io/k3s/raw/main/install.sh 2>/dev/null | sha256sum | cut -d' ' -f1)
     DOWNLOADED_SHA256=$(sha256sum "$K3S_SCRIPT" | cut -d' ' -f1)
-    if [ -z "$K3S_SCRIPT_SHA256" ]; then
+    if [ -z "$EXPECTED_K3S_SCRIPT_SHA256" ]; then
         echo "Error: could not verify K3s install script (GitHub unreachable)." >&2
         exit 1
-    elif [ "$K3S_SCRIPT_SHA256" != "$DOWNLOADED_SHA256" ]; then
+    elif [ "$EXPECTED_K3S_SCRIPT_SHA256" != "$DOWNLOADED_SHA256" ]; then
         echo "Error: K3s install script checksum mismatch." >&2
-        echo "  Expected: $K3S_SCRIPT_SHA256" >&2
+        echo "  Expected: $EXPECTED_K3S_SCRIPT_SHA256" >&2
         echo "  Got:      $DOWNLOADED_SHA256" >&2
         rm -f "$K3S_SCRIPT"
         exit 1
@@ -304,6 +305,17 @@ validate() {
     echo "Compose: $( $compose_ok && echo "OK" || echo "issues found" )"
 }
 
+# Echo variable-reference errors for a file and increment the error counter
+# by the number of errors found.  Uses the global $errors variable.
+_count_ref_errors() {
+    local known_vars="$1" file="$2"
+    local ref_errors; ref_errors=$(_check_var_refs "$known_vars" "$file")
+    if [ -n "$ref_errors" ]; then
+        echo "$ref_errors"
+        errors=$((errors + $(echo "$ref_errors" | wc -l)))
+    fi
+}
+
 _validate_k3s() {
     local target="$1" comp_dir="$ATLAS_ROOT/targets/$target/k3s" errors=0
 
@@ -331,11 +343,7 @@ VOLUMES")
         local yaml_files=()
         for yf in "$comp_dir"/*.yaml "$comp_dir"/*.yml; do if [ -f "$yf" ]; then yaml_files+=("$yf"); fi; done
         for yf in "${yaml_files[@]}"; do
-            local ref_errors; ref_errors=$(_check_var_refs "$known_vars" "$yf")
-            if [ -n "$ref_errors" ]; then
-                echo "$ref_errors"
-                errors=$((errors + $(echo "$ref_errors" | wc -l)))
-            fi
+            _count_ref_errors "$known_vars" "$yf"
         done
     done
 
@@ -372,11 +380,7 @@ COMPOSE_STATE_DIR")
     local compose_files=("$ATLAS_ROOT/targets/$target/compose/compose.yaml")
     for f in "$ATLAS_ROOT/targets/$target/compose/templates"/*; do if [ -f "$f" ]; then compose_files+=("$f"); fi; done
     for f in "${compose_files[@]}"; do
-        local ref_errors; ref_errors=$(_check_var_refs "$known_vars" "$f")
-        if [ -n "$ref_errors" ]; then
-            echo "$ref_errors"
-            errors=$((errors + $(echo "$ref_errors" | wc -l)))
-        fi
+        _count_ref_errors "$known_vars" "$f"
     done
 
     if command -v docker >/dev/null 2>&1 && docker compose version >/dev/null 2>&1; then
@@ -397,6 +401,8 @@ list_domains() {
     local sd="${SERVICES_DOMAIN:-}"
     if [ -z "$sd" ]; then sd='$SERVICES_DOMAIN'; fi
 
+    # Traefik Host rules use backtick-delimited syntax:  Host(`example.com`)
+    # \x60 is the backtick character (`) in hex — simpler than escaping it.
     _extract_hosts() {
         grep -rohP "Host\(\x60[^\x60]+\x60\)" "$@" 2>/dev/null | \
             sed "s/.*\x60\([^\x60]*\)\x60.*/\1/" | \
@@ -418,6 +424,9 @@ list_domains() {
 
 # ====== retry ======
 
+# retry: runs a shell command (passed as remaining arguments) up to TRIES times,
+# sleeping DELAY seconds between attempts.  Uses eval to support pipelines and
+# redirections, so callers must pass only trusted, hard-coded command strings.
 retry() {
     local tries="${1:-30}"
     local delay="${2:-5}"
@@ -463,7 +472,7 @@ K3SEOF
 
 wait_for_crds() {
     local timeout_secs="${1:-300}"
-    local max_tries=$(( timeout_secs / 5 ))
+    local max_tries=$(( timeout_secs / 15 ))  # 10s kubectl call + 5s sleep per iteration
     shift
 
     local all_ok=true

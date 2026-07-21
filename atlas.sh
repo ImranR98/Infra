@@ -50,7 +50,7 @@ if [ "$vars_found" = true ]; then
     DOCKER_GID="$(getent group docker | cut -d: -f3)" || true
     case "${1:-}" in
         compose|k3s)
-            if [ -z "$DOCKER_GID" ] && [ "${2:-}" != "backup-state" ]; then
+			if [ -z "$DOCKER_GID" ] && [ "${2:-}" != "backup-state" ] && [ "${2:-}" != "generate-frp-certs" ]; then
                 echo "Error: docker group not found. Is Docker installed?" >&2
                 exit 1
             fi
