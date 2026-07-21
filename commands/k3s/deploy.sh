@@ -54,7 +54,7 @@ _run_hook() {
     if [ -f "$COMPONENT_DIR/$hook" ]; then bash "$COMPONENT_DIR/$hook"; fi
 }
 
-_check_initial_prereqs() {
+_check_cert_manager_crds() {
     $_has_initial_markers || return 0
     kubectl get crd certificates.cert-manager.io >/dev/null 2>&1 && return 0
     echo "WARNING: cert-manager CRDs not yet available. Run with 'initial' first if this is a fresh install." >&2
@@ -75,7 +75,7 @@ _delete_resource_with_timeout() {
     kubectl delete "$kind" "$name" -n "$ns" --wait=false 2>/dev/null || true
     kubectl get "$kind" "$name" -n "$ns" >/dev/null 2>&1 || return 0
     kubectl wait --for=delete "$kind" "$name" -n "$ns" --timeout="$timeout" >/dev/null 2>&1 && return 0
-    echo "ERROR: $kind $ns/$name did not finish deleting within $timeout" >&2
+    echo "Error: $kind $ns/$name did not finish deleting within $timeout" >&2
     exit 1
 }
 
@@ -119,7 +119,7 @@ declare -a _cleanup_dirs=()
 case "$MODE" in
     apply)
         _run_hook prep.sh
-        _check_initial_prereqs
+        _check_cert_manager_crds
         _build_yaml false
         _k3s_apply
         _run_hook post.sh ;;

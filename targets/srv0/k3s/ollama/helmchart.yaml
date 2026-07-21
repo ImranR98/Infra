@@ -40,8 +40,9 @@ spec:
     #               operator: In
     #               values:
     #                 - "true"
-    tolerations:
-      - key: scheduling-discouraged
-        operator: Equal
-        value: "true"
-        effect: PreferNoSchedule
+    # Uncomment when an AMD GPU node is available
+    # tolerations:
+    #   - key: scheduling-discouraged
+    #     operator: Equal
+    #     value: "true"
+    #     effect: PreferNoSchedule

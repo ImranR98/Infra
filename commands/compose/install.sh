@@ -43,7 +43,7 @@ WantedBy=multi-user.target
 EOF
 SU=$(get_sudo_cmd)
 $SU bash -c 'mv "$1" "$2"' _ "$COMPOSE_STATE_DIR/$TARGET.service" "/etc/systemd/system/$TARGET.service"
-command -v chcon &>/dev/null && $SU bash -c 'chcon -t "$1" "$2"' _ systemd_unit_file_t "/etc/systemd/system/$TARGET.service" 2>/dev/null || true
+command -v chcon >/dev/null 2>&1 && $SU bash -c 'chcon -t "$1" "$2"' _ systemd_unit_file_t "/etc/systemd/system/$TARGET.service" 2>/dev/null || true
 $SU bash -c 'systemctl daemon-reload' && $SU bash -c "systemctl enable $TARGET.service"
 $SU bash -c "systemctl restart $TARGET.service" 2>/dev/null || $SU bash -c "systemctl start $TARGET.service"
 

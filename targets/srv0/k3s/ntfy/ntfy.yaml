@@ -1,3 +1,4 @@
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -15,57 +16,57 @@ spec:
       labels:
         app: ntfy
     spec:
-        securityContext:
+      securityContext:
         fsGroup: $MY_UID
-        containers:
-      - name: ntfy
-        image: binwiederhier/ntfy:v2.26.0
-        securityContext:
-          allowPrivilegeEscalation: false
-        args: ["serve"]
-        env:
-        - name: NTFY_AUTH_USERS
-          valueFrom:
-            secretKeyRef:
-              name: ntfy-auth
-              key: auth-users
-        - name: NTFY_AUTH_TOKENS
-          valueFrom:
-            secretKeyRef:
-              name: ntfy-auth
-              key: auth-tokens
-        - name: NTFY_AUTH_ACCESS
-          valueFrom:
-            secretKeyRef:
-              name: ntfy-auth
-              key: auth-access
-        ports:
-        - containerPort: 3000
-        resources:
-          limits:
-            memory: 2Gi
-          requests:
-            memory: 128Mi
-        readinessProbe:
-          httpGet:
-            path: /v1/health
-            port: 3000
-          periodSeconds: 30
-          timeoutSeconds: 5
-          failureThreshold: 3
-        volumeMounts:
+      containers:
+        - name: ntfy
+          image: binwiederhier/ntfy:v2.26.0
+          securityContext:
+            allowPrivilegeEscalation: false
+          args: ["serve"]
+          env:
+            - name: NTFY_AUTH_USERS
+              valueFrom:
+                secretKeyRef:
+                  name: ntfy-auth
+                  key: auth-users
+            - name: NTFY_AUTH_TOKENS
+              valueFrom:
+                secretKeyRef:
+                  name: ntfy-auth
+                  key: auth-tokens
+            - name: NTFY_AUTH_ACCESS
+              valueFrom:
+                secretKeyRef:
+                  name: ntfy-auth
+                  key: auth-access
+          ports:
+            - containerPort: 3000
+          resources:
+            limits:
+              memory: 2Gi
+            requests:
+              memory: 128Mi
+          readinessProbe:
+            httpGet:
+              path: /v1/health
+              port: 3000
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+          volumeMounts:
+            - name: ntfy-data
+              mountPath: /home/ntfy
+            - name: ntfy-config
+              mountPath: /etc/ntfy
+              readOnly: true
+      volumes:
         - name: ntfy-data
-          mountPath: /home/ntfy
+          persistentVolumeClaim:
+            claimName: ntfy-pvc
         - name: ntfy-config
-          mountPath: /etc/ntfy
-          readOnly: true
-        volumes:
-      - name: ntfy-data
-        persistentVolumeClaim:
-          claimName: ntfy-pvc
-      - name: ntfy-config
-        secret:
-          secretName: ntfy-server-config
+          secret:
+            secretName: ntfy-server-config
 ---
 apiVersion: v1
 kind: Service

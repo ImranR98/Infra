@@ -1,7 +1,7 @@
 #!/bin/bash
 # DESC: Generate FRP mTLS certificates for a client↔server pair.
 #       Prints copy-paste blocks for VARS files. Never modifies VARS files.
-#       Run from the client target (srv0 or pc0).
+#       Run from any client/non-proxy target.
 # Usage: ./atlas.sh <client-target> compose generate-frp-certs <server-target>
 set -euo pipefail
 source "$ATLAS_ROOT/lib/common.sh"

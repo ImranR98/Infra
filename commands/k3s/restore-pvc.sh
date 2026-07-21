@@ -13,7 +13,7 @@ if [ "${1:-}" = "-y" ]; then AUTO_YES=true; shift; fi
 BACKUP_FILE="$PVC_BACKUP_DIR/${PVC_NAME}.tar.gz"
 
 if [ ! -f "$BACKUP_FILE" ]; then
-    echo "ERROR: backup not found at $BACKUP_FILE" >&2
+    echo "Error: backup not found at $BACKUP_FILE" >&2
     exit 1
 fi
 
@@ -21,7 +21,7 @@ fi
 PVC_NS=$(kubectl get pvc -A -o json 2>/dev/null | jq -r --arg name "$PVC_NAME" \
     '.items[] | select(.metadata.name == $name) | .metadata.namespace' 2>/dev/null || true)
 if [ -z "$PVC_NS" ]; then
-    echo "ERROR: PVC $PVC_NAME not found in cluster" >&2
+    echo "Error: PVC $PVC_NAME not found in cluster" >&2
     exit 1
 fi
 
@@ -121,7 +121,7 @@ PODEOF
 
 echo "Waiting for restore pod to complete..."
 if ! kubectl wait --for=jsonpath='{.status.phase}'=Succeeded "pod/$RESTORE_POD" -n "$PVC_NS" --timeout=600s 2>/dev/null; then
-    echo "ERROR: restore pod did not succeed" >&2
+    echo "Error: restore pod did not succeed" >&2
     exit 1
 fi
 kubectl delete pod "$RESTORE_POD" -n "$PVC_NS"

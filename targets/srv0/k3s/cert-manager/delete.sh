@@ -1,4 +1,5 @@
 #!/bin/bash
+# DESC: Remove cluster issuers and certificates before deleting cert-manager
 set -euo pipefail
 
 source "$ATLAS_ROOT/lib/common.sh"

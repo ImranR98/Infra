@@ -1,4 +1,5 @@
 #!/bin/bash
+# DESC: Check whether the root partition uses LUKS encryption
 set -euo pipefail
 
 # Get the root filesystem source device and clean up any appended subvol/path

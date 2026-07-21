@@ -40,6 +40,6 @@ echo "Waiting for cluster to be ready..."
 wait_for_k3s_cluster
 
 echo "Re-applying network policies with updated API server subnet..."
-bash "$ATLAS_ROOT/commands/k3s/install.sh" namespaces apply
+bash "$ATLAS_ROOT/commands/k3s/deploy.sh" namespaces apply
 
 echo "Done. K3s node IP updated to $new_ip."

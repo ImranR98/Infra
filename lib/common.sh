@@ -9,8 +9,8 @@ _lib_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 
 get_sudo_cmd() {
     local has_sudo=false has_run0=false
-    command -v sudo  &>/dev/null && has_sudo=true
-    command -v run0  &>/dev/null && has_run0=true
+    command -v sudo  >/dev/null 2>&1 && has_sudo=true
+    command -v run0  >/dev/null 2>&1 && has_run0=true
 
     if $has_run0 && $has_sudo; then
         ${ATLAS_INTERACTIVE:-false} && echo "sudo" || echo "run0"
@@ -22,9 +22,9 @@ get_sudo_cmd() {
 }
 
 detect_pkgmgr() {
-    if command -v apt-get &>/dev/null; then echo "apt"
-    elif command -v rpm-ostree &>/dev/null; then echo "rpm-ostree"
-    elif command -v dnf &>/dev/null; then echo "dnf"
+    if command -v apt-get >/dev/null 2>&1; then echo "apt"
+    elif command -v rpm-ostree >/dev/null 2>&1; then echo "rpm-ostree"
+    elif command -v dnf >/dev/null 2>&1; then echo "dnf"
     else echo "unknown"
     fi
 }
@@ -284,7 +284,7 @@ _check_var_refs() {
     if [ -z "$refs" ]; then return 0; fi
     echo "$refs" | grep -vxFf <(echo "$known_vars") | while read -r v; do
         if [ -z "$v" ]; then continue; fi
-        echo "ERROR: $(basename "$file") references '\$$v' but it's not defined in VARS template"
+        echo "Error: $(basename "$file") references '\$$v' but it's not defined in VARS template"
     done
 }
 
@@ -307,7 +307,7 @@ validate() {
 _validate_k3s() {
     local target="$1" comp_dir="$ATLAS_ROOT/targets/$target/k3s" errors=0
 
-     local known_vars; known_vars=$(_build_known_vars "$target" "MY_UID
+    local known_vars; known_vars=$(_build_known_vars "$target" "MY_UID
 TARGET
 COMPOSE_STATE_DIR
 COMPOSE_STATE_BACKUP_DIR
@@ -322,10 +322,10 @@ VOLUMES")
         local comp; comp=$(basename "$comp_dir")
         local kfile="$comp_dir/kustomization.yaml"
 
-        [ -f "$kfile" ] || { echo "ERROR: $comp missing kustomization.yaml"; errors=$((errors + 1)); continue; }
+        [ -f "$kfile" ] || { echo "Error: $comp missing kustomization.yaml"; errors=$((errors + 1)); continue; }
 
         if command -v kubectl >/dev/null 2>&1; then
-            kubectl kustomize "$comp_dir" >/dev/null || { echo "ERROR: $comp kustomize build failed"; errors=$((errors + 1)); }
+            kubectl kustomize "$comp_dir" >/dev/null || { echo "Error: $comp kustomize build failed"; errors=$((errors + 1)); }
         fi
 
         local yaml_files=()
@@ -351,7 +351,7 @@ _validate_compose() {
         [ -f "$f" ] || continue
         if [[ "$f" =~ \.(yaml|yml)$ ]]; then
             if ! yq eval '.' "$f" >/dev/null 2>&1; then
-                echo "ERROR: $(basename "$f") has invalid YAML syntax"
+                echo "Error: $(basename "$f") has invalid YAML syntax"
                 errors=$((errors + 1))
             fi
         fi
@@ -359,7 +359,7 @@ _validate_compose() {
     while IFS= read -r -d '' f; do
         [[ "$f" =~ \.(yaml|yml)$ ]] || continue
         if ! yq eval '.' "$f" >/dev/null 2>&1; then
-            echo "ERROR: $(basename "$f") has invalid YAML syntax"
+            echo "Error: $(basename "$f") has invalid YAML syntax"
             errors=$((errors + 1))
         fi
     done < <(find "$ATLAS_ROOT/targets/$target/compose/templates" -type f -print0 2>/dev/null)
@@ -381,7 +381,7 @@ COMPOSE_STATE_DIR")
 
     if command -v docker >/dev/null 2>&1 && docker compose version >/dev/null 2>&1; then
         if [ -f "$COMPOSE_STATE_DIR/compose.yaml" ]; then
-            docker compose -f "$COMPOSE_STATE_DIR/compose.yaml" config --dry-run >/dev/null || { echo "ERROR: docker compose config validation failed"; errors=$((errors + 1)); }
+            docker compose -f "$COMPOSE_STATE_DIR/compose.yaml" config --dry-run >/dev/null || { echo "Error: docker compose config validation failed"; errors=$((errors + 1)); }
         fi
     fi
 
@@ -474,7 +474,7 @@ wait_for_crds() {
             sleep 5
         done
         if [ "$crd_ok" = false ]; then
-            echo "ERROR: CRD $crd not established after ${timeout_secs}s" >&2
+            echo "Error: CRD $crd not established after ${timeout_secs}s" >&2
             all_ok=false
         fi
     done

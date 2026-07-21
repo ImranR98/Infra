@@ -1,4 +1,5 @@
 #!/bin/bash
+# DESC: Wait for cert-manager CRDs, apply issuers and certificates
 set -euo pipefail
 
 COMP_DIR="$ATLAS_ROOT/targets/$TARGET/k3s/cert-manager"
