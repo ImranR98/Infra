@@ -22,7 +22,7 @@ Template files under `compose/templates/` use file extensions to control renderi
 
 - **`.secret` files** — rendered via `envsubst`, then `chmod 600` (owner read/write only). Stripped of `.secret` suffix.
 - **`.plain` files** — copied without `envsubst` processing (no variable expansion). Used for files that must not be modified by templating.
-- **`traefik/acme.json`** — TLS certificate private keys. Seeded as `{"}"` with `chmod 600` if missing.
+- **`traefik/acme.json`** — TLS certificate private keys. Seeded as `{}` with `chmod 600` if missing.
 
 The runtime state directory (`current_target/compose_live_state/`) is fully gitignored since it contains rendered secrets.
 

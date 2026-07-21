@@ -78,7 +78,7 @@ Authelia configuration files have a special bootstrap mode. On first render (whe
 
 ### `acme.json` initialization
 
-For Traefik's Let's Encrypt certificate storage, a seed `{"}"` JSON file is created if one doesn't exist, with `chmod 600`.
+For Traefik's Let's Encrypt certificate storage, a seed `{}` JSON file is created if one doesn't exist, with `chmod 600`.
 
 ## K3s variable expansion
 
