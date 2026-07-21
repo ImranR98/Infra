@@ -306,7 +306,8 @@ validate() {
 }
 
 # Echo variable-reference errors for a file and increment the error counter
-# by the number of errors found.  Uses the global $errors variable.
+# by the number of errors found.  The caller must 'local errors=0' first;
+# bash makes local variables visible to called functions.
 _count_ref_errors() {
     local known_vars="$1" file="$2"
     local ref_errors; ref_errors=$(_check_var_refs "$known_vars" "$file")

@@ -113,8 +113,8 @@ _k3s_delete() {
 _k3s_diff() { printf '%s\n' "$PROCESSED_YAML" | kubectl diff -f - || true; }
 _k3s_yaml() { printf '%s\n' "$PROCESSED_YAML"; }
 
-trap 'rm -rf "${_cleanup_dirs[@]:-}"' EXIT
 declare -a _cleanup_dirs=()
+trap 'rm -rf "${_cleanup_dirs[@]:-}"' EXIT
 
 case "$MODE" in
     apply)

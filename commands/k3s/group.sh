@@ -29,7 +29,7 @@ if [ "$MODE" = "delete" ]; then
     fi
     for ((i=${#COMPONENTS[@]}-1; i>=0; i--)); do
         echo "=== ${COMPONENTS[$i]} (delete) ==="
-        bash "$ATLAS_ROOT/commands/k3s/deploy.sh" "${COMPONENTS[$i]}" delete || true
+        bash "$ATLAS_ROOT/commands/k3s/deploy.sh" "${COMPONENTS[$i]}" delete
     done
     exit 0
 fi

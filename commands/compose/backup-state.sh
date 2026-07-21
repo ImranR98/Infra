@@ -18,6 +18,11 @@ _prune_backups() {
     fi
 }
 
+_prep_backup() {
+    mkdir -p "$COMPOSE_STATE_BACKUP_DIR"
+    date +%Y%m%d_%H%M%S
+}
+
 _usage() {
     cat >&2 <<'EOF'
 Usage:
@@ -56,8 +61,7 @@ if [ $# -ge 2 ]; then
     remote_host="${remote_spec%%:*}"
     remote_path="${remote_spec#*:}"
 
-    TIMESTAMP=$(date +%Y%m%d_%H%M%S)
-    mkdir -p "$COMPOSE_STATE_BACKUP_DIR"
+    TIMESTAMP=$(_prep_backup)
     OUTPUT="$COMPOSE_STATE_BACKUP_DIR/$remote_target-backup-$TIMESTAMP.tar"
 
     echo "Backing up $remote_target state from $remote_host..." >&2
@@ -102,8 +106,7 @@ dir_size=$(du -sb "$COMPOSE_STATE_DIR" 2>/dev/null | awk '{print $1}') || dir_si
 
 if [ -t 1 ] && [ "${ATLAS_BACKUP_STREAM:-}" != "true" ]; then
     # stdout is a terminal (and not explicitly streaming) → write to file
-    TIMESTAMP=$(date +%Y%m%d_%H%M%S)
-    mkdir -p "$COMPOSE_STATE_BACKUP_DIR"
+    TIMESTAMP=$(_prep_backup)
     OUTPUT="$COMPOSE_STATE_BACKUP_DIR/$TARGET-backup-$TIMESTAMP.tar"
 
     echo "Backing up $COMPOSE_STATE_DIR..."

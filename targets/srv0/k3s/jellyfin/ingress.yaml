@@ -56,8 +56,6 @@ metadata:
 spec:
   entryPoints:
     - websecure
-  tls:
-    secretName: local-tls
   routes:
     - match: Host(`tv.lan.localhost`)
       kind: Rule
@@ -69,3 +67,5 @@ spec:
       services:
         - name: jellyfin
           port: 8096
+  tls:
+    secretName: local-tls

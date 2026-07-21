@@ -12,3 +12,16 @@ spec:
   dnsNames:
     - *.cluster.localhost
     - "*.lan.localhost"
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: local-tls
+  namespace: apps
+spec:
+  secretName: local-tls
+  issuerRef:
+    name: ca-issuer
+    kind: ClusterIssuer
+  dnsNames:
+    - "*.lan.localhost"

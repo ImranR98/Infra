@@ -80,4 +80,4 @@ print_copy_paste_block "$SERVER_TARGET" "FRP_SERVER_KEY" "$OUTDIR/server.key"
 
 echo ""
 echo "Files also available at: $OUTDIR"
-echo "(will be cleaned up when this script exits unless you Ctrl-C now)"
+echo "(will be cleaned up when this script exits)"

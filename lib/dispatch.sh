@@ -54,26 +54,26 @@ _atlas_help() {
     echo ""
     echo "  validate            Check configs for errors"
     echo "  list-domains        Show domains used by this target"
-    for f in commands/*.sh; do
+    for f in "$ATLAS_ROOT/commands"/*.sh; do
         [ -f "$f" ] || continue
         printf '  %-19s' "$(basename "${f%.*}")"
         _desc "$f"
     done
-    for f in "targets/$TARGET"/commands/*.sh; do
+    for f in "$ATLAS_ROOT/targets/$TARGET"/commands/*.sh; do
         [ -f "$f" ] || continue
         printf '  %-19s' "$(basename "${f%.*}")"
         _desc "$f"
     done
     for stack in compose k3s; do
-        [ -d "targets/$TARGET/$stack" ] || continue
+        [ -d "$ATLAS_ROOT/targets/$TARGET/$stack" ] || continue
         local has_cmds=false
-        for f in "commands/$stack"/*.sh; do
+        for f in "$ATLAS_ROOT/commands/$stack"/*.sh; do
             [ -f "$f" ] || continue
             [ "$has_cmds" = false ] && echo "" && has_cmds=true
             printf '  %s %-15s' "$stack" "$(basename "${f%.*}")"
             _desc "$f"
         done
-        for f in "targets/$TARGET"/commands/"$stack"/*.sh; do
+        for f in "$ATLAS_ROOT/targets/$TARGET"/commands/"$stack"/*.sh; do
             [ -f "$f" ] || continue
             [ "$has_cmds" = false ] && echo "" && has_cmds=true
             printf '  %s %-15s' "$stack" "$(basename "${f%.*}")"

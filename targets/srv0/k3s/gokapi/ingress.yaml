@@ -42,8 +42,6 @@ metadata:
 spec:
   entryPoints:
     - websecure
-  tls:
-    secretName: local-tls
   routes:
     - match: Host(`send.lan.localhost`)
       kind: Rule
@@ -55,3 +53,5 @@ spec:
       services:
         - name: gokapi-svc
           port: 53842
+  tls:
+    secretName: local-tls
