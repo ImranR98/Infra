@@ -46,7 +46,21 @@ _build_yaml() {
 	# vars (e.g. $DSCPLN_BUDGET_INIT_AMT=3000) become bare YAML integers.
 	# Kubernetes rejects integer values in env[].value string fields.
 	# The sed re-quotes bare numeric values in 'value:' lines.
-	PROCESSED_YAML=$(printf '%s\n' "$RAW_YAML" | envsubst "$ENVSUBST_VARS" | sed -E 's/^(\s+value: )([+-]?[0-9]+)$/\1"\2"/')
+	#
+	# envsubst replaces multiline variables inline only on their first
+	# line of occurrence, so subsequent lines inside YAML block scalars
+	# (after :| or :|-) lose template indentation.  The awk pass fixes
+	# those continuation lines back to the block's base indent.
+	PROCESSED_YAML=$(printf '%s\n' "$RAW_YAML" \
+		| envsubst "$ENVSUBST_VARS" \
+		| sed -E 's/^(\s+value: )([+-]?[0-9]+)$/\1"\2"/' \
+		| awk '
+			function indent(s) { match(s,/^ */); return RLENGTH }
+			/:[[:blank:]]*\|-?[[:blank:]]*$/ { blk=1; base=0; next_ok=1; print; next }
+			blk && next_ok && NF>0 { base=indent($0); next_ok=0; print; next }
+			blk && NF>0 && indent($0)<base { $0=sprintf("%*s%s",base,"",substr($0,indent($0)+1))}
+			{ blk=0; print }
+		')
 }
 
 _run_hook() {
