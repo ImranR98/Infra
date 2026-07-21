@@ -15,6 +15,7 @@ spec:
       share: /k3s-state
       subDir: jellyfin-config
       mountOptions: nolock
+      mountPermissions: "0755"
   storageClassName: nfs
   persistentVolumeReclaimPolicy: Retain
 ---

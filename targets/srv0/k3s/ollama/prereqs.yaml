@@ -15,6 +15,7 @@ spec:
       share: /k3s-state
       subDir: ollama-models
       mountOptions: nolock
+      mountPermissions: "0755"
   storageClassName: nfs
   persistentVolumeReclaimPolicy: Retain
 ---
@@ -49,6 +50,7 @@ spec:
       share: /k3s-state
       subDir: openwebui-data
       mountOptions: nolock
+      mountPermissions: "0755"
   storageClassName: nfs
   persistentVolumeReclaimPolicy: Retain
 ---
@@ -67,6 +69,41 @@ spec:
       storage: 5Gi
   storageClassName: nfs
   volumeName: openwebui-data-pv
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: open-webui-pipelines-pv
+spec:
+  capacity:
+    storage: 5Gi
+  accessModes:
+    - ReadWriteMany
+  csi:
+    driver: nfs.csi.k8s.io
+    volumeHandle: open-webui-pipelines
+    volumeAttributes:
+      server: nfs-server.base.svc.cluster.local
+      share: /k3s-state
+      subDir: open-webui-pipelines
+      mountOptions: nolock
+      mountPermissions: "0755"
+  storageClassName: nfs
+  persistentVolumeReclaimPolicy: Retain
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: open-webui-pipelines
+  namespace: apps
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 5Gi
+  storageClassName: nfs
+  volumeName: open-webui-pipelines-pv
 ---
 apiVersion: v1
 kind: Secret

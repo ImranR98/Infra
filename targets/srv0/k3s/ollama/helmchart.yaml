@@ -11,13 +11,13 @@ spec:
   failurePolicy: abort
   version: 1.66.0
   valuesContent: |-
-    image:
-      tag: latest
     persistentVolume:
       enabled: true
       existingClaim: ollama-models-pvc
-    gpu:
-      enabled: false
+    ollama:
+      gpu:
+        enabled: true
+        type: amd
     resources:
       limits:
         memory: 2Gi

@@ -19,6 +19,9 @@ spec:
         enabled: false
 
     volumes:
+      - name: dri
+        hostPath:
+          path: /dev/dri
       - name: tv
         persistentVolumeClaim:
           claimName: jellyfin-tv-pvc
@@ -27,6 +30,8 @@ spec:
           claimName: jellyfin-youtube-pvc
 
     volumeMounts:
+      - name: dri
+        mountPath: /dev/dri
       - name: tv
         mountPath: /media/TV
         readOnly: true
