@@ -56,11 +56,11 @@ _build_yaml() {
 		| sed -E 's/^(\s+value: )([+-]?[0-9]+)$/\1"\2"/' \
 		| awk '
 			function indent(s) { match(s,/^ */); return RLENGTH }
-			/:[[:blank:]]*\|-?[[:blank:]]*$/ { blk=1; base=0; got=0; print; next }
-			blk && !got && NF>0       { base=indent($0); got=1; print; next }
-			blk && NF==0              { blk=0; print; next }
-			blk && indent($0) < base  { blk=0; print; next }
-			blk                       { $0=sprintf("%*s%s",base,"",substr($0,indent($0)+1)); print; next }
+			/:[[:blank:]]*\|-?[[:blank:]]*$/    { blk=1; base=0; got=0; print; next }
+			blk && !got && NF>0                  { base=indent($0); got=1; print; next }
+			blk && NF==0                         { blk=0; print; next }
+			blk && indent($0) >= base            { print; next }
+			blk { $0=sprintf("%*s%s",base,"",substr($0,indent($0)+1)); print; next }
 			{ print }
 		')
 }
