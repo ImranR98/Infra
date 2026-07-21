@@ -59,6 +59,11 @@ echo ""
 echo "=== Node Labels ==="
 echo "If this node has an AMD GPU, label it for GPU-accelerated workloads:"
 echo "  kubectl label node $(hostname) has-amdgpu=true --overwrite"
+echo ""
+echo "When adding a future node that should be avoided by most workloads:"
+echo "  kubectl taint node <node-name> scheduling-discouraged=true:PreferNoSchedule"
+echo "GPU workloads (ollama, immich-machine-learning, jellyfin) can still"
+echo "land on it — they have matching tolerations plus GPU affinity."
 
 configure_k3s_firewall
 

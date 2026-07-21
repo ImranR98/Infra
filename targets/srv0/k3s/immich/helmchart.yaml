@@ -70,6 +70,11 @@ spec:
                 repository: ghcr.io/immich-app/immich-machine-learning
                 tag: v3.0.3-rocm
       defaultPodOptions:
+        tolerations:
+          - key: scheduling-discouraged
+            operator: Equal
+            value: "true"
+            effect: PreferNoSchedule
         affinity:
           nodeAffinity:
             preferredDuringSchedulingIgnoredDuringExecution:

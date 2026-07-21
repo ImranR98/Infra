@@ -53,3 +53,8 @@ spec:
                   operator: In
                   values:
                     - "true"
+    tolerations:
+      - key: scheduling-discouraged
+        operator: Equal
+        value: "true"
+        effect: PreferNoSchedule
