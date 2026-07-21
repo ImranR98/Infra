@@ -27,6 +27,8 @@ spec:
         startup:
           failureThreshold: 30
       extraVolumeMounts:
+        - name: notifier-data
+          mountPath: "/notifications"
         - name: users-database
           mountPath: "/config/users"
           readOnly: true
@@ -34,6 +36,8 @@ spec:
           mountPath: "/secrets/oidc"
           readOnly: true
       extraVolumes:
+        - name: notifier-data
+          emptyDir: {}
         - name: users-database
           secret:
             secretName: authelia-users
@@ -95,7 +99,8 @@ spec:
             enabled: false
       notifier:
         filesystem:
-          enabled: false
+          enabled: true
+          filename: /notifications/notification.txt
         smtp:
           enabled: false
       identity_providers:

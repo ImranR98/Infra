@@ -22,10 +22,6 @@ spec:
         - name: opencanary
           image: thinkst/opencanary:0.9.8
           securityContext:
-            runAsUser: $MY_UID
-            runAsGroup: $MY_UID
-            capabilities:
-              add: ["NET_BIND_SERVICE"]
             allowPrivilegeEscalation: false
           resources:
             limits:
