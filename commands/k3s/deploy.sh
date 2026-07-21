@@ -36,11 +36,12 @@ _build_yaml() {
         TMP_DIR=$(mktemp -d)
         _cleanup_dirs+=("$TMP_DIR")
         for f in "$COMPONENT_DIR"/*.yaml; do
+            [ -f "$f" ] || continue
             sed '/# IGNORE INITIALLY$/d' "$f" > "$TMP_DIR/$(basename "$f")"
         done
-        RAW_YAML=$(kubectl kustomize "$TMP_DIR")
+        RAW_YAML=$(kubectl kustomize "$TMP_DIR") || { echo "Error: kustomize build failed for $COMPONENT (initial)" >&2; exit 1; }
     else
-        RAW_YAML=$(kubectl kustomize "$COMPONENT_DIR")
+        RAW_YAML=$(kubectl kustomize "$COMPONENT_DIR") || { echo "Error: kustomize build failed for $COMPONENT" >&2; exit 1; }
     fi
     # kustomize strips YAML quotes from scalars, so after envsubst numeric
     # vars (e.g. $DSCPLN_BUDGET_INIT_AMT=3000) become bare YAML integers.
@@ -74,9 +75,10 @@ _delete_resource_with_timeout() {
     local kind="$1" ns="$2" name="$3" timeout="${4:-30s}"
     kubectl delete "$kind" "$name" -n "$ns" --wait=false 2>/dev/null || true
     kubectl get "$kind" "$name" -n "$ns" >/dev/null 2>&1 || return 0
-    kubectl wait --for=delete "$kind" "$name" -n "$ns" --timeout="$timeout" >/dev/null 2>&1 && return 0
-    echo "Error: $kind $ns/$name did not finish deleting within $timeout" >&2
-    exit 1
+    kubectl wait --for=delete "$kind" "$name" -n "$ns" --timeout="$timeout" >/dev/null 2>&1 \
+        || kubectl get "$kind" "$name" -n "$ns" >/dev/null 2>&1 \
+        || { echo "Error: $kind $ns/$name did not finish deleting within $timeout" >&2; exit 1; }
+    return 0
 }
 
 _k3s_delete() {
