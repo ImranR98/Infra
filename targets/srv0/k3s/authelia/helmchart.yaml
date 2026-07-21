@@ -14,6 +14,10 @@ spec:
   valuesContent: |-
     pod:
       kind: Deployment
+      securityContext:
+        container:
+          runAsUser: $MY_UID
+          runAsGroup: $MY_UID
       resources:
         limits:
           memory: 2Gi
@@ -91,7 +95,7 @@ spec:
             enabled: false
       notifier:
         filesystem:
-          enabled: true
+          enabled: false
         smtp:
           enabled: false
       identity_providers:
