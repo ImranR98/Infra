@@ -6,9 +6,7 @@ ensure_envsubst_vars
 
 render_compose_yaml
 
-# Parse compose.yaml to discover host volume paths: for each
-# service volume, extract the source path.  Files get the parent
-# directory created; directories get the path itself.
+# Create host volume dirs from compose.yaml (parent dir for files, full path for dirs).
 yq -r '.services[] | select(.volumes) | .volumes[] | (.source? // .) | split(":") | .[0]' "$COMPOSE_STATE_DIR/compose.yaml" | grep -F "^$COMPOSE_STATE_DIR" | while read -r host_path; do
 name="$(basename "$host_path")"
 if [[ "$name" =~ \.[a-zA-Z0-9]{1,5}$ ]]; then

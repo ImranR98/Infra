@@ -28,8 +28,7 @@ spec:
 ---
 # CrowdSec bouncer — checks IPs against CrowdSec's ban list in streaming mode.
 # Requires CrowdSec LAPI to be running (15.crowdsec.yaml).
-# NOTE: The bouncer key is inline because Traefik plugin Middleware CRDs
-# do not support valueFrom.secretKeyRef — only plain string values.
+# Bouncer key inline — Traefik Middleware CRDs don't support secretKeyRef.
 apiVersion: traefik.io/v1alpha1
 kind: Middleware
 metadata:

@@ -219,7 +219,6 @@ download_k3s_installer() {
 }
 
 configure_k3s_firewall() {
-    # Check for firewalld (RHEL/Fedora family)
     if command -v firewall-cmd >/dev/null 2>&1; then
         firewall-cmd --permanent --zone=trusted --add-source=10.42.0.0/16 2>/dev/null || true  # pod network CIDR
         firewall-cmd --permanent --zone=trusted --add-source=10.43.0.0/16 2>/dev/null || true  # service CIDR
@@ -232,7 +231,6 @@ configure_k3s_firewall() {
         firewall-cmd --permanent --add-port=443/tcp 2>/dev/null || true    # HTTPS ingress
         firewall-cmd --reload
         echo "Firewall configured (firewalld)."
-    # Check for ufw (Ubuntu/Debian family)
     elif command -v ufw >/dev/null 2>&1; then
         ufw allow from 10.42.0.0/16 2>/dev/null || true   # pod network CIDR
         ufw allow from 10.43.0.0/16 2>/dev/null || true   # service CIDR
@@ -307,9 +305,7 @@ validate() {
     echo "Compose: $( $compose_ok && echo "OK" || echo "issues found" )"
 }
 
-# Echo variable-reference errors for a file and increment the error counter
-# by the number of errors found.  The caller must 'local errors=0' first;
-# bash makes local variables visible to called functions.
+# Count ref-errors from file.  Caller needs 'local errors=0' (bash locals propagate to called functions).
 _count_ref_errors() {
     local known_vars="$1" file="$2"
     local ref_errors; ref_errors=$(_check_var_refs "$known_vars" "$file")

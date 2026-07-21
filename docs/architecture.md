@@ -127,7 +127,7 @@ All memory and storage sizes follow a small set of preset tiers. Every service i
 |------|-----------|-------------|-------------------|----------|
 | small | 512Mi | 128Mi | 512M | Sidecars, init containers, CSI components |
 | medium | 2Gi | 128Mi | 2G | Most app containers, all database pods |
-| large | 8Gi | 2Gi | 8G | Plausible stack (app, Postgres, ClickHouse) |
+| large | 8Gi | 2Gi | 8G | Plausible analytics (app, Postgres, ClickHouse) |
 
 ### Storage tiers
 

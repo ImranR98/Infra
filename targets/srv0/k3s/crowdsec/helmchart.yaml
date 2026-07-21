@@ -15,9 +15,7 @@ spec:
 
     tls:
       enabled: true
-      # The CrowdSec chart v0.24.0 generates cert-manager Certificate resources
-      # with null secretTemplate values when no annotations are set (a chart bug).
-      # Providing at least one annotation prevents the null rendering.
+      # Annotations prevent null secretTemplate rendering (CrowdSec chart v0.24.0 bug).
       certManager:
         secretTemplate:
           annotations:
@@ -85,8 +83,7 @@ spec:
       dashboard:
         enabled: false
       env:
-        # Without TLS and AGENTS_ALLOWED_OU, the appsec component enters an
-        # "unknown" state after reboot and never recovers.
+        # TLS + AGENTS_ALLOWED_OU prevents appsec entering "unknown" after reboot.
         - name: AGENTS_ALLOWED_OU
           value: agent-ou,appsec-ou
         - name: BOUNCER_KEY_traefik

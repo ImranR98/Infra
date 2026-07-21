@@ -25,27 +25,18 @@ $SU bash -c 'mkdir -p /etc/wireguard'
 $SU bash -c 'cp "$1" "$2"' _ "$CONFIG_FILE" /etc/wireguard/wg0.conf
 $SU bash -c 'chmod 600 /etc/wireguard/wg0.conf'
 
-# Rewrite AllowedIPs.  0.0.0.0/1 + 128.0.0.0/1 covers all IPv4
-# but is less specific than directly-connected routes (/24), so
-# K3s (10.42.0.0/16, 10.43.0.0/16) and the LAN subnet stay on
-# the physical NIC.
+# Split-/1 AllowedIPs are less specific than local routes, protecting K3s/LAN.
 $SU bash -c "sed -i 's/^AllowedIPs\s*=.*/AllowedIPs = 0.0.0.0\/1, 128.0.0.0\/1/' /etc/wireguard/wg0.conf"
 
-# The endpoint falls inside 0.0.0.0/1, which causes a dead loop:
-# WireGuard's own handshake packets get routed into wg0 instead of
-# out the physical NIC.  Add a PostUp rule so the endpoint always
-# goes through the physical gateway.
+# Endpoint inside /1 causes handshake to loop into wg0; PostUp /32 route forces it via physical gateway.
 ENDPOINT=$($SU bash -c "grep -oP '^Endpoint\s*=\s*\K[\d.]+' /etc/wireguard/wg0.conf")
 GATEWAY=$(ip route show default 2>/dev/null | awk '{print $3; exit}')
 if [ -n "$ENDPOINT" ] && [ -n "$GATEWAY" ]; then
     $SU bash -c 'sed -i "$1" "$2"' _ "/^\[Interface\]/a\PostUp = ip route add $ENDPOINT/32 via $GATEWAY" /etc/wireguard/wg0.conf
     $SU bash -c 'sed -i "$1" "$2"' _ "/^\[Interface\]/a\PreDown = ip route delete $ENDPOINT/32 via $GATEWAY" /etc/wireguard/wg0.conf
 
-    # Remove the Table=auto spec that wg-quick inserts for split-/1 prefixes.
-    # Without a PostUp endpoint-specific /32 route, wg-quick would route the
-    # WireGuard handshake into wg0 (dead loop).  The PostUp/PreDown rules above
-    # fix that, and removing Table=auto keeps the routes in the main table so
-    # they coexist safely with K3s/LAN subnets.
+    # Drop Table=auto (inserted for split-/1).  PostUp/PreDown /32 routes
+    # avoid dead loop; main-table routes coexist with K3s.
     $SU bash -c "sed -i '/^Table\s*=/d' /etc/wireguard/wg0.conf"
 fi
 

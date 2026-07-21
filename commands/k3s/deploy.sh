@@ -43,10 +43,8 @@ _build_yaml() {
     else
         RAW_YAML=$(kubectl kustomize "$COMPONENT_DIR") || { echo "Error: kustomize build failed for $COMPONENT" >&2; exit 1; }
     fi
-    # kustomize strips YAML quotes from scalars, so after envsubst numeric
-    # vars (e.g. $DSCPLN_BUDGET_INIT_AMT=3000) become bare YAML integers.
-    # Kubernetes rejects integer values in env[].value string fields.
-    # The sed re-quotes bare numeric values in 'value:' lines.
+    # kustomize strips YAML quotes; envsubst makes numeric vars bare ints.
+    # Kubernetes rejects unquoted ints in env[].value.  Sed re-quotes them.
     PROCESSED_YAML=$(printf '%s\n' "$RAW_YAML" | envsubst "$ENVSUBST_VARS" | sed -E 's/^(\s+value: )([+-]?[0-9]+)$/\1"\2"/')
 }
 

@@ -1,8 +1,6 @@
-# NOTE: Any ending (strictly ending, not just containing) with the 'IGNORE INITIALLY' comment
-#       will be ignored by atlas.sh when copying this file for the first time (but not when updating it later).
-#       The main use case for this is to avoid applying 'bypass' policies to some sites that
-#       should not be protected by Authelia once fully set up, but should be protected before
-#       some manual step is taken (usually manual creation of an admin account).
+# Lines ending with 'IGNORE INITIALLY' are commented-out on first copy
+# (skips 'bypass' policies until accounts are configured).  Included on
+# subsequent updates.
 
 jwt_secret: '$AUTHELIA_JWT_SECRET'
 

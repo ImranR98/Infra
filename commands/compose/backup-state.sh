@@ -96,16 +96,14 @@ if [ ! -d "$COMPOSE_STATE_DIR" ]; then
     exit 1
 fi
 
-# Docker+tar pipeline that excludes FIFOs/sockets (they block reads indefinitely)
-# --log-driver none prevents Docker from writing the tar stream to json-file logs on disk
+# Docker tar pipeline excluding FIFOs/sockets; --log-driver none avoids json-file disk logs.
 docker_tar_cmd=(docker run --rm --log-driver none -v "$COMPOSE_STATE_DIR":/backup/state:ro \
     alpine sh -c 'apk add --no-cache tar >/dev/null && find /backup/state \( -type f -o -type d -o -type l \) -print0 | tar cf - --null -T - --sparse --ignore-failed-read --warning=no-file-changed --warning=no-file-removed')
 
-# Size estimate for progress display
 dir_size=$(du -sb "$COMPOSE_STATE_DIR" 2>/dev/null | awk '{print $1}') || dir_size=""
 
 if [ -t 1 ] && [ "${ATLAS_BACKUP_STREAM:-}" != "true" ]; then
-    # stdout is a terminal (and not explicitly streaming) → write to file
+    # Terminal → write to file
     TIMESTAMP=$(_prep_backup)
     OUTPUT="$COMPOSE_STATE_BACKUP_DIR/$TARGET-backup-$TIMESTAMP.tar"
 
@@ -131,7 +129,7 @@ if [ -t 1 ] && [ "${ATLAS_BACKUP_STREAM:-}" != "true" ]; then
         exit 1
     fi
 else
-    # pipe/stream mode → tar to stdout, progress to stderr
+    # Stream mode → stdout
     echo "Backing up $COMPOSE_STATE_DIR..." >&2
     if [ -n "$dir_size" ]; then
         echo "State directory size: $(numfmt --to=iec $dir_size 2>/dev/null || echo "$dir_size bytes")" >&2

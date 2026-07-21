@@ -3,25 +3,13 @@
 # Idempotent. Called by setup.sh and join.sh BEFORE K3s starts.
 set -euo pipefail
 
-# K3s state directory for NFS-backed persistent storage.
-#
-# NOTE: NFS static PV capacity.storage is not a quota.  Pods can write
-# up to the free space available on the host filesystem underlying
-# this directory.  The PVC size in the spec is a scheduling/binding
-# hint — the kernel and NFS server do not enforce it.
+# NFS static PV capacity.storage is only a scheduling hint, not a quota.
 mkdir -p "$K3S_STATE_DIR"
 
-# Pre-create NFS subdirectories for all persistent volumes.
-# The CSI NFS driver mounts the parent share; the subDir parameter
-# only appends to the mount path — it doesn't create the directory.
-# We scan prereqs.yaml across all k3s components for 'subDir:' lines
-# to discover what directories are needed.
-#
-# NOTE: When run remotely via join.sh, ATLAS_ROOT and TARGET are not
-# set (the local control-plane paths don't exist on the remote).
-# The grep below silently fails, which is acceptable — the first
-# control-plane node already created the directories on the shared
-# NFS volume.
+# Pre-create NFS subdirs discovered from prereqs.yaml.  CSI driver's
+# subDir only appends to the mount path — it doesn't create.  On remotes
+# (join.sh has no ATLAS_ROOT/TARGET) this is skipped; the first CP node
+# already created them on the shared NFS volume.
 if [ -n "${ATLAS_ROOT:-}" ] && [ -n "${TARGET:-}" ] && [ -d "$ATLAS_ROOT/targets/$TARGET/k3s" ]; then
     grep -rhoP 'subDir:\s*\K\S+' "$ATLAS_ROOT/targets/$TARGET/k3s"/*/prereqs.yaml 2>/dev/null | sort -u | while read subdir; do
         mkdir -p "$K3S_STATE_DIR/$subdir"

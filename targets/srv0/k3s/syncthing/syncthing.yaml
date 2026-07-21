@@ -17,8 +17,7 @@ spec:
         app: syncthing
     spec:
       hostNetwork: true
-      # runAsUser/runAsGroup used instead of fsGroup because fsGroup recursively
-      # chgrp+chmods the entire hostPath volume (/home/$user) at every pod startup.
+      # runAsUser avoids fsGroup's recursive chgrp on hostPath at every pod start.
       securityContext:
         runAsUser: $MY_UID
         runAsGroup: $MY_UID

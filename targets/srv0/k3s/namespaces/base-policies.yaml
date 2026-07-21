@@ -1,8 +1,5 @@
-# ┌──────────────────────────────────────────────────────────────┐
-# │  BASELINE NETWORK POLICIES — applied to all user namespaces  │
-# │  These are the foundation. Component-specific rules live in  │
-# │  each component's own network-policy.yaml file.              │
-# └──────────────────────────────────────────────────────────────┘
+# Baseline network policies for all user namespaces.
+# Component-specific rules in each component's network-policy.yaml.
 #
 # POLICY MODEL (per namespace):
 #   deny-all-ingress      — block all ingress by default

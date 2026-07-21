@@ -1,6 +1,5 @@
 #!/bin/bash
-# Library functions for FRP mTLS certificate generation.
-# All cert output goes to stdout or a temp directory. VARS files are never touched.
+# FRP mTLS cert generation.  Output to stdout/temp only; never touches VARS files.
 
 _frp_certs_temp_dir() {
     local d="/tmp/frp-certs-$$"

@@ -2,8 +2,8 @@
 # DESC: Check whether the root partition uses LUKS encryption
 set -euo pipefail
 
-# Get the root filesystem source device and clean up any appended subvol/path
-root_source=$(findmnt -n -o SOURCE /sysroot 2>/dev/null | sed 's/\[.*//') || true # Remove [subvol] or [/path] suffixes
+# Resolve root device, stripping subvol/path suffixes
+root_source=$(findmnt -n -o SOURCE /sysroot 2>/dev/null | sed 's/\[.*//') || true
 if [[ -z "$root_source" ]]; then
     root_source=$(findmnt -n -o SOURCE / 2>/dev/null | sed 's/\[.*//') || true
 fi

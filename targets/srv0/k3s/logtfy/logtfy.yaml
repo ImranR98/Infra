@@ -1,4 +1,4 @@
-# RBAC — logtfy needs to read pod logs across namespaces via the Kubernetes API
+# RBAC for cross-namespace pod log reading
 apiVersion: v1
 kind: ServiceAccount
 metadata:
