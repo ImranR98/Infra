@@ -16,7 +16,8 @@ spec:
       existingClaim: ollama-models-pvc
     ollama:
       gpu:
-        enabled: true
+        # Set enabled: true when an AMD GPU node is available
+        enabled: false
         type: amd
     resources:
       limits:
@@ -27,16 +28,17 @@ spec:
       fsGroup: $MY_UID
     containerSecurityContext:
       allowPrivilegeEscalation: false
-    affinity:
-      nodeAffinity:
-        preferredDuringSchedulingIgnoredDuringExecution:
-          - weight: 100
-            preference:
-              matchExpressions:
-                - key: has-amdgpu
-                  operator: In
-                  values:
-                    - "true"
+    # Uncomment when an AMD GPU node is available
+    # affinity:
+    #   nodeAffinity:
+    #     preferredDuringSchedulingIgnoredDuringExecution:
+    #       - weight: 100
+    #         preference:
+    #           matchExpressions:
+    #             - key: has-amdgpu
+    #               operator: In
+    #               values:
+    #                 - "true"
     tolerations:
       - key: scheduling-discouraged
         operator: Equal
