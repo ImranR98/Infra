@@ -435,22 +435,11 @@ write_k3s_config() {
 	local config_file="$3"
 	local cluster_init="${4:-false}"
 
-	if [ "$cluster_init" = true ]; then
+	if [ "$role" = "server" ]; then
 		cat > "$config_file" <<K3SEOF
 selinux: true
 write-kubeconfig-mode: "0640"
-cluster-init: true
-flannel-backend: wireguard-native
-node-ip: $node_ip
-flannel-iface-regex: "^(eth|ens|enp|eno|enx|wlan|wlp|wlo|bond|ib)"
-node-label:
-  - "hostpath-main=true"
-  - "external-exposed=true"
-K3SEOF
-	elif [ "$role" = "server" ]; then
-		cat > "$config_file" <<K3SEOF
-selinux: true
-write-kubeconfig-mode: "0640"
+$([ "$cluster_init" = true ] && echo 'cluster-init: true')
 flannel-backend: wireguard-native
 node-ip: $node_ip
 flannel-iface-regex: "^(eth|ens|enp|eno|enx|wlan|wlp|wlo|bond|ib)"
