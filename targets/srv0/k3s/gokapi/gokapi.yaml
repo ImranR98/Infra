@@ -22,6 +22,8 @@ spec:
         - name: gokapi
           image: f0rc3/gokapi:latest
           securityContext:
+            runAsUser: $MY_UID
+            runAsGroup: $MY_UID
             allowPrivilegeEscalation: false
           ports:
             - containerPort: 53842

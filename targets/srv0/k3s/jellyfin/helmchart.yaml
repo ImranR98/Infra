@@ -46,6 +46,8 @@ spec:
         memory: 128Mi
     podSecurityContext:
       fsGroup: $MY_UID
+      runAsUser: $MY_UID
+      runAsGroup: $MY_UID
     containerSecurityContext:
       allowPrivilegeEscalation: false
     affinity:

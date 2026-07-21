@@ -22,6 +22,8 @@ spec:
         - name: fmd
           image: registry.gitlab.com/fmd-foss/fmd-server:0.16.0
           securityContext:
+            runAsUser: $MY_UID
+            runAsGroup: $MY_UID
             allowPrivilegeEscalation: false
           ports:
             - containerPort: 8080

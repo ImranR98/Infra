@@ -22,6 +22,8 @@ spec:
         - name: ntfy
           image: binwiederhier/ntfy:v2.26.0
           securityContext:
+            runAsUser: $MY_UID
+            runAsGroup: $MY_UID
             allowPrivilegeEscalation: false
           args: ["serve"]
           env:

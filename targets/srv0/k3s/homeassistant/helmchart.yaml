@@ -19,6 +19,8 @@ spec:
       tag: stable
     podSecurityContext:
       fsGroup: $MY_UID
+      runAsUser: $MY_UID
+      runAsGroup: $MY_UID
     containerSecurityContext:
       allowPrivilegeEscalation: false
     persistence:
