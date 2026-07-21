@@ -1,6 +1,8 @@
 #!/bin/bash
 # DESC: Host preparation for control-plane / storage nodes
 # Idempotent. Called by setup.sh and join.sh BEFORE K3s starts.
+: ${ATLAS_ROOT:="$(cd "$(dirname "$(readlink -f "$0")")/../.." >/dev/null 2>&1 && pwd)"}
+: ${K3S_STATE_DIR:="$ATLAS_ROOT/current_target/k3s_live_state"}
 set -euo pipefail
 
 # K3s state directory for NFS-backed persistent storage.
