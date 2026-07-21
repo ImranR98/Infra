@@ -15,9 +15,9 @@ spec:
       labels:
         app: ntfy
     spec:
-      securityContext:
+        securityContext:
         fsGroup: $MY_UID
-      containers:
+        containers:
       - name: ntfy
         image: binwiederhier/ntfy:v2.26.0
         securityContext:
@@ -59,7 +59,7 @@ spec:
         - name: ntfy-config
           mountPath: /etc/ntfy
           readOnly: true
-      volumes:
+        volumes:
       - name: ntfy-data
         persistentVolumeClaim:
           claimName: ntfy-pvc

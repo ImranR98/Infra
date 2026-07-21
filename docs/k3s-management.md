@@ -85,7 +85,7 @@ Runs before the standard deletion pipeline. The standard pipeline deletes HelmCh
 
 ## Component modes
 
-`k3s install <component> <mode>` supports:
+`k3s deploy <component> <mode>` supports:
 
 | Mode | Behavior |
 |------|----------|

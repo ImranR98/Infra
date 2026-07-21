@@ -32,11 +32,11 @@ EOF
 }
 
 case "${1:-}" in
-    -h|--help) usage; exit 0 ;;
+    -h|--help)     _usage; exit 0 ;;
     *) ;;
 esac
 if [ $# -eq 1 ]; then
-    usage
+    _usage
     exit 1
 fi
 
@@ -46,7 +46,7 @@ if [ $# -ge 2 ]; then
     remote_target="$2"
 
     if [[ "$remote_spec" != *:* ]]; then
-        usage
+        _usage
         exit 1
     fi
     if ! command -v ssh >/dev/null 2>&1; then
