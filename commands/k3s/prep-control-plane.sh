@@ -16,7 +16,13 @@ mkdir -p "$K3S_STATE_DIR"
 # only appends to the mount path — it doesn't create the directory.
 # We scan prereqs.yaml across all k3s components for 'subDir:' lines
 # to discover what directories are needed.
-if [ -d "$ATLAS_ROOT/targets/$TARGET/k3s" ]; then
+#
+# NOTE: When run remotely via join.sh, ATLAS_ROOT and TARGET are not
+# set (the local control-plane paths don't exist on the remote).
+# The grep below silently fails, which is acceptable — the first
+# control-plane node already created the directories on the shared
+# NFS volume.
+if [ -n "${ATLAS_ROOT:-}" ] && [ -n "${TARGET:-}" ] && [ -d "$ATLAS_ROOT/targets/$TARGET/k3s" ]; then
     grep -rhoP 'subDir:\s*\K\S+' "$ATLAS_ROOT/targets/$TARGET/k3s"/*/prereqs.yaml 2>/dev/null | sort -u | while read subdir; do
         mkdir -p "$K3S_STATE_DIR/$subdir"
     done

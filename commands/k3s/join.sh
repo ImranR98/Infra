@@ -33,8 +33,10 @@ echo "=== Host preparation ==="
 
 if [ "$ROLE" = "server" ]; then
     rsync -az "$ATLAS_ROOT/commands/k3s/prep-control-plane.sh" "${SSH_USER}@${CLIENT_IP}:/tmp/"
+    # ATLAS_ROOT and TARGET are the local control-plane paths — not valid
+    # on the remote.  prep-control-plane.sh skips subDir scanning on remotes.
     ssh -t "${SSH_USER}@${CLIENT_IP}" \
-        "sudo TARGET='${TARGET}' ATLAS_ROOT='${ATLAS_ROOT}' K3S_STATE_DIR='${K3S_STATE_DIR}' bash /tmp/prep-control-plane.sh" || {
+        "sudo K3S_STATE_DIR='${K3S_STATE_DIR}' bash /tmp/prep-control-plane.sh" || {
         echo "Error: prep-control-plane.sh failed on $CLIENT_IP" >&2; exit 1; }
 fi
 

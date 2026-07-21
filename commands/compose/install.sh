@@ -5,22 +5,23 @@ source "$ATLAS_ROOT/lib/common.sh"
 ensure_envsubst_vars
 
 render_compose_yaml
-    # Parse compose.yaml to discover host volume paths: for each
-    # service volume, extract the source path.  Files get the parent
-    # directory created; directories get the path itself.
-    yq -r '.services[] | select(.volumes) | .volumes[] | (.source? // .) | split(":") | .[0]' "$COMPOSE_STATE_DIR/compose.yaml" | grep -F "^$COMPOSE_STATE_DIR" | while read -r host_path; do
-    name="$(basename "$host_path")"
-    if [[ "$name" =~ \.[a-zA-Z0-9]{1,5}$ ]]; then
-        mkdir -p "$(dirname "$host_path")"
-        if [ "$UID" -eq 0 ]; then
-            chown "$MY_UID:$MY_UID" "$(dirname "$host_path")" 2>/dev/null || :
-        fi
-    else
-        mkdir -p "$host_path"
-        if [ "$UID" -eq 0 ]; then
-            chown "$MY_UID:$MY_UID" "$host_path" 2>/dev/null || :
-        fi
+
+# Parse compose.yaml to discover host volume paths: for each
+# service volume, extract the source path.  Files get the parent
+# directory created; directories get the path itself.
+yq -r '.services[] | select(.volumes) | .volumes[] | (.source? // .) | split(":") | .[0]' "$COMPOSE_STATE_DIR/compose.yaml" | grep -F "^$COMPOSE_STATE_DIR" | while read -r host_path; do
+name="$(basename "$host_path")"
+if [[ "$name" =~ \.[a-zA-Z0-9]{1,5}$ ]]; then
+    mkdir -p "$(dirname "$host_path")"
+    if [ "$UID" -eq 0 ]; then
+        chown "$MY_UID:$MY_UID" "$(dirname "$host_path")" 2>/dev/null || :
     fi
+else
+    mkdir -p "$host_path"
+    if [ "$UID" -eq 0 ]; then
+        chown "$MY_UID:$MY_UID" "$host_path" 2>/dev/null || :
+    fi
+fi
 done
 
 configure_compose_templates "$TARGET"

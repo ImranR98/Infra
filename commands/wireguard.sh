@@ -41,8 +41,11 @@ if [ -n "$ENDPOINT" ] && [ -n "$GATEWAY" ]; then
     $SU bash -c 'sed -i "$1" "$2"' _ "/^\[Interface\]/a\PostUp = ip route add $ENDPOINT/32 via $GATEWAY" /etc/wireguard/wg0.conf
     $SU bash -c 'sed -i "$1" "$2"' _ "/^\[Interface\]/a\PreDown = ip route delete $ENDPOINT/32 via $GATEWAY" /etc/wireguard/wg0.conf
 
-    # Remove default route left by AllowedIPs rewrite (wireguard-tools adds it,
-    # but the PostUp rules handle the split tunnel)
+    # Remove the Table=auto spec that wg-quick inserts for split-/1 prefixes.
+    # Without a PostUp endpoint-specific /32 route, wg-quick would route the
+    # WireGuard handshake into wg0 (dead loop).  The PostUp/PreDown rules above
+    # fix that, and removing Table=auto keeps the routes in the main table so
+    # they coexist safely with K3s/LAN subnets.
     $SU bash -c "sed -i '/^Table\s*=/d' /etc/wireguard/wg0.conf"
 fi
 
