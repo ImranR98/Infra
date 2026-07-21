@@ -29,9 +29,12 @@ spec:
     storage: $SIZE
   accessModes:
     - ReadWriteMany
-  nfs:
-    server: nfs-server.base.svc.cluster.local
-    path: /k3s-state/storage-test
+  csi:
+    driver: nfs.csi.k8s.io
+    volumeHandle: storage-test
+    volumeAttributes:
+      server: nfs-server.base.svc.cluster.local
+      share: /k3s-state/storage-test
   storageClassName: nfs
   persistentVolumeReclaimPolicy: Retain
 EOF

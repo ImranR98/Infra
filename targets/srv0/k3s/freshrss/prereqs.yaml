@@ -7,9 +7,12 @@ spec:
     storage: 5Gi
   accessModes:
     - ReadWriteMany
-  nfs:
-    server: nfs-server.base.svc.cluster.local
-    path: /k3s-state/freshrss-data
+  csi:
+    driver: nfs.csi.k8s.io
+    volumeHandle: freshrss-data
+    volumeAttributes:
+      server: nfs-server.base.svc.cluster.local
+      share: /k3s-state/freshrss-data
   storageClassName: nfs
   persistentVolumeReclaimPolicy: Retain
 ---
@@ -38,9 +41,12 @@ spec:
     storage: 5Gi
   accessModes:
     - ReadWriteMany
-  nfs:
-    server: nfs-server.base.svc.cluster.local
-    path: /k3s-state/freshrss-extensions
+  csi:
+    driver: nfs.csi.k8s.io
+    volumeHandle: freshrss-extensions
+    volumeAttributes:
+      server: nfs-server.base.svc.cluster.local
+      share: /k3s-state/freshrss-extensions
   storageClassName: nfs
   persistentVolumeReclaimPolicy: Retain
 ---

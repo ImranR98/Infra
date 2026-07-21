@@ -7,9 +7,12 @@ spec:
     storage: 5Gi
   accessModes:
     - ReadWriteMany
-  nfs:
-    server: nfs-server.base.svc.cluster.local
-    path: /k3s-state/ntfy
+  csi:
+    driver: nfs.csi.k8s.io
+    volumeHandle: ntfy
+    volumeAttributes:
+      server: nfs-server.base.svc.cluster.local
+      share: /k3s-state/ntfy
   storageClassName: nfs
   persistentVolumeReclaimPolicy: Retain
 ---

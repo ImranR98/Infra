@@ -7,9 +7,12 @@ spec:
     storage: 5Gi
   accessModes:
     - ReadWriteMany
-  nfs:
-    server: nfs-server.base.svc.cluster.local
-    path: /k3s-state/opodsync
+  csi:
+    driver: nfs.csi.k8s.io
+    volumeHandle: opodsync
+    volumeAttributes:
+      server: nfs-server.base.svc.cluster.local
+      share: /k3s-state/opodsync
   storageClassName: nfs
   persistentVolumeReclaimPolicy: Retain
 ---

@@ -7,9 +7,12 @@ spec:
     storage: 200Gi
   accessModes:
     - ReadWriteMany
-  nfs:
-    server: nfs-server.base.svc.cluster.local
-    path: /k3s-state/ollama-models
+  csi:
+    driver: nfs.csi.k8s.io
+    volumeHandle: ollama-models
+    volumeAttributes:
+      server: nfs-server.base.svc.cluster.local
+      share: /k3s-state/ollama-models
   storageClassName: nfs
   persistentVolumeReclaimPolicy: Retain
 ---
@@ -36,9 +39,12 @@ spec:
     storage: 5Gi
   accessModes:
     - ReadWriteMany
-  nfs:
-    server: nfs-server.base.svc.cluster.local
-    path: /k3s-state/openwebui-data
+  csi:
+    driver: nfs.csi.k8s.io
+    volumeHandle: openwebui-data
+    volumeAttributes:
+      server: nfs-server.base.svc.cluster.local
+      share: /k3s-state/openwebui-data
   storageClassName: nfs
   persistentVolumeReclaimPolicy: Retain
 ---

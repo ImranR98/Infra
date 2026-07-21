@@ -7,9 +7,12 @@ spec:
     storage: 5Gi
   accessModes:
     - ReadWriteMany
-  nfs:
-    server: nfs-server.base.svc.cluster.local
-    path: /k3s-state/authelia-db
+  csi:
+    driver: nfs.csi.k8s.io
+    volumeHandle: authelia-db
+    volumeAttributes:
+      server: nfs-server.base.svc.cluster.local
+      share: /k3s-state/authelia-db
   storageClassName: nfs
   persistentVolumeReclaimPolicy: Retain
 ---
@@ -36,9 +39,12 @@ spec:
     storage: 5Gi
   accessModes:
     - ReadWriteMany
-  nfs:
-    server: nfs-server.base.svc.cluster.local
-    path: /k3s-state/authelia-session
+  csi:
+    driver: nfs.csi.k8s.io
+    volumeHandle: authelia-session
+    volumeAttributes:
+      server: nfs-server.base.svc.cluster.local
+      share: /k3s-state/authelia-session
   storageClassName: nfs
   persistentVolumeReclaimPolicy: Retain
 ---

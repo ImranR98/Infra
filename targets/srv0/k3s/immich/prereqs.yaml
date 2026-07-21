@@ -7,9 +7,12 @@ spec:
     storage: 5Gi
   accessModes:
     - ReadWriteMany
-  nfs:
-    server: nfs-server.base.svc.cluster.local
-    path: /k3s-state/immich-db
+  csi:
+    driver: nfs.csi.k8s.io
+    volumeHandle: immich-db
+    volumeAttributes:
+      server: nfs-server.base.svc.cluster.local
+      share: /k3s-state/immich-db
   storageClassName: nfs
   persistentVolumeReclaimPolicy: Retain
 ---
@@ -38,9 +41,12 @@ spec:
     storage: 50Gi
   accessModes:
     - ReadWriteMany
-  nfs:
-    server: nfs-server.base.svc.cluster.local
-    path: /k3s-state/immich-library
+  csi:
+    driver: nfs.csi.k8s.io
+    volumeHandle: immich-library
+    volumeAttributes:
+      server: nfs-server.base.svc.cluster.local
+      share: /k3s-state/immich-library
   storageClassName: nfs
   persistentVolumeReclaimPolicy: Retain
 ---

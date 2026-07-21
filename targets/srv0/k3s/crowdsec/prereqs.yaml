@@ -7,9 +7,12 @@ spec:
     storage: 5Gi
   accessModes:
     - ReadWriteMany
-  nfs:
-    server: nfs-server.base.svc.cluster.local
-    path: /k3s-state/crowdsec
+  csi:
+    driver: nfs.csi.k8s.io
+    volumeHandle: crowdsec
+    volumeAttributes:
+      server: nfs-server.base.svc.cluster.local
+      share: /k3s-state/crowdsec
   storageClassName: nfs
   persistentVolumeReclaimPolicy: Retain
 ---

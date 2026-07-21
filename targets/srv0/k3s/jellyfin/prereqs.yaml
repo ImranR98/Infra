@@ -7,9 +7,12 @@ spec:
     storage: 5Gi
   accessModes:
     - ReadWriteMany
-  nfs:
-    server: nfs-server.base.svc.cluster.local
-    path: /k3s-state/jellyfin-config
+  csi:
+    driver: nfs.csi.k8s.io
+    volumeHandle: jellyfin-config
+    volumeAttributes:
+      server: nfs-server.base.svc.cluster.local
+      share: /k3s-state/jellyfin-config
   storageClassName: nfs
   persistentVolumeReclaimPolicy: Retain
 ---

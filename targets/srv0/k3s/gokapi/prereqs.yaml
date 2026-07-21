@@ -7,9 +7,12 @@ spec:
     storage: 200Gi
   accessModes:
     - ReadWriteMany
-  nfs:
-    server: nfs-server.base.svc.cluster.local
-    path: /k3s-state/gokapi-data
+  csi:
+    driver: nfs.csi.k8s.io
+    volumeHandle: gokapi-data
+    volumeAttributes:
+      server: nfs-server.base.svc.cluster.local
+      share: /k3s-state/gokapi-data
   storageClassName: nfs
   persistentVolumeReclaimPolicy: Retain
 ---
@@ -36,9 +39,12 @@ spec:
     storage: 1Gi
   accessModes:
     - ReadWriteMany
-  nfs:
-    server: nfs-server.base.svc.cluster.local
-    path: /k3s-state/gokapi-config
+  csi:
+    driver: nfs.csi.k8s.io
+    volumeHandle: gokapi-config
+    volumeAttributes:
+      server: nfs-server.base.svc.cluster.local
+      share: /k3s-state/gokapi-config
   storageClassName: nfs
   persistentVolumeReclaimPolicy: Retain
 ---

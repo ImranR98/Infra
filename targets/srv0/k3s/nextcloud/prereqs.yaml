@@ -26,9 +26,12 @@ spec:
     storage: 5Gi
   accessModes:
     - ReadWriteMany
-  nfs:
-    server: nfs-server.base.svc.cluster.local
-    path: /k3s-state/nextcloud-data
+  csi:
+    driver: nfs.csi.k8s.io
+    volumeHandle: nextcloud-data
+    volumeAttributes:
+      server: nfs-server.base.svc.cluster.local
+      share: /k3s-state/nextcloud-data
   storageClassName: nfs
   persistentVolumeReclaimPolicy: Retain
 ---
@@ -57,9 +60,12 @@ spec:
     storage: 5Gi
   accessModes:
     - ReadWriteMany
-  nfs:
-    server: nfs-server.base.svc.cluster.local
-    path: /k3s-state/nextcloud-db
+  csi:
+    driver: nfs.csi.k8s.io
+    volumeHandle: nextcloud-db
+    volumeAttributes:
+      server: nfs-server.base.svc.cluster.local
+      share: /k3s-state/nextcloud-db
   storageClassName: nfs
   persistentVolumeReclaimPolicy: Retain
 ---
