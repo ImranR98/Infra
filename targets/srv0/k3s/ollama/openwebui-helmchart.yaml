@@ -22,8 +22,7 @@ spec:
       storageClass: nfs
     pipelines:
       persistence:
-        storageClass: nfs
-        size: 5Gi
+        existingClaim: open-webui-pipelines-pvc
     extraEnvVars:
       - name: ENABLE_OAUTH_SIGNUP
         value: "true"
@@ -63,7 +62,5 @@ spec:
         memory: 128Mi
     podSecurityContext:
       fsGroup: $MY_UID
-      runAsUser: $MY_UID
-      runAsGroup: $MY_UID
     containerSecurityContext:
       allowPrivilegeEscalation: false
