@@ -31,14 +31,11 @@ echo ""
 
 # --- send and run prep scripts on client ---
 echo "=== Host preparation ==="
-rsync -az "$ATLAS_ROOT/commands/k3s/prep-node.sh" "${SSH_USER}@${CLIENT_IP}:/tmp/"
-ssh -t "${SSH_USER}@${CLIENT_IP}" "sudo bash /tmp/prep-node.sh" || {
-	echo "Error: prep-node.sh failed on $CLIENT_IP" >&2; exit 1; }
 
 if [ "$ROLE" = "server" ]; then
 	rsync -az "$ATLAS_ROOT/commands/k3s/prep-control-plane.sh" "${SSH_USER}@${CLIENT_IP}:/tmp/"
 	ssh -t "${SSH_USER}@${CLIENT_IP}" \
-		"sudo MAYASTOR_POOL_DIR='${MAYASTOR_POOL_DIR}' bash /tmp/prep-control-plane.sh" || {
+		"sudo K3S_STATE_DIR='${K3S_STATE_DIR}' bash /tmp/prep-control-plane.sh" || {
 		echo "Error: prep-control-plane.sh failed on $CLIENT_IP" >&2; exit 1; }
 fi
 
@@ -97,15 +94,10 @@ ssh -t "${SSH_USER}@${CLIENT_IP}" \
 	"ATLAS_INTERACTIVE=true bash /tmp/agent-install.sh '${SERVER_URL}' '${TOKEN}' '${ROLE}'"
 
 echo "Cleaning up client..."
-ssh "${SSH_USER}@${CLIENT_IP}" "rm -rf /tmp/lib /tmp/agent-install.sh /tmp/prep-node.sh /tmp/prep-control-plane.sh" 2>/dev/null || true
+ssh "${SSH_USER}@${CLIENT_IP}" "rm -rf /tmp/lib /tmp/agent-install.sh /tmp/prep-control-plane.sh" 2>/dev/null || true
 
 echo ""
 wait_for_k3s_cluster
-
-if [ "$ROLE" = "server" ]; then
-	NODE_NAME=$(ssh "${SSH_USER}@${CLIENT_IP}" "hostname -s" 2>/dev/null || true)
-	[ -n "$NODE_NAME" ] && kubectl label node "$NODE_NAME" openebs.io/engine=mayastor --overwrite 2>/dev/null || true
-fi
 
 echo "Ready nodes:"
 kubectl get nodes

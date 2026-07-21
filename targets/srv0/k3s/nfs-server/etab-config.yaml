@@ -11,3 +11,4 @@ data:
     /exports/jellyfin-youtube *(ro,fsid=3,no_subtree_check,insecure,root_squash)
     /exports/dscpln *(rw,fsid=4,no_subtree_check,insecure,root_squash)
     /exports/immich *(ro,fsid=5,no_subtree_check,insecure,root_squash)
+    /exports/k3s-state *(rw,fsid=10,no_subtree_check,insecure,root_squash)

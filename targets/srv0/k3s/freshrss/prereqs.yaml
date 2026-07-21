@@ -1,4 +1,19 @@
 apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: freshrss-data-pv
+spec:
+  capacity:
+    storage: 5Gi
+  accessModes:
+    - ReadWriteMany
+  nfs:
+    server: nfs-server.base.svc.cluster.local
+    path: /k3s-state/freshrss-data
+  storageClassName: nfs
+  persistentVolumeReclaimPolicy: Retain
+---
+apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: freshrss-data-pvc
@@ -6,12 +21,28 @@ metadata:
   labels:
     auto-backup: "true"
 spec:
-  storageClassName: mayastor-install-single-replica
   accessModes:
-    - ReadWriteOnce
+    - ReadWriteMany
   resources:
     requests:
       storage: 5Gi
+  storageClassName: nfs
+  volumeName: freshrss-data-pv
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: freshrss-extensions-pv
+spec:
+  capacity:
+    storage: 5Gi
+  accessModes:
+    - ReadWriteMany
+  nfs:
+    server: nfs-server.base.svc.cluster.local
+    path: /k3s-state/freshrss-extensions
+  storageClassName: nfs
+  persistentVolumeReclaimPolicy: Retain
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -21,12 +52,13 @@ metadata:
   labels:
     auto-backup: "true"
 spec:
-  storageClassName: mayastor-install-single-replica
   accessModes:
-    - ReadWriteOnce
+    - ReadWriteMany
   resources:
     requests:
       storage: 5Gi
+  storageClassName: nfs
+  volumeName: freshrss-extensions-pv
 ---
 apiVersion: v1
 kind: Secret

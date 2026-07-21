@@ -1,15 +1,46 @@
 apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: authelia-db-pv
+spec:
+  capacity:
+    storage: 5Gi
+  accessModes:
+    - ReadWriteMany
+  nfs:
+    server: nfs-server.base.svc.cluster.local
+    path: /k3s-state/authelia-db
+  storageClassName: nfs
+  persistentVolumeReclaimPolicy: Retain
+---
+apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: authelia-db-pvc
   namespace: base
 spec:
-  storageClassName: mayastor-install-single-replica
   accessModes:
-    - ReadWriteOnce
+    - ReadWriteMany
   resources:
     requests:
       storage: 5Gi
+  storageClassName: nfs
+  volumeName: authelia-db-pv
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: authelia-session-pv
+spec:
+  capacity:
+    storage: 5Gi
+  accessModes:
+    - ReadWriteMany
+  nfs:
+    server: nfs-server.base.svc.cluster.local
+    path: /k3s-state/authelia-session
+  storageClassName: nfs
+  persistentVolumeReclaimPolicy: Retain
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -17,12 +48,13 @@ metadata:
   name: authelia-session-pvc
   namespace: base
 spec:
-  storageClassName: mayastor-install-single-replica
   accessModes:
-    - ReadWriteOnce
+    - ReadWriteMany
   resources:
     requests:
       storage: 5Gi
+  storageClassName: nfs
+  volumeName: authelia-session-pv
 ---
 apiVersion: v1
 kind: Secret

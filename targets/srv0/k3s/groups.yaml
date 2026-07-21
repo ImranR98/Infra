@@ -2,7 +2,6 @@ base:
   - namespaces
   - nfs-server
   - csi-driver-nfs
-  - mayastor
   - cert-manager
   - traefik
   - crowdsec

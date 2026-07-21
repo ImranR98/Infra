@@ -18,10 +18,10 @@ spec:
     persistence:
       enabled: true
       existingClaim: openwebui-data-pvc
-      storageClass: mayastor-install-single-replica
+      storageClass: nfs
     pipelines:
       persistence:
-        storageClass: mayastor-install-single-replica
+        storageClass: nfs
         size: 5Gi
     extraEnvVars:
       - name: ENABLE_OAUTH_SIGNUP

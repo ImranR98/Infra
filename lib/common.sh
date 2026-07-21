@@ -132,7 +132,7 @@ get_envsubst_vars() {
 		vars="$vars $(grep -oP 'export \K[A-Z_][A-Z_0-9]*' "$vars_file" | tr '\n' ' ')"
 	fi
 
-	for v in MY_UID TARGET COMPOSE_STATE_DIR COMPOSE_STATE_BACKUP_DIR MAYASTOR_POOL_DIR PVC_BACKUP_DIR DOCKER_GID PROXY_IP; do
+	for v in MY_UID TARGET COMPOSE_STATE_DIR COMPOSE_STATE_BACKUP_DIR K3S_STATE_DIR PVC_BACKUP_DIR DOCKER_GID PROXY_IP; do
 		case " $vars " in *" $v "*) ;; *) vars="$vars $v" ;; esac
 	done
 
@@ -309,7 +309,7 @@ _validate_k3s() {
 TARGET
 COMPOSE_STATE_DIR
 COMPOSE_STATE_BACKUP_DIR
-MAYASTOR_POOL_DIR
+K3S_STATE_DIR
 PVC_BACKUP_DIR
 NS
 PV
@@ -426,11 +426,6 @@ retry() {
 	done
 	return 1
 }
-
-# ====== constants ======
-
-MAYASTOR_HUGEPAGE_PATH="/sys/kernel/mm/hugepages/hugepages-2048kB/nr_hugepages"
-MAYASTOR_HUGEPAGE_COUNT=1024
 
 # ====== k3s config ======
 

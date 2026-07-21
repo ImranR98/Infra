@@ -1,15 +1,46 @@
 apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: gokapi-data
+spec:
+  capacity:
+    storage: 200Gi
+  accessModes:
+    - ReadWriteMany
+  nfs:
+    server: nfs-server.base.svc.cluster.local
+    path: /k3s-state/gokapi-data
+  storageClassName: nfs
+  persistentVolumeReclaimPolicy: Retain
+---
+apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: gokapi-data
   namespace: apps
 spec:
-  storageClassName: mayastor-install-single-replica
   accessModes:
-    - ReadWriteOnce
+    - ReadWriteMany
   resources:
     requests:
       storage: 200Gi
+  storageClassName: nfs
+  volumeName: gokapi-data
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: gokapi-config
+spec:
+  capacity:
+    storage: 1Gi
+  accessModes:
+    - ReadWriteMany
+  nfs:
+    server: nfs-server.base.svc.cluster.local
+    path: /k3s-state/gokapi-config
+  storageClassName: nfs
+  persistentVolumeReclaimPolicy: Retain
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -19,9 +50,10 @@ metadata:
   labels:
     auto-backup: "true"
 spec:
-  storageClassName: mayastor-install-single-replica
   accessModes:
-    - ReadWriteOnce
+    - ReadWriteMany
   resources:
     requests:
       storage: 1Gi
+  storageClassName: nfs
+  volumeName: gokapi-config

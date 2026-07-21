@@ -73,6 +73,8 @@ spec:
               name: dscpln-storage
             - mountPath: /exports/immich
               name: immich-storage
+            - mountPath: /exports/k3s-state
+              name: k3s-state-storage
             - mountPath: /var/lib/nfs/etab
               name: nfs-exports
               subPath: etab
@@ -110,6 +112,10 @@ spec:
         - name: dscpln-storage
           hostPath:
             path: $DSCPLN_TRANSACTIONS_PATH
+            type: DirectoryOrCreate
+        - name: k3s-state-storage
+          hostPath:
+            path: $K3S_STATE_DIR
             type: DirectoryOrCreate
         - name: immich-storage
           hostPath:

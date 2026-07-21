@@ -36,8 +36,6 @@ echo "K3s config drop-in written to /etc/rancher/k3s/config.yaml.d/10-server.yam
 
 echo ""
 echo "=== Host preparation ==="
-export MAYASTOR_POOL_DIR="${MAYASTOR_POOL_DIR:-/var/local/mayastor-install/io-engine}"
-bash "$ATLAS_ROOT/commands/k3s/prep-node.sh"
 bash "$ATLAS_ROOT/commands/k3s/prep-control-plane.sh"
 
 echo ""
@@ -68,8 +66,6 @@ echo ""
 echo "Waiting for cluster to be ready..."
 systemctl enable --now k3s
 wait_for_k3s_cluster
-
-kubectl label node "$(hostname)" openebs.io/engine=mayastor --overwrite
 
 DID_COMPLETE=true
 echo "Done. K3s control-plane node initialized."

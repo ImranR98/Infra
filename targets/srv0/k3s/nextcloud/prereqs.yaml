@@ -18,6 +18,21 @@ stringData:
   password: "$NEXTCLOUD_DB_PASSWORD"
 ---
 apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: nextcloud-data-pv
+spec:
+  capacity:
+    storage: 5Gi
+  accessModes:
+    - ReadWriteMany
+  nfs:
+    server: nfs-server.base.svc.cluster.local
+    path: /k3s-state/nextcloud-data
+  storageClassName: nfs
+  persistentVolumeReclaimPolicy: Retain
+---
+apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: nextcloud-data-pvc
@@ -25,12 +40,28 @@ metadata:
   labels:
     auto-backup: "true"
 spec:
-  storageClassName: mayastor-install-single-replica
   accessModes:
-    - ReadWriteOnce
+    - ReadWriteMany
   resources:
     requests:
       storage: 5Gi
+  storageClassName: nfs
+  volumeName: nextcloud-data-pv
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: nextcloud-db-pv
+spec:
+  capacity:
+    storage: 5Gi
+  accessModes:
+    - ReadWriteMany
+  nfs:
+    server: nfs-server.base.svc.cluster.local
+    path: /k3s-state/nextcloud-db
+  storageClassName: nfs
+  persistentVolumeReclaimPolicy: Retain
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -40,12 +71,13 @@ metadata:
   labels:
     auto-backup: "true"
 spec:
-  storageClassName: mayastor-install-single-replica
   accessModes:
-    - ReadWriteOnce
+    - ReadWriteMany
   resources:
     requests:
       storage: 5Gi
+  storageClassName: nfs
+  volumeName: nextcloud-db-pv
 ---
 apiVersion: apps/v1
 kind: Deployment
