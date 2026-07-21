@@ -71,8 +71,6 @@ spec:
               name: youtube-storage
             - mountPath: /exports/dscpln
               name: dscpln-storage
-            - mountPath: /exports/immich
-              name: immich-storage
             - mountPath: /exports/k3s-state
               name: k3s-state-storage
             - mountPath: /var/lib/nfs/etab
@@ -116,8 +114,4 @@ spec:
         - name: k3s-state-storage
           hostPath:
             path: $K3S_STATE_DIR
-            type: DirectoryOrCreate
-        - name: immich-storage
-          hostPath:
-            path: $MEDIA_DIR_PATH
             type: DirectoryOrCreate

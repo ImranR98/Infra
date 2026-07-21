@@ -68,42 +68,6 @@ spec:
   storageClassName: nfs
   volumeName: immich-library-pv
 ---
-# External media library — existing photos/videos on the host filesystem.
-# Immich can index these via the "External Library" feature (mounted at /external in the container).
-apiVersion: v1
-kind: PersistentVolume
-metadata:
-  name: immich-external-pv
-spec:
-  capacity:
-    storage: 4096Gi
-  volumeMode: Filesystem
-  accessModes:
-    - ReadWriteMany
-  persistentVolumeReclaimPolicy: Retain
-  storageClassName: nfs
-  csi:
-    driver: nfs.csi.k8s.io
-    volumeHandle: immich-external
-    volumeAttributes:
-      server: nfs-server.base.svc.cluster.local
-      share: /immich
----
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: immich-external-pvc
-  namespace: apps
-spec:
-  storageClassName: nfs
-  accessModes:
-    - ReadWriteMany
-  volumeName: immich-external-pv
-  resources:
-    requests:
-      storage: 4096Gi
-
----
 apiVersion: v1
 kind: Secret
 metadata:

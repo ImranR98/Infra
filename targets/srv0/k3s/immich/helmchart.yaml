@@ -55,7 +55,8 @@ spec:
           globalMounts:
             - path: /dev/dri
         external:
-          existingClaim: immich-external-pvc
+          type: hostPath
+          hostPath: $MEDIA_DIR_PATH
           globalMounts:
             - path: /external
               readOnly: true
