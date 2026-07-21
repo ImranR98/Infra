@@ -143,11 +143,11 @@ spec:
       volumes:
         - name: data
           persistentVolumeClaim:
-          claimName: immich-db-pvc
+            claimName: immich-db-pvc
         - name: dshm
           emptyDir:
-          medium: Memory
-          sizeLimit: 5Gi
+            medium: Memory
+            sizeLimit: 5Gi
 ---
 apiVersion: v1
 kind: Service

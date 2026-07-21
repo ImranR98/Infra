@@ -166,7 +166,7 @@ configure_compose_templates() {
         fi
     fi
     local template_dir="$ATLAS_ROOT/targets/$target/compose/templates"
-    [ -d "$template_dir" ] || return
+    [ -d "$template_dir" ] || return 0
 
     while IFS= read -r -d '' src; do
         local rel="${src#$template_dir/}"
