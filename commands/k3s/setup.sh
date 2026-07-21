@@ -6,7 +6,7 @@ set -euo pipefail
 source "$ATLAS_ROOT/lib/common.sh"
 
 if [ "$(id -u)" != 0 ]; then
-	exec $(get_sudo_cmd) bash "$0" "$@"
+	exec $(get_sudo_cmd) env TARGET="$TARGET" ATLAS_ROOT="$ATLAS_ROOT" K3S_STATE_DIR="$K3S_STATE_DIR" bash "$0" "$@"
 fi
 
 DID_COMPLETE=false

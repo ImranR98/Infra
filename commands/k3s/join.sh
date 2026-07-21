@@ -35,7 +35,7 @@ echo "=== Host preparation ==="
 if [ "$ROLE" = "server" ]; then
 	rsync -az "$ATLAS_ROOT/commands/k3s/prep-control-plane.sh" "${SSH_USER}@${CLIENT_IP}:/tmp/"
 	ssh -t "${SSH_USER}@${CLIENT_IP}" \
-		"sudo K3S_STATE_DIR='${K3S_STATE_DIR}' bash /tmp/prep-control-plane.sh" || {
+		"sudo TARGET='${TARGET}' ATLAS_ROOT='${ATLAS_ROOT}' K3S_STATE_DIR='${K3S_STATE_DIR}' bash /tmp/prep-control-plane.sh" || {
 		echo "Error: prep-control-plane.sh failed on $CLIENT_IP" >&2; exit 1; }
 fi
 
