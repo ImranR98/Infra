@@ -12,7 +12,9 @@ spec:
     volumeHandle: ntfy
     volumeAttributes:
       server: nfs-server.base.svc.cluster.local
-      share: /k3s-state/ntfy
+      share: /k3s-state
+      subDir: ntfy
+      mountOptions: nolock
   storageClassName: nfs
   persistentVolumeReclaimPolicy: Retain
 ---

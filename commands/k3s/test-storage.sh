@@ -34,7 +34,9 @@ spec:
     volumeHandle: storage-test
     volumeAttributes:
       server: nfs-server.base.svc.cluster.local
-      share: /k3s-state/storage-test
+      share: /k3s-state
+      subDir: storage-test
+      mountOptions: nolock
   storageClassName: nfs
   persistentVolumeReclaimPolicy: Retain
 EOF

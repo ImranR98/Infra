@@ -12,7 +12,9 @@ spec:
     volumeHandle: mosquitto-data
     volumeAttributes:
       server: nfs-server.base.svc.cluster.local
-      share: /k3s-state/mosquitto-data
+      share: /k3s-state
+      subDir: mosquitto-data
+      mountOptions: nolock
   storageClassName: nfs
   persistentVolumeReclaimPolicy: Retain
 ---

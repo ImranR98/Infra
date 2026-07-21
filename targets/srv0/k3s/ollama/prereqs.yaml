@@ -12,7 +12,9 @@ spec:
     volumeHandle: ollama-models
     volumeAttributes:
       server: nfs-server.base.svc.cluster.local
-      share: /k3s-state/ollama-models
+      share: /k3s-state
+      subDir: ollama-models
+      mountOptions: nolock
   storageClassName: nfs
   persistentVolumeReclaimPolicy: Retain
 ---
@@ -44,7 +46,9 @@ spec:
     volumeHandle: openwebui-data
     volumeAttributes:
       server: nfs-server.base.svc.cluster.local
-      share: /k3s-state/openwebui-data
+      share: /k3s-state
+      subDir: openwebui-data
+      mountOptions: nolock
   storageClassName: nfs
   persistentVolumeReclaimPolicy: Retain
 ---

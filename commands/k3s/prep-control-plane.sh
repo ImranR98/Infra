@@ -12,3 +12,15 @@ set -euo pipefail
 # this directory.  The PVC size in the spec is a scheduling/binding
 # hint — the kernel and NFS server do not enforce it.
 mkdir -p "$K3S_STATE_DIR"
+
+# Pre-create NFS subdirectories for all persistent volumes.
+# The CSI NFS driver mounts the parent share; subdirs must already
+# exist on the NFS server or the mount will fail with ENOENT.
+for subdir in \
+	authelia-db authelia-session crowdsec ntfy \
+	fmd freshrss-data freshrss-extensions gokapi-data gokapi-config \
+	homeassistant-config immich-db immich-library jellyfin-config \
+	mosquitto-data navidrome-data nextcloud-data nextcloud-db \
+	ollama-models openwebui-data opodsync; do
+	mkdir -p "$K3S_STATE_DIR/$subdir"
+done

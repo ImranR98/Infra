@@ -12,7 +12,9 @@ spec:
     volumeHandle: fmd
     volumeAttributes:
       server: nfs-server.base.svc.cluster.local
-      share: /k3s-state/fmd
+      share: /k3s-state
+      subDir: fmd
+      mountOptions: nolock
   storageClassName: nfs
   persistentVolumeReclaimPolicy: Retain
 ---

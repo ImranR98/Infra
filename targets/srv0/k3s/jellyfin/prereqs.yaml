@@ -12,7 +12,9 @@ spec:
     volumeHandle: jellyfin-config
     volumeAttributes:
       server: nfs-server.base.svc.cluster.local
-      share: /k3s-state/jellyfin-config
+      share: /k3s-state
+      subDir: jellyfin-config
+      mountOptions: nolock
   storageClassName: nfs
   persistentVolumeReclaimPolicy: Retain
 ---

@@ -31,7 +31,9 @@ spec:
     volumeHandle: nextcloud-data
     volumeAttributes:
       server: nfs-server.base.svc.cluster.local
-      share: /k3s-state/nextcloud-data
+      share: /k3s-state
+      subDir: nextcloud-data
+      mountOptions: nolock
   storageClassName: nfs
   persistentVolumeReclaimPolicy: Retain
 ---
@@ -65,7 +67,9 @@ spec:
     volumeHandle: nextcloud-db
     volumeAttributes:
       server: nfs-server.base.svc.cluster.local
-      share: /k3s-state/nextcloud-db
+      share: /k3s-state
+      subDir: nextcloud-db
+      mountOptions: nolock
   storageClassName: nfs
   persistentVolumeReclaimPolicy: Retain
 ---

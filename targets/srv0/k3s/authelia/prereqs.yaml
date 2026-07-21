@@ -12,7 +12,9 @@ spec:
     volumeHandle: authelia-db
     volumeAttributes:
       server: nfs-server.base.svc.cluster.local
-      share: /k3s-state/authelia-db
+      share: /k3s-state
+      subDir: authelia-db
+      mountOptions: nolock
   storageClassName: nfs
   persistentVolumeReclaimPolicy: Retain
 ---
@@ -44,7 +46,9 @@ spec:
     volumeHandle: authelia-session
     volumeAttributes:
       server: nfs-server.base.svc.cluster.local
-      share: /k3s-state/authelia-session
+      share: /k3s-state
+      subDir: authelia-session
+      mountOptions: nolock
   storageClassName: nfs
   persistentVolumeReclaimPolicy: Retain
 ---

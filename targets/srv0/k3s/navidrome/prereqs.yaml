@@ -12,7 +12,9 @@ spec:
     volumeHandle: navidrome-data
     volumeAttributes:
       server: nfs-server.base.svc.cluster.local
-      share: /k3s-state/navidrome-data
+      share: /k3s-state
+      subDir: navidrome-data
+      mountOptions: nolock
   storageClassName: nfs
   persistentVolumeReclaimPolicy: Retain
 ---

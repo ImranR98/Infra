@@ -12,7 +12,9 @@ spec:
     volumeHandle: immich-db
     volumeAttributes:
       server: nfs-server.base.svc.cluster.local
-      share: /k3s-state/immich-db
+      share: /k3s-state
+      subDir: immich-db
+      mountOptions: nolock
   storageClassName: nfs
   persistentVolumeReclaimPolicy: Retain
 ---
@@ -46,7 +48,9 @@ spec:
     volumeHandle: immich-library
     volumeAttributes:
       server: nfs-server.base.svc.cluster.local
-      share: /k3s-state/immich-library
+      share: /k3s-state
+      subDir: immich-library
+      mountOptions: nolock
   storageClassName: nfs
   persistentVolumeReclaimPolicy: Retain
 ---

@@ -12,7 +12,9 @@ spec:
     volumeHandle: opodsync
     volumeAttributes:
       server: nfs-server.base.svc.cluster.local
-      share: /k3s-state/opodsync
+      share: /k3s-state
+      subDir: opodsync
+      mountOptions: nolock
   storageClassName: nfs
   persistentVolumeReclaimPolicy: Retain
 ---

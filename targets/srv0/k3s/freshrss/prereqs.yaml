@@ -12,7 +12,9 @@ spec:
     volumeHandle: freshrss-data
     volumeAttributes:
       server: nfs-server.base.svc.cluster.local
-      share: /k3s-state/freshrss-data
+      share: /k3s-state
+      subDir: freshrss-data
+      mountOptions: nolock
   storageClassName: nfs
   persistentVolumeReclaimPolicy: Retain
 ---
@@ -46,7 +48,9 @@ spec:
     volumeHandle: freshrss-extensions
     volumeAttributes:
       server: nfs-server.base.svc.cluster.local
-      share: /k3s-state/freshrss-extensions
+      share: /k3s-state
+      subDir: freshrss-extensions
+      mountOptions: nolock
   storageClassName: nfs
   persistentVolumeReclaimPolicy: Retain
 ---
