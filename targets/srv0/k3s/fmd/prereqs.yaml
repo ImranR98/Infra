@@ -34,7 +34,6 @@ spec:
       storage: 5Gi
   storageClassName: nfs
   volumeName: fmd-pv
-
 ---
 apiVersion: v1
 kind: Secret

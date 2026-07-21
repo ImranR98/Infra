@@ -6,17 +6,17 @@ set -euo pipefail
 source "$ATLAS_ROOT/lib/common.sh"
 
 if [ "$(id -u)" != 0 ]; then
-	exec $(get_sudo_cmd) env TARGET="$TARGET" ATLAS_ROOT="$ATLAS_ROOT" K3S_STATE_DIR="$K3S_STATE_DIR" bash "$0" "$@"
+    exec $(get_sudo_cmd) env TARGET="$TARGET" ATLAS_ROOT="$ATLAS_ROOT" K3S_STATE_DIR="$K3S_STATE_DIR" bash "$0" "$@"
 fi
 
 DID_COMPLETE=false
-cleanup() {
-	if [ "$DID_COMPLETE" = false ]; then
-		echo "It appears the script did not complete." >&2
-	fi
-	rm -f "$K3S_SCRIPT"
+_cleanup() {
+    if [ "$DID_COMPLETE" = false ]; then
+        echo "It appears the script did not complete." >&2
+    fi
+    rm -f "$K3S_SCRIPT"
 }
-trap cleanup EXIT
+trap _cleanup EXIT
 
 echo "NOTE: K3s requires a fixed IP on this network. If the IP changes, run: ./atlas.sh <target> k3s update-node-ip"
 echo ""
@@ -24,9 +24,6 @@ echo ""
 echo "=== Downloading K3s installer ==="
 download_k3s_installer
 
-# Only needed on secureblue
-# semodule --disable=userns_deny_unconfined_relabels # Required for K3s Flannel unfortunately
-# sed -i 's/# rpm_install_extra_args/rpm_install_extra_args/g' $K3S_SCRIPT
 
 # Write K3s config drop-in files before installing so the first start picks them up
 NODE_IP=$(get_node_ip) || NODE_IP=""
@@ -46,8 +43,8 @@ echo ""
 echo "=== Setting up kubectl group access ==="
 groupadd -f kubectl
 if ! grep -E '^kubectl:' /etc/group >/dev/null 2>&1; then
-	# Workaround for secureblue
-	grep -E '^kubectl:' /usr/lib/group | tee -a /etc/group >/dev/null
+    # Workaround for secureblue
+    grep -E '^kubectl:' /usr/lib/group | tee -a /etc/group >/dev/null
 fi
 chgrp -R kubectl /etc/rancher/k3s
 K3S_CONFIG_OWNER="$(echo "${SUDO_USER:-$USER}")"

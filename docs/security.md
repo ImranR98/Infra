@@ -138,8 +138,8 @@ In a default K3s deployment, HelmChart CR access is restricted to cluster-admin 
 
 Affected charts: authelia (Redis password, DB password, encryption key, OIDC HMAC secret, JWKS key, OIDC client secrets), crowdsec (LAPI secret).
 
-## NVMe-TCP encryption
+## NFS storage security
 
-Mayastor uses the NVMe-oF TCP protocol for all storage I/O between the io-engine and CSI node plugins. The NVMe/TCP specification supports TLS 1.3, but Mayastor does not currently implement it. On a single-node cluster, all NVMe-TCP traffic stays on localhost — no network exposure. On multi-node clusters, all storage replication and volume mount I/O traverses the network in cleartext.
+K3s persistent volumes use NFSv4 served by the on-cluster NFS server. NFSv4 traffic between pods and the NFS server traverses the pod network. On a single-node cluster, this traffic stays on localhost — no network exposure. On multi-node clusters, NFS I/O traverses the network in cleartext.
 
-Mitigations for multi-node deployments: use an isolated storage VLAN between nodes, deploy WireGuard tunnels between storage nodes, or use Flannel WireGuard backend (configured via `flannel-backend: wireguard` in K3s config) which encrypts all pod-to-pod traffic across nodes automatically — including Mayastor NVMe-TCP.
+Mitigations for multi-node deployments: use an isolated storage VLAN between nodes, deploy WireGuard tunnels between storage nodes, or use Flannel WireGuard backend (configured via `flannel-backend: wireguard` in K3s config) which encrypts all pod-to-pod traffic across nodes automatically — including NFS I/O.

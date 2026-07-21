@@ -42,7 +42,6 @@ metadata:
 spec:
   capacity:
     storage: 4096Gi
-  volumeMode: Filesystem
   accessModes:
     - ReadWriteMany
   persistentVolumeReclaimPolicy: Retain
@@ -60,13 +59,13 @@ metadata:
   name: jellyfin-tv-pvc
   namespace: apps
 spec:
-  storageClassName: nfs
   accessModes:
     - ReadWriteMany
-  volumeName: jellyfin-tv-pv
   resources:
     requests:
       storage: 4096Gi
+  storageClassName: nfs
+  volumeName: jellyfin-tv-pv
 ---
 apiVersion: v1
 kind: PersistentVolume
@@ -75,7 +74,6 @@ metadata:
 spec:
   capacity:
     storage: 4096Gi
-  volumeMode: Filesystem
   accessModes:
     - ReadWriteMany
   persistentVolumeReclaimPolicy: Retain
@@ -93,10 +91,10 @@ metadata:
   name: jellyfin-youtube-pvc
   namespace: apps
 spec:
-  storageClassName: nfs
   accessModes:
     - ReadWriteMany
-  volumeName: jellyfin-youtube-pv
   resources:
     requests:
       storage: 4096Gi
+  storageClassName: nfs
+  volumeName: jellyfin-youtube-pv

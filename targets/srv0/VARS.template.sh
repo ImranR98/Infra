@@ -1,14 +1,14 @@
-# --- Domain ---
+# ====== Domain ======
 export SERVICES_DOMAIN="home.example.org"
 export DOMAIN_OWNER_EMAIL="contact@example.org"
 
-# --- Ntfy ---
+# ====== Ntfy ======
 export NTFY_WRITE_ONLY_ACCOUNT_TOKEN="change_me" # "tk_$(openssl rand -hex 16)"
 export NTFY_FALLBACK_TOPIC="change_me" # openssl rand -hex 16
 export NTFY_ADMIN_PASSWORD_HASH="change_me" # docker run --rm -it binwiederhier/ntfy user hash
 export NTFY_WRITE_ONLY_ACCOUNT_PASSWORD_HASH="change_me" # docker run --rm -it binwiederhier/ntfy user hash
 
-# --- FRP ---
+# ====== FRP ======
 export PROXY_HOST="vps0.example.org"
 # Generate with: ./atlas.sh srv0 compose generate-frp-certs vps0
 export FRP_CA_CERT="change_me" # PEM-encoded CA certificate for this FRP pair
@@ -18,7 +18,7 @@ export FRP_CLIENT_KEY="change_me" # PEM-encoded client private key
 export FRP_PREBOOT_CLIENT_CERT="change_me" # PEM-encoded preboot client certificate
 export FRP_PREBOOT_CLIENT_KEY="change_me" # PEM-encoded preboot client private key
 
-# --- Geoblock (Traefik middleware) ---
+# ====== Geoblock (Traefik middleware) ======
 # Indentation matters
 export GEOBLOCK_CONFIG_SUBSET='
           blackListMode: false
@@ -28,14 +28,14 @@ export GEOBLOCK_CONFIG_SUBSET='
             - CU
 '
 
-# --- Host Paths ---
+# ====== Host Paths ======
 # Ensure these exist before starting services
 export MAIN_PARENT_DIR="/path/to/data"
 export MEDIA_DIR_PATH="$MAIN_PARENT_DIR/Main/Media"
 export DSCPLN_TRANSACTIONS_PATH="$MAIN_PARENT_DIR/Main/Notes/Transactions"
 export MDSCL_DEVICE_SYNC_PATH="$MAIN_PARENT_DIR/deviceSync"
 
-# --- Authelia ---
+# ====== Authelia ======
 # Use `docker run -it authelia/authelia:latest authelia crypto hash generate argon2` to generate the password hash
 # Indentation matters: needs 2 spaces more than the 4-space block scalar base (6/8/10 spaces)
 # For one-time 2FA registration: kubectl -n base exec -it "$(kubectl -n base get pod | grep -E '^authelia' | grep -Ev '(postgres|redis)' | awk '{print $1}')" -- cat /config/notification.txt
@@ -60,32 +60,32 @@ export AUTHELIA_JWKS_KEY="-----BEGIN PRIVATE KEY-----
 export AUTHELIA_IMMICH_CLIENT_SECRET="change_me" # docker run authelia/authelia:latest authelia crypto hash generate pbkdf2 --variant sha512 --random --random.length 72 --random.charset rfc3986
 export AUTHELIA_OPENWEBUI_CLIENT_SECRET="change_me" # docker run authelia/authelia:latest authelia crypto hash generate pbkdf2 --variant sha512 --random --random.length 72 --random.charset rfc3986
 
-# --- Crowdsec ---
+# ====== Crowdsec ======
 export CROWDSEC_BOUNCER_KEY="change_me" # openssl rand -hex 32
 export CROWDSEC_LAPI_SECRET="change_me" # openssl rand -hex 32
 
-# --- Localhost Basic Auth ---
+# ====== Localhost Basic Auth ======
 export LOCALHOST_AUTH_USER="admin"
 export LOCALHOST_AUTH_PASSWORD_HASH="change_me" # openssl passwd -6 'password'
 
-# --- Immich ---
+# ====== Immich ======
 export IMMICH_DB_PASSWORD="change_me" # openssl rand -hex 16
 
-# --- Mosquitto ---
+# ====== Mosquitto ======
 export MOSQUITTO_CREDENTIALS="change_me" # tmpfile=$(mktemp) && mosquitto_passwd -b "$tmpfile" admin 'your-password' && cat "$tmpfile" && rm "$tmpfile"
 
-# --- FreshRSS ---
+# ====== FreshRSS ======
 export FRESHRSS_PASSWORD="change_me" # openssl rand -base64 32
 
-# --- D$CPLN ---
+# ====== D$CPLN ======
 export DSCPLN_DATA_FILE="Acc $(date +%Y).md"
 export DSCPLN_BUDGET_INIT_AMT="2400"
 export DSCPLN_FIRST_WEEK_BIAS_INIT_AMT="1400"
 
-# --- FMD ---
+# ====== FMD ======
 export FMD_REGISTRATIONTOKEN="change_me" # openssl rand -base64 32
 
-# --- Nextcloud ---
+# ====== Nextcloud ======
 export NEXTCLOUD_ADMIN_USER="admin"
 export NEXTCLOUD_ADMIN_PASSWORD="change_me" # openssl rand -hex 16
 export NEXTCLOUD_DB_PASSWORD="change_me" # openssl rand -hex 16

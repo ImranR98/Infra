@@ -10,13 +10,13 @@ SIZE=1Gi
 TEST_STRING="storage-test-$(date +%s)"
 FAILED=false
 
-fail() { echo "FAIL: $*" >&2; FAILED=true; }
-cleanup() {
-	kubectl delete pod -n "$NS" "$NAME" --timeout=30s 2>/dev/null || true
-	kubectl delete pvc -n "$NS" "$PVC_NAME" --timeout=30s 2>/dev/null || true
-	kubectl delete pv "$PV_NAME" --timeout=30s 2>/dev/null || true
+_fail() { echo "FAIL: $*" >&2; FAILED=true; }
+_cleanup() {
+    kubectl delete pod -n "$NS" "$NAME" --timeout=30s 2>/dev/null || true
+    kubectl delete pvc -n "$NS" "$PVC_NAME" --timeout=30s 2>/dev/null || true
+    kubectl delete pv "$PV_NAME" --timeout=30s 2>/dev/null || true
 }
-trap cleanup EXIT
+trap _cleanup EXIT
 
 echo "=== Create test PV ==="
 kubectl apply -f - >/dev/null <<EOF
@@ -60,7 +60,7 @@ EOF
 
 echo "=== Wait for PVC bind ==="
 kubectl wait -n "$NS" --for=jsonpath='{.status.phase}'=Bound "pvc/$PVC_NAME" --timeout=60s \
-  || fail "PVC did not bind"
+  || _fail "PVC did not bind"
 
 echo "=== Create test pod ==="
 kubectl apply -f - >/dev/null <<EOF
@@ -91,12 +91,12 @@ EOF
 
 echo "=== Wait for test pod ==="
 kubectl wait -n "$NS" --for=jsonpath='{.status.phase}'=Succeeded "pod/$NAME" --timeout=60s \
-  || fail "Test pod did not succeed"
+  || _fail "Test pod did not succeed"
 
 echo "=== Pod output ==="
 POD_OUT=$(kubectl logs -n "$NS" "$NAME" 2>/dev/null)
 echo "$POD_OUT"
-echo "$POD_OUT" | grep -q "$TEST_STRING" || fail "Data mismatch"
+echo "$POD_OUT" | grep -q "$TEST_STRING" || _fail "Data mismatch"
 
 echo "=== Clean up ==="
 kubectl delete pod -n "$NS" "$NAME" --timeout=30s 2>/dev/null || true
@@ -104,8 +104,8 @@ kubectl delete pvc -n "$NS" "$PVC_NAME" --timeout=30s 2>/dev/null || true
 kubectl delete pv "$PV_NAME" --timeout=30s 2>/dev/null || true
 
 if $FAILED; then
-	echo "Some checks failed." >&2
-	exit 1
+    echo "Some checks failed." >&2
+    exit 1
 fi
 
 echo "All checks passed."

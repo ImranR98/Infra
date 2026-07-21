@@ -36,7 +36,7 @@ spec:
 apiVersion: v1
 kind: PersistentVolume
 metadata:
-  name: openwebui-data-pv
+  name: open-webui-data-pv
 spec:
   capacity:
     storage: 5Gi
@@ -44,11 +44,11 @@ spec:
     - ReadWriteMany
   csi:
     driver: nfs.csi.k8s.io
-    volumeHandle: openwebui-data
+    volumeHandle: open-webui-data
     volumeAttributes:
       server: nfs-server.base.svc.cluster.local
       share: /k3s-state
-      subDir: openwebui-data
+      subDir: open-webui-data
       mountOptions: nolock
       mountPermissions: "0755"
   storageClassName: nfs
@@ -57,7 +57,7 @@ spec:
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: openwebui-data-pvc
+  name: open-webui-data-pvc
   namespace: apps
   labels:
     auto-backup: "true"
@@ -68,7 +68,7 @@ spec:
     requests:
       storage: 5Gi
   storageClassName: nfs
-  volumeName: openwebui-data-pv
+  volumeName: open-webui-data-pv
 ---
 apiVersion: v1
 kind: PersistentVolume
@@ -94,7 +94,7 @@ spec:
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: open-webui-pipelines
+  name: open-webui-pipelines-pvc
   namespace: apps
 spec:
   accessModes:

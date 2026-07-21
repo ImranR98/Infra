@@ -31,8 +31,6 @@ Two behaviors, depending on context:
 
 This lets a greenfield cluster deploy partially, get dependencies up, then complete the deployment.
 
-The `mayastor` component does not use this pattern — it uses a `post.sh` hook instead to wait for CRDs and provision DiskPools after the HelmChart applies.
-
 ## Group-based deployment (`groups.yaml`)
 
 Components are organized into ordered groups:
@@ -42,7 +40,6 @@ base:
   - namespaces
   - nfs-server
   - csi-driver-nfs
-  - mayastor
   - cert-manager
   - traefik
   # ... more infrastructure
@@ -107,36 +104,21 @@ Runs before the standard deletion pipeline. The standard pipeline deletes HelmCh
 ./atlas.sh <target> k3s update-node-ip         # Reconfigure after IP change
 ```
 
-**`setup`** — Downloads the K3s installer (with SHA256 verification against GitHub), writes config drop-ins (node IP auto-detected, SELinux on, node labels set), runs host preparation scripts (`prep-node.sh` loads nvme_tcp module, `prep-control-plane.sh` allocates hugepages and creates the Mayastor backing file), then runs the installer. Because prep runs before K3s starts, kubelet discovers hugepages at first boot — no restart needed. Creates a `kubectl` group and configures the firewall.
+**`setup`** — Downloads the K3s installer (with SHA256 verification against GitHub), writes config drop-ins (node IP auto-detected, SELinux on, node labels set), runs host preparation scripts (`prep-control-plane.sh` creates the NFS state directory), then runs the installer. Creates a `kubectl` group and configures the firewall.
 
-**`join`** — Runs from the control-plane. Reads the cluster token, syncs and runs `prep-node.sh` on the remote (loads nvme_tcp), optionally also syncs `prep-control-plane.sh` if joining as a `server`, then installs K3s agent or server via SSH. The optional third argument `[agent|server]` defaults to `agent`.
+**`join`** — Runs from the control-plane. Reads the cluster token, optionally syncs `prep-control-plane.sh` if joining as a `server`, then installs K3s agent or server via SSH. The optional third argument `[agent|server]` defaults to `agent`.
 
 **`update-node-ip`** — Detects the node's new IP, writes a config drop-in, restarts K3s, and re-applies network policies. Uses the shared `wait_for_k3s_cluster()` helper from common.sh.
 
 ## Host preparation scripts
 
-Atlas includes reusable host preparation scripts that run on every node during setup/join, BEFORE K3s starts. This avoids restarts and keeps the `mayastor` component's `prep.sh` lightweight (validation-only).
+Atlas includes reusable host preparation scripts that run on every node during setup/join, BEFORE K3s starts.
 
-**`prep-node.sh`** — Runs on all nodes (control-plane and workers). Loads the `nvme_tcp` kernel module and persists it via `/etc/modules-load.d/`. Required for Mayastor's CSI node plugin to mount NVMe-oF TCP volumes.
+**`prep-control-plane.sh`** — Runs on control-plane nodes only. Creates the K3s NFS state directory (`$K3S_STATE_DIR`) and pre-creates subdirectories for all persistent volumes discovered by scanning `prereqs.yaml` files. Idempotent — safe to re-run.
 
-**`prep-control-plane.sh`** — Runs on control-plane nodes only. Allocates 2GiB of 2MiB hugepages (runtime + persistent via GRUB and sysctl), creates the Mayastor backing file (`$MAYASTOR_POOL_DIR/pool.img`) as a 100G sparse file. Idempotent — safe to re-run.
+## Storage
 
-## Mayastor pool expansion
-
-```bash
-./atlas.sh <target> k3s expand-pool <size>
-```
-
-Expands the Mayastor DiskPool backing file and triggers an online resize. No downtime — the pool grows while volumes are running. The script:
-
-1. Validates the pool is online and the new size is larger than current
-2. Checks against `maxExpandableSize` (set at pool creation, immutable)
-3. Prompts for confirmation
-4. Grows the backing file (`truncate -s`)
-5. Annotates the DiskPool to trigger Mayastor expansion
-6. Waits for the pool to report the new capacity
-
-Size format supports any `numfmt`-compatible value: `1.5T`, `2000G`, `1500000000000`.
+All persistent volumes use NFS-backed CSI PVs served by the on-cluster NFS server. Data lives at `$K3S_STATE_DIR` on the host filesystem. See `prep-control-plane.sh` for the setup script.
 
 ## PVC backup and restore
 

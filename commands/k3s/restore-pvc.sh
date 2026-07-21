@@ -13,70 +13,70 @@ if [ "${1:-}" = "-y" ]; then AUTO_YES=true; shift; fi
 BACKUP_FILE="$PVC_BACKUP_DIR/${PVC_NAME}.tar.gz"
 
 if [ ! -f "$BACKUP_FILE" ]; then
-	echo "ERROR: backup not found at $BACKUP_FILE" >&2
-	exit 1
+    echo "ERROR: backup not found at $BACKUP_FILE" >&2
+    exit 1
 fi
 
 # Find namespace from the PVC
 PVC_NS=$(kubectl get pvc -A -o json 2>/dev/null | jq -r --arg name "$PVC_NAME" \
-	'.items[] | select(.metadata.name == $name) | .metadata.namespace' 2>/dev/null || true)
+    '.items[] | select(.metadata.name == $name) | .metadata.namespace' 2>/dev/null || true)
 if [ -z "$PVC_NS" ]; then
-	echo "ERROR: PVC $PVC_NAME not found in cluster" >&2
-	exit 1
+    echo "ERROR: PVC $PVC_NAME not found in cluster" >&2
+    exit 1
 fi
 
 # Find workloads using this PVC
 echo "Discovering workloads using $PVC_NS/$PVC_NAME..."
 WORKLOADS=$(kubectl get deploy,sts,ds -n "$PVC_NS" -o json 2>/dev/null | jq -r --arg pvc "$PVC_NAME" \
-	'.items[] | select(.spec.template.spec.volumes[]?.persistentVolumeClaim.claimName == $pvc) | "\(.kind)/\(.metadata.name)"' 2>/dev/null || true)
+    '.items[] | select(.spec.template.spec.volumes[]?.persistentVolumeClaim.claimName == $pvc) | "\(.kind)/\(.metadata.name)"' 2>/dev/null || true)
 
 if [ -z "$WORKLOADS" ]; then
-	echo "WARNING: no workloads found referencing $PVC_NAME" >&2
+    echo "WARNING: no workloads found referencing $PVC_NAME" >&2
 else
-	echo ""
-	echo "The following workloads will be scaled down during restore:"
-	for w in $WORKLOADS; do
-		echo "  $w"
-	done
-	echo ""
+    echo ""
+    echo "The following workloads will be scaled down during restore:"
+    for w in $WORKLOADS; do
+        echo "  $w"
+    done
+    echo ""
 fi
 
 if [ "$AUTO_YES" = false ]; then
-	read -p "Proceed with restore? [y/N] " confirm
-	case "$confirm" in [yY]*) ;; *) echo "Aborted."; exit 0 ;; esac
+    read -p "Proceed with restore? [y/N] " confirm
+    case "$confirm" in [yY]*) ;; *) echo "Aborted."; exit 0 ;; esac
 fi
 
 SCALED_FILE=$(mktemp)
 trap '_restore_workloads; rm -f "$SCALED_FILE"' EXIT
 
 _restore_workloads() {
-	if [ -f "$SCALED_FILE" ]; then
-		while IFS= read -r entry; do
-			wkind=$(echo "$entry" | cut -d/ -f1)
-			wname=$(echo "$entry" | cut -d/ -f2)
-			reps=$(echo "$entry" | cut -d/ -f3)
-			kubectl scale "$wkind" "$wname" -n "$PVC_NS" --replicas="$reps" 2>/dev/null || true
-		done < "$SCALED_FILE"
-	fi
-	kubectl delete pod -n "$PVC_NS" -l app=pvc-restore-temp --wait=false 2>/dev/null || true
+    if [ -f "$SCALED_FILE" ]; then
+        while IFS= read -r entry; do
+            wkind=$(echo "$entry" | cut -d/ -f1)
+            wname=$(echo "$entry" | cut -d/ -f2)
+            reps=$(echo "$entry" | cut -d/ -f3)
+            kubectl scale "$wkind" "$wname" -n "$PVC_NS" --replicas="$reps" 2>/dev/null || true
+        done < "$SCALED_FILE"
+    fi
+    kubectl delete pod -n "$PVC_NS" -l app=pvc-restore-temp --wait=false 2>/dev/null || true
 }
 
 for w in $WORKLOADS; do
-	wkind="${w%%/*}"
-	wname="${w##*/}"
-	reps=$(kubectl get "$wkind" "$wname" -n "$PVC_NS" -o jsonpath='{.spec.replicas}' 2>/dev/null || echo 1)
-	echo "$wkind/$wname/$reps" >> "$SCALED_FILE"
-	echo "Scaling $wkind/$wname to 0..."
-	kubectl scale "$wkind" "$wname" -n "$PVC_NS" --replicas=0
+    wkind="${w%%/*}"
+    wname="${w##*/}"
+    reps=$(kubectl get "$wkind" "$wname" -n "$PVC_NS" -o jsonpath='{.spec.replicas}' 2>/dev/null || echo 1)
+    echo "$wkind/$wname/$reps" >> "$SCALED_FILE"
+    echo "Scaling $wkind/$wname to 0..."
+    kubectl scale "$wkind" "$wname" -n "$PVC_NS" --replicas=0
 done
 
 # Wait for pods to terminate
 sleep 5
 for w in $WORKLOADS; do
-	wkind="${w%%/*}"
-	wname="${w##*/}"
-	echo "Waiting for $wkind/$wname pods to terminate..."
-	kubectl wait --for=delete pod -n "$PVC_NS" --selector="$(kubectl get "$wkind" "$wname" -n "$PVC_NS" -o jsonpath='{.spec.selector.matchLabels}' 2>/dev/null | jq -r 'to_entries | map("\(.key)=\(.value)") | join(",")')" --timeout=120s 2>/dev/null || true
+    wkind="${w%%/*}"
+    wname="${w##*/}"
+    echo "Waiting for $wkind/$wname pods to terminate..."
+    kubectl wait --for=delete pod -n "$PVC_NS" --selector="$(kubectl get "$wkind" "$wname" -n "$PVC_NS" -o jsonpath='{.spec.selector.matchLabels}' 2>/dev/null | jq -r 'to_entries | map("\(.key)=\(.value)") | join(",")')" --timeout=120s 2>/dev/null || true
 done
 
 # Run restore pod
@@ -121,8 +121,8 @@ PODEOF
 
 echo "Waiting for restore pod to complete..."
 if ! kubectl wait --for=jsonpath='{.status.phase}'=Succeeded "pod/$RESTORE_POD" -n "$PVC_NS" --timeout=600s 2>/dev/null; then
-	echo "ERROR: restore pod did not succeed" >&2
-	exit 1
+    echo "ERROR: restore pod did not succeed" >&2
+    exit 1
 fi
 kubectl delete pod "$RESTORE_POD" -n "$PVC_NS"
 

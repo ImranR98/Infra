@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: PersistentVolume
 metadata:
-  name: gokapi-data
+  name: gokapi-data-pv
 spec:
   capacity:
     storage: 200Gi
@@ -22,7 +22,7 @@ spec:
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: gokapi-data
+  name: gokapi-data-pv
   namespace: apps
 spec:
   accessModes:
@@ -31,12 +31,12 @@ spec:
     requests:
       storage: 200Gi
   storageClassName: nfs
-  volumeName: gokapi-data
+  volumeName: gokapi-data-pv
 ---
 apiVersion: v1
 kind: PersistentVolume
 metadata:
-  name: gokapi-config
+  name: gokapi-config-pv
 spec:
   capacity:
     storage: 1Gi
@@ -57,7 +57,7 @@ spec:
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: gokapi-config
+  name: gokapi-config-pv
   namespace: apps
   labels:
     auto-backup: "true"
@@ -68,4 +68,4 @@ spec:
     requests:
       storage: 1Gi
   storageClassName: nfs
-  volumeName: gokapi-config
+  volumeName: gokapi-config-pv

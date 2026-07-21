@@ -100,7 +100,7 @@ spec:
       securityContext:
         fsGroup: $MY_UID
       containers:
-      - name: postgresql
+        - name: postgresql
         image: ghcr.io/immich-app/postgres:18-vectorchord0.5.3-pgvector0.8.1
         securityContext:
           allowPrivilegeEscalation: false
@@ -115,19 +115,19 @@ spec:
           failureThreshold: 3
           initialDelaySeconds: 15
         env:
-        - name: POSTGRES_USER
-          value: "postgres"
-        - name: POSTGRES_PASSWORD
+          - name: POSTGRES_USER
+          value: postgres
+          - name: POSTGRES_PASSWORD
           valueFrom:
             secretKeyRef:
               name: immich-db-credentials
               key: password
-        - name: POSTGRES_DB
-          value: "immich"
-        - name: PGDATA
+          - name: POSTGRES_DB
+          value: immich
+          - name: PGDATA
           value: /var/lib/postgresql/data/pgdata
-        - name: POSTGRES_INITDB_ARGS
-          value: "--data-checksums"
+          - name: POSTGRES_INITDB_ARGS
+          value: --data-checksums
         ports:
         - containerPort: 5432
         resources:
@@ -141,10 +141,10 @@ spec:
         - name: dshm
           mountPath: /dev/shm
       volumes:
-      - name: data
+        - name: data
         persistentVolumeClaim:
           claimName: immich-db-pvc
-      - name: dshm
+        - name: dshm
         emptyDir:
           medium: Memory
           sizeLimit: 5Gi

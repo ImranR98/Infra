@@ -17,7 +17,7 @@ spec:
       - http://ollama.apps.svc.cluster.local:11434
     persistence:
       enabled: true
-      existingClaim: openwebui-data-pvc
+      existingClaim: open-webui-data-pvc
       storageClass: nfs
     pipelines:
       persistence:

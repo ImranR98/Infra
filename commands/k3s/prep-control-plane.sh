@@ -17,7 +17,7 @@ mkdir -p "$K3S_STATE_DIR"
 # We scan prereqs.yaml across all k3s components for 'subDir:' lines
 # to discover what directories are needed.
 if [ -d "$ATLAS_ROOT/targets/$TARGET/k3s" ]; then
-	grep -rhoP 'subDir:\s*\K\S+' "$ATLAS_ROOT/targets/$TARGET/k3s"/*/prereqs.yaml 2>/dev/null | sort -u | while read subdir; do
-		mkdir -p "$K3S_STATE_DIR/$subdir"
-	done
+    grep -rhoP 'subDir:\s*\K\S+' "$ATLAS_ROOT/targets/$TARGET/k3s"/*/prereqs.yaml 2>/dev/null | sort -u | while read subdir; do
+        mkdir -p "$K3S_STATE_DIR/$subdir"
+    done
 fi

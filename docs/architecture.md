@@ -85,7 +85,7 @@ Template files (*.secret, *.plain) under `compose/templates/` are rendered into 
 - `TARGET` — name of the current target, always available
 - `COMPOSE_STATE_DIR` — where rendered Compose files live at runtime
 - `PVC_BACKUP_DIR` — path for K3s PVC backup archives
-- `MAYASTOR_POOL_DIR` — path for Mayastor storage pool backing file
+- `K3S_STATE_DIR` — path for K3s NFS-backed persistent storage
 - `ENVSUBST_VARS` — space-separated list of `$VARIABLE` names for envsubst
 - `.secret` — file extension marking templates that should be rendered with restricted permissions
 - `.plain` — file extension marking templates that should be copied verbatim without envsubst

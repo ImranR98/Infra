@@ -41,10 +41,10 @@ spec:
       volumes:
         - name: data
           persistentVolumeClaim:
-            claimName: gokapi-data
+            claimName: gokapi-data-pvc
         - name: config
           persistentVolumeClaim:
-            claimName: gokapi-config
+            claimName: gokapi-config-pvc
 ---
 # Named 'gokapi-svc' rather than 'gokapi' to avoid Kubernetes injecting
 # GOKAPI_PORT=tcp://... into the pod, which gokapi's Go config parser

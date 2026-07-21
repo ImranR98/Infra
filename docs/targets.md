@@ -21,7 +21,7 @@ This documentation is generated at a point in time. Targets may be added, remove
 The main homelab server. Runs a full K3s cluster with ~20 application workloads, plus a small Docker Compose sidecar for FRPC tunneling.
 
 - **Orchestrator:** K3s (control-plane node) + Docker Compose sidecar
-- **K3s workloads (base):** Namespaces, NFS server, NFS CSI driver, Mayastor storage, cert-manager, Traefik ingress, CrowdSec, Authelia SSO, ntfy notifications
+- **K3s workloads (base):** Namespaces, NFS server, NFS CSI driver, cert-manager, Traefik ingress, CrowdSec, Authelia SSO, ntfy notifications
 - **K3s workloads (apps):** Immich, Jellyfin, Navidrome, Home Assistant, Nextcloud, Ollama + Open WebUI, FreshRSS, mosquitto, Syncthing, mdScl, OPodSync, D$CPLN, OpenCanary, FMD, logtfy
 - **Compose:** FRPC sidecar (tunnels K3s services through the FRP server)
 - **Special:** LUKS-aware preboot FRPC for remote SSH unlock of encrypted root filesystem

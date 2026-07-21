@@ -28,7 +28,7 @@ Renovate runs in its standard local mode with a standard `renovate.json` config 
 
 WireGuard uses `wg-quick`, standard `wg0.conf` syntax, and standard systemd integration. The split-tunnel routing (`0.0.0.0/1, 128.0.0.0/1`) is a well-known WireGuard technique for selective routing.
 
-### cert-manager, Traefik, Authelia, CrowdSec, Mayastor
+### cert-manager, Traefik, Authelia, CrowdSec
 
 All Kubernetes applications are deployed via standard CRDs, HelmCharts, and standard configurations. Their documentation applies directly.
 

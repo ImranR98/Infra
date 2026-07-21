@@ -51,7 +51,7 @@ echo ""
 echo "=== Certificates generated ==="
 echo ""
 
-# --- Print VARS.sh (common, for client) ---
+# ====== Print VARS.sh (common, for client) ======
 echo "Paste into VARS.${CLIENT_TARGET}.sh:"
 echo ""
 echo "  # --- FRP CA (shared for this pair) ---"
@@ -68,7 +68,7 @@ if [ "$HAS_PREBOOT" = true ]; then
     print_copy_paste_block "$CLIENT_TARGET" "FRP_PREBOOT_CLIENT_KEY" "$OUTDIR/$CLIENT_TARGET-preboot.key"
 fi
 
-# --- Print VARS for server ---
+# ====== Print VARS for server ======
 echo "Paste into VARS.${SERVER_TARGET}.sh:"
 echo ""
 echo "  # --- FRP CA (shared for this pair) ---"

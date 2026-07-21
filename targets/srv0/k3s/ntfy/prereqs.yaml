@@ -32,7 +32,6 @@ spec:
       storage: 5Gi
   storageClassName: nfs
   volumeName: ntfy-pv
-
 ---
 apiVersion: v1
 kind: Secret
@@ -51,7 +50,6 @@ stringData:
     # effect and ntfy silently allows all writes.
     auth-file: "/home/ntfy/user.db"
     auth-default-access: deny-all
-
 ---
 apiVersion: v1
 kind: Secret
