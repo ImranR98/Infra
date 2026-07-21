@@ -57,7 +57,7 @@ spec:
       podSecurityContext:
         fsGroup: $MY_UID
         seLinuxOptions:
-          type: spc_t  # Required to read host /var/log/pods for log acquisition
+          type: spc_t        # NOTE: crowdsec must run as root — /staging/ tini-init and SELinux
       containerSecurityContext:
         allowPrivilegeEscalation: false
       acquisition:

@@ -60,6 +60,8 @@ spec:
         memory: 2Gi
       requests:
         memory: 128Mi
+    # NOTE: open-webui, redis, and pipelines run as root — copy-app-data
+    # init container copies files as root, sub-charts uncontrolled by parent.
     podSecurityContext:
       fsGroup: $MY_UID
     containerSecurityContext:

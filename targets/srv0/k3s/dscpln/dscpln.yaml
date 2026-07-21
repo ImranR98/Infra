@@ -22,6 +22,7 @@ spec:
         - name: dscpln
           image: imranrdev/dscpln:latest@sha256:89ad11f983d92606caf4b1f742857793f1f9b4718934cbc9511e4ae3ad424e80
           securityContext:
+            # runs as root: imranrdev image breaks with non-root uid
             allowPrivilegeEscalation: false
           ports:
             - containerPort: 3300

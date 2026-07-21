@@ -124,6 +124,7 @@ spec:
             - name: KUBE_API_SERVER
               value: "https://kubernetes.default.svc"
           securityContext:
+            # runs as root: imranrdev image breaks with non-root uid
             allowPrivilegeEscalation: false
           resources:
             limits:

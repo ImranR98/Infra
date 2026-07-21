@@ -130,7 +130,7 @@ spec:
             - "1001:1001"
             - /bitnami/postgresql
           securityContext:
-            runAsUser: 0
+            runAsUser: 0  # root required: chown on NFS-backed PVC for postgresql (uid 1001)
           resources:
             limits:
               memory: 2Gi

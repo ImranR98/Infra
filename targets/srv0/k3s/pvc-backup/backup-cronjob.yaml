@@ -16,7 +16,7 @@ spec:
           serviceAccountName: pvc-backup
           restartPolicy: Never
           securityContext:
-            runAsUser: 0
+            runAsUser: 0  # root required: kubectl scale/delete/patch across all namespaces
           containers:
             - name: backup
               image: bitnami/kubectl:latest
