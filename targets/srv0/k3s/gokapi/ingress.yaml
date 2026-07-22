@@ -34,6 +34,14 @@ spec:
   tls:
     secretName: gokapi-prod-tls
 ---
+# In initial mode, send.$SERVICES_DOMAIN is protected by Authelia.
+# This breaks Gokapi's first-time setup, so an internal
+# LAN-only route is needed (defined below).
+# Accessing the LAN-only route may require editing /etc/hosts
+# temporarily if you are not running on a cluster node.
+# In non-initial mode, we want to disable this LAN-only route, 
+# so we make Authelia protect it (this is effectively a block),
+# hence the 'IGNORE INITIALLY' comments below.
 apiVersion: traefik.io/v1alpha1
 kind: IngressRoute
 metadata:
