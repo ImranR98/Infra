@@ -134,15 +134,13 @@ spec:
     - sh
     - -c
     - |
-      echo "$TIMESTAMP" > /tmp/__backup_timestamp.txt
-      if [ ! -d /data ] || ! mountpoint /data; then
-        echo "ERROR: PVC not mounted at /data" >&2
-        exit 1
-      fi
-      if ! tar czf /backup/"$PVC_NAME".tar.gz -C /tmp __backup_timestamp.txt -C /data .; then
+      echo "$TIMESTAMP" > /data/__backup_timestamp.txt
+      if ! tar czf /backup/"$PVC_NAME".tar.gz -C /data .; then
         echo "ERROR: tar archive creation failed" >&2
+        rm -f /data/__backup_timestamp.txt
         exit 1
       fi
+      rm -f /data/__backup_timestamp.txt
       if [ ! -s /backup/"$PVC_NAME".tar.gz ]; then
         echo "ERROR: backup archive is empty" >&2
         exit 1

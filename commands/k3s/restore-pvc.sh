@@ -135,8 +135,8 @@ spec:
         echo "ERROR: PVC not mounted at /data" >&2
         exit 1
       fi
-      rm -rf /data/*
-      tar xzf /backup/${PVC_NAME}.tar.gz -C /data --exclude=__backup_timestamp.txt
+      find /data -mindepth 1 -delete
+      tar xzf /backup/${PVC_NAME}.tar.gz -C /data
     volumeMounts:
     - name: data
       mountPath: /data
