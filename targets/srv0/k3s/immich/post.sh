@@ -9,7 +9,7 @@ source_env
 echo "=== Checking Immich configuration ==="
 
 # Wait for Immich server to be ready
-if ! retry 60 5 "kubectl -n apps wait --for=condition=Ready pod -l app.kubernetes.io/name=immich-server --timeout=10s >/dev/null 2>&1"; then
+if ! retry 60 5 "kubectl -n apps wait --for=condition=Ready pod -l app.kubernetes.io/name=server,app.kubernetes.io/instance=immich --timeout=10s >/dev/null 2>&1"; then
     echo "Error: Immich server did not become ready in time" >&2
     exit 1
 fi
