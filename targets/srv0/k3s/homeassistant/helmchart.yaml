@@ -17,11 +17,7 @@ spec:
       type: Deployment
     image:
       tag: stable
-    podSecurityContext:
-      fsGroup: $MY_UID
-      runAsUser: $MY_UID
-      runAsGroup: $MY_UID
-      supplementalGroups: [20]
+    podSecurityContext: {}
     securityContext:
       allowPrivilegeEscalation: false
     persistence:
