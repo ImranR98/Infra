@@ -132,7 +132,7 @@ The `pvc-backup` component in the `apps` group runs a nightly CronJob at 3AM. Fo
 3. Archives the PVC contents as a `.tar.gz` (with a `timestamp.txt` inside)
 4. Deletes the temp pod and scales workloads back up
 
-Backups are stored at `$PVC_BACKUP_DIR/<pvc-name>.tar.gz` (inside `current_target/`, gitignored). The filename is constant — each run overwrites the previous copy.
+Backups are stored at `$PVC_BACKUP_DIR/<pvc-name>.tar.gz` (at `$ATLAS_ROOT/k3s_state_backups/`, gitignored). The filename is constant — each run overwrites the previous copy.
 
 Manual trigger (zero code duplication):
 ```bash

@@ -1,5 +1,6 @@
 /current_target/
 /compose_state_backups/
+/k3s_state_backups/
 /VARS.sh
 /VARS.*.sh
 ~*

@@ -14,7 +14,7 @@ export ATLAS_INTERACTIVE
 export COMPOSE_STATE_DIR="$ATLAS_ROOT/current_target/compose_live_state"
 export COMPOSE_STATE_BACKUP_DIR="$ATLAS_ROOT/compose_state_backups"
 export K3S_STATE_DIR="$ATLAS_ROOT/current_target/k3s_live_state"
-export PVC_BACKUP_DIR="$ATLAS_ROOT/current_target/k3s_pvc_backups"
+export PVC_BACKUP_DIR="$ATLAS_ROOT/k3s_state_backups"
 
 if [ "${1:-}" = "" ]; then
     echo "Usage: $0 <target> <command...>" >&2
