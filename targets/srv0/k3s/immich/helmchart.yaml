@@ -48,6 +48,18 @@ spec:
                 tag: v3.0.3
               env:
                 HWACCEL_VAAPI_ENABLED: "true"
+                OAUTH_ENABLED: "true"
+                OAUTH_ISSUER_URL: "https://auth.$SERVICES_DOMAIN"
+                OAUTH_CLIENT_ID: "immich"
+                OAUTH_CLIENT_SECRET:
+                  valueFrom:
+                    secretKeyRef:
+                      name: immich-oidc
+                      key: client-secret
+                OAUTH_REDIRECT_URI: "https://immich.$SERVICES_DOMAIN/auth/login"
+                OAUTH_BUTTON_TEXT: "Login with Authelia"
+                OAUTH_AUTO_REGISTER: "true"
+                OAUTH_SCOPE: "openid profile email"
       persistence:
         dri:
           type: hostPath

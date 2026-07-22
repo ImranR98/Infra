@@ -79,6 +79,15 @@ type: Opaque
 stringData:
   password: "$IMMICH_DB_PASSWORD"
 ---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: immich-oidc
+  namespace: apps
+type: Opaque
+stringData:
+  client-secret: "$AUTHELIA_IMMICH_CLIENT_SECRET_HASHABLE"
+---
 # PostgreSQL with VectorChord extension for Immich smart search
 apiVersion: apps/v1
 kind: Deployment
