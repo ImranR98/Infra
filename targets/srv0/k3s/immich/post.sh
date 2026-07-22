@@ -14,109 +14,77 @@ if ! retry 60 5 "kubectl -n apps wait --for=condition=Ready pod -l app.kubernete
     exit 1
 fi
 
-# Idempotency check: skip if OAuth already configured
-CLIENT_ID=$(kubectl exec -n apps deploy/immich-server -- node -e "
-    const http = require('http');
-    const req = http.get('http://localhost:2283/api/system-config', (res) => {
-        let data = '';
-        res.on('data', (c) => data += c);
-        res.on('end', () => {
-            try { const j = JSON.parse(data); process.stdout.write(j.oauth.clientId || ''); }
-            catch(e) { process.stdout.write(''); }
-        });
-    });
-    req.on('error', () => process.stdout.write(''));
-    req.end();
-" 2>/dev/null || echo "")
+# Reset admin password and check idempotency in one shot.
+# The password reset always succeeds (Inquirer raises ERR_USE_AFTER_CLOSE
+# after setting the password — harmless).  We get a fresh token and
+# check whether OAuth is already configured.
+PWD=$(openssl rand -hex 12)
 
-if [ -n "$CLIENT_ID" ]; then
+echo "Resetting admin password for API access..."
+echo "$PWD" | kubectl exec -i -n apps deploy/immich-server -- \
+    timeout 10 immich-admin reset-admin-password 2>/dev/null || true
+
+TOKEN=$(kubectl exec -n apps deploy/immich-server -- \
+    curl -sk -X POST http://localhost:2283/api/auth/login \
+      -H "Content-Type: application/json" \
+      -d "{\"email\":\"$DOMAIN_OWNER_EMAIL\",\"password\":\"$PWD\"}" 2>/dev/null | \
+    python3 -c "import json,sys; print(json.load(sys.stdin)['accessToken'])" 2>/dev/null || echo "")
+
+if [ -z "$TOKEN" ]; then
+    echo "Error: could not obtain API token" >&2
+    exit 1
+fi
+
+CLIENT_ID=$(kubectl exec -n apps deploy/immich-server -- \
+    curl -sk "http://localhost:2283/api/system-config" \
+      -H "Authorization: Bearer $TOKEN" 2>/dev/null | \
+    python3 -c "import json,sys; print(json.load(sys.stdin)['oauth']['clientId'])" 2>/dev/null || echo "")
+
+if [ -n "$CLIENT_ID" ] && [ "$CLIENT_ID" != "null" ]; then
     echo "OAuth already configured (clientId=$CLIENT_ID). Skipping."
     exit 0
 fi
 
-echo "OAuth not yet configured. Seeding configuration via API..."
+echo "OAuth not yet configured. Seeding configuration..."
 
-kubectl exec -i -n apps deploy/immich-server -- env \
-  ADMIN_EMAIL="$DOMAIN_OWNER_EMAIL" \
-  SERVICES_DOMAIN="$SERVICES_DOMAIN" \
-  CLIENT_SECRET="$AUTHELIA_IMMICH_CLIENT_SECRET_HASHABLE" \
-  node <<'SEED'
-const http = require('http');
-const { execSync } = require('child_process');
-const crypto = require('crypto');
+# GET current config, patch, PUT back
+CONFIG_JSON=$(kubectl exec -n apps deploy/immich-server -- \
+    curl -sk "http://localhost:2283/api/system-config" \
+      -H "Authorization: Bearer $TOKEN" 2>/dev/null)
 
-function api(method, path, token, body) {
-    return new Promise((resolve, reject) => {
-        const opts = {
-            hostname: 'localhost', port: 2283, path: path,
-            method: method, headers: { 'Content-Type': 'application/json' }
-        };
-        if (token) opts.headers['Authorization'] = `Bearer ${token}`;
-        const req = http.request(opts, (res) => {
-            let data = '';
-            res.on('data', (c) => data += c);
-            res.on('end', () => {
-                try { resolve(JSON.parse(data)); }
-                catch(e) { reject(new Error(`Invalid JSON: ${data}`)); }
-            });
-        });
-        req.on('error', reject);
-        if (body) req.write(JSON.stringify(body));
-        req.end();
-    });
-}
+UPDATED_JSON=$(echo "$CONFIG_JSON" | python3 -c "
+import json, sys, os
 
-async function seed() {
-    const pwd = crypto.randomBytes(12).toString('hex');
+c = json.load(sys.stdin)
 
-    // Check if admin exists
-    let hasAdmin = false;
-    try {
-        const users = execSync('immich-admin list-users', { encoding: 'utf8' });
-        hasAdmin = JSON.parse(users).length > 0;
-    } catch(e) {}
+c['oauth']['enabled'] = True
+c['oauth']['issuerUrl'] = 'https://auth.$SERVICES_DOMAIN'
+c['oauth']['clientId'] = 'immich'
+c['oauth']['clientSecret'] = '$AUTHELIA_IMMICH_CLIENT_SECRET_HASHABLE'
+c['oauth']['buttonText'] = 'Login with Authelia'
+c['oauth']['autoRegister'] = True
+c['oauth']['autoLaunch'] = True
+c['oauth']['scope'] = 'openid profile email'
+c['ffmpeg']['accel'] = 'vaapi'
+c['passwordLogin']['enabled'] = False
+c['library']['watch']['enabled'] = True
 
-    if (!hasAdmin) {
-        console.log('Creating admin user...');
-        await api('POST', '/auth/admin-sign-up', null, {
-            email: process.env.ADMIN_EMAIL,
-            name: 'Admin',
-            password: pwd
-        });
-        await new Promise(r => setTimeout(r, 2000));
-    } else {
-        console.log('Admin already exists, resetting password for API access...');
-        execSync('immich-admin reset-admin-password', { input: pwd, encoding: 'utf8' });
-        await new Promise(r => setTimeout(r, 2000));
-    }
+sys.stdout.write(json.dumps(c))
+")
 
-    const loginResp = await api('POST', '/auth/login', null, {
-        email: process.env.ADMIN_EMAIL,
-        password: pwd
-    });
-    const token = loginResp.accessToken;
-
-    const config = await api('GET', '/system-config', token);
-
-    config.oauth.enabled = true;
-    config.oauth.issuerUrl = `https://auth.${process.env.SERVICES_DOMAIN}`;
-    config.oauth.clientId = 'immich';
-    config.oauth.clientSecret = process.env.CLIENT_SECRET;
-    config.oauth.buttonText = 'Login with Authelia';
-    config.oauth.autoRegister = true;
-    config.oauth.autoLaunch = true;
-    config.oauth.scope = 'openid profile email';
-    config.ffmpeg.accel = 'vaapi';
-    config.passwordLogin.enabled = false;
-    config.library.watch.enabled = true;
-
-    await api('PUT', '/system-config', token, config);
-
-    console.log('Immich configuration seeded successfully.');
-}
-
-seed().catch(e => { console.error(e.message); process.exit(1); });
-SEED
+echo "$UPDATED_JSON" | kubectl exec -i -n apps deploy/immich-server -- \
+    curl -sk -X PUT "http://localhost:2283/api/system-config" \
+      -H "Authorization: Bearer $TOKEN" \
+      -H "Content-Type: application/json" \
+      -d @- 2>/dev/null | python3 -c "
+import json, sys
+c = json.load(sys.stdin)
+o = c['oauth']
+assert o['enabled'] == True
+assert o['clientId'] == 'immich'
+assert c['passwordLogin']['enabled'] == False
+print('ok')
+" 2>/dev/null
 
 echo ""
 echo "Immich configuration seeded."
