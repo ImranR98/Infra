@@ -21,7 +21,8 @@ spec:
       fsGroup: $MY_UID
       runAsUser: $MY_UID
       runAsGroup: $MY_UID
-    containerSecurityContext:
+      supplementalGroups: [20]
+    securityContext:
       allowPrivilegeEscalation: false
     persistence:
       enabled: true
@@ -35,6 +36,21 @@ spec:
         - 10.0.0.0/8
         - 172.16.0.0/12
         - 192.168.0.0/16
+    additionalVolumes:
+      - name: usb-serial
+        hostPath:
+          path: /dev/serial/by-id
+          type: DirectoryOrCreate
+      - name: dbus
+        hostPath:
+          path: /run/dbus/system_bus_socket
+          type: Socket
+    additionalMounts:
+      - name: usb-serial
+        mountPath: /dev/serial/by-id
+        readOnly: true
+      - name: dbus
+        mountPath: /run/dbus/system_bus_socket
     resources:
       limits:
         memory: 2Gi
