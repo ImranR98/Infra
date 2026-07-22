@@ -20,12 +20,27 @@ fi
 # check whether OAuth is already configured.
 PWD=$(openssl rand -hex 12)
 
-echo "Resetting admin password for API access..."
+echo "Ensuring admin access..."
 # Ensure password login is enabled so we can authenticate
 kubectl exec -n apps deploy/immich-server -- \
     immich-admin enable-password-login 2>/dev/null || true
-echo "$PWD" | kubectl exec -i -n apps deploy/immich-server -- \
-    timeout 10 immich-admin reset-admin-password 2>/dev/null || true
+
+# Check if admin user exists
+HAS_ADMIN=$(kubectl exec -n apps deploy/immich-server -- \
+    immich-admin list-users 2>/dev/null | python3 -c "import json,sys; print(len(json.load(sys.stdin)))" 2>/dev/null || echo 0)
+
+if [ "$HAS_ADMIN" = "0" ]; then
+    echo "No admin user found. Creating via API..."
+    kubectl exec -n apps deploy/immich-server -- \
+        curl -sk -X POST "http://localhost:2283/api/auth/admin-sign-up" \
+          -H "Content-Type: application/json" \
+          -d "{\"email\":\"$DOMAIN_OWNER_EMAIL\",\"name\":\"Admin\",\"password\":\"$PWD\"}" 2>/dev/null
+    sleep 2
+else
+    echo "Admin exists. Resetting password..."
+    echo "$PWD" | kubectl exec -i -n apps deploy/immich-server -- \
+        timeout 10 immich-admin reset-admin-password 2>/dev/null || true
+fi
 
 TOKEN=$(kubectl exec -n apps deploy/immich-server -- \
     curl -sk -X POST http://localhost:2283/api/auth/login \
