@@ -25,9 +25,10 @@ echo "Ensuring admin access..."
 kubectl exec -n apps deploy/immich-server -- \
     immich-admin enable-password-login 2>/dev/null || true
 
-# Check if admin user exists (immich-admin list-users output is not valid JSON)
+# Check if admin user exists
 HAS_ADMIN=$(kubectl exec -n apps deploy/immich-server -- \
-    immich-admin list-users 2>/dev/null | grep -c "id:" 2>/dev/null || echo 0)
+    sh -c "immich-admin list-users 2>/dev/null | grep -c 'id:'" 2>/dev/null || echo 0)
+HAS_ADMIN=$(echo "$HAS_ADMIN" | head -1)
 
 if [ "$HAS_ADMIN" = "0" ]; then
     echo "No admin user found. Creating via API..."
