@@ -15,10 +15,21 @@ if ! retry 60 5 "kubectl -n apps wait --for=condition=Ready pod -l app.kubernete
 fi
 
 # Idempotency check: skip if OAuth already configured
-CLIENT_ID=$(kubectl exec -n apps deploy/immich-server -- \
-    python3 -c "import json,subprocess; r=subprocess.run(['curl','-sk','http://localhost:2283/api/system-config'],capture_output=True,text=True); print(json.loads(r.stdout)['oauth']['clientId'])" 2>/dev/null || echo "")
+CLIENT_ID=$(kubectl exec -n apps deploy/immich-server -- node -e "
+    const http = require('http');
+    const req = http.get('http://localhost:2283/api/system-config', (res) => {
+        let data = '';
+        res.on('data', (c) => data += c);
+        res.on('end', () => {
+            try { const j = JSON.parse(data); process.stdout.write(j.oauth.clientId || ''); }
+            catch(e) { process.stdout.write(''); }
+        });
+    });
+    req.on('error', () => process.stdout.write(''));
+    req.end();
+" 2>/dev/null || echo "")
 
-if [ -n "$CLIENT_ID" ] && [ "$CLIENT_ID" != "null" ]; then
+if [ -n "$CLIENT_ID" ]; then
     echo "OAuth already configured (clientId=$CLIENT_ID). Skipping."
     exit 0
 fi
@@ -29,84 +40,84 @@ kubectl exec -i -n apps deploy/immich-server -- env \
   ADMIN_EMAIL="$DOMAIN_OWNER_EMAIL" \
   SERVICES_DOMAIN="$SERVICES_DOMAIN" \
   CLIENT_SECRET="$AUTHELIA_IMMICH_CLIENT_SECRET_HASHABLE" \
-  python3 <<'SEED'
-import json, subprocess, os, secrets, sys, time
+  node <<'SEED'
+const http = require('http');
+const { execSync } = require('child_process');
+const crypto = require('crypto');
 
-def api(method, path, token=None, body=None):
-    args = ["curl", "-sk", f"http://localhost:2283{path}"]
-    if token:
-        args += ["-H", f"Authorization: Bearer {token}"]
-    if body is not None:
-        args += ["-H", "Content-Type: application/json"]
-        args += ["-d", json.dumps(body)]
-    args += ["-X", method.upper()]
-    r = subprocess.run(args, capture_output=True, text=True)
-    if r.returncode != 0:
-        print(f"API call failed: {method} {path}", file=sys.stderr)
-        print(r.stderr, file=sys.stderr)
-        sys.exit(1)
-    try:
-        return json.loads(r.stdout)
-    except json.JSONDecodeError:
-        print(f"API returned non-JSON: {method} {path}", file=sys.stderr)
-        print(r.stdout, file=sys.stderr)
-        sys.exit(1)
+function api(method, path, token, body) {
+    return new Promise((resolve, reject) => {
+        const opts = {
+            hostname: 'localhost', port: 2283, path: path,
+            method: method, headers: { 'Content-Type': 'application/json' }
+        };
+        if (token) opts.headers['Authorization'] = `Bearer ${token}`;
+        const req = http.request(opts, (res) => {
+            let data = '';
+            res.on('data', (c) => data += c);
+            res.on('end', () => {
+                try { resolve(JSON.parse(data)); }
+                catch(e) { reject(new Error(`Invalid JSON: ${data}`)); }
+            });
+        });
+        req.on('error', reject);
+        if (body) req.write(JSON.stringify(body));
+        req.end();
+    });
+}
 
-# Check if an admin user exists
-admin_list = subprocess.run(
-    ["immich-admin", "list-users"], capture_output=True, text=True
-)
-has_admin = False
-try:
-    users = json.loads(admin_list.stdout)
-    has_admin = len(users) > 0
-except (json.JSONDecodeError, TypeError):
-    pass
+async function seed() {
+    const pwd = crypto.randomBytes(12).toString('hex');
 
-pwd = secrets.token_hex(16)
+    // Check if admin exists
+    let hasAdmin = false;
+    try {
+        const users = execSync('immich-admin list-users', { encoding: 'utf8' });
+        hasAdmin = JSON.parse(users).length > 0;
+    } catch(e) {}
 
-if not has_admin:
-    print("Creating admin user...")
-    api("POST", "/auth/admin-sign-up", body={
-        "email": os.environ["ADMIN_EMAIL"],
-        "name": "Admin",
-        "password": pwd
-    })
-    # Wait briefly for the server to process the sign-up
-    time.sleep(2)
-else:
-    print("Admin already exists, resetting password for API access...")
-    subprocess.run(
-        ["immich-admin", "reset-admin-password"],
-        input=pwd, text=True, capture_output=True
-    )
-    time.sleep(2)
+    if (!hasAdmin) {
+        console.log('Creating admin user...');
+        await api('POST', '/auth/admin-sign-up', null, {
+            email: process.env.ADMIN_EMAIL,
+            name: 'Admin',
+            password: pwd
+        });
+        await new Promise(r => setTimeout(r, 2000));
+    } else {
+        console.log('Admin already exists, resetting password for API access...');
+        execSync('immich-admin reset-admin-password', { input: pwd, encoding: 'utf8' });
+        await new Promise(r => setTimeout(r, 2000));
+    }
 
-token = api("POST", "/auth/login", body={
-    "email": os.environ["ADMIN_EMAIL"],
-    "password": pwd
-})["accessToken"]
+    const loginResp = await api('POST', '/auth/login', null, {
+        email: process.env.ADMIN_EMAIL,
+        password: pwd
+    });
+    const token = loginResp.accessToken;
 
-config = api("GET", "/system-config", token=token)
+    const config = await api('GET', '/system-config', token);
 
-config["oauth"]["enabled"] = True
-config["oauth"]["issuerUrl"] = f"https://auth.{os.environ['SERVICES_DOMAIN']}"
-config["oauth"]["clientId"] = "immich"
-config["oauth"]["clientSecret"] = os.environ["CLIENT_SECRET"]
-config["oauth"]["buttonText"] = "Login with Authelia"
-config["oauth"]["autoRegister"] = True
-config["oauth"]["autoLaunch"] = True
-config["oauth"]["scope"] = "openid profile email"
-config["ffmpeg"]["accel"] = "vaapi"
-config["passwordLogin"]["enabled"] = False
-config["library"]["watch"]["enabled"] = True
+    config.oauth.enabled = true;
+    config.oauth.issuerUrl = `https://auth.${process.env.SERVICES_DOMAIN}`;
+    config.oauth.clientId = 'immich';
+    config.oauth.clientSecret = process.env.CLIENT_SECRET;
+    config.oauth.buttonText = 'Login with Authelia';
+    config.oauth.autoRegister = true;
+    config.oauth.autoLaunch = true;
+    config.oauth.scope = 'openid profile email';
+    config.ffmpeg.accel = 'vaapi';
+    config.passwordLogin.enabled = false;
+    config.library.watch.enabled = true;
 
-api("PUT", "/system-config", token=token, body=config)
+    await api('PUT', '/system-config', token, config);
 
-print("Immich configuration seeded successfully.")
+    console.log('Immich configuration seeded successfully.');
+}
+
+seed().catch(e => { console.error(e.message); process.exit(1); });
 SEED
 
 echo ""
 echo "Immich configuration seeded."
 echo "OAuth enabled, password login disabled, VAAPI acceleration active."
-echo "Admin password was set to a random value — use Authelia SSO to log in."
