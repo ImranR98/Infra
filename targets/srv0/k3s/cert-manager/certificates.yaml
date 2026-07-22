@@ -10,7 +10,7 @@ spec:
     name: ca-issuer
     kind: ClusterIssuer
   dnsNames:
-    - *.cluster.localhost
+    - "*.cluster.localhost"
     - "*.lan.localhost"
 ---
 apiVersion: cert-manager.io/v1
