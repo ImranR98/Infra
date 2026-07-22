@@ -30,6 +30,7 @@ metadata:
 spec:
   entryPoints:
     - websecure
+    - websecure-proxy
   routes:
     - match: Host(`tv.$SERVICES_DOMAIN`)
       kind: Rule

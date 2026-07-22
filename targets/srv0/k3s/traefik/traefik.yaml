@@ -13,8 +13,7 @@ spec:
       - "--global.checkNewVersion=true"
       - "--log.level=INFO"
       - "--accesslog=true"
-      - "--entryPoints.websecure.proxyProtocol.trustedIPs=127.0.0.1/32,10.42.0.0/16,10.43.0.0/16"
-      - "--entryPoints.web.proxyProtocol.trustedIPs=127.0.0.1/32,10.42.0.0/16,10.43.0.0/16"
+      - "--entryPoints.websecure-proxy.proxyProtocol.trustedIPs=127.0.0.1/32,10.42.0.0/16,10.43.0.0/16"
       - "--entryPoints.web.http.redirections.entryPoint.to=websecure"
       - "--entryPoints.web.http.redirections.entryPoint.scheme=https"
       - "--entryPoints.web.http.redirections.entryPoint.permanent=true"
@@ -41,6 +40,11 @@ spec:
         expose:
           default: true
         exposedPort: 443
+      websecure-proxy:
+        port: 8443
+        expose:
+          default: true
+        exposedPort: 8443
 ---
 apiVersion: cert-manager.io/v1
 kind: Certificate
@@ -63,6 +67,7 @@ metadata:
 spec:
   entryPoints:
     - websecure
+    - websecure-proxy
   tls:
     secretName: traefik-prod-tls
   routes:

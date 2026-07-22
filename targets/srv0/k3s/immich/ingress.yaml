@@ -20,6 +20,7 @@ metadata:
 spec:
   entryPoints:
     - websecure
+    - websecure-proxy
   routes:
     - match: Host(`immich.$SERVICES_DOMAIN`)
       kind: Rule

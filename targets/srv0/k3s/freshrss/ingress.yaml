@@ -20,6 +20,7 @@ metadata:
 spec:
   entryPoints:
     - websecure
+    - websecure-proxy
   routes:
     - match: Host(`rss.$SERVICES_DOMAIN`)
       kind: Rule

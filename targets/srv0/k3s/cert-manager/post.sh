@@ -18,5 +18,17 @@ ensure_envsubst_vars
 retry 30 5 "envsubst \"\$ENVSUBST_VARS\" <\"\$COMP_DIR/issuers.yaml\" | kubectl apply -f -"
 retry 30 5 "kubectl get clusterissuer letsencrypt-staging >/dev/null"
 
+echo "Waiting for local CA certificate..."
+retry 60 5 "kubectl get certificate k3s-local-ca -n base -o jsonpath='{.status.conditions[?(@.type==\"Ready\")].status}' | grep -q True"
+
+echo "Waiting for ca-issuer ClusterIssuer..."
+retry 60 5 "kubectl get clusterissuer ca-issuer -o jsonpath='{.status.conditions[?(@.type==\"Ready\")].status}' | grep -q True"
+
 echo "Applying certificates..."
 retry 30 5 "envsubst \"\$ENVSUBST_VARS\" <\"\$COMP_DIR/certificates.yaml\" | kubectl apply -f -"
+
+echo "Waiting for local-tls certificate in kube-system..."
+retry 60 5 "kubectl get certificate local-tls -n kube-system -o jsonpath='{.status.conditions[?(@.type==\"Ready\")].status}' | grep -q True"
+
+echo "Waiting for local-tls certificate in apps..."
+retry 60 5 "kubectl get certificate local-tls -n apps -o jsonpath='{.status.conditions[?(@.type==\"Ready\")].status}' | grep -q True"

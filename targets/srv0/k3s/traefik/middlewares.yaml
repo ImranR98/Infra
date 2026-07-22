@@ -60,6 +60,7 @@ metadata:
   namespace: base
 spec:
   forwardAuth:
+    trustForwardHeader: true
     address: 'http://authelia.base.svc.cluster.local/api/authz/forward-auth'
     authResponseHeaders:
       - 'Remote-User'
