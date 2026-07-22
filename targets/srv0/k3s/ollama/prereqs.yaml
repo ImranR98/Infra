@@ -112,4 +112,4 @@ metadata:
   namespace: apps
 type: Opaque
 stringData:
-  client-secret: "$AUTHELIA_OPENWEBUI_CLIENT_SECRET"
+  client-secret: "$AUTHELIA_OPENWEBUI_CLIENT_SECRET_HASHABLE"

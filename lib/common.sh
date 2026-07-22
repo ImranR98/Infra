@@ -116,6 +116,16 @@ source_env() {
 
     source "$vars_file"
 
+    # Auto-hash any variable ending in _HASHABLE → _HASHED
+    while IFS='=' read -r var value; do
+        case "$var" in *_HASHABLE)
+            hashed_var="${var%_HASHABLE}_HASHED"
+            printf -v "$hashed_var" '%s' "$(printf '%s' "$value" | openssl dgst -sha512 -binary | base64 -w0)"
+            export "$hashed_var"
+            ;;
+        esac
+    done < <(env | grep '^[A-Z_][A-Z_0-9]*_HASHABLE=')
+
     if [ "$(id -u)" -eq 0 ]; then
         export MY_UID=1000
     else
@@ -134,6 +144,10 @@ get_envsubst_vars() {
     fi
 
     for v in MY_UID TARGET COMPOSE_STATE_DIR COMPOSE_STATE_BACKUP_DIR K3S_STATE_DIR PVC_BACKUP_DIR DOCKER_GID PROXY_IP; do
+        case " $vars " in *" $v "*) ;; *) vars="$vars $v" ;; esac
+    done
+
+    for v in $(env | grep -o '^[A-Z_][A-Z_0-9]*_HASHED=' | sed 's/=//'); do
         case " $vars " in *" $v "*) ;; *) vars="$vars $v" ;; esac
     done
 
