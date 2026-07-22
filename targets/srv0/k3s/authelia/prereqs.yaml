@@ -276,5 +276,5 @@ type: Opaque
 stringData:
   jwks.private-key.pem: |
     $AUTHELIA_JWKS_KEY
-  oidc.immich.client-secret: "${DOLLAR}sha512${DOLLAR}${AUTHELIA_IMMICH_CLIENT_SECRET_HASHED}"
-  oidc.openwebui.client-secret: "${DOLLAR}sha512${DOLLAR}${AUTHELIA_OPENWEBUI_CLIENT_SECRET_HASHED}"
+  oidc.immich.client-secret: "${AUTHELIA_IMMICH_CLIENT_SECRET_HASHED}"
+  oidc.openwebui.client-secret: "${AUTHELIA_OPENWEBUI_CLIENT_SECRET_HASHED}"
