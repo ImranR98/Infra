@@ -21,6 +21,9 @@ fi
 PWD=$(openssl rand -hex 12)
 
 echo "Resetting admin password for API access..."
+# Ensure password login is enabled so we can authenticate
+kubectl exec -n apps deploy/immich-server -- \
+    immich-admin enable-password-login 2>/dev/null || true
 echo "$PWD" | kubectl exec -i -n apps deploy/immich-server -- \
     timeout 10 immich-admin reset-admin-password 2>/dev/null || true
 
