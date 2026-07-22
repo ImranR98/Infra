@@ -32,10 +32,6 @@ write_k3s_config server "$NODE_IP" /etc/rancher/k3s/config.yaml.d/10-server.yaml
 echo "K3s config drop-in written to /etc/rancher/k3s/config.yaml.d/10-server.yaml"
 
 echo ""
-echo "=== Host preparation ==="
-bash "$ATLAS_ROOT/commands/k3s/prep-control-plane.sh"
-
-echo ""
 echo "=== Installing K3s server ==="
 "$K3S_SCRIPT"
 

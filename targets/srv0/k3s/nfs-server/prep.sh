@@ -1,6 +1,6 @@
 #!/bin/bash
-# DESC: Pre-create NFS subdirs on the hostpath-main node before nfs-server starts.
-# Runs locally when the CP node is also the NFS node, or via SSH for remote nodes.
+# DESC: Pre-create K3S_STATE_DIR and NFS subdirs on the hostpath-main node
+# before nfs-server starts.  Runs locally when on the NFS node, via SSH otherwise.
 set -euo pipefail
 
 NFS_NODE=$(kubectl get nodes -l hostpath-main=true -o jsonpath='{.items[0].metadata.name}')
@@ -10,6 +10,17 @@ NFS_IP=$(kubectl get node "$NFS_NODE" -o jsonpath='{.status.addresses[?(@.type==
 
 _is_local() {
     [ "$(hostname)" = "$NFS_NODE" ] || [ "$(hostname -f 2>/dev/null)" = "$NFS_NODE" ]
+}
+
+_ensure_base_dir() {
+    if _is_local; then
+        if [ ! -d "$K3S_STATE_DIR" ]; then
+            sudo mkdir -p "$K3S_STATE_DIR"
+            sudo chown "${MY_UID:-1000}:${MY_UID:-1000}" "$K3S_STATE_DIR"
+        fi
+    else
+        ssh "root@$NFS_IP" "mkdir -p '$K3S_STATE_DIR' && chown '${MY_UID:-1000}:${MY_UID:-1000}' '$K3S_STATE_DIR'"
+    fi
 }
 
 _dir_exists() {
@@ -28,6 +39,8 @@ _create_dir() {
         ssh "root@$NFS_IP" "mkdir -p '$dir' && chown '${MY_UID:-1000}:${MY_UID:-1000}' '$dir'"
     fi
 }
+
+_ensure_base_dir
 
 grep -rhoP 'subDir:\s*\K\S+' "$ATLAS_ROOT/targets/$TARGET/k3s"/*/prereqs.yaml 2>/dev/null | sort -u | while read subdir; do
     if _dir_exists "$K3S_STATE_DIR/$subdir"; then

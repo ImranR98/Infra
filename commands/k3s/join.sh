@@ -25,23 +25,9 @@ TOKEN=$(cat /var/lib/rancher/k3s/server/token 2>/dev/null) || {
 SERVER_IP=$(kubectl get node "$(hostname)" -o jsonpath='{.status.addresses[?(@.type=="InternalIP")].address}' 2>/dev/null) || SERVER_IP=""
 SERVER_URL="https://${SERVER_IP}:6443"
 
-echo "Joining $CLIENT_IP as $ROLE..."
+echo "=== Joining $CLIENT_IP as $ROLE ==="
 echo "Server IP: $SERVER_IP"
 echo ""
-
-echo "=== Host preparation ==="
-
-if [ "$ROLE" = "server" ]; then
-    rsync -az "$ATLAS_ROOT/commands/k3s/prep-control-plane.sh" "${SSH_USER}@${CLIENT_IP}:/tmp/"
-    # ATLAS_ROOT and TARGET are the local control-plane paths — not valid
-    # on the remote.  prep-control-plane.sh skips subDir scanning on remotes.
-    ssh -t "${SSH_USER}@${CLIENT_IP}" \
-        "sudo K3S_STATE_DIR='${K3S_STATE_DIR}' bash /tmp/prep-control-plane.sh" || {
-        echo "Error: prep-control-plane.sh failed on $CLIENT_IP" >&2; exit 1; }
-fi
-
-echo ""
-echo "=== Running K3s installer on client ==="
 installer=$(mktemp /tmp/k3s-agent-install.XXXXXX)
 trap 'rm -f "$installer"' EXIT
 
@@ -94,7 +80,7 @@ ssh -t "${SSH_USER}@${CLIENT_IP}" \
     "ATLAS_INTERACTIVE=true bash /tmp/agent-install.sh '${SERVER_URL}' '${TOKEN}' '${ROLE}'"
 
 echo "Cleaning up client..."
-ssh "${SSH_USER}@${CLIENT_IP}" "rm -rf /tmp/lib /tmp/agent-install.sh /tmp/prep-control-plane.sh" 2>/dev/null || true
+ssh "${SSH_USER}@${CLIENT_IP}" "rm -rf /tmp/lib /tmp/agent-install.sh" 2>/dev/null || true
 
 echo ""
 wait_for_k3s_cluster
