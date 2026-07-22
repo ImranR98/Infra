@@ -103,14 +103,22 @@ spec:
           existingClaim: immich-library-pvc
       configurationKind: Secret
       configuration:
+        ffmpeg:
+          accel: vaapi
+        passwordLogin:
+          enabled: false
         oauth:
-          enabled: true
-          issuerUrl: "https://auth.$SERVICES_DOMAIN"
+          autoLaunch: true
+          autoRegister: true
+          buttonText: "Login with Authelia"
           clientId: "immich"
           clientSecret: "$AUTHELIA_IMMICH_CLIENT_SECRET_HASHABLE"
-          buttonText: "Login with Authelia"
-          autoRegister: true
+          enabled: true
+          issuerUrl: "https://auth.$SERVICES_DOMAIN"
           scope: "openid profile email"
+        library:
+          watch:
+            enabled: true
 
     valkey:
       controllers:
