@@ -48,6 +48,16 @@ spec:
                     ns="${pvc%%/*}"
                     name="${pvc##*/}"
                     CURRENT_INDEX=$((CURRENT_INDEX + 1))
+
+                    # Read optional exclude patterns from PVC annotation
+                    EXCLUDE=$(kubectl get pvc "$name" -n "$ns" -o jsonpath='{.metadata.annotations.backup\.atlas/exclude}' 2>/dev/null || echo "")
+                    EXCL_FLAGS=""
+                    if [ -n "$EXCLUDE" ]; then
+                      for pat in $EXCLUDE; do
+                        EXCL_FLAGS="$EXCL_FLAGS --exclude=$pat"
+                      done
+                    fi
+
                     echo "=== Backing up $ns/$name ($CURRENT_INDEX/$TOTAL_COUNT) ==="
 
                     # Warn about running workloads, but don't scale down
@@ -85,7 +95,7 @@ spec:
                         - -c
                         - |
                           echo "$TIMESTAMP" > /data/__backup_timestamp.txt
-                          if ! tar czf /backup/"$name".tar.gz -C /data .; then
+                          if ! tar czf /backup/"$name".tar.gz -C /data $EXCL_FLAGS .; then
                             echo "ERROR: tar archive creation failed" >&2
                             rm -f /data/__backup_timestamp.txt
                             exit 1

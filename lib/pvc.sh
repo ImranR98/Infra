@@ -89,12 +89,20 @@ pvc_scale_restore() {
     done < "$scaled_file"
 }
 
-# pvc_backup_pod_yaml <pvc-name> <namespace> <backup-dir> <dest-file> <timestamp>
+# pvc_backup_pod_yaml <pvc-name> <namespace> <backup-dir> <dest-file> <timestamp> [exclude-patterns]
 # Prints the backup pod YAML to stdout. Caller pipes to kubectl apply.
+# exclude-patterns: optional space-separated tar --exclude patterns (e.g. "index-*.db")
 pvc_backup_pod_yaml() {
     local pvc="${1:?}" ns="${2:?}" backup_dir="${3:?}" dest_file="${4:?}" timestamp="${5:?}"
+    local exclude="${6:-}"
     local pod_name
     pod_name="backup-$(echo "$pvc" | tr '_' '-')"
+    local excl_flags=""
+    if [ -n "$exclude" ]; then
+        for pat in $exclude; do
+            excl_flags="$excl_flags --exclude=$pat"
+        done
+    fi
     cat <<PODEOF
 apiVersion: v1
 kind: Pod
@@ -120,7 +128,7 @@ spec:
     - -c
     - |
       echo "$timestamp" > /data/__backup_timestamp.txt
-      if ! tar czf /backup/"$dest_file" -C /data .; then
+      if ! tar czf /backup/"$dest_file" -C /data $excl_flags .; then
         echo "ERROR: tar archive creation failed" >&2
         rm -f /data/__backup_timestamp.txt
         exit 1

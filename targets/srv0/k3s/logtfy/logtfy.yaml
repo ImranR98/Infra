@@ -134,7 +134,7 @@ spec:
       volumes:
         - name: journal
           persistentVolumeClaim:
-            claimName: logtfy-journal-pvc
+            claimName: external-exposed-node-syslog-pvc
         - name: config
           secret:
             secretName: logtfy-config

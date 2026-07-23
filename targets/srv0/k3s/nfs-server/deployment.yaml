@@ -69,8 +69,6 @@ spec:
               name: tv-storage
             - mountPath: /exports/jellyfin-youtube
               name: youtube-storage
-            - mountPath: /exports/dscpln
-              name: dscpln-storage
             - mountPath: /exports/k3s-state
               name: k3s-state-storage
             - mountPath: /var/lib/nfs/etab
@@ -106,10 +104,6 @@ spec:
         - name: youtube-storage
           hostPath:
             path: $MEDIA_DIR_PATH/YouTube
-            type: DirectoryOrCreate
-        - name: dscpln-storage
-          hostPath:
-            path: $DSCPLN_TRANSACTIONS_PATH
             type: DirectoryOrCreate
         - name: k3s-state-storage
           hostPath:

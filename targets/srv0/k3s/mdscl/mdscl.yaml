@@ -47,10 +47,10 @@ spec:
       volumes:
         - name: mdscl-camera-src
           persistentVolumeClaim:
-            claimName: mdscl-camera-src-pvc
+            claimName: hostpath-main-node-devicesync-camera-pvc
         - name: mdscl-camera-dst
           persistentVolumeClaim:
-            claimName: mdscl-camera-dst-pvc
+            claimName: hostpath-main-node-media-camera-pvc
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -100,10 +100,10 @@ spec:
       volumes:
         - name: mdscl-screenshots-src
           persistentVolumeClaim:
-            claimName: mdscl-screenshots-src-pvc
+            claimName: hostpath-main-node-devicesync-screenshots-pvc
         - name: mdscl-screenshots-dst
           persistentVolumeClaim:
-            claimName: mdscl-screenshots-dst-pvc
+            claimName: hostpath-main-node-media-screenshots-pvc
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -153,7 +153,7 @@ spec:
       volumes:
         - name: mdscl-screenrecs-src
           persistentVolumeClaim:
-            claimName: mdscl-screenrecs-src-pvc
+            claimName: hostpath-main-node-devicesync-screenrecs-pvc
         - name: mdscl-screenrecs-dst
           persistentVolumeClaim:
-            claimName: mdscl-screenrecs-dst-pvc
+            claimName: hostpath-main-node-media-screenrecs-pvc

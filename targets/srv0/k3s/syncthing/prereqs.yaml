@@ -1,17 +1,17 @@
 apiVersion: v1
 kind: PersistentVolume
 metadata:
-  name: syncthing-home-pv
+  name: syncthing-config-pv
 spec:
   capacity:
-    storage: 4096Gi
+    storage: 10Gi
   volumeMode: Filesystem
   accessModes:
-    - ReadWriteOnce
+    - ReadWriteMany
   persistentVolumeReclaimPolicy: Retain
   storageClassName: hostpath
   local:
-    path: $MAIN_PARENT_DIR
+    path: $K3S_STATE_DIR/syncthing-config
   nodeAffinity:
     required:
       nodeSelectorTerms:
@@ -24,13 +24,17 @@ spec:
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: syncthing-home-pvc
+  name: syncthing-config-pvc
   namespace: apps
+  labels:
+    auto-backup: "true"
+  annotations:
+    backup.atlas/exclude: "index-*.db"
 spec:
   accessModes:
-    - ReadWriteOnce
+    - ReadWriteMany
   storageClassName: hostpath
   resources:
     requests:
-      storage: 4096Gi
-  volumeName: syncthing-home-pv
+      storage: 10Gi
+  volumeName: syncthing-config-pv

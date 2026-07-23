@@ -1,6 +1,7 @@
 base:
   - namespaces
   - nfs-server
+  - host-volumes
   - csi-driver-nfs
   - cert-manager
   - traefik

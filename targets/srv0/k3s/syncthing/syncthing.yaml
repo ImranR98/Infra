@@ -17,13 +17,15 @@ spec:
         app: syncthing
     spec:
       hostNetwork: true
-      # runAsUser avoids fsGroup's recursive chgrp on hostPath at every pod start.
       securityContext:
         runAsUser: $MY_UID
         runAsGroup: $MY_UID
       containers:
         - name: syncthing
           image: syncthing/syncthing:2.1.2
+          args:
+            - "-home"
+            - "/var/syncthing/config"
           securityContext:
             allowPrivilegeEscalation: false
           env:
@@ -41,9 +43,14 @@ spec:
             timeoutSeconds: 5
             failureThreshold: 3
           volumeMounts:
-            - name: syncthing-home
-              mountPath: /var/syncthing
+            - name: host-maindir-parent
+              mountPath: /var/syncthing/hostmainparent
+            - name: syncthing-config
+              mountPath: /var/syncthing/config
       volumes:
-        - name: syncthing-home
+        - name: host-maindir-parent
           persistentVolumeClaim:
-            claimName: syncthing-home-pvc
+            claimName: hostpath-main-node-main-parent-pvc
+        - name: syncthing-config
+          persistentVolumeClaim:
+            claimName: syncthing-config-pvc

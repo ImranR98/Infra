@@ -4,17 +4,22 @@ metadata:
   name: dscpln-data-pv
 spec:
   capacity:
-    storage: 4096Gi
+    storage: 5Mi
+  volumeMode: Filesystem
   accessModes:
     - ReadWriteMany
   persistentVolumeReclaimPolicy: Retain
-  storageClassName: nfs
-  csi:
-    driver: nfs.csi.k8s.io
-    volumeHandle: dscpln-data
-    volumeAttributes:
-      server: nfs-server.base.svc.cluster.local
-      share: /dscpln
+  storageClassName: hostpath
+  local:
+    path: $DSCPLN_TRANSACTIONS_PATH
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - key: hostpath-main
+              operator: In
+              values:
+                - "true"
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -24,10 +29,10 @@ metadata:
 spec:
   accessModes:
     - ReadWriteMany
+  storageClassName: hostpath
   resources:
     requests:
-      storage: 4096Gi
-  storageClassName: nfs
+      storage: 5Mi
   volumeName: dscpln-data-pv
 ---
 apiVersion: v1
@@ -38,4 +43,3 @@ metadata:
 type: Opaque
 stringData:
   token: "$NTFY_WRITE_ONLY_ACCOUNT_TOKEN"
-

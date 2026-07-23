@@ -48,7 +48,11 @@ TIMESTAMP=$(date -Iseconds)
 echo ""
 echo "Backing up $PVC_NS/$PVC_NAME..."
 BACKUP_POD="backup-$(echo "$PVC_NAME" | tr '_' '-')"
-pvc_backup_pod_yaml "$PVC_NAME" "$PVC_NS" "$PVC_BACKUP_DIR" "${PVC_NAME}.tar.gz" "$TIMESTAMP" | kubectl apply -f -
+
+# Read optional exclude patterns from PVC annotation
+EXCLUDE=$(kubectl get pvc "$PVC_NAME" -n "$PVC_NS" -o jsonpath='{.metadata.annotations.backup\.atlas/exclude}' 2>/dev/null || echo "")
+
+pvc_backup_pod_yaml "$PVC_NAME" "$PVC_NS" "$PVC_BACKUP_DIR" "${PVC_NAME}.tar.gz" "$TIMESTAMP" "$EXCLUDE" | kubectl apply -f -
 
 echo "Waiting for backup pod to complete..."
 if ! kubectl wait --for=jsonpath='{.status.phase}'=Succeeded "pod/$BACKUP_POD" -n "$PVC_NS" --timeout=600s 2>/dev/null; then
