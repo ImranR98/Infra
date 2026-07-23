@@ -274,6 +274,20 @@ configure_k3s_firewall() {
     fi
 }
 
+configure_k3s_sysctl() {
+    local conf="/etc/sysctl.d/90-k3s.conf"
+    if [ ! -f "$conf" ]; then
+        cat > "$conf" <<SYSEOF
+# K3s node tuning — automatically configured by Atlas
+fs.inotify.max_user_watches = 6000000
+fs.inotify.max_user_instances = 512
+user.max_user_namespaces = 28633
+SYSEOF
+    fi
+    sysctl --system >/dev/null 2>&1 || sysctl -p "$conf" >/dev/null 2>&1 || true
+    echo "Kernel parameters configured ($conf)."
+}
+
 wait_for_k3s_cluster() {
     local timeout_secs="${1:-150}"
     local max_tries=$(( timeout_secs / 5 ))

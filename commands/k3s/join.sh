@@ -68,6 +68,7 @@ rm -f "$K3S_SCRIPT"
 
 echo "=== Configuring firewall ==="
 configure_k3s_firewall
+configure_k3s_sysctl
 echo "K3s $ROLE installed."
 ENDSCRIPT
 

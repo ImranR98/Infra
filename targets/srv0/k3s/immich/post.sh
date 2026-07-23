@@ -21,37 +21,43 @@ fi
 PWD=$(openssl rand -hex 12)
 
 echo "Ensuring admin access..."
-# Ensure password login is enabled so we can authenticate
+# Enable password login so we can authenticate
 kubectl exec -n apps deploy/immich-server -- \
     immich-admin enable-password-login 2>/dev/null || true
 
-# Check if admin user exists
-HAS_ADMIN=$(kubectl exec -n apps deploy/immich-server -- \
-    sh -c "immich-admin list-users 2>/dev/null | grep -c 'id:'" 2>/dev/null || echo 0)
-HAS_ADMIN=$(echo "$HAS_ADMIN" | head -1)
+# Try logging in as the expected admin. If admin doesn't exist, reset-admin-password
+# or login will fail, and we fall back to creating one. This avoids the race
+# condition where immich-admin list-users returns empty during server startup.
+PWD=$(openssl rand -hex 12)
 
-if [ "$HAS_ADMIN" = "0" ]; then
-    echo "No admin user found. Creating via API..."
+TOKEN=""
+_try_login() {
+    TOKEN=$(kubectl exec -n apps deploy/immich-server -- \
+        curl -sk -X POST http://localhost:2283/api/auth/login \
+          -H "Content-Type: application/json" \
+          -d "{\"email\":\"$DOMAIN_OWNER_EMAIL\",\"password\":\"$1\"}" 2>/dev/null | \
+        python3 -c "import json,sys; print(json.load(sys.stdin).get('accessToken',''))" 2>/dev/null || echo "")
+    [ -n "$TOKEN" ]
+}
+
+# Attempt 1: assume admin exists, reset its password and login
+echo "Admin exists. Resetting password..."
+echo "$PWD" | kubectl exec -i -n apps deploy/immich-server -- \
+    timeout 10 immich-admin reset-admin-password 2>/dev/null || true
+sleep 2
+
+if ! _try_login "$PWD"; then
+    # Attempt 2: admin doesn't exist or password reset failed, create one
+    echo "Login failed. Creating admin user..."
     kubectl exec -n apps deploy/immich-server -- \
         curl -sk -X POST "http://localhost:2283/api/auth/admin-sign-up" \
           -H "Content-Type: application/json" \
           -d "{\"email\":\"$DOMAIN_OWNER_EMAIL\",\"name\":\"Admin\",\"password\":\"$PWD\"}" 2>/dev/null
     sleep 2
-else
-    echo "Admin exists. Resetting password..."
-    echo "$PWD" | kubectl exec -i -n apps deploy/immich-server -- \
-        timeout 10 immich-admin reset-admin-password 2>/dev/null || true
-fi
-
-TOKEN=$(kubectl exec -n apps deploy/immich-server -- \
-    curl -sk -X POST http://localhost:2283/api/auth/login \
-      -H "Content-Type: application/json" \
-      -d "{\"email\":\"$DOMAIN_OWNER_EMAIL\",\"password\":\"$PWD\"}" 2>/dev/null | \
-    python3 -c "import json,sys; print(json.load(sys.stdin)['accessToken'])" 2>/dev/null || echo "")
-
-if [ -z "$TOKEN" ]; then
-    echo "Error: could not obtain API token" >&2
-    exit 1
+    if ! _try_login "$PWD"; then
+        echo "Error: could not create or authenticate as admin" >&2
+        exit 1
+    fi
 fi
 
 CLIENT_ID=$(kubectl exec -n apps deploy/immich-server -- \
