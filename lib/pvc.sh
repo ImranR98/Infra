@@ -179,6 +179,8 @@ spec:
     image: alpine:3.21
     securityContext:
       privileged: true
+      seLinuxOptions:
+        level: "s0"
     command:
     - sh
     - -c
@@ -189,7 +191,6 @@ spec:
       fi
       find /data -mindepth 1 -delete
       tar xzf /backup/"$src_file" -C /data
-      chcon -R -l s0 /data 2>/dev/null || true
     volumeMounts:
     - name: data
       mountPath: /data

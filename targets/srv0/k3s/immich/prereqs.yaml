@@ -60,8 +60,6 @@ spec:
           image: ghcr.io/immich-app/postgres:18-vectorchord0.5.3-pgvector0.8.1
           securityContext:
             allowPrivilegeEscalation: false
-            seLinuxOptions:
-              level: "s0"
           readinessProbe:
             exec:
               command:
