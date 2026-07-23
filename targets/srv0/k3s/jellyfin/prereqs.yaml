@@ -1,25 +1,4 @@
 apiVersion: v1
-kind: PersistentVolume
-metadata:
-  name: jellyfin-config-pv
-spec:
-  capacity:
-    storage: 5Gi
-  accessModes:
-    - ReadWriteMany
-  csi:
-    driver: nfs.csi.k8s.io
-    volumeHandle: jellyfin-config
-    volumeAttributes:
-      server: nfs-server.base.svc.cluster.local
-      share: /k3s-state
-      subDir: jellyfin-config
-      mountOptions: nolock
-      mountPermissions: "0755"
-  storageClassName: nfs
-  persistentVolumeReclaimPolicy: Retain
----
-apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: jellyfin-config-pvc
@@ -28,12 +7,11 @@ metadata:
     auto-backup: "true"
 spec:
   accessModes:
-    - ReadWriteMany
+    - ReadWriteOnce
   resources:
     requests:
       storage: 5Gi
-  storageClassName: nfs
-  volumeName: jellyfin-config-pv
+  storageClassName: longhorn
 ---
 apiVersion: v1
 kind: PersistentVolume

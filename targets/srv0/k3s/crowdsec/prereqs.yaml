@@ -1,37 +1,15 @@
 apiVersion: v1
-kind: PersistentVolume
-metadata:
-  name: crowdsec-pv
-spec:
-  capacity:
-    storage: 5Gi
-  accessModes:
-    - ReadWriteMany
-  csi:
-    driver: nfs.csi.k8s.io
-    volumeHandle: crowdsec
-    volumeAttributes:
-      server: nfs-server.base.svc.cluster.local
-      share: /k3s-state
-      subDir: crowdsec
-      mountOptions: nolock
-      mountPermissions: "0755"
-  storageClassName: nfs
-  persistentVolumeReclaimPolicy: Retain
----
-apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: crowdsec-pvc
   namespace: base
 spec:
   accessModes:
-    - ReadWriteMany
+    - ReadWriteOnce
   resources:
     requests:
       storage: 5Gi
-  storageClassName: nfs
-  volumeName: crowdsec-pv
+  storageClassName: longhorn
 ---
 apiVersion: v1
 kind: Secret

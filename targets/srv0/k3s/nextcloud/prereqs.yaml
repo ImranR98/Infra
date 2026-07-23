@@ -18,27 +18,6 @@ stringData:
   password: "$NEXTCLOUD_DB_PASSWORD"
 ---
 apiVersion: v1
-kind: PersistentVolume
-metadata:
-  name: nextcloud-data-pv
-spec:
-  capacity:
-    storage: 5Gi
-  accessModes:
-    - ReadWriteMany
-  csi:
-    driver: nfs.csi.k8s.io
-    volumeHandle: nextcloud-data
-    volumeAttributes:
-      server: nfs-server.base.svc.cluster.local
-      share: /k3s-state
-      subDir: nextcloud-data
-      mountOptions: nolock
-      mountPermissions: "0755"
-  storageClassName: nfs
-  persistentVolumeReclaimPolicy: Retain
----
-apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: nextcloud-data-pvc
@@ -47,33 +26,11 @@ metadata:
     auto-backup: "true"
 spec:
   accessModes:
-    - ReadWriteMany
+    - ReadWriteOnce
   resources:
     requests:
       storage: 5Gi
-  storageClassName: nfs
-  volumeName: nextcloud-data-pv
----
-apiVersion: v1
-kind: PersistentVolume
-metadata:
-  name: nextcloud-db-pv
-spec:
-  capacity:
-    storage: 5Gi
-  accessModes:
-    - ReadWriteMany
-  csi:
-    driver: nfs.csi.k8s.io
-    volumeHandle: nextcloud-db
-    volumeAttributes:
-      server: nfs-server.base.svc.cluster.local
-      share: /k3s-state
-      subDir: nextcloud-db
-      mountOptions: nolock
-      mountPermissions: "0755"
-  storageClassName: nfs
-  persistentVolumeReclaimPolicy: Retain
+  storageClassName: longhorn
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -84,12 +41,11 @@ metadata:
     auto-backup: "true"
 spec:
   accessModes:
-    - ReadWriteMany
+    - ReadWriteOnce
   resources:
     requests:
       storage: 5Gi
-  storageClassName: nfs
-  volumeName: nextcloud-db-pv
+  storageClassName: longhorn
 ---
 apiVersion: apps/v1
 kind: Deployment

@@ -1,25 +1,4 @@
 apiVersion: v1
-kind: PersistentVolume
-metadata:
-  name: immich-db-pv
-spec:
-  capacity:
-    storage: 5Gi
-  accessModes:
-    - ReadWriteMany
-  csi:
-    driver: nfs.csi.k8s.io
-    volumeHandle: immich-db
-    volumeAttributes:
-      server: nfs-server.base.svc.cluster.local
-      share: /k3s-state
-      subDir: immich-db
-      mountOptions: nolock
-      mountPermissions: "0755"
-  storageClassName: nfs
-  persistentVolumeReclaimPolicy: Retain
----
-apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: immich-db-pvc
@@ -28,33 +7,11 @@ metadata:
     auto-backup: "true"
 spec:
   accessModes:
-    - ReadWriteMany
+    - ReadWriteOnce
   resources:
     requests:
       storage: 5Gi
-  storageClassName: nfs
-  volumeName: immich-db-pv
----
-apiVersion: v1
-kind: PersistentVolume
-metadata:
-  name: immich-library-pv
-spec:
-  capacity:
-    storage: 50Gi
-  accessModes:
-    - ReadWriteMany
-  csi:
-    driver: nfs.csi.k8s.io
-    volumeHandle: immich-library
-    volumeAttributes:
-      server: nfs-server.base.svc.cluster.local
-      share: /k3s-state
-      subDir: immich-library
-      mountOptions: nolock
-      mountPermissions: "0755"
-  storageClassName: nfs
-  persistentVolumeReclaimPolicy: Retain
+  storageClassName: longhorn
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -63,12 +20,11 @@ metadata:
   namespace: apps
 spec:
   accessModes:
-    - ReadWriteMany
+    - ReadWriteOnce
   resources:
     requests:
       storage: 50Gi
-  storageClassName: nfs
-  volumeName: immich-library-pv
+  storageClassName: longhorn
 ---
 apiVersion: v1
 kind: Secret

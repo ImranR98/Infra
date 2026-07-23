@@ -1,25 +1,4 @@
 apiVersion: v1
-kind: PersistentVolume
-metadata:
-  name: opodsync-pv
-spec:
-  capacity:
-    storage: 5Gi
-  accessModes:
-    - ReadWriteMany
-  csi:
-    driver: nfs.csi.k8s.io
-    volumeHandle: opodsync
-    volumeAttributes:
-      server: nfs-server.base.svc.cluster.local
-      share: /k3s-state
-      subDir: opodsync
-      mountOptions: nolock
-      mountPermissions: "0755"
-  storageClassName: nfs
-  persistentVolumeReclaimPolicy: Retain
----
-apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: opodsync-pvc
@@ -28,10 +7,9 @@ metadata:
     auto-backup: "true"
 spec:
   accessModes:
-    - ReadWriteMany
+    - ReadWriteOnce
   resources:
     requests:
       storage: 5Gi
-  storageClassName: nfs
-  volumeName: opodsync-pv
+  storageClassName: longhorn
 

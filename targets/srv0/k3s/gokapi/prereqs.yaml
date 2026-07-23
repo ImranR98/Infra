@@ -1,58 +1,15 @@
 apiVersion: v1
-kind: PersistentVolume
-metadata:
-  name: gokapi-data-pv
-spec:
-  capacity:
-    storage: 200Gi
-  accessModes:
-    - ReadWriteMany
-  csi:
-    driver: nfs.csi.k8s.io
-    volumeHandle: gokapi-data
-    volumeAttributes:
-      server: nfs-server.base.svc.cluster.local
-      share: /k3s-state
-      subDir: gokapi-data
-      mountOptions: nolock
-      mountPermissions: "0755"
-  storageClassName: nfs
-  persistentVolumeReclaimPolicy: Retain
----
-apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: gokapi-data-pvc
   namespace: apps
 spec:
   accessModes:
-    - ReadWriteMany
+    - ReadWriteOnce
   resources:
     requests:
       storage: 200Gi
-  storageClassName: nfs
-  volumeName: gokapi-data-pv
----
-apiVersion: v1
-kind: PersistentVolume
-metadata:
-  name: gokapi-config-pv
-spec:
-  capacity:
-    storage: 1Gi
-  accessModes:
-    - ReadWriteMany
-  csi:
-    driver: nfs.csi.k8s.io
-    volumeHandle: gokapi-config
-    volumeAttributes:
-      server: nfs-server.base.svc.cluster.local
-      share: /k3s-state
-      subDir: gokapi-config
-      mountOptions: nolock
-      mountPermissions: "0755"
-  storageClassName: nfs
-  persistentVolumeReclaimPolicy: Retain
+  storageClassName: longhorn
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -63,9 +20,8 @@ metadata:
     auto-backup: "true"
 spec:
   accessModes:
-    - ReadWriteMany
+    - ReadWriteOnce
   resources:
     requests:
       storage: 1Gi
-  storageClassName: nfs
-  volumeName: gokapi-config-pv
+  storageClassName: longhorn
