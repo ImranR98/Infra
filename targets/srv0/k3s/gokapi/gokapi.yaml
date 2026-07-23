@@ -30,8 +30,11 @@ spec:
           env:
             - name: TZ
               value: "UTC"
+          command:
+            - /sbin/tini
+            - --
+            - /app/run.sh
           args:
-            - gokapi
             - --deployment-password=$GOKAPI_DEPLOYMENT_PASSWORD
           volumeMounts:
             - name: data
