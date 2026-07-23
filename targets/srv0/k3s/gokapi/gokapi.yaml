@@ -30,6 +30,8 @@ spec:
           env:
             - name: TZ
               value: "UTC"
+            - name: GOKAPI_DEPLOYMENT_PASSWORD
+              value: "$GOKAPI_DEPLOYMENT_PASSWORD"
           volumeMounts:
             - name: data
               mountPath: /app/data
