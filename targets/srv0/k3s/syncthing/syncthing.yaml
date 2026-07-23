@@ -24,7 +24,7 @@ spec:
         - name: syncthing
           image: syncthing/syncthing:2.1.2
           args:
-            - "-home"
+            - "--home"
             - "/var/syncthing/config"
           securityContext:
             allowPrivilegeEscalation: false
