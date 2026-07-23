@@ -16,6 +16,8 @@ spec:
       labels:
         app: mosquitto
     spec:
+      securityContext:
+        fsGroup: 1883
       containers:
         - name: mosquitto
           image: eclipse-mosquitto:2.0.22-openssl
