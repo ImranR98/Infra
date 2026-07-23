@@ -29,7 +29,7 @@ metadata:
   labels:
     auto-backup: "true"
   annotations:
-    backup.atlas/exclude: "index-*.db"
+    backup.atlas/exclude: "index-*.db index-v2"
 spec:
   accessModes:
     - ReadWriteMany
