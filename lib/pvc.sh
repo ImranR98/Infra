@@ -173,14 +173,14 @@ spec:
     runAsUser: ${MY_UID}
     runAsGroup: ${MY_UID}
     fsGroup: ${MY_UID}
+    seLinuxOptions:
+      level: "s0"
   restartPolicy: Never
   containers:
   - name: restore
     image: alpine:3.21
     securityContext:
       privileged: true
-      seLinuxOptions:
-        level: "s0"
     command:
     - sh
     - -c
