@@ -10,4 +10,3 @@ data:
     /exports/music *(ro,fsid=1,no_subtree_check,insecure,root_squash)
     /exports/jellyfin-tv *(ro,fsid=2,no_subtree_check,insecure,root_squash)
     /exports/jellyfin-youtube *(ro,fsid=3,no_subtree_check,insecure,root_squash)
-    /exports/k3s-state *(rw,fsid=10,no_subtree_check,insecure,no_root_squash)

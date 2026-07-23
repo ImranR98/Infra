@@ -69,8 +69,7 @@ spec:
               name: tv-storage
             - mountPath: /exports/jellyfin-youtube
               name: youtube-storage
-            - mountPath: /exports/k3s-state
-              name: k3s-state-storage
+
             - mountPath: /var/lib/nfs/etab
               name: nfs-exports
               subPath: etab
@@ -105,7 +104,4 @@ spec:
           hostPath:
             path: $MEDIA_DIR_PATH/YouTube
             type: DirectoryOrCreate
-        - name: k3s-state-storage
-          hostPath:
-            path: $K3S_STATE_DIR
-            type: DirectoryOrCreate
+
