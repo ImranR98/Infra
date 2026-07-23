@@ -121,8 +121,7 @@ spec:
   - name: backup
     image: alpine:3.21
     securityContext:
-      seLinuxOptions:
-        level: s0
+      privileged: true
     command:
     - sh
     - -c
@@ -179,8 +178,7 @@ spec:
   - name: restore
     image: alpine:3.21
     securityContext:
-      seLinuxOptions:
-        level: s0
+      privileged: true
     command:
     - sh
     - -c
