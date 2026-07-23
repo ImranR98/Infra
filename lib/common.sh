@@ -5,6 +5,8 @@ ATLAS_LIB_LOADED=true
 _lib_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 : ${ATLAS_ROOT:="$(cd "$_lib_dir/.." >/dev/null 2>&1 && pwd)"}
 
+source "$_lib_dir/pvc.sh"
+
 # ====== packages ======
 
 get_sudo_cmd() {
@@ -182,7 +184,22 @@ configure_compose_templates() {
     local template_dir="$ATLAS_ROOT/targets/$target/compose/templates"
     [ -d "$template_dir" ] || return 0
 
+    declare -A _compose_hooks_run
+
     while IFS= read -r -d '' src; do
+        local rel="${src#$template_dir/}"
+        local dst="$COMPOSE_STATE_DIR/$rel"
+        dst="${dst%.secret}"
+        dst="${dst%.plain}"
+        mkdir -p "$(dirname "$dst")"
+
+        # Run component-specific compose prep hook once per component directory
+        local component="${rel%%/*}"
+        if [ "${_compose_hooks_run[$component]:-}" != "1" ]; then
+            _compose_hooks_run[$component]=1
+            local chook="$template_dir/$component/prep.sh"
+            [ -f "$chook" ] && bash "$chook"
+        fi
         local rel="${src#$template_dir/}"
         local dst="$COMPOSE_STATE_DIR/$rel"
         dst="${dst%.secret}"
@@ -192,21 +209,14 @@ configure_compose_templates() {
         case "$rel" in
             *.plain) cp "$src" "$dst" ;;
             *.secret)
-                envsubst "$ENVSUBST_VARS" < "$src" > "$dst"
-                chmod 600 "$dst" ;;
-            authelia/*)
-                if [ ! -f "$dst" ]; then
+                if [ ! -f "$dst" ] && grep -q '# IGNORE INITIALLY$' "$src" 2>/dev/null; then
                     sed '/# IGNORE INITIALLY$/ s/^/# /' "$src" | envsubst "$ENVSUBST_VARS" > "$dst"
                 else
                     envsubst "$ENVSUBST_VARS" < "$src" > "$dst"
                 fi
-                # Authelia expects users_database.yml keys indented 2 spaces
-                # deeper than the $AUTHELIA_USERS_DATABASE block scalar in VARS.
-                printf '%s\n' "$AUTHELIA_USERS_DATABASE" | awk 'NR==1{print} NR>1&&/./{print "  " $0} NR>1&&!/./{print}' > "$COMPOSE_STATE_DIR/authelia/config/users_database.yml" ;;
-            traefik/*)
-                [ -f "$COMPOSE_STATE_DIR/traefik/acme.json" ] || { echo '{}' > "$COMPOSE_STATE_DIR/traefik/acme.json"; chmod 600 "$COMPOSE_STATE_DIR/traefik/acme.json"; }
+                chmod 600 "$dst" ;;
+            *)
                 envsubst "$ENVSUBST_VARS" < "$src" > "$dst" ;;
-            *) envsubst "$ENVSUBST_VARS" < "$src" > "$dst" ;;
         esac
     done < <(find "$template_dir" -type f -print0)
 }

@@ -36,86 +36,10 @@ spec:
                   TOTAL_COUNT=0
                   CURRENT_INDEX=0
 
-                  # --- trap: on any exit (success or failure), restore all
-                  #     scaled workloads and clean up temp pods ---
-                  SCALED_FILE=$(mktemp)
-                  trap 'if [ -f "$SCALED_FILE" ]; then restore_workloads; rm -f "$SCALED_FILE"; fi' EXIT
-
-                  restore_workloads() {
-                    while IFS= read -r entry; do
-                      ns=$(echo "$entry" | cut -d/ -f1)
-                      kind=$(echo "$entry" | cut -d/ -f2)
-                      wname=$(echo "$entry" | cut -d/ -f3)
-                      reps=$(echo "$entry" | cut -d/ -f4)
-                      echo "Restoring $kind/$wname in $ns to $reps..."
-                      if ! kubectl scale "$kind" "$wname" -n "$ns" --replicas="$reps" 2>/dev/null; then
-                        echo "WARNING: failed to restore $kind/$wname — it may still be scaled to 0" >&2
-                      fi
-                    done < "$SCALED_FILE"
-                    kubectl delete pod -A -l app=pvc-backup-temp --wait=false 2>/dev/null || true
-                  }
-
-                  # --- helpers ---
-                  scale_down_workload() {
-                    local ns="$1" pvc_name="$2"
-                    local workloads kind wname key reps
-
-                    # DaemonSets are skipped — they can't be scaled and
-                    # their pods restart immediately, keeping the PVC in use.
-                    workloads=$(kubectl get deploy,sts -n "$ns" -o json 2>/dev/null | \
-                      jq -r --arg pvc "$pvc_name" \
-                      '.items[] | select(.spec.template.spec.volumes[]?.persistentVolumeClaim.claimName == $pvc) | "\(.kind)/\(.metadata.name)"' 2>/dev/null || true)
-
-                    for w in $workloads; do
-                      kind="${w%%/*}"
-                      wname="${w##*/}"
-                      key="$ns/$kind/$wname"
-                      if grep -q "^$key/" "$SCALED_FILE" 2>/dev/null; then
-                        echo "  $kind/$wname already scaled; skipping"
-                        continue
-                      fi
-                      reps=$(kubectl get "$kind" "$wname" -n "$ns" -o jsonpath='{.spec.replicas}' 2>/dev/null || echo 1)
-                      echo "  Scaling $kind/$wname to 0..."
-                      if ! kubectl scale "$kind" "$wname" -n "$ns" --replicas=0; then
-                        echo "  WARNING: failed to scale $kind/$wname — backup may fail if PVC is still in use" >&2
-                        continue
-                      fi
-                      echo "$key/$reps" >> "$SCALED_FILE"
-                    done
-                  }
-
-                  wait_for_pods_gone() {
-                    local ns="$1" kind="$2" wname="$3"
-                    local selector
-                    selector=$(kubectl get "$kind" "$wname" -n "$ns" -o jsonpath='{.spec.selector.matchLabels}' 2>/dev/null | \
-                      jq -r 'to_entries | map("\(.key)=\(.value)") | join(",")')
-                    if [ -z "$selector" ]; then return 0; fi
-                    if ! kubectl wait --for=delete pod -n "$ns" --selector="$selector" --timeout=180s 2>/dev/null; then
-                      echo "  WARNING: pods for $kind/$wname did not terminate within 180s" >&2
-                      return 1
-                    fi
-                    return 0
-                  }
-
-                  wait_for_pvc_bound() {
-                    local ns="$1" pvc_name="$2"
-                    local i
-                    for i in $(seq 1 30); do
-                      status=$(kubectl get pvc "$pvc_name" -n "$ns" -o jsonpath='{.status.phase}' 2>/dev/null || true)
-                      if [ "$status" = "Bound" ]; then return 0; fi
-                      sleep 5
-                    done
-                    echo "  WARNING: PVC $pvc_name did not reach Bound state — backup may fail" >&2
-                    return 1
-                  }
-
                   # Clean up any orphaned temp pods from previous failed runs
                   kubectl delete pod -A -l app=pvc-backup-temp --wait=false 2>/dev/null || true
 
-                  # --- main loop: iterate every PVC with the auto-backup label ---
-                  # Use a temporary file so the while loop runs in the current
-                  # shell (pipes create subshells, making variable assignments
-                  # like FAILED_COUNT invisible outside the loop).
+                  # --- main loop: back up live PVCs without scaling down ---
                   PVC_LIST=$(mktemp)
                   kubectl get pvc -A -l "$LABEL" -o jsonpath='{range .items[*]}{.metadata.namespace}/{.metadata.name}{"\n"}{end}' > "$PVC_LIST"
                   TOTAL_COUNT=$(grep -c . "$PVC_LIST" 2>/dev/null || echo 0)
@@ -126,21 +50,15 @@ spec:
                     CURRENT_INDEX=$((CURRENT_INDEX + 1))
                     echo "=== Backing up $ns/$name ($CURRENT_INDEX/$TOTAL_COUNT) ==="
 
-                    scale_down_workload "$ns" "$name"
-
-                    # Wait for pods to terminate and PVC to be released
-                    if [ -f "$SCALED_FILE" ]; then
-                      while IFS= read -r entry; do
-                        e_ns=$(echo "$entry" | cut -d/ -f1)
-                        e_kind=$(echo "$entry" | cut -d/ -f2)
-                        e_wname=$(echo "$entry" | cut -d/ -f3)
-                        [ "$e_ns" = "$ns" ] || continue
-                        wait_for_pods_gone "$e_ns" "$e_kind" "$e_wname"
-                      done < "$SCALED_FILE"
+                    # Warn about running workloads, but don't scale down
+                    workloads=$(kubectl get deploy,sts -n "$ns" -o json 2>/dev/null | \
+                      jq -r --arg pvc "$name" \
+                      '.items[] | select(.spec.template.spec.volumes[]?.persistentVolumeClaim.claimName == $pvc) | "\(.kind)/\(.metadata.name)"' 2>/dev/null || true)
+                    if [ -n "$workloads" ]; then
+                      echo "  WARNING: these workloads are running — backup captures live state:"
+                      for w in $workloads; do echo "    $w"; done
                     fi
-                    wait_for_pvc_bound "$ns" "$name"
 
-                    # --- backup pod ---
                     podname="backup-$(echo "$name" | tr '_' '-')"
                     cat <<PODEOF | kubectl apply -f -
                     apiVersion: v1
@@ -227,9 +145,6 @@ rules:
   - apiGroups: [""]
     resources: ["persistentvolumeclaims"]
     verbs: ["get", "list"]
-  - apiGroups: ["apps"]
-    resources: ["deployments", "deployments/scale", "statefulsets", "statefulsets/scale"]
-    verbs: ["get", "list", "patch"]
   - apiGroups: [""]
     resources: ["pods"]
     verbs: ["create", "get", "delete", "list", "watch"]

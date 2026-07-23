@@ -53,12 +53,6 @@ _run_hook() {
     if [ -f "$COMPONENT_DIR/$hook" ]; then bash "$COMPONENT_DIR/$hook"; fi
 }
 
-_check_cert_manager_crds() {
-    $_has_initial_markers || return 0
-    kubectl get crd certificates.cert-manager.io >/dev/null 2>&1 && return 0
-    echo "WARNING: cert-manager CRDs not yet available. Run with 'initial' first if this is a fresh install." >&2
-}
-
 _initial_reminder() {
     $_has_initial_markers || return 0
     [ -f "$COMPONENT_DIR/kustomization.yaml" ] || return 0
@@ -119,7 +113,6 @@ trap 'rm -rf "${_cleanup_dirs[@]:-}"' EXIT
 case "$MODE" in
     apply)
         _run_hook prep.sh
-        _check_cert_manager_crds
         _build_yaml false
         _k3s_apply
         _run_hook post.sh ;;
