@@ -19,7 +19,7 @@ spec:
             runAsUser: 0
           containers:
             - name: backup
-              image: bitnami/kubectl:1.36
+              image: bitnami/kubectl:latest
               securityContext:
                 privileged: true
               env:
