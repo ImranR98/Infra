@@ -34,8 +34,6 @@ spec:
             - /sbin/tini
             - --
             - /app/run.sh
-          args:
-            - --deployment-password=$GOKAPI_DEPLOYMENT_PASSWORD
           volumeMounts:
             - name: data
               mountPath: /app/data
