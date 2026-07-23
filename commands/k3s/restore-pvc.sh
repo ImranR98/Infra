@@ -1,14 +1,34 @@
 #!/bin/bash
-# DESC: Restore a PVC from a backup archive
+# DESC: Restore PVCs from backup archives — single by name, or mass via --all.
 set -euo pipefail
 
 source "$ATLAS_ROOT/lib/common.sh"
-source_env
 
-PVC_NAME="${1:?Usage: $0 <pvc-name> [-y]}"
-shift
+# Allow CronJob pod to bypass source_env (vars already in environment).
+if [ -z "${PVC_BACKUP_DIR:-}" ]; then
+    source_env
+fi
+
+ALL_MODE=false
+if [ "${1:-}" = "--all" ]; then
+    ALL_MODE=true
+    shift
+fi
+
 AUTO_YES=false
 if [ "${1:-}" = "-y" ]; then AUTO_YES=true; shift; fi
+
+if $ALL_MODE; then
+    if ! $AUTO_YES; then
+        read -p "Restore all auto-backup labeled PVCs from backup archives? [y/N] " confirm
+        case "$confirm" in [yY]*) ;; *) echo "Aborted."; exit 0 ;; esac
+    fi
+    pvc_restore_all true
+    exit $?
+fi
+
+# --- single-PVC path (unchanged) -------------------------------------------
+PVC_NAME="${1:?Usage: $0 <pvc-name> | --all [-y]}"
 
 BACKUP_FILE="$PVC_BACKUP_DIR/${PVC_NAME}.tar.gz"
 
@@ -59,17 +79,8 @@ TIMESTAMP=$(tar xzf "$BACKUP_FILE" __backup_timestamp.txt -O 2>/dev/null || echo
 echo ""
 echo "Restoring from backup taken at: $TIMESTAMP"
 
-RESTORE_POD="restore-$(echo "$PVC_NAME" | tr '_' '-')"
-pvc_restore_pod_yaml "$PVC_NAME" "$PVC_NS" "$PVC_BACKUP_DIR" "${PVC_NAME}.tar.gz" | kubectl apply -f -
-
-echo "Waiting for restore pod to complete..."
-if ! kubectl wait --for=jsonpath='{.status.phase}'=Succeeded "pod/$RESTORE_POD" -n "$PVC_NS" --timeout=600s 2>/dev/null; then
-    echo "Error: restore pod did not succeed — check pod logs with:" >&2
-    echo "  kubectl logs $RESTORE_POD -n $PVC_NS" >&2
-    kubectl delete pod "$RESTORE_POD" -n "$PVC_NS" --ignore-not-found 2>/dev/null || true
-    exit 1
-fi
-kubectl delete pod "$RESTORE_POD" -n "$PVC_NS" --ignore-not-found 2>/dev/null
+pvc_restore_data "$PVC_NAME" "$PVC_NS" "$PVC_BACKUP_DIR" "${PVC_NAME}.tar.gz" \
+    || { echo "Restore failed." >&2; exit 1; }
 
 echo ""
 echo "Restore of $PVC_NAME complete."

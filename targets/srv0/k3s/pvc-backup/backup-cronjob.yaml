@@ -16,129 +16,39 @@ spec:
           serviceAccountName: pvc-backup
           restartPolicy: Never
           securityContext:
-            runAsUser: 0  # root required: kubectl scale/delete/patch across all namespaces
+            runAsUser: 0
           containers:
             - name: backup
               image: bitnami/kubectl:1.36
+              securityContext:
+                privileged: true
               env:
-                - name: BACKUP_DIR
-                  value: "$PVC_BACKUP_DIR"
+                - name: ATLAS_ROOT
+                  value: "$ATLAS_ROOT"
                 - name: MY_UID
                   value: "$MY_UID"
+                - name: PVC_BACKUP_DIR
+                  value: "$PVC_BACKUP_DIR"
               command:
-                - sh
+                - bash
                 - -c
                 - |
                   set -eu
-                  LABEL="auto-backup=true"
-                  TIMESTAMP=$(date -Iseconds)
-                  FAILED_COUNT=0
-                  TOTAL_COUNT=0
-                  CURRENT_INDEX=0
-
-                  # Clean up any orphaned temp pods from previous failed runs
-                  kubectl delete pod -A -l app=pvc-backup-temp --wait=false 2>/dev/null || true
-
-                  # --- main loop: back up live PVCs without scaling down ---
-                  PVC_LIST=$(mktemp)
-                  kubectl get pvc -A -l "$LABEL" -o jsonpath='{range .items[*]}{.metadata.namespace}/{.metadata.name}{"\n"}{end}' > "$PVC_LIST"
-                  TOTAL_COUNT=$(grep -c . "$PVC_LIST" 2>/dev/null || echo 0)
-                  while IFS= read -r pvc; do
-                    [ -z "$pvc" ] && continue
-                    ns="${pvc%%/*}"
-                    name="${pvc##*/}"
-                    CURRENT_INDEX=$((CURRENT_INDEX + 1))
-
-                    # Read optional exclude patterns from PVC annotation
-                    EXCLUDE=$(kubectl get pvc "$name" -n "$ns" -o jsonpath='{.metadata.annotations.backup\.atlas/exclude}' 2>/dev/null || echo "")
-                    EXCL_FLAGS=""
-                    if [ -n "$EXCLUDE" ]; then
-                      for pat in $EXCLUDE; do
-                        EXCL_FLAGS="$EXCL_FLAGS --exclude=$pat"
-                      done
-                    fi
-
-                    echo "=== Backing up $ns/$name ($CURRENT_INDEX/$TOTAL_COUNT) ==="
-
-                    # Warn about running workloads, but don't scale down
-                    workloads=$(kubectl get deploy,sts -n "$ns" -o json 2>/dev/null | \
-                      jq -r --arg pvc "$name" \
-                      '.items[] | select(.spec.template.spec.volumes[]?.persistentVolumeClaim.claimName == $pvc) | "\(.kind)/\(.metadata.name)"' 2>/dev/null || true)
-                    if [ -n "$workloads" ]; then
-                      echo "  WARNING: these workloads are running — backup captures live state:"
-                      for w in $workloads; do echo "    $w"; done
-                    fi
-
-                    podname="backup-$(echo "$name" | tr '_' '-')"
-                    cat <<PODEOF | kubectl apply -f -
-                    apiVersion: v1
-                    kind: Pod
-                    metadata:
-                      name: $podname
-                      namespace: $ns
-                      labels:
-                        app: pvc-backup-temp
-                    spec:
-                      securityContext:
-                        runAsUser: ${MY_UID}
-                        runAsGroup: ${MY_UID}
-                        fsGroup: ${MY_UID}
-                      restartPolicy: Never
-                      containers:
-                      - name: backup
-                        image: alpine:3.21
-                        securityContext:
-                          seLinuxOptions:
-                            level: s0
-                        command:
-                        - sh
-                        - -c
-                        - |
-                          echo "$TIMESTAMP" > /data/__backup_timestamp.txt
-                          if ! tar czf /backup/"$name".tar.gz -C /data $EXCL_FLAGS .; then
-                            echo "ERROR: tar archive creation failed" >&2
-                            rm -f /data/__backup_timestamp.txt
-                            exit 1
-                          fi
-                          rm -f /data/__backup_timestamp.txt
-                          if [ ! -s /backup/"$name".tar.gz ]; then
-                            echo "ERROR: backup archive is empty" >&2
-                            exit 1
-                          fi
-                          chown ${MY_UID}:${MY_UID} /backup/"$name".tar.gz 2>/dev/null || true
-                        volumeMounts:
-                        - name: data
-                          mountPath: /data
-                        - name: backup-dest
-                          mountPath: /backup
-                      volumes:
-                      - name: data
-                        persistentVolumeClaim:
-                          claimName: $name
-                      - name: backup-dest
-                        hostPath:
-                          path: $BACKUP_DIR
-                          type: DirectoryOrCreate
-                    PODEOF
-
-                    echo "  Waiting for temp pod..."
-                    if ! kubectl wait --for=jsonpath='{.status.phase}'=Succeeded "pod/$podname" -n "$ns" --timeout=600s; then
-                      echo "  ERROR: backup pod failed for $ns/$name — check logs:" >&2
-                      echo "    kubectl logs $podname -n $ns" >&2
-                      FAILED_COUNT=$((FAILED_COUNT + 1))
-                    else
-                      echo "  Done: $name"
-                    fi
-                    kubectl delete pod "$podname" -n "$ns" 2>/dev/null || true
-                    echo ""
-                  done < "$PVC_LIST"
-                  rm -f "$PVC_LIST"
-
-                  if [ "$FAILED_COUNT" -gt 0 ]; then
-                    echo "=== Backup complete with $FAILED_COUNT/$TOTAL_COUNT failures ==="
-                    exit 1
-                  fi
-                  echo "=== Backup complete ($TOTAL_COUNT PVCs) ==="
+                  bash "$ATLAS_ROOT/commands/k3s/backup-pvc.sh" --all -y
+              volumeMounts:
+                - name: atlas-repo
+                  mountPath: "$ATLAS_ROOT"
+                - name: backup-dir
+                  mountPath: "$PVC_BACKUP_DIR"
+          volumes:
+            - name: atlas-repo
+              hostPath:
+                path: "$ATLAS_ROOT"
+                type: Directory
+            - name: backup-dir
+              hostPath:
+                path: "$PVC_BACKUP_DIR"
+                type: DirectoryOrCreate
       backoffLimit: 2
 ---
 apiVersion: v1

@@ -204,3 +204,198 @@ spec:
       type: DirectoryOrCreate
 PODEOF
 }
+
+# pvc_backup_data <pvc> <ns> <backup-dir> <dest-file> <timestamp> [exclude]
+# Creates backup pod, waits for success, cleans up. Returns 0 on success.
+pvc_backup_data() {
+    local pvc="${1:?}" ns="${2:?}" backup_dir="${3:?}" dest_file="${4:?}" timestamp="${5:?}" exclude="${6:-}"
+    local pod_name
+    pod_name="backup-$(echo "$pvc" | tr '_' '-')"
+    pvc_backup_pod_yaml "$pvc" "$ns" "$backup_dir" "$dest_file" "$timestamp" "$exclude" | kubectl apply -f -
+    if ! kubectl wait --for=jsonpath='{.status.phase}'=Succeeded "pod/$pod_name" -n "$ns" --timeout=600s 2>/dev/null; then
+        echo "  ERROR: backup pod failed for $ns/$pvc" >&2
+        kubectl delete pod "$pod_name" -n "$ns" --ignore-not-found 2>/dev/null || true
+        return 1
+    fi
+    kubectl delete pod "$pod_name" -n "$ns" --ignore-not-found 2>/dev/null || true
+    return 0
+}
+
+# pvc_backup_all <auto-yes>
+# Backs up every PVC with label auto-backup=true.
+# Skips the confirmation prompt when auto_yes=true.
+pvc_backup_all() {
+    local auto_yes="${1:-false}"
+    local backup_dir="${PVC_BACKUP_DIR:?PVC_BACKUP_DIR not set}"
+    local total=0 failed=0
+    local pvc_list timestamp ns name exclude workloads
+
+    mkdir -p "$backup_dir"
+    chcon -t container_file_t -l s0 "$backup_dir" 2>/dev/null || true
+
+    timestamp=$(date -Iseconds)
+
+    kubectl delete pod -A -l app=pvc-backup-temp --wait=false 2>/dev/null || true
+
+    pvc_list=$(kubectl get pvc -A -l auto-backup=true -o jsonpath='{range .items[*]}{.metadata.namespace}/{.metadata.name}{"\n"}{end}' 2>/dev/null)
+
+    if [ -z "$pvc_list" ]; then
+        echo "No PVCs found with label auto-backup=true"
+        return 0
+    fi
+
+    while IFS= read -r line; do
+        [ -z "$line" ] && continue
+        ns="${line%%/*}"
+        name="${line##*/}"
+        total=$((total + 1))
+
+        echo "=== Backing up $ns/$name ($total) ==="
+
+        workloads=$(pvc_find_workloads "$ns" "$name")
+        if [ -n "$workloads" ]; then
+            echo "  WARNING: these workloads are running — backup captures live state:"
+            for w in $workloads; do echo "    $w"; done
+        fi
+
+        exclude=$(kubectl get pvc "$name" -n "$ns" -o jsonpath='{.metadata.annotations.backup\.atlas/exclude}' 2>/dev/null || echo "")
+
+        if pvc_backup_data "$name" "$ns" "$backup_dir" "${name}.tar.gz" "$timestamp" "$exclude"; then
+            echo "  Done: $name"
+        else
+            failed=$((failed + 1))
+        fi
+        echo ""
+    done <<< "$pvc_list"
+
+    if [ "$failed" -gt 0 ]; then
+        echo "=== Backup complete with $failed/$total failures ==="
+        return 1
+    fi
+    echo "=== Backup complete ($total PVCs) ==="
+}
+
+# pvc_restore_data <pvc> <ns> <backup-dir> <src-file>
+# Creates restore pod, waits for success, cleans up. Returns 0 on success.
+# Caller must ensure PVC is Bound before calling.
+pvc_restore_data() {
+    local pvc="${1:?}" ns="${2:?}" backup_dir="${3:?}" src_file="${4:?}"
+    local pod_name
+    pod_name="restore-$(echo "$pvc" | tr '_' '-')"
+    pvc_restore_pod_yaml "$pvc" "$ns" "$backup_dir" "$src_file" | kubectl apply -f -
+    if ! kubectl wait --for=jsonpath='{.status.phase}'=Succeeded "pod/$pod_name" -n "$ns" --timeout=600s 2>/dev/null; then
+        echo "  ERROR: restore pod failed for $ns/$pvc" >&2
+        kubectl delete pod "$pod_name" -n "$ns" --ignore-not-found 2>/dev/null || true
+        return 1
+    fi
+    kubectl delete pod "$pod_name" -n "$ns" --ignore-not-found 2>/dev/null || true
+    return 0
+}
+
+# pvc_restore_all <auto-yes>
+# Restores every PVC with label auto-backup=true that has an existing backup archive.
+# Bulk scales down all workloads first, restores each PVC, then scales back up.
+# Skips the confirmation prompt when auto_yes=true.
+pvc_restore_all() {
+    local auto_yes="${1:-false}"
+    local backup_dir="${PVC_BACKUP_DIR:?PVC_BACKUP_DIR not set}"
+    local total=0 failed=0 skipped=0
+    local pvc_list ns name backup_file timestamp
+    local scaled_file_all
+
+    pvc_list=$(kubectl get pvc -A -l auto-backup=true -o jsonpath='{range .items[*]}{.metadata.namespace}/{.metadata.name}{"\n"}{end}' 2>/dev/null)
+
+    if [ -z "$pvc_list" ]; then
+        echo "No PVCs found with label auto-backup=true"
+        return 0
+    fi
+
+    scaled_file_all=$(mktemp)
+
+    # Phase 1 — bulk scale-down across all matching PVCs
+    while IFS= read -r line; do
+        [ -z "$line" ] && continue
+        ns="${line%%/*}"
+        name="${line##*/}"
+
+        backup_file="$backup_dir/${name}.tar.gz"
+        if [ ! -f "$backup_file" ] || [ ! -s "$backup_file" ]; then
+            skipped=$((skipped + 1))
+            continue
+        fi
+
+        workloads=$(pvc_find_workloads "$ns" "$name")
+        for w in $workloads; do
+            kind="${w%%/*}"
+            wname="${w##*/}"
+            reps=$(kubectl get "$kind" "$wname" -n "$ns" -o jsonpath='{.spec.replicas}' 2>/dev/null || echo 1)
+            echo "$ns/$kind/$wname/$reps" >> "$scaled_file_all"
+            if [ "$reps" != "0" ]; then
+                kubectl scale "$kind" "$wname" -n "$ns" --replicas=0 2>/dev/null
+            fi
+        done
+    done <<< "$pvc_list"
+
+    if [ -s "$scaled_file_all" ]; then
+        echo "Waiting for all pods to terminate..."
+        while IFS= read -r entry; do
+            ns=$(echo "$entry" | cut -d/ -f1)
+            kind=$(echo "$entry" | cut -d/ -f2)
+            wname=$(echo "$entry" | cut -d/ -f3)
+            selector=$(kubectl get "$kind" "$wname" -n "$ns" -o jsonpath='{.spec.selector.matchLabels}' 2>/dev/null | jq -r 'to_entries | map("\(.key)=\(.value)") | join(",")')
+            [ -n "$selector" ] || continue
+            kubectl wait --for=delete pod -n "$ns" --selector="$selector" --timeout=180s 2>/dev/null || \
+                echo "WARNING: pods for $ns/$kind/$wname did not terminate within 180s" >&2
+        done < "$scaled_file_all"
+    fi
+
+    # Phase 2 — restore each PVC
+    while IFS= read -r line; do
+        [ -z "$line" ] && continue
+        ns="${line%%/*}"
+        name="${line##*/}"
+
+        backup_file="$backup_dir/${name}.tar.gz"
+        [ -f "$backup_file" ] || continue
+        total=$((total + 1))
+
+        echo "=== Restoring $ns/$name ($total) ==="
+
+        pvc_wait_bound "$ns" "$name" 150 || { failed=$((failed + 1)); continue; }
+
+        timestamp=$(tar xzf "$backup_file" __backup_timestamp.txt -O 2>/dev/null || echo "unknown")
+        echo "  Restoring from backup taken at: $timestamp"
+
+        if pvc_restore_data "$name" "$ns" "$backup_dir" "${name}.tar.gz"; then
+            echo "  Done: $name"
+        else
+            failed=$((failed + 1))
+        fi
+        echo ""
+    done <<< "$pvc_list"
+
+    # Phase 3 — bulk scale-up
+    if [ -s "$scaled_file_all" ]; then
+        echo "Restoring all workloads..."
+        while IFS= read -r entry; do
+            ns=$(echo "$entry" | cut -d/ -f1)
+            kind=$(echo "$entry" | cut -d/ -f2)
+            wname=$(echo "$entry" | cut -d/ -f3)
+            reps=$(echo "$entry" | cut -d/ -f4)
+            echo "  Restoring $ns/$kind/$wname to $reps replicas..."
+            kubectl scale "$kind" "$wname" -n "$ns" --replicas="$reps" 2>/dev/null || \
+                echo "WARNING: failed to restore $ns/$kind/$wname" >&2
+        done < "$scaled_file_all"
+    fi
+
+    rm -f "$scaled_file_all"
+
+    if [ "$skipped" -gt 0 ]; then
+        echo "=== Skipped $skipped PVCs (no backup file found) ==="
+    fi
+    if [ "$failed" -gt 0 ]; then
+        echo "=== Restore complete with $failed/$total failures ==="
+        return 1
+    fi
+    echo "=== Restore complete ($total PVCs) ==="
+}

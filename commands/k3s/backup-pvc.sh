@@ -1,15 +1,35 @@
 #!/bin/bash
-# DESC: Manually back up a single PVC on demand
+# DESC: Back up PVCs — single by name, or mass via --all (auto-backup labeled).
 # NOTE: Does NOT scale down workloads — backup captures live running state.
 set -euo pipefail
 
 source "$ATLAS_ROOT/lib/common.sh"
-source_env
 
-PVC_NAME="${1:?Usage: $0 <pvc-name> [-y]}"
-shift
+# Allow CronJob pod to bypass source_env (vars already in environment).
+if [ -z "${PVC_BACKUP_DIR:-}" ]; then
+    source_env
+fi
+
+ALL_MODE=false
+if [ "${1:-}" = "--all" ]; then
+    ALL_MODE=true
+    shift
+fi
+
 AUTO_YES=false
 if [ "${1:-}" = "-y" ]; then AUTO_YES=true; shift; fi
+
+if $ALL_MODE; then
+    if ! $AUTO_YES; then
+        read -p "Back up all auto-backup labeled PVCs? [y/N] " confirm
+        case "$confirm" in [yY]*) ;; *) echo "Aborted."; exit 0 ;; esac
+    fi
+    pvc_backup_all true
+    exit $?
+fi
+
+# --- single-PVC path (unchanged) -------------------------------------------
+PVC_NAME="${1:?Usage: $0 <pvc-name> | --all [-y]}"
 
 BACKUP_FILE="$PVC_BACKUP_DIR/${PVC_NAME}.tar.gz"
 mkdir -p "$PVC_BACKUP_DIR"
@@ -47,21 +67,11 @@ TIMESTAMP=$(date -Iseconds)
 
 echo ""
 echo "Backing up $PVC_NS/$PVC_NAME..."
-BACKUP_POD="backup-$(echo "$PVC_NAME" | tr '_' '-')"
 
-# Read optional exclude patterns from PVC annotation
 EXCLUDE=$(kubectl get pvc "$PVC_NAME" -n "$PVC_NS" -o jsonpath='{.metadata.annotations.backup\.atlas/exclude}' 2>/dev/null || echo "")
 
-pvc_backup_pod_yaml "$PVC_NAME" "$PVC_NS" "$PVC_BACKUP_DIR" "${PVC_NAME}.tar.gz" "$TIMESTAMP" "$EXCLUDE" | kubectl apply -f -
-
-echo "Waiting for backup pod to complete..."
-if ! kubectl wait --for=jsonpath='{.status.phase}'=Succeeded "pod/$BACKUP_POD" -n "$PVC_NS" --timeout=600s 2>/dev/null; then
-    echo "Error: backup pod did not succeed — check pod logs with:" >&2
-    echo "  kubectl logs $BACKUP_POD -n $PVC_NS" >&2
-    kubectl delete pod "$BACKUP_POD" -n "$PVC_NS" --ignore-not-found 2>/dev/null || true
-    exit 1
-fi
-kubectl delete pod "$BACKUP_POD" -n "$PVC_NS" --ignore-not-found 2>/dev/null
+pvc_backup_data "$PVC_NAME" "$PVC_NS" "$PVC_BACKUP_DIR" "${PVC_NAME}.tar.gz" "$TIMESTAMP" "$EXCLUDE" \
+    || { echo "Backup failed." >&2; exit 1; }
 
 echo ""
 echo "Backup of $PVC_NAME complete."
