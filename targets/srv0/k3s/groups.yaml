@@ -4,6 +4,7 @@ base:
   - host-volumes
   - csi-driver-nfs
   - cert-manager
+  - longhorn
   - traefik
   - crowdsec
   - authelia

@@ -1,0 +1,34 @@
+---
+apiVersion: helm.cattle.io/v1
+kind: HelmChart
+metadata:
+  name: longhorn
+  namespace: kube-system
+spec:
+  chart: longhorn
+  repo: https://charts.longhorn.io
+  failurePolicy: abort
+  targetNamespace: longhorn-system
+  createNamespace: true
+  version: 1.8.1
+  valuesContent: |-
+    defaultSettings:
+      defaultReplicaCount: 1
+      defaultDataLocality: best-effort
+      storageOverProvisioningPercentage: 2000
+      storageMinimalAvailablePercentage: 5
+      nodeDownPodDeletionPolicy: delete-both-statefulset-and-deployment-pod
+      orphanAutoDeletion: true
+    persistence:
+      defaultClass: true
+      defaultClassReplicaCount: 1
+    longhornManager:
+      nodeSelector:
+        hostpath-main: "true"
+    longhornDriver:
+      nodeSelector:
+        hostpath-main: "true"
+    longhornUI:
+      nodeSelector:
+        hostpath-main: "true"
+      replicas: 1
