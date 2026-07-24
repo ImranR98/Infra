@@ -368,16 +368,20 @@ The culprit was `monitoring/logtfy`, a Python-based log monitoring service.
 Its `asyncio` event loop defaulted to io_uring, which SELinux on Fedora 44
 doesn't allow for containers.
 
-**Fix:** Add a runtime environment variable to disable io_uring in the
-application's I/O library:
+**Fix:** There is no SELinux boolean or capability that grants io_uring to
+containers without full `privileged: true` (which bypasses all SELinux
+enforcement). Both runtimes *do* fall back to `epoll` — the app continues
+working — but they retry `io_uring_setup()` periodically, producing
+continuous audit denials and `setroubleshootd` CPU load. The fix is to
+tell the I/O library not to bother trying:
 
 | Runtime | Env var | Effect |
 |---------|---------|--------|
-| Python (asyncio) | `PYTHON_IO_URING=0` | Falls back to `epoll` |
-| Node.js / Deno (libuv) | `UV_USE_IO_URING=0` | Falls back to `epoll` |
+| Python (asyncio) | `PYTHON_IO_URING=0` | Skips `io_uring_setup()`, uses `epoll` directly |
+| Node.js / Deno (libuv) | `UV_USE_IO_URING=0` | Skips `io_uring_setup()`, uses `epoll` directly |
 
-No SELinux policy changes needed, no system-level modifications,
-no new packages.
+No SELinux policy changes needed, no system-level modifications, no new
+packages — just an env var on the affected deployment.
 
 ---
 
@@ -459,4 +463,4 @@ sudo ausearch -m avc --start recent | wc -l  # see how many denials it's process
 
 6. **Backup pods touch production PVCs.** Our backup and restore utility pods both mount live PVCs. Any file they create (even a tiny `__backup_timestamp.txt`) can trigger a cascade of WAL-related `{ lock }` denials on SQLite-backed workloads. These pods need the same pod-level `seLinuxOptions` fix as the restore pods.
 
-7. **io_uring denials are a separate policy gap.** On recent kernels with older SELinux policies, Python's `asyncio` defaulting to io_uring produces `anon_inode { create }` denials. The fix is application-level (`PYTHON_IO_URING=0`), not policy-level.
+7. **io_uring denials are audit spam, not functional breakage.** Both Python asyncio and Node.js libuv fall back to `epoll` when `io_uring_setup()` returns EACCES — the app keeps working. But they retry periodically, generating continuous denials that keep `setroubleshootd` busy and fill the audit log. The fix is app-level (`PYTHON_IO_URING=0` or `UV_USE_IO_URING=0`), which skips the doomed syscall entirely. There is no SELinux boolean for io_uring — the only bypass is `privileged: true`.
