@@ -125,6 +125,8 @@ spec:
               value: "https://kubernetes.default.svc"
             - name: PYTHON_IO_URING
               value: "0"
+            - name: PYTHON_IOURING
+              value: "0"
           securityContext:
             # runs as root: imranrdev image breaks with non-root uid
             allowPrivilegeEscalation: false
