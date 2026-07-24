@@ -33,7 +33,7 @@ ENDPOINT=$($SU bash -c "grep -oP '^Endpoint\s*=\s*\K[\d.]+' /etc/wireguard/wg0.c
 GATEWAY=$(ip route show default 2>/dev/null | awk '{print $3; exit}')
 if [ -n "$ENDPOINT" ] && [ -n "$GATEWAY" ]; then
     $SU bash -c 'sed -i "$1" "$2"' _ "/^\[Interface\]/a\PostUp = ip route add $ENDPOINT/32 via $GATEWAY" /etc/wireguard/wg0.conf
-    $SU bash -c 'sed -i "$1" "$2"' _ "/^\[Interface\]/a\PreDown = ip route delete $ENDPOINT/32 via $GATEWAY" /etc/wireguard/wg0.conf
+    $SU bash -c 'sed -i "$1" "$2"' _ "/^\[Interface\]/a\PreDown = ip route delete $ENDPOINT/32 via $GATEWAY || true" /etc/wireguard/wg0.conf
 
     # Drop Table=auto (inserted for split-/1).  PostUp/PreDown /32 routes
     # avoid dead loop; main-table routes coexist with K3s.
@@ -43,12 +43,13 @@ fi
 echo "AllowedIPs pinned to 0.0.0.0/1, 128.0.0.0/1 to protect K3s subnets from the VPN."
 echo "Config deployed to /etc/wireguard/wg0.conf"
 
-# Add restart resilience — VPN comes up async, K3s is not blocked
+# Add restart resilience with stale-interface guard — handles suspend/resume
 $SU bash -c 'mkdir -p /etc/systemd/system/wg-quick@wg0.service.d'
 $SU bash -c 'tee /etc/systemd/system/wg-quick@wg0.service.d/restart.conf >/dev/null' <<EOF
 [Service]
 Restart=on-failure
 RestartSec=15
+ExecStartPre=-ip link delete wg0 2>/dev/null
 EOF
 $SU bash -c 'systemctl daemon-reload' 2>/dev/null || true
 
