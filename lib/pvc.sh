@@ -116,6 +116,8 @@ spec:
     runAsUser: ${MY_UID}
     runAsGroup: ${MY_UID}
     fsGroup: ${MY_UID}
+    seLinuxOptions:
+      level: "s0"
   restartPolicy: Never
   containers:
   - name: backup
