@@ -18,9 +18,10 @@ spec:
     image:
       tag: stable
     podSecurityContext: {}
+    hostNetwork: true
+    dnsPolicy: ClusterFirstWithHostNet
     securityContext:
       allowPrivilegeEscalation: false
-      privileged: true
     persistence:
       enabled: true
       existingClaim: homeassistant-config-pvc
