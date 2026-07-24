@@ -1,6 +1,6 @@
 # Updates and Renovate Integration
 
-Atlas uses [Renovate](https://docs.renovatebot.com/) to automatically discover and apply dependency updates across all Docker images, Helm charts, and Traefik plugins referenced in the repository.
+Infra uses [Renovate](https://docs.renovatebot.com/) to automatically discover and apply dependency updates across all Docker images, Helm charts, and Traefik plugins referenced in the repository.
 
 ## How it works
 

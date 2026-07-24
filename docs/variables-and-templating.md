@@ -2,7 +2,7 @@
 
 ## The two-file system
 
-Atlas separates configuration into two layers:
+Infra separates configuration into two layers:
 
 1. **Templates** — YAML/TOML/JSON files with `$VARIABLE` placeholders. These live in `targets/` and are version-controlled.
 2. **Variables** — per-target shell scripts that `export` the actual values. These live at the repo root as `VARS.<target>.sh` and are **gitignored**.
@@ -38,7 +38,7 @@ The template serves as:
 
 ## envsubst: the rendering engine
 
-`envsubst` (part of GNU gettext) replaces `$VARIABLE` references in text with their values from the environment. Atlas uses it for all template rendering.
+`envsubst` (part of GNU gettext) replaces `$VARIABLE` references in text with their values from the environment. Infra uses it for all template rendering.
 
 ### How it works
 

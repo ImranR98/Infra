@@ -1,6 +1,6 @@
 # Targets
 
-A **target** is a named machine that Atlas manages. Each target lives in its own directory under `targets/`. Targets are the unit of operation — every `atlas.sh` invocation specifies a target as its first argument.
+A **target** is a named machine that Infra manages. Each target lives in its own directory under `targets/`. Targets are the unit of operation — every `atlas.sh` invocation specifies a target as its first argument.
 
 ## What defines a target
 

@@ -2,7 +2,7 @@
 
 ## Overview
 
-Atlas is a single-repo infrastructure-as-code system where one CLI entry point (`atlas.sh`) dispatches commands against named machines ("targets"). There is no build step, no compilation, no server-side agent. Everything runs from shell scripts invoked on the machine being managed.
+Infra is a single-repo infrastructure-as-code system where one CLI entry point (`atlas.sh`) dispatches commands against named machines ("targets"). There is no build step, no compilation, no server-side agent. Everything runs from shell scripts invoked on the machine being managed.
 
 ```
 User runs:  ./atlas.sh <target> <command> [args...]
@@ -52,7 +52,7 @@ Two commands are "built-in" and handled directly in dispatch without script reso
 
 ## Target abstraction
 
-Every machine managed by Atlas is a "target." Each target has its own directory under `targets/` containing:
+Every machine managed by Infra is a "target." Each target has its own directory under `targets/` containing:
 
 - `VARS.template.sh` — documents required environment variables
 - `compose/compose.yaml` — Docker Compose definition (if this target runs Compose)
@@ -93,7 +93,7 @@ Template files (*.secret, *.plain) under `compose/templates/` are rendered into 
 
 ## Two orchestrators
 
-Atlas supports two workload orchestrators, and a target can use either or both:
+Infra supports two workload orchestrators, and a target can use either or both:
 
 **Docker Compose** — Simple service composition. Each target with Compose gets a systemd unit that runs `docker compose up/down`. Suitable for VPS-style deployments.
 

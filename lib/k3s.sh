@@ -24,7 +24,7 @@ configure_k3s_sysctl() {
     local conf="/etc/sysctl.d/90-k3s.conf"
     if [ ! -f "$conf" ]; then
         cat > "$conf" <<SYSEOF
-# K3s node tuning — automatically configured by Atlas
+# K3s node tuning — automatically configured by Infra
 fs.inotify.max_user_watches = 6000000
 fs.inotify.max_user_instances = 512
 user.max_user_namespaces = 28633

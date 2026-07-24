@@ -1,10 +1,10 @@
 # K3s Management
 
-This doc focuses on how Atlas wraps K3s — not on what K3s, kustomize, or kubectl are.
+This doc focuses on how Infra wraps K3s — not on what K3s, kustomize, or kubectl are.
 
 ## Component structure and conventions
 
-Each K3s workload lives in `targets/<target>/k3s/<component>/`. The Atlas-specific conventions are:
+Each K3s workload lives in `targets/<target>/k3s/<component>/`. The Infra-specific conventions are:
 
 ### Directory layout
 
@@ -22,7 +22,7 @@ All component YAML goes through a two-stage pipeline: kustomize builds the raw Y
 
 ## The `# IGNORE INITIALLY` bootstrap pattern
 
-Atlas uses a custom two-phase bootstrap for components that depend on resources from other components. YAML lines ending with `# IGNORE INITIALLY` reference objects that won't exist yet during initial deployment (e.g., a `Certificate` referencing a `ClusterIssuer` that hasn't been deployed).
+Infra uses a custom two-phase bootstrap for components that depend on resources from other components. YAML lines ending with `# IGNORE INITIALLY` reference objects that won't exist yet during initial deployment (e.g., a `Certificate` referencing a `ClusterIssuer` that hasn't been deployed).
 
 Two behaviors, depending on context:
 
@@ -72,7 +72,7 @@ Runs before manifests hit the cluster. Used for pre-creating prerequisites that 
 
 ### `post.sh`
 
-Runs after apply. Most commonly waits for CRDs to become established via the Atlas helper:
+Runs after apply. Most commonly waits for CRDs to become established via the Infra helper:
 
 ```bash
 source "$ATLAS_ROOT/lib/common.sh"
@@ -118,7 +118,7 @@ Persistent volumes use Longhorn (local block storage) as the primary storage bac
 
 ## PVC backup and restore
 
-A CronJob backs up labeled PVCs to the host filesystem. Restore is a separate Atlas command.
+A CronJob backs up labeled PVCs to the host filesystem. Restore is a separate Infra command.
 
 ### Backup
 

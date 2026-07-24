@@ -1,6 +1,6 @@
 # Networking
 
-Atlas manages networking at multiple layers: WireGuard VPN for secure connectivity, FRP (Fast Reverse Proxy) for NAT traversal, split-tunnel routing to protect Kubernetes subnets, and a preboot FRP tunnel for remote LUKS unlock.
+Infra manages networking at multiple layers: WireGuard VPN for secure connectivity, FRP (Fast Reverse Proxy) for NAT traversal, split-tunnel routing to protect Kubernetes subnets, and a preboot FRP tunnel for remote LUKS unlock.
 
 ## Network architecture
 
@@ -125,7 +125,7 @@ frps has a health check hitting its admin API healthz endpoint (`:7500`). frpc u
 
 ## Preboot FRPC (LUKS unlock)
 
-When the home server's root disk is LUKS-encrypted, the initramfs needs network access to receive the decryption passphrase via SSH. Atlas provides a target-specific command (`compose install-preboot`) that:
+When the home server's root disk is LUKS-encrypted, the initramfs needs network access to receive the decryption passphrase via SSH. Infra provides a target-specific command (`compose install-preboot`) that:
 
 1. **Checks if root is LUKS-encrypted** via `check_root_luks.sh` (uses `lsblk -s` to detect crypt devices)
 2. **Installs dracut-crypt-ssh** — embeds an SSH server in the initramfs that listens for connections

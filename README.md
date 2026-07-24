@@ -1,8 +1,8 @@
-# Atlas
+# Infra
 
-Atlas is a single-repo, shell-driven infrastructure-as-code system for managing a homelab of Linux servers. It deploys and orchestrates Docker Compose stacks and K3s (lightweight Kubernetes) workloads across multiple machines — private servers, VPS instances, and remote agents — all from one CLI.
+Infra is a single-repo, shell-driven infrastructure-as-code system for managing a homelab of Linux servers. It deploys and orchestrates Docker Compose stacks and K3s (lightweight Kubernetes) workloads across multiple machines — private servers, VPS instances, and remote agents — all from one CLI.
 
-*The docs assume familiarity with Docker Compose, K3s/kubectl/kustomize, and Traefik. They focus on how Atlas wires these tools together and what's unique to this repo.*
+*The docs assume familiarity with Docker Compose, K3s/kubectl/kustomize, and Traefik. They focus on how Infra wires these tools together and what's unique to this repo.*
 
 ## What it does
 
@@ -44,13 +44,13 @@ Read these in order to develop your understanding of the repo:
 | 3 | [docs/commands-and-dispatch.md](docs/commands-and-dispatch.md) | The CLI dispatch system and how commands work |
 | 4 | [docs/variables-and-templating.md](docs/variables-and-templating.md) | Variable files, envsubst, and template rendering |
 | 5 | [docs/updates-and-renovate.md](docs/updates-and-renovate.md) | Automated dependency update workflow |
-| 6 | [docs/compose-management.md](docs/compose-management.md) | Atlas-specific Compose patterns (*) |
-| 7 | [docs/k3s-management.md](docs/k3s-management.md) | Atlas-specific K3s patterns (*) |
+| 6 | [docs/compose-management.md](docs/compose-management.md) | Infra-specific Compose patterns (*) |
+| 7 | [docs/k3s-management.md](docs/k3s-management.md) | Infra-specific K3s patterns (*) |
 | 8 | [docs/networking.md](docs/networking.md) | WireGuard, FRP tunneling, and network architecture |
 | 9 | [docs/security.md](docs/security.md) | Secrets, LUKS, authentication, and hardening |
-| 10 | [docs/standard-vs-custom.md](docs/standard-vs-custom.md) | How Atlas combines standard tools with custom glue |
+| 10 | [docs/standard-vs-custom.md](docs/standard-vs-custom.md) | How Infra combines standard tools with custom glue |
 
-(*) Assumes Compose/K3s familiarity. Focuses on Atlas conventions: `.secret`/`.plain`, `# IGNORE INITIALLY`, hook scripts, `groups.yaml`, etc.
+(*) Assumes Compose/K3s familiarity. Focuses on Infra conventions: `.secret`/`.plain`, `# IGNORE INITIALLY`, hook scripts, `groups.yaml`, etc.
 
 ## Requirements
 

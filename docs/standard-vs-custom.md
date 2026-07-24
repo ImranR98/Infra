@@ -1,12 +1,12 @@
 # Standard vs. Custom
 
-Atlas sits in an interesting space on the homelab automation spectrum. It uses well-known open-source tools in their intended ways, but wraps them in a custom orchestration layer. This document separates what is "standard" from what is "custom" in this repo.
+Infra sits in an interesting space on the homelab automation spectrum. It uses well-known open-source tools in their intended ways, but wraps them in a custom orchestration layer. This document separates what is "standard" from what is "custom" in this repo.
 
 ## Standard: tools used as intended
 
 ### Docker and Docker Compose
 
-Docker and Docker Compose are used exactly as documented — `docker compose up`, `docker compose down`, standard `compose.yaml` format with no extensions. Atlas simply renders templates and wraps the lifecycle in systemd units. Any Docker user could look at the rendered `compose.yaml` and understand it immediately.
+Docker and Docker Compose are used exactly as documented — `docker compose up`, `docker compose down`, standard `compose.yaml` format with no extensions. Infra simply renders templates and wraps the lifecycle in systemd units. Any Docker user could look at the rendered `compose.yaml` and understand it immediately.
 
 ### K3s
 
@@ -36,7 +36,7 @@ All Kubernetes applications are deployed via standard CRDs, HelmCharts, and stan
 
 Services run as standard systemd units with `Type=simple`, `Restart=always`, `WantedBy=multi-user.target`. No custom unit types or non-standard properties.
 
-## Custom: Atlas-specific glue
+## Custom: Infra-specific glue
 
 ### The dispatch system
 
@@ -48,7 +48,7 @@ The concept of "targets" as directory-based configuration units with overridable
 
 ### The `# IGNORE INITIALLY` bootstrap system
 
-The two-phase deployment (initial mode strips markers for safe bootstrapping, then re-running includes everything) is a custom pattern. The Authelia-specific variant (comment out on first render) and the K3s variant (remove on initial, include normally thereafter) are specific to Atlas.
+The two-phase deployment (initial mode strips markers for safe bootstrapping, then re-running includes everything) is a custom pattern. The Authelia-specific variant (comment out on first render) and the K3s variant (remove on initial, include normally thereafter) are specific to Infra.
 
 ### `.secret` and `.plain` file conventions
 
@@ -64,11 +64,11 @@ The split between `VARS.template.sh` (documentation + validation source) and `VA
 
 ### The `post.sh` CRD waiter
 
-`wait_for_crds()` is a custom shell function that polls `kubectl wait` for CRD establishment. While it uses standard kubectl, the wrapper function with timeout and retry logic is Atlas-specific.
+`wait_for_crds()` is a custom shell function that polls `kubectl wait` for CRD establishment. While it uses standard kubectl, the wrapper function with timeout and retry logic is Infra-specific.
 
 ### backup-state remote mode
 
-The remote backup system (SSH into a remote Atlas instance, stream tar back over the connection) is a custom shell script workflow. The `ATLAS_BACKUP_STREAM` mode switch is custom.
+The remote backup system (SSH into a remote Infra instance, stream tar back over the connection) is a custom shell script workflow. The `ATLAS_BACKUP_STREAM` mode switch is custom.
 
 ### Multi-distro package management
 
@@ -88,7 +88,7 @@ The `generate-frp-certs` command generates per-pair CA and X.509 certificates fo
 
 ### Preboot FRPC + dracut-crypt-ssh
 
-The initramfs integration for remote LUKS unlock is customized for Atlas's FRP infrastructure. While `dracut-crypt-ssh` is an existing project, the FRPC preboot integration and the `check_root_luks.sh` detection logic are custom.
+The initramfs integration for remote LUKS unlock is customized for Infra's FRP infrastructure. While `dracut-crypt-ssh` is an existing project, the FRPC preboot integration and the `check_root_luks.sh` detection logic are custom.
 
 ### WireGuard routing customizations
 
@@ -96,6 +96,6 @@ The `AllowedIPs` rewrite and endpoint dead-loop fix in `wireguard.sh` are specif
 
 ## What this means for users
 
-- **If you know Docker, Kubernetes, WireGuard, and systemd**, you'll understand the deployed services immediately. Atlas does not invent new abstractions for these — it uses them in standard, documented ways.
-- **If you want to understand how Atlas orchestrates these tools**, you'll need to learn the custom dispatch system, the templating conventions, and the bootstrap patterns. These are not standard tools — they're the glue unique to this repo.
-- **If you want to port Atlas to a standard tool**, the custom glue maps roughly to: the dispatch system (like Task or Make), the variable model (like Ansible vault or SOPS), the component lifecycle (like Helm hooks or ArgoCD sync waves). But Atlas is intentionally kept simple — bash scripts and envsubst — to remain understandable and maintainable by one person.
+- **If you know Docker, Kubernetes, WireGuard, and systemd**, you'll understand the deployed services immediately. Infra does not invent new abstractions for these — it uses them in standard, documented ways.
+- **If you want to understand how Infra orchestrates these tools**, you'll need to learn the custom dispatch system, the templating conventions, and the bootstrap patterns. These are not standard tools — they're the glue unique to this repo.
+- **If you want to port Infra to a standard tool**, the custom glue maps roughly to: the dispatch system (like Task or Make), the variable model (like Ansible vault or SOPS), the component lifecycle (like Helm hooks or ArgoCD sync waves). But Infra is intentionally kept simple — bash scripts and envsubst — to remain understandable and maintainable by one person.

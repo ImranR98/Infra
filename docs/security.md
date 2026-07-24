@@ -1,6 +1,6 @@
 # Security
 
-Atlas takes a defense-in-depth approach to security across the stack: file permissions, encryption-at-rest, authentication middleware, intrusion prevention, and network-level access control.
+Infra takes a defense-in-depth approach to security across the stack: file permissions, encryption-at-rest, authentication middleware, intrusion prevention, and network-level access control.
 
 ## Secret management
 

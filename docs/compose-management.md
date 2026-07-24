@@ -1,6 +1,6 @@
 # Docker Compose Management
 
-Atlas wraps Compose stacks as systemd units. This doc focuses on Atlas-specific conventions — not on what Compose or systemd are.
+Infra wraps Compose stacks as systemd units. This doc focuses on Infra-specific conventions — not on what Compose or systemd are.
 
 ## Template rendering pipeline
 
@@ -51,7 +51,7 @@ Creates a `.tar` of `current_target/compose_live_state/` via an Alpine Docker co
 ./atlas.sh <target> compose backup-state <user@host:path> <remote_target>
 ```
 
-SSHs into a remote Atlas instance and streams the tar back. The remote end sets `ATLAS_BACKUP_STREAM=true`, which makes the backup script write tar to stdout instead of a file. The local end captures stdout to disk. Old backups are pruned by `$BACKUP_RETENTION` (default: keep 1).
+SSHs into a remote Infra instance and streams the tar back. The remote end sets `ATLAS_BACKUP_STREAM=true`, which makes the backup script write tar to stdout instead of a file. The local end captures stdout to disk. Old backups are pruned by `$BACKUP_RETENTION` (default: keep 1).
 
 ## `compose generate-frp-certs`
 
