@@ -3,6 +3,25 @@
 set -euo pipefail
 source "$ATLAS_ROOT/lib/common.sh"
 
+echo "=== WARNING ==="
+echo "This script rebuilds the initramfs using dracut."
+echo "BEFORE running this, ensure:"
+echo "  1. Your OS is fully updated (dnf upgrade / apt upgrade / pacman -Syu)"
+echo "  2. You have rebooted into the latest kernel"
+echo "  3. Firmware packages (linux-firmware) are installed and current"
+echo ""
+echo "Rebuilding initramfs against an outdated kernel or missing firmware"
+echo "can leave the system unbootable or with broken hardware support."
+echo ""
+
+if [[ "${SKIP_PREBOOT_WARNING:-}" != "true" ]]; then
+    read -r -p "Proceed? [y/N] " _confirm
+    if [[ "$_confirm" != [yY] && "$_confirm" != [yY][eE][sS] ]]; then
+        echo "Aborted. Set SKIP_PREBOOT_WARNING=true to bypass this prompt."
+        exit 0
+    fi
+fi
+
 echo "=== Check if root partition is LUKS-encrypted ==="
 if bash "$ATLAS_ROOT/commands/compose/check_root_luks.sh"; then
     echo "LUKS detected. Installing remote unlock..."
