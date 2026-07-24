@@ -127,7 +127,7 @@ spec:
   persistentVolumeReclaimPolicy: Retain
   storageClassName: hostpath
   local:
-    path: $MAIN_PARENT_DIR/Main/Media/Camera
+    path: $MEDIA_DIR_PATH/Camera
   nodeAffinity:
     required:
       nodeSelectorTerms:
@@ -201,7 +201,7 @@ spec:
   persistentVolumeReclaimPolicy: Retain
   storageClassName: hostpath
   local:
-    path: $MAIN_PARENT_DIR/Main/Media/Screenshots
+    path: $MEDIA_DIR_PATH/Screenshots
   nodeAffinity:
     required:
       nodeSelectorTerms:
@@ -275,7 +275,7 @@ spec:
   persistentVolumeReclaimPolicy: Retain
   storageClassName: hostpath
   local:
-    path: $MAIN_PARENT_DIR/Main/Media/Recordings
+    path: $MEDIA_DIR_PATH/Recordings
   nodeAffinity:
     required:
       nodeSelectorTerms:
