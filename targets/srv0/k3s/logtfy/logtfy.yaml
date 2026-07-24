@@ -123,6 +123,8 @@ spec:
           env:
             - name: KUBE_API_SERVER
               value: "https://kubernetes.default.svc"
+            - name: PYTHON_IO_URING
+              value: "0"
           securityContext:
             # runs as root: imranrdev image breaks with non-root uid
             allowPrivilegeEscalation: false
