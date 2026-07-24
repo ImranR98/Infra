@@ -38,6 +38,8 @@ spec:
             timeoutSeconds: 5
             failureThreshold: 3
           env:
+            - name: UV_USE_IO_URING
+              value: "0"
             - name: TEXTFILE_DATA_PROVIDER_DATA_PATH
               value: "/data/$DSCPLN_DATA_FILE"
             - name: MONTHLY_LIMIT_NTFY_URL
