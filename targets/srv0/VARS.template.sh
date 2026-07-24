@@ -8,16 +8,6 @@ export NTFY_FALLBACK_TOPIC="change_me" # openssl rand -hex 16
 export NTFY_ADMIN_PASSWORD_HASH="change_me" # docker run --rm -it binwiederhier/ntfy user hash
 export NTFY_WRITE_ONLY_ACCOUNT_PASSWORD_HASH="change_me" # docker run --rm -it binwiederhier/ntfy user hash
 
-# ====== FRP ======
-export PROXY_HOST="vps0.example.org"
-# Generate with: ./atlas.sh srv0 compose generate-frp-certs vps0
-export FRP_CA_CERT="change_me" # PEM-encoded CA certificate for this FRP pair
-export FRP_CA_KEY="change_me" # PEM-encoded CA private key (keep on operator machine)
-export FRP_CLIENT_CERT="change_me" # PEM-encoded client certificate
-export FRP_CLIENT_KEY="change_me" # PEM-encoded client private key
-export FRP_PREBOOT_CLIENT_CERT="change_me" # PEM-encoded preboot client certificate
-export FRP_PREBOOT_CLIENT_KEY="change_me" # PEM-encoded preboot client private key
-
 # ====== Geoblock (Traefik middleware) ======
 # Indentation matters
 export GEOBLOCK_CONFIG_SUBSET='
@@ -92,3 +82,13 @@ export FMD_REGISTRATIONTOKEN="change_me" # openssl rand -base64 32
 export NEXTCLOUD_ADMIN_USER="admin"
 export NEXTCLOUD_ADMIN_PASSWORD="change_me" # openssl rand -hex 16
 export NEXTCLOUD_DB_PASSWORD="change_me" # openssl rand -hex 16
+
+# ====== FRP ======
+export PROXY_HOST="vps0.example.org"
+# Generate with: ./atlas.sh srv0 compose generate-frp-certs vps0
+export FRP_CA_CERT="change_me" # PEM-encoded CA certificate for this FRP pair
+export FRP_CA_KEY="change_me" # PEM-encoded CA private key (keep on operator machine)
+export FRP_CLIENT_CERT="change_me" # PEM-encoded client certificate
+export FRP_CLIENT_KEY="change_me" # PEM-encoded client private key
+export FRP_PREBOOT_CLIENT_CERT="change_me" # PEM-encoded preboot client certificate
+export FRP_PREBOOT_CLIENT_KEY="change_me" # PEM-encoded preboot client private key
