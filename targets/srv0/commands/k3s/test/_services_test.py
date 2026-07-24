@@ -2,7 +2,7 @@
 """Browser-based integration tests for all exposed services.
 
 Usage (via Infra dispatch):
-    ./atlas.sh srv0 test services
+    ./infra.sh srv0 test services
 
 Expects SERVICES_DOMAIN and a domains list file as arguments.
 Reads COOKIES_FILE env var for persistent auth storage.

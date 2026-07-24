@@ -7,7 +7,7 @@ get_sudo_cmd() {
     command -v run0  >/dev/null 2>&1 && has_run0=true
 
     if $has_run0 && $has_sudo; then
-        ${ATLAS_INTERACTIVE:-false} && echo "sudo" || echo "run0"
+        ${INFRA_INTERACTIVE:-false} && echo "sudo" || echo "run0"
     elif $has_run0; then
         echo "run0"
     else

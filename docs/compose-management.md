@@ -32,7 +32,7 @@ Each component under `templates/` can include a `prep.sh` that runs before templ
 ## `compose install`
 
 ```bash
-./atlas.sh <target> compose install
+./infra.sh <target> compose install
 ```
 
 Runs the rendering pipeline, creates host directories for bind-mounted volumes (with `$MY_UID` ownership), and installs a systemd unit named `<target>.service` that runs `docker compose up/down`. The Compose project name equals the target name.
@@ -48,15 +48,15 @@ Creates a `.tar` of `current_target/compose_live_state/` via an Alpine Docker co
 ### Remote mode (SSH streaming)
 
 ```bash
-./atlas.sh <target> compose backup-state <user@host:path> <remote_target>
+./infra.sh <target> compose backup-state <user@host:path> <remote_target>
 ```
 
-SSHs into a remote Infra instance and streams the tar back. The remote end sets `ATLAS_BACKUP_STREAM=true`, which makes the backup script write tar to stdout instead of a file. The local end captures stdout to disk. Old backups are pruned by `$BACKUP_RETENTION` (default: keep 1).
+SSHs into a remote Infra instance and streams the tar back. The remote end sets `INFRA_BACKUP_STREAM=true`, which makes the backup script write tar to stdout instead of a file. The local end captures stdout to disk. Old backups are pruned by `$BACKUP_RETENTION` (default: keep 1).
 
 ## `compose generate-frp-certs`
 
 ```bash
-./atlas.sh <client-target> compose generate-frp-certs <server-target>
+./infra.sh <client-target> compose generate-frp-certs <server-target>
 ```
 
 Generates mTLS certificates for an FRP client↔server pair. Creates a per-pair CA, a server certificate for the VPS target, and client certificates for the current target (including a preboot-specific client cert if `FRP_PREBOOT_CLIENT_CERT` is in the template). Outputs copy-paste blocks for both targets' VARS files. VARS files are never modified automatically.
@@ -64,7 +64,7 @@ Generates mTLS certificates for an FRP client↔server pair. Creates a per-pair 
 ## `compose restart`
 
 ```bash
-./atlas.sh <target> compose restart <service-name>
+./infra.sh <target> compose restart <service-name>
 ```
 
 Re-renders templates then downs/ups a single service — picks up config changes without restarting the whole stack.

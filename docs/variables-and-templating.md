@@ -45,7 +45,7 @@ The template serves as:
 The variable list `ENVSUBST_VARS` controls which variables envsubst expands. It's built by `get_envsubst_vars()`, which collects:
 
 - All `export`ed variables from the real vars file
-- Built-in variables: `ATLAS_ROOT`, `MY_UID`, `TARGET`, `COMPOSE_STATE_DIR`, `COMPOSE_STATE_BACKUP_DIR`, `K3S_STATE_DIR`, `PVC_BACKUP_DIR`
+- Built-in variables: `INFRA_ROOT`, `MY_UID`, `TARGET`, `COMPOSE_STATE_DIR`, `COMPOSE_STATE_BACKUP_DIR`, `K3S_STATE_DIR`, `PVC_BACKUP_DIR`
 - `DOCKER_GID` and `PROXY_IP` (when applicable)
 
 The final format is a space-separated list with `$` prefixes: `$VAR1 $VAR2 $VAR3...`. This is passed to `envsubst` so that only known variables are expanded — any `$OTHER` reference left over after rendering indicates a missing variable, which validation catches.
@@ -114,12 +114,12 @@ Known variables include:
 
 ## Runtime environment variables
 
-`atlas.sh` also sets several variables automatically:
+`infra.sh` also sets several variables automatically:
 
 | Variable | Source | Description |
 |----------|--------|-------------|
-| `ATLAS_ROOT` | Resolved from script location | Absolute path to repo root |
-| `ATLAS_INTERACTIVE` | Detected from stdin | `true` if running in a terminal |
+| `INFRA_ROOT` | Resolved from script location | Absolute path to repo root |
+| `INFRA_INTERACTIVE` | Detected from stdin | `true` if running in a terminal |
 | `TARGET` | CLI argument | Name of current target |
 | `COMPOSE_STATE_DIR` | Hardcoded | Path to rendered Compose state |
 | `COMPOSE_STATE_BACKUP_DIR` | Hardcoded | Path for Compose state backups |

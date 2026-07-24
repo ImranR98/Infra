@@ -27,10 +27,10 @@ validate() {
     local target="${1:-$TARGET}"
     local k3s_ok=true compose_ok=true
 
-    if [ -d "$ATLAS_ROOT/targets/$target/k3s" ]; then
+    if [ -d "$INFRA_ROOT/targets/$target/k3s" ]; then
         _validate_k3s "$target" || k3s_ok=false
     fi
-    if [ -f "$ATLAS_ROOT/targets/$target/compose/compose.yaml" ]; then
+    if [ -f "$INFRA_ROOT/targets/$target/compose/compose.yaml" ]; then
         _validate_compose "$target" || compose_ok=false
     fi
 
@@ -49,7 +49,7 @@ _count_ref_errors() {
 }
 
 _validate_k3s() {
-    local target="$1" comp_dir="$ATLAS_ROOT/targets/$target/k3s" errors=0
+    local target="$1" comp_dir="$INFRA_ROOT/targets/$target/k3s" errors=0
 
     local known_vars; known_vars=$(_build_known_vars "$target" "MY_UID
 TARGET
@@ -87,7 +87,7 @@ VOLUMES")
 _validate_compose() {
     local target="$1" errors=0
 
-    for f in "$ATLAS_ROOT/targets/$target/compose/compose.yaml"; do
+    for f in "$INFRA_ROOT/targets/$target/compose/compose.yaml"; do
         [ -f "$f" ] || continue
         if [[ "$f" =~ \.(yaml|yml)$ ]]; then
             if ! yq eval '.' "$f" >/dev/null 2>&1; then
@@ -102,15 +102,15 @@ _validate_compose() {
             echo "Error: $(basename "$f") has invalid YAML syntax"
             errors=$((errors + 1))
         fi
-    done < <(find "$ATLAS_ROOT/targets/$target/compose/templates" -type f -print0 2>/dev/null)
+    done < <(find "$INFRA_ROOT/targets/$target/compose/templates" -type f -print0 2>/dev/null)
 
     local known_vars; known_vars=$(_build_known_vars "$target" "MY_UID
 TARGET
 DOCKER_GID
 COMPOSE_STATE_DIR")
 
-    local compose_files=("$ATLAS_ROOT/targets/$target/compose/compose.yaml")
-    for f in "$ATLAS_ROOT/targets/$target/compose/templates"/*; do if [ -f "$f" ]; then compose_files+=("$f"); fi; done
+    local compose_files=("$INFRA_ROOT/targets/$target/compose/compose.yaml")
+    for f in "$INFRA_ROOT/targets/$target/compose/templates"/*; do if [ -f "$f" ]; then compose_files+=("$f"); fi; done
     for f in "${compose_files[@]}"; do
         _count_ref_errors "$known_vars" "$f"
     done

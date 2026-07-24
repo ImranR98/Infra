@@ -4,7 +4,7 @@
 # $AUTHELIA_USERS_DATABASE block scalar in VARS.
 set -euo pipefail
 
-COMPOSE_STATE_DIR="${ATLAS_ROOT:?}/current_target/compose_live_state"
+COMPOSE_STATE_DIR="${INFRA_ROOT:?}/current_target/compose_live_state"
 mkdir -p "$COMPOSE_STATE_DIR/authelia/config"
 
 printf '%s\n' "${AUTHELIA_USERS_DATABASE:?}" | \

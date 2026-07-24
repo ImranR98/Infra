@@ -1,7 +1,7 @@
 #!/bin/bash
 # DESC: Render templates, install systemd service, start Compose stack
 set -euo pipefail
-source "$ATLAS_ROOT/lib/common.sh"
+source "$INFRA_ROOT/lib/common.sh"
 ensure_envsubst_vars
 
 render_compose_yaml

@@ -1,10 +1,10 @@
 #!/bin/bash
 # lib/common.sh — library index. Sources all focused modules.
-[[ "${ATLAS_LIB_LOADED:-}" = true ]] && return 0
-ATLAS_LIB_LOADED=true
+[[ "${INFRA_LIB_LOADED:-}" = true ]] && return 0
+INFRA_LIB_LOADED=true
 
 _lib_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
-: ${ATLAS_ROOT:="$(cd "$_lib_dir/.." >/dev/null 2>&1 && pwd)"}
+: ${INFRA_ROOT:="$(cd "$_lib_dir/.." >/dev/null 2>&1 && pwd)"}
 
 source "$_lib_dir/pkg.sh"
 source "$_lib_dir/env.sh"

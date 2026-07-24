@@ -2,21 +2,21 @@
 # DESC: Generate FRP mTLS certificates for a client↔server pair.
 #       Prints copy-paste blocks for VARS files. Never modifies VARS files.
 #       Run from any client/non-proxy target.
-# Usage: ./atlas.sh <client-target> compose generate-frp-certs <server-target>
+# Usage: ./infra.sh <client-target> compose generate-frp-certs <server-target>
 set -euo pipefail
-source "$ATLAS_ROOT/lib/common.sh"
-source "$ATLAS_ROOT/lib/frp-certs.sh"
+source "$INFRA_ROOT/lib/common.sh"
+source "$INFRA_ROOT/lib/frp-certs.sh"
 
 SERVER_TARGET="$1"
-if [ -z "$SERVER_TARGET" ] || [ ! -f "$ATLAS_ROOT/targets/$SERVER_TARGET/VARS.template.sh" ]; then
+if [ -z "$SERVER_TARGET" ] || [ ! -f "$INFRA_ROOT/targets/$SERVER_TARGET/VARS.template.sh" ]; then
     echo "Usage: $0 <target> compose generate-frp-certs <server-target>" >&2
     echo "  <server-target> is the VPS running frps (e.g., vps0 or vps1)" >&2
     exit 1
 fi
 
 CLIENT_TARGET="$TARGET"
-CLIENT_VARS_TPL="$ATLAS_ROOT/targets/$CLIENT_TARGET/VARS.template.sh"
-SERVER_VARS_TPL="$ATLAS_ROOT/targets/$SERVER_TARGET/VARS.template.sh"
+CLIENT_VARS_TPL="$INFRA_ROOT/targets/$CLIENT_TARGET/VARS.template.sh"
+SERVER_VARS_TPL="$INFRA_ROOT/targets/$SERVER_TARGET/VARS.template.sh"
 
 echo "=== FRP mTLS Certificate Generator ==="
 echo "Client: $CLIENT_TARGET"

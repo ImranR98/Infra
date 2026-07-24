@@ -262,7 +262,7 @@ pvc_backup_all() {
             for w in $workloads; do echo "    $w"; done
         fi
 
-        exclude=$(kubectl get pvc "$name" -n "$ns" -o jsonpath='{.metadata.annotations.backup\.atlas/exclude}' 2>/dev/null || echo "")
+        exclude=$(kubectl get pvc "$name" -n "$ns" -o jsonpath='{.metadata.annotations.backup\.infra/exclude}' 2>/dev/null || echo "")
 
         if pvc_backup_data "$name" "$ns" "$backup_dir" "${name}.tar.gz" "$timestamp" "$exclude"; then
             echo "  Done: $name"

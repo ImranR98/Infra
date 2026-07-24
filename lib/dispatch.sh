@@ -7,7 +7,7 @@ _desc() {
     if [ -n "$d" ]; then echo "  $d"; fi
 }
 
-atlas_dispatch() {
+infra_dispatch() {
     local cmd_args=("$@")
 
     case "${cmd_args[0]:-}" in
@@ -23,9 +23,9 @@ atlas_dispatch() {
         # search_path accumulates subdirectory navigation (e.g. "compose").
         # ${search_path:+/$search_path} prepends "/<path>" only when search_path is non-empty.
         for base in "${search_dirs[@]}"; do
-            local shf="$ATLAS_ROOT/${base}${search_path:+/$search_path}/$arg.sh"
-            local pyf="$ATLAS_ROOT/${base}${search_path:+/$search_path}/$arg.py"
-            local dir="$ATLAS_ROOT/${base}${search_path:+/$search_path}/$arg"
+            local shf="$INFRA_ROOT/${base}${search_path:+/$search_path}/$arg.sh"
+            local pyf="$INFRA_ROOT/${base}${search_path:+/$search_path}/$arg.py"
+            local dir="$INFRA_ROOT/${base}${search_path:+/$search_path}/$arg"
             if [ -x "$shf" ]; then
                 found="script"; CMD_PATH="$shf"; CMD_RUNNER="bash"; shift $((arg_idx + 1)); break 2
             elif [ -f "$pyf" ]; then
@@ -40,10 +40,10 @@ atlas_dispatch() {
 
     if [ -n "$CMD_PATH" ]; then exec "$CMD_RUNNER" "$CMD_PATH" "$@"; fi
 
-    _atlas_help "$@"
+    _infra_help "$@"
 }
 
-_atlas_help() {
+_infra_help() {
     local _err=false
     if [ $# -gt 0 ]; then
         echo "Unknown command: $*" >&2
@@ -54,26 +54,26 @@ _atlas_help() {
     echo ""
     echo "  validate            Check configs for errors"
     echo "  list-domains        Show domains used by this target"
-    for f in "$ATLAS_ROOT/commands"/*.sh; do
+    for f in "$INFRA_ROOT/commands"/*.sh; do
         [ -f "$f" ] || continue
         printf '  %-19s' "$(basename "${f%.*}")"
         _desc "$f"
     done
-    for f in "$ATLAS_ROOT/targets/$TARGET"/commands/*.sh; do
+    for f in "$INFRA_ROOT/targets/$TARGET"/commands/*.sh; do
         [ -f "$f" ] || continue
         printf '  %-19s' "$(basename "${f%.*}")"
         _desc "$f"
     done
     for stack in compose k3s; do
-        [ -d "$ATLAS_ROOT/targets/$TARGET/$stack" ] || continue
+        [ -d "$INFRA_ROOT/targets/$TARGET/$stack" ] || continue
         local has_cmds=false
-        for f in "$ATLAS_ROOT/commands/$stack"/*.sh; do
+        for f in "$INFRA_ROOT/commands/$stack"/*.sh; do
             [ -f "$f" ] || continue
             [ "$has_cmds" = false ] && echo "" && has_cmds=true
             printf '  %s %-15s' "$stack" "$(basename "${f%.*}")"
             _desc "$f"
         done
-        for f in "$ATLAS_ROOT/targets/$TARGET"/commands/"$stack"/*.sh; do
+        for f in "$INFRA_ROOT/targets/$TARGET"/commands/"$stack"/*.sh; do
             [ -f "$f" ] || continue
             [ "$has_cmds" = false ] && echo "" && has_cmds=true
             printf '  %s %-15s' "$stack" "$(basename "${f%.*}")"

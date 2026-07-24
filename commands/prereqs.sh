@@ -1,7 +1,7 @@
 #!/bin/bash
 # DESC: Install system prerequisites (Docker, yq, envsubst, jq, python3)
 set -euo pipefail
-source "$ATLAS_ROOT/lib/common.sh"
+source "$INFRA_ROOT/lib/common.sh"
 
 SU=$(get_sudo_cmd)
 PKG_MGR=$(detect_pkgmgr)

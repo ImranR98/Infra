@@ -6,7 +6,7 @@ Infra is a single-repo, shell-driven infrastructure-as-code system for managing 
 
 ## What it does
 
-- **One CLI for everything.** `./atlas.sh <target> <command>` is the entry point. Targets are named machines; commands do the work.
+- **One CLI for everything.** `./infra.sh <target> <command>` is the entry point. Targets are named machines; commands do the work.
 - **Docker Compose management.** Render templates, spin up Compose stacks as systemd services, back up runtime state, swap individual services.
 - **K3s cluster management.** Bootstrap control-plane nodes, join remote agent nodes via SSH, deploy Kubernetes workloads through `kubectl kustomize` with a full component lifecycle (apply, delete, diff, render, initial bootstrap).
 - **Declarative configuration.** All infrastructure is defined as YAML/TOML/JSON templates with `$VARIABLE` placeholders. Per-target environment files provide secrets at runtime.
@@ -18,19 +18,19 @@ Infra is a single-repo, shell-driven infrastructure-as-code system for managing 
 
 ```bash
 # Install prerequisites (Docker, yq, envsubst, jq, python3)
-./atlas.sh <target> prereqs
+./infra.sh <target> prereqs
 
 # Create your variables file from the template
 cp targets/<target>/VARS.template.sh VARS.<target>.sh
 # Edit VARS.<target>.sh with your secrets and settings
 
 # Validate your configuration
-./atlas.sh <target> validate
+./infra.sh <target> validate
 
 # Deploy
-./atlas.sh <target> compose install
-./atlas.sh <target> k3s group base apply
-./atlas.sh <target> k3s group apps apply
+./infra.sh <target> compose install
+./infra.sh <target> k3s group base apply
+./infra.sh <target> k3s group apps apply
 ```
 
 ## Documentation

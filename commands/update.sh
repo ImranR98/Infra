@@ -1,7 +1,7 @@
 #!/bin/bash
 # DESC: Scan for image, chart, and plugin updates across all stacks via Renovate
 set -euo pipefail
-source "$ATLAS_ROOT/lib/common.sh"
+source "$INFRA_ROOT/lib/common.sh"
 
 DRY_RUN=false
 while [ $# -gt 0 ]; do
@@ -23,7 +23,7 @@ if ! command -v renovate >/dev/null 2>&1; then
     fi
 fi
 
-_CONFIG_FILE="$ATLAS_ROOT/renovate.json"
+_CONFIG_FILE="$INFRA_ROOT/renovate.json"
 if [ ! -f "$_CONFIG_FILE" ]; then
     echo "Error: renovate.json not found at $_CONFIG_FILE" >&2
     exit 1
@@ -41,12 +41,12 @@ export LOG_LEVEL=debug LOG_FORMAT=json
 echo "Scanning for updates via Renovate..."
 $RENOVATE_BIN \
     --platform=local \
-    --base-dir="$ATLAS_ROOT" \
+    --base-dir="$INFRA_ROOT" \
     --require-config=required \
     --onboarding=false \
     > "$_RENOVATE_LOG" 2>&1 || true
 
-_APPLY_PY="$ATLAS_ROOT/commands/_internal/_apply_updates.py"
+_APPLY_PY="$INFRA_ROOT/commands/_internal/_apply_updates.py"
 _TARGET_FLAG="--target=$TARGET"
 if [ "$DRY_RUN" = true ]; then
     _APPLY_OUT=$(python3 "$_APPLY_PY" --dry-run "$_TARGET_FLAG" < "$_RENOVATE_LOG")
@@ -57,7 +57,7 @@ echo "$_APPLY_OUT"
 
 echo ""
 echo "Checking Traefik plugins..."
-for f in "$ATLAS_ROOT/targets/$TARGET/compose/compose.yaml" $(find "$ATLAS_ROOT/targets/$TARGET/k3s" -name traefik.yaml 2>/dev/null); do
+for f in "$INFRA_ROOT/targets/$TARGET/compose/compose.yaml" $(find "$INFRA_ROOT/targets/$TARGET/k3s" -name traefik.yaml 2>/dev/null); do
     [ -f "$f" ] || continue
     _plugin_tmp=$(mktemp)
     cp "$f" "$_plugin_tmp"
@@ -87,4 +87,4 @@ for f in "$ATLAS_ROOT/targets/$TARGET/compose/compose.yaml" $(find "$ATLAS_ROOT/
 done
 
 echo ""
-echo "Done. Review changes with 'git diff' and run './atlas.sh <target> validate'."
+echo "Done. Review changes with 'git diff' and run './infra.sh <target> validate'."

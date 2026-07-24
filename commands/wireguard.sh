@@ -1,7 +1,7 @@
 #!/bin/bash
 # DESC: Install WireGuard and deploy a config file
 set -euo pipefail
-source "$ATLAS_ROOT/lib/common.sh"
+source "$INFRA_ROOT/lib/common.sh"
 
 CONFIG_FILE="${1:?Usage: $0 <path-to-wireguard-conf>}"
 

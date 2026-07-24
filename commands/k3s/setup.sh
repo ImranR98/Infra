@@ -2,11 +2,11 @@
 # DESC: Bootstrap a K3s control-plane node
 set -euo pipefail
 
-[ -z "${ATLAS_ROOT:-}" ] && ATLAS_ROOT="$(cd "$(dirname "$(readlink -f "$0")")/../.." && pwd)"
-source "$ATLAS_ROOT/lib/common.sh"
+[ -z "${INFRA_ROOT:-}" ] && INFRA_ROOT="$(cd "$(dirname "$(readlink -f "$0")")/../.." && pwd)"
+source "$INFRA_ROOT/lib/common.sh"
 
 if [ "$(id -u)" != 0 ]; then
-    exec $(get_sudo_cmd) env TARGET="$TARGET" ATLAS_ROOT="$ATLAS_ROOT" K3S_STATE_DIR="$K3S_STATE_DIR" MY_UID="$MY_UID" bash "$0" "$@"
+    exec $(get_sudo_cmd) env TARGET="$TARGET" INFRA_ROOT="$INFRA_ROOT" K3S_STATE_DIR="$K3S_STATE_DIR" MY_UID="$MY_UID" bash "$0" "$@"
 fi
 
 DID_COMPLETE=false
@@ -18,7 +18,7 @@ _cleanup() {
 }
 trap _cleanup EXIT
 
-echo "NOTE: K3s requires a fixed IP on this network. If the IP changes, run: ./atlas.sh <target> k3s update-node-ip"
+echo "NOTE: K3s requires a fixed IP on this network. If the IP changes, run: ./infra.sh <target> k3s update-node-ip"
 echo ""
 
 echo "=== Downloading K3s installer ==="

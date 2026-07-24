@@ -444,7 +444,7 @@ sudo ausearch -m avc --start recent | wc -l  # see how many denials it's process
 | `gokapi/gokapi.yaml` | Set explicit `command: [/sbin/tini, --, /app/run.sh]` and added `GOKAPI_DEPLOYMENT_PASSWORD` to VARS | Fresh Longhorn data PVC needed a deployment password for one-time init; the `tini` entrypoint override was needed because the Docker image uses `tini` as ENTRYPOINT without `CMD` |
 | `logtfy/logtfy.yaml` | Added `PYTHON_IO_URING: "0"` env var | Prevents Python `asyncio` io_uring SELinux denials |
 | `dscpln/dscpln.yaml` | Added `UV_USE_IO_URING: "0"` env var | Prevents Node.js libuv io_uring SELinux denials |
-| `lib/env.sh` | Added `ATLAS_ROOT` to `get_envsubst_vars()` | Needed for the new CronJob YAML that mounts `$ATLAS_ROOT` |
+| `lib/env.sh` | Added `INFRA_ROOT` to `get_envsubst_vars()` | Needed for the new CronJob YAML that mounts `$INFRA_ROOT` |
 | 15 `*/prereqs.yaml` files | Converted NFS PV+PVC pairs to Longhorn PVCs (dynamic provisioning) | All state moved from NFS to Longhorn; static PV blocks removed |
 
 ---

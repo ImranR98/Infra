@@ -1,20 +1,20 @@
 #!/bin/bash
 set -euo pipefail
 
-ATLAS_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
-export ATLAS_ROOT
+INFRA_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
+export INFRA_ROOT
 
 if [ -t 0 ]; then
-    ATLAS_INTERACTIVE=true
+    INFRA_INTERACTIVE=true
 else
-    ATLAS_INTERACTIVE=false
+    INFRA_INTERACTIVE=false
 fi
-export ATLAS_INTERACTIVE
+export INFRA_INTERACTIVE
 
-export COMPOSE_STATE_DIR="$ATLAS_ROOT/current_target/compose_live_state"
-export COMPOSE_STATE_BACKUP_DIR="$ATLAS_ROOT/compose_state_backups"
-export K3S_STATE_DIR="$ATLAS_ROOT/current_target/k3s_live_state"
-export PVC_BACKUP_DIR="$ATLAS_ROOT/k3s_state_backups"
+export COMPOSE_STATE_DIR="$INFRA_ROOT/current_target/compose_live_state"
+export COMPOSE_STATE_BACKUP_DIR="$INFRA_ROOT/compose_state_backups"
+export K3S_STATE_DIR="$INFRA_ROOT/current_target/k3s_live_state"
+export PVC_BACKUP_DIR="$INFRA_ROOT/k3s_state_backups"
 
 if [ "${1:-}" = "" ]; then
     echo "Usage: $0 <target> <command...>" >&2
@@ -22,15 +22,15 @@ if [ "${1:-}" = "" ]; then
     exit 1
 fi
 
-if [ ! -d "$ATLAS_ROOT/targets/$1" ]; then
+if [ ! -d "$INFRA_ROOT/targets/$1" ]; then
     echo "Unknown target: $1" >&2
-    echo "Available targets: $(ls -1 "$ATLAS_ROOT/targets" | tr '\n' ' ')" >&2
+    echo "Available targets: $(ls -1 "$INFRA_ROOT/targets" | tr '\n' ' ')" >&2
     exit 1
 fi
 export TARGET="$1"
 shift
 
-source "$ATLAS_ROOT/lib/common.sh"
+source "$INFRA_ROOT/lib/common.sh"
 
 vars_found=false
 _skip_source=false
@@ -67,5 +67,5 @@ elif [ -n "${1:-}" ]; then
     esac
 fi
 
-source "$ATLAS_ROOT/lib/dispatch.sh"
-atlas_dispatch "$@"
+source "$INFRA_ROOT/lib/dispatch.sh"
+infra_dispatch "$@"

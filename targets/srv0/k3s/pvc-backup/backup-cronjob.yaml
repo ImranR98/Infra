@@ -23,8 +23,8 @@ spec:
               securityContext:
                 privileged: true
               env:
-                - name: ATLAS_ROOT
-                  value: "$ATLAS_ROOT"
+                - name: INFRA_ROOT
+                  value: "$INFRA_ROOT"
                 - name: MY_UID
                   value: "$MY_UID"
                 - name: PVC_BACKUP_DIR
@@ -34,16 +34,16 @@ spec:
                 - -c
                 - |
                   set -eu
-                  bash "$ATLAS_ROOT/commands/k3s/backup-pvc.sh" --all -y
+                  bash "$INFRA_ROOT/commands/k3s/backup-pvc.sh" --all -y
               volumeMounts:
-                - name: atlas-repo
-                  mountPath: "$ATLAS_ROOT"
+                - name: infra-repo
+                  mountPath: "$INFRA_ROOT"
                 - name: backup-dir
                   mountPath: "$PVC_BACKUP_DIR"
           volumes:
-            - name: atlas-repo
+            - name: infra-repo
               hostPath:
-                path: "$ATLAS_ROOT"
+                path: "$INFRA_ROOT"
                 type: Directory
             - name: backup-dir
               hostPath:

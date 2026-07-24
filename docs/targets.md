@@ -1,6 +1,6 @@
 # Targets
 
-A **target** is a named machine that Infra manages. Each target lives in its own directory under `targets/`. Targets are the unit of operation — every `atlas.sh` invocation specifies a target as its first argument.
+A **target** is a named machine that Infra manages. Each target lives in its own directory under `targets/`. Targets are the unit of operation — every `infra.sh` invocation specifies a target as its first argument.
 
 ## What defines a target
 
@@ -79,4 +79,4 @@ Any target can override a global command by placing a script at `targets/<name>/
 2. Add `compose/compose.yaml` and/or `k3s/` directory as needed
 3. Create `VARS.<name>.sh` at the repo root following the template
 4. Any target-specific commands go in `targets/<name>/commands/`
-5. The target is immediately usable: `./atlas.sh <name> <command>`
+5. The target is immediately usable: `./infra.sh <name> <command>`

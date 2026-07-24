@@ -1,13 +1,13 @@
 #!/bin/bash
 # DESC: Deploy or delete a group of K3s components (base or apps)
 set -euo pipefail
-source "$ATLAS_ROOT/lib/common.sh"
+source "$INFRA_ROOT/lib/common.sh"
 
 GROUP="${1:?Usage: $0 <base|apps> [apply|initial|delete]}"
 MODE="${2:-apply}"
 case "$MODE" in apply|initial|delete) ;; *) echo "Usage: $0 <base|apps> [apply|initial|delete]" >&2; exit 1 ;; esac
 
-_groups_file="$ATLAS_ROOT/targets/$TARGET/k3s/groups.yaml"
+_groups_file="$INFRA_ROOT/targets/$TARGET/k3s/groups.yaml"
 if [ ! -f "$_groups_file" ]; then
     echo "No groups.yaml found for target $TARGET." >&2
     exit 1
@@ -29,12 +29,12 @@ if [ "$MODE" = "delete" ]; then
     fi
     for ((i=${#COMPONENTS[@]}-1; i>=0; i--)); do
         echo "=== ${COMPONENTS[$i]} (delete) ==="
-        bash "$ATLAS_ROOT/commands/k3s/deploy.sh" "${COMPONENTS[$i]}" delete
+        bash "$INFRA_ROOT/commands/k3s/deploy.sh" "${COMPONENTS[$i]}" delete
     done
     exit 0
 fi
 
 for comp in "${COMPONENTS[@]}"; do
     echo "=== $comp ==="
-    bash "$ATLAS_ROOT/commands/k3s/deploy.sh" "$comp" "$MODE"
+    bash "$INFRA_ROOT/commands/k3s/deploy.sh" "$comp" "$MODE"
 done

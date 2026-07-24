@@ -4,7 +4,7 @@
 render_compose_yaml() {
     ensure_envsubst_vars
     mkdir -p "$COMPOSE_STATE_DIR"
-    envsubst "$ENVSUBST_VARS" < "$ATLAS_ROOT/targets/$TARGET/compose/compose.yaml" > "$COMPOSE_STATE_DIR/compose.yaml"
+    envsubst "$ENVSUBST_VARS" < "$INFRA_ROOT/targets/$TARGET/compose/compose.yaml" > "$COMPOSE_STATE_DIR/compose.yaml"
 }
 
 configure_compose_templates() {
@@ -18,7 +18,7 @@ configure_compose_templates() {
             export PROXY_IP
         fi
     fi
-    local template_dir="$ATLAS_ROOT/targets/$target/compose/templates"
+    local template_dir="$INFRA_ROOT/targets/$target/compose/templates"
     [ -d "$template_dir" ] || return 0
 
     declare -A _compose_hooks_run
@@ -63,14 +63,14 @@ list_domains() {
             grep -v '\.localhost'
     }
 
-    if [ -d "$ATLAS_ROOT/targets/$target/k3s" ]; then
-        _extract_hosts --include='*.yaml' "$ATLAS_ROOT/targets/$target/k3s" | \
+    if [ -d "$INFRA_ROOT/targets/$target/k3s" ]; then
+        _extract_hosts --include='*.yaml' "$INFRA_ROOT/targets/$target/k3s" | \
             sed "s/\\\$SERVICES_DOMAIN/${sd}/g" | \
             sort -u
     fi
 
-    if [ -f "$ATLAS_ROOT/targets/$target/compose/compose.yaml" ]; then
-        sed -n 's/.*Host(`\([^`]*\)`).*/\1/p' "$ATLAS_ROOT/targets/$target/compose/compose.yaml" | \
+    if [ -f "$INFRA_ROOT/targets/$target/compose/compose.yaml" ]; then
+        sed -n 's/.*Host(`\([^`]*\)`).*/\1/p' "$INFRA_ROOT/targets/$target/compose/compose.yaml" | \
             sed "s/\\\$SERVICES_DOMAIN/${sd}/g" | \
             sort -u
     fi

@@ -2,7 +2,7 @@
 # DESC: Update K3s node IP after a network change
 set -euo pipefail
 
-source "$ATLAS_ROOT/lib/common.sh"
+source "$INFRA_ROOT/lib/common.sh"
 
 SU="$(get_sudo_cmd)"
 
@@ -40,6 +40,6 @@ echo "Waiting for cluster to be ready..."
 wait_for_k3s_cluster
 
 echo "Re-applying network policies with updated API server subnet..."
-bash "$ATLAS_ROOT/commands/k3s/deploy.sh" namespaces apply
+bash "$INFRA_ROOT/commands/k3s/deploy.sh" namespaces apply
 
 echo "Done. K3s node IP updated to $new_ip."

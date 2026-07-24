@@ -1,10 +1,10 @@
 #!/bin/bash
 # DESC: Install preboot FRPC for remote LUKS unlock via SSH
 set -euo pipefail
-source "$ATLAS_ROOT/lib/common.sh"
+source "$INFRA_ROOT/lib/common.sh"
 
 echo "=== Check if root partition is LUKS-encrypted ==="
-if bash "$ATLAS_ROOT/commands/compose/check_root_luks.sh"; then
+if bash "$INFRA_ROOT/commands/compose/check_root_luks.sh"; then
     echo "LUKS detected. Installing remote unlock..."
     configure_compose_templates "$TARGET"
 

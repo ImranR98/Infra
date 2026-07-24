@@ -2,7 +2,7 @@
 # DESC: Browser-based integration tests for all exposed services
 set -euo pipefail
 
-source "$ATLAS_ROOT/lib/common.sh"
+source "$INFRA_ROOT/lib/common.sh"
 source_env
 
 SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"

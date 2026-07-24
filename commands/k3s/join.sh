@@ -2,7 +2,7 @@
 # DESC: Join a remote node to the cluster via SSH (run from server)
 set -euo pipefail
 
-source "$ATLAS_ROOT/lib/common.sh"
+source "$INFRA_ROOT/lib/common.sh"
 
 CLIENT_IP="${1:?Usage: $0 <client-ip> <ssh-user> [agent|server]}"
 SSH_USER="${2:?Usage: $0 <client-ip> <ssh-user> [agent|server]}"
@@ -38,8 +38,8 @@ SERVER_URL="${1:?}"
 TOKEN="${2:?}"
 ROLE="${3:-agent}"
 
-ATLAS_ROOT="$(cd "$(dirname "$0")" && pwd)"
-source "$ATLAS_ROOT/lib/common.sh"
+INFRA_ROOT="$(cd "$(dirname "$0")" && pwd)"
+source "$INFRA_ROOT/lib/common.sh"
 
 if [ "$(id -u)" != 0 ]; then
     SU=$(get_sudo_cmd)
@@ -75,10 +75,10 @@ ENDSCRIPT
 echo "Syncing files to client..."
 ssh "${SSH_USER}@${CLIENT_IP}" "mkdir -p /tmp/lib" 2>/dev/null
 rsync -az "$installer" "${SSH_USER}@${CLIENT_IP}:/tmp/agent-install.sh"
-rsync -az "$ATLAS_ROOT/lib/common.sh" "${SSH_USER}@${CLIENT_IP}:/tmp/lib/"
+rsync -az "$INFRA_ROOT/lib/common.sh" "${SSH_USER}@${CLIENT_IP}:/tmp/lib/"
 
 ssh -t "${SSH_USER}@${CLIENT_IP}" \
-    "ATLAS_INTERACTIVE=true bash /tmp/agent-install.sh '${SERVER_URL}' '${TOKEN}' '${ROLE}'"
+    "INFRA_INTERACTIVE=true bash /tmp/agent-install.sh '${SERVER_URL}' '${TOKEN}' '${ROLE}'"
 
 echo "Cleaning up client..."
 ssh "${SSH_USER}@${CLIENT_IP}" "rm -rf /tmp/lib /tmp/agent-install.sh" 2>/dev/null || true

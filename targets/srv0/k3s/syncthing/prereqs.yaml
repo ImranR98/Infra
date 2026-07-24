@@ -6,7 +6,7 @@ metadata:
   labels:
     auto-backup: "true"
   annotations:
-    backup.atlas/exclude: "index-*.db index-v2"
+    backup.infra/exclude: "index-*.db index-v2"
 spec:
   accessModes:
     - ReadWriteOnce

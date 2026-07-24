@@ -8,7 +8,7 @@ Infra uses [Renovate](https://docs.renovatebot.com/) to automatically discover a
 renovate.json config
     │
     ▼
-./atlas.sh <target> update
+./infra.sh <target> update
     │
     ├── npx renovate (local mode)  →  debug JSON log
     │                                        │
@@ -45,7 +45,7 @@ Floating tags (`latest`, `stable`, `release`) are pinned to digests via `pinDige
 ## The update command
 
 ```bash
-./atlas.sh <target> update [--dry-run]
+./infra.sh <target> update [--dry-run]
 ```
 
 ### Step 1: Renovate scan
@@ -90,7 +90,7 @@ image: another/image:v1.2.3                    ← full auto-update
 After running `update`:
 
 1. Review changes: `git diff`
-2. Validate: `./atlas.sh <target> validate`
+2. Validate: `./infra.sh <target> validate`
 3. Test the deployment if possible
 4. Commit the changes
 

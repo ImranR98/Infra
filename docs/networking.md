@@ -44,7 +44,7 @@ The `wireguard` command installs WireGuard tools and deploys a config file.
 ### Installation
 
 ```bash
-./atlas.sh <target> wireguard <path-to-wireguard-conf>
+./infra.sh <target> wireguard <path-to-wireguard-conf>
 ```
 
 This:
@@ -117,7 +117,7 @@ FRP uses mutual TLS (mTLS) for authentication. A per-pair CA issues client and s
 
 ### Certificate generation
 
-Use `./atlas.sh <client-target> compose generate-frp-certs <server-target>` to generate certificates for a client↔server pair. The command outputs copy-paste blocks for the VARS files of both targets. See `commands/compose/generate-frp-certs.sh`.
+Use `./infra.sh <client-target> compose generate-frp-certs <server-target>` to generate certificates for a client↔server pair. The command outputs copy-paste blocks for the VARS files of both targets. See `commands/compose/generate-frp-certs.sh`.
 
 ### Health checks
 

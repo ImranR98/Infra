@@ -2,7 +2,7 @@
 
 ## The dispatch system
 
-`atlas.sh` delegates all command routing to `atlas_dispatch()` in `lib/dispatch.sh`. This function takes the remaining arguments after the target name and resolves them to an executable script.
+`infra.sh` delegates all command routing to `infra_dispatch()` in `lib/dispatch.sh`. This function takes the remaining arguments after the target name and resolves them to an executable script.
 
 ### Resolution order
 
@@ -26,7 +26,7 @@ Both `.sh` (bash) and `.py` (python3) scripts are supported. Bash scripts must b
 
 ### Built-in commands
 
-Two commands bypass the script resolution entirely and are handled directly in `atlas_dispatch()`:
+Two commands bypass the script resolution entirely and are handled directly in `infra_dispatch()`:
 
 - **`validate`** — runs YAML validation, kustomize build checks, variable reference checks
 - **`list-domains`** — extracts all `Host(...)` domains from IngressRoutes and Compose rules
@@ -43,7 +43,7 @@ If no matching script is found, or if the user provides no arguments, a help scr
 
 Every command script:
 1. Is sourced/executed with the remaining CLI arguments
-2. Has access to `$ATLAS_ROOT`, `$TARGET`, and all variables from `VARS.<target>.sh`
+2. Has access to `$INFRA_ROOT`, `$TARGET`, and all variables from `VARS.<target>.sh`
 3. Sources `lib/common.sh` if it needs shared functions
 4. Uses `get_sudo_cmd()` when root privileges are needed
 
@@ -91,7 +91,7 @@ The second line of each `.sh` command file starts with `# DESC:` followed by a h
    #!/bin/bash
    # DESC: Short description of what it does
    set -euo pipefail
-   source "$ATLAS_ROOT/lib/common.sh"
+   source "$INFRA_ROOT/lib/common.sh"
    ```
 3. At the end, `exec` the script with `"$@"` to receive remaining arguments
 

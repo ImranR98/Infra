@@ -2,7 +2,7 @@
 # DESC: Restore PVCs from backup archives — single by name, or mass via --all.
 set -euo pipefail
 
-source "$ATLAS_ROOT/lib/common.sh"
+source "$INFRA_ROOT/lib/common.sh"
 
 # Allow CronJob pod to bypass source_env (vars already in environment).
 if [ -z "${PVC_BACKUP_DIR:-}" ]; then

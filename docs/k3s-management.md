@@ -56,10 +56,10 @@ apps:
 Commands:
 
 ```bash
-./atlas.sh <target> k3s group base apply      # Deploy infra in order
-./atlas.sh <target> k3s group base initial    # Bootstrap with IGNORE INITIALLY
-./atlas.sh <target> k3s group apps delete     # Tear down apps (reverse order)
-./atlas.sh <target> k3s group base delete     # Then infra (reverse order)
+./infra.sh <target> k3s group base apply      # Deploy infra in order
+./infra.sh <target> k3s group base initial    # Bootstrap with IGNORE INITIALLY
+./infra.sh <target> k3s group apps delete     # Tear down apps (reverse order)
+./infra.sh <target> k3s group base delete     # Then infra (reverse order)
 ```
 
 Deploy order = listed order. Delete order = reverse. Deleting base refuses to proceed if any Bound PVCs still exist.
@@ -75,7 +75,7 @@ Runs before manifests hit the cluster. Used for pre-creating prerequisites that 
 Runs after apply. Most commonly waits for CRDs to become established via the Infra helper:
 
 ```bash
-source "$ATLAS_ROOT/lib/common.sh"
+source "$INFRA_ROOT/lib/common.sh"
 wait_for_crds 150 middlewares.traefik.io ingressroutes.traefik.io
 ```
 
@@ -100,10 +100,10 @@ Runs before the standard deletion pipeline. The standard pipeline deletes HelmCh
 ## Node management commands
 
 ```
-./atlas.sh <target> k3s setup                  # Bootstrap control-plane
-./atlas.sh <target> k3s join <ip> <user>       # Join agent node (default)
-./atlas.sh <target> k3s join <ip> <user> server  # Join additional control-plane node
-./atlas.sh <target> k3s update-node-ip         # Reconfigure after IP change
+./infra.sh <target> k3s setup                  # Bootstrap control-plane
+./infra.sh <target> k3s join <ip> <user>       # Join agent node (default)
+./infra.sh <target> k3s join <ip> <user> server  # Join additional control-plane node
+./infra.sh <target> k3s update-node-ip         # Reconfigure after IP change
 ```
 
 **`setup`** — Downloads the K3s installer (with SHA256 verification against GitHub), writes config drop-ins (node IP auto-detected, SELinux on, node labels set), then runs the installer. Creates a `kubectl` group and configures the firewall.
@@ -129,7 +129,7 @@ The `pvc-backup` component in the `apps` group runs a nightly CronJob at 3AM. Fo
 
 Workloads are NOT scaled down — the backup captures live running state.
 
-Backups are stored at `$PVC_BACKUP_DIR/<pvc-name>.tar.gz` (at `$ATLAS_ROOT/k3s_state_backups/`, gitignored). The filename is constant — each run overwrites the previous copy.
+Backups are stored at `$PVC_BACKUP_DIR/<pvc-name>.tar.gz` (at `$INFRA_ROOT/k3s_state_backups/`, gitignored). The filename is constant — each run overwrites the previous copy.
 
 Manual trigger (zero code duplication):
 ```bash
@@ -139,7 +139,7 @@ kubectl create job backup-manual --from=cronjob/pvc-backup -n apps
 ### Restore
 
 ```bash
-./atlas.sh <target> k3s restore-pvc <pvc-name> [-y]
+./infra.sh <target> k3s restore-pvc <pvc-name> [-y]
 ```
 
 The restore script:

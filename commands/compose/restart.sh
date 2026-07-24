@@ -1,7 +1,7 @@
 #!/bin/bash
 # DESC: Restart a specific Compose service
 set -euo pipefail
-source "$ATLAS_ROOT/lib/common.sh"
+source "$INFRA_ROOT/lib/common.sh"
 
 SVC="${1:-}"
 if [ -z "$SVC" ]; then

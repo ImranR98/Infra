@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 
-source "$ATLAS_ROOT/lib/common.sh"
+source "$INFRA_ROOT/lib/common.sh"
 
 echo "Waiting for Longhorn CRDs..."
 wait_for_crds 300 \

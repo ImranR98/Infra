@@ -3,7 +3,7 @@
 # NOTE: Does NOT scale down workloads — backup captures live running state.
 set -euo pipefail
 
-source "$ATLAS_ROOT/lib/common.sh"
+source "$INFRA_ROOT/lib/common.sh"
 
 # Allow CronJob pod to bypass source_env (vars already in environment).
 if [ -z "${PVC_BACKUP_DIR:-}" ]; then
@@ -68,7 +68,7 @@ TIMESTAMP=$(date -Iseconds)
 echo ""
 echo "Backing up $PVC_NS/$PVC_NAME..."
 
-EXCLUDE=$(kubectl get pvc "$PVC_NAME" -n "$PVC_NS" -o jsonpath='{.metadata.annotations.backup\.atlas/exclude}' 2>/dev/null || echo "")
+EXCLUDE=$(kubectl get pvc "$PVC_NAME" -n "$PVC_NS" -o jsonpath='{.metadata.annotations.backup\.infra/exclude}' 2>/dev/null || echo "")
 
 pvc_backup_data "$PVC_NAME" "$PVC_NS" "$PVC_BACKUP_DIR" "${PVC_NAME}.tar.gz" "$TIMESTAMP" "$EXCLUDE" \
     || { echo "Backup failed." >&2; exit 1; }

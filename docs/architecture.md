@@ -2,13 +2,13 @@
 
 ## Overview
 
-Infra is a single-repo infrastructure-as-code system where one CLI entry point (`atlas.sh`) dispatches commands against named machines ("targets"). There is no build step, no compilation, no server-side agent. Everything runs from shell scripts invoked on the machine being managed.
+Infra is a single-repo infrastructure-as-code system where one CLI entry point (`infra.sh`) dispatches commands against named machines ("targets"). There is no build step, no compilation, no server-side agent. Everything runs from shell scripts invoked on the machine being managed.
 
 ```
-User runs:  ./atlas.sh <target> <command> [args...]
+User runs:  ./infra.sh <target> <command> [args...]
                               │
                               ▼
-                    atlas.sh entry point
+                    infra.sh entry point
                               │
               ┌───────────────┼───────────────┐
               ▼               ▼               ▼
@@ -32,7 +32,7 @@ User runs:  ./atlas.sh <target> <command> [args...]
 
 | Directory | Purpose |
 |-----------|---------|
-| `atlas.sh` | Main CLI entry point. Sets up environment, sources libraries, dispatches commands. |
+| `infra.sh` | Main CLI entry point. Sets up environment, sources libraries, dispatches commands. |
 | `lib/` | Shared library code. `common.sh` has reusable functions; `dispatch.sh` has the command router. |
 | `commands/` | Global command implementations. Shared across all targets. |
 | `targets/` | Per-machine configuration. Each subdirectory is one target with its Compose and/or K3s definitions. |
@@ -41,7 +41,7 @@ User runs:  ./atlas.sh <target> <command> [args...]
 
 ## The dispatch system
 
-`atlas_dispatch()` in `lib/dispatch.sh` is the core routing engine. It resolves a command string like `compose install` to an executable script by searching two directories in order:
+`infra_dispatch()` in `lib/dispatch.sh` is the core routing engine. It resolves a command string like `compose install` to an executable script by searching two directories in order:
 
 1. **Target-specific override:** `targets/<target>/commands/<path>/<cmd>.sh`
 2. **Global default:** `commands/<path>/<cmd>.sh`
@@ -71,17 +71,17 @@ Template files (*.secret, *.plain) under `compose/templates/` are rendered into 
 
 ## Execution flow
 
-1. `atlas.sh` starts, sets `ATLAS_ROOT`, detects interactive mode, validates the target exists
-2. Sources `lib/common.sh` (guarded against double-loading via `ATLAS_LIB_LOADED`)
+1. `infra.sh` starts, sets `INFRA_ROOT`, detects interactive mode, validates the target exists
+2. Sources `lib/common.sh` (guarded against double-loading via `INFRA_LIB_LOADED`)
 3. Looks for `VARS.<target>.sh` — sources it, computes `ENVSUBST_VARS` (skipped for `compose generate-frp-certs`)
 4. Checks Docker availability if the command is `compose` or `k3s` (skipped for `backup-state` and `generate-frp-certs` subcommands)
-5. Sources `lib/dispatch.sh` and calls `atlas_dispatch()` with remaining arguments
-6. `atlas_dispatch()` finds and executes the matching script
+5. Sources `lib/dispatch.sh` and calls `infra_dispatch()` with remaining arguments
+6. `infra_dispatch()` finds and executes the matching script
 
 ## File conventions
 
 - `# DESC:` — the second line of each command script is a description shown in `--help`
-- `ATLAS_ROOT` — absolute path to the repo root, always available
+- `INFRA_ROOT` — absolute path to the repo root, always available
 - `TARGET` — name of the current target, always available
 - `COMPOSE_STATE_DIR` — where rendered Compose files live at runtime
 - `COMPOSE_STATE_BACKUP_DIR` — path for Compose state backups

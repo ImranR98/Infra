@@ -11,7 +11,7 @@ import os
 import sys
 from pathlib import Path
 
-ATLAS_ROOT = Path(os.environ.get("ATLAS_ROOT", ".")).resolve()
+INFRA_ROOT = Path(os.environ.get("INFRA_ROOT", ".")).resolve()
 
 
 def _parse_flag(flag):
@@ -28,7 +28,7 @@ def _has_flag(flag):
 
 
 def _apply_file(package_file, deps, dry_run=False):
-    fpath = ATLAS_ROOT / package_file
+    fpath = INFRA_ROOT / package_file
     if not fpath.exists():
         print(f"  WARNING: {package_file} not found, skipping")
         return

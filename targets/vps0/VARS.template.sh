@@ -51,7 +51,7 @@ export SHLINK_API_KEY="change_me" # openssl rand -hex 32
 export GEOLITE_LICENSE_KEY="" # (optional, see Shlink docs)
 
 # ====== FRP ======
-# Generate with: ./atlas.sh srv0 compose generate-frp-certs vps0
+# Generate with: ./infra.sh srv0 compose generate-frp-certs vps0
 export FRP_CA_CERT="change_me" # PEM-encoded CA certificate for this FRP pair
 export FRP_SERVER_CERT="change_me" # PEM-encoded server certificate
 export FRP_SERVER_KEY="change_me" # PEM-encoded server private key

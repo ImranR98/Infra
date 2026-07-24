@@ -3,7 +3,7 @@
 #       Idempotent — skips if OAuth is already configured.
 set -euo pipefail
 
-source "$ATLAS_ROOT/lib/common.sh"
+source "$INFRA_ROOT/lib/common.sh"
 source_env
 
 echo "=== Checking Immich configuration ==="

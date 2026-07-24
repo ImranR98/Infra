@@ -85,7 +85,7 @@ export NEXTCLOUD_DB_PASSWORD="change_me" # openssl rand -hex 16
 
 # ====== FRP ======
 export PROXY_HOST="vps0.example.org"
-# Generate with: ./atlas.sh srv0 compose generate-frp-certs vps0
+# Generate with: ./infra.sh srv0 compose generate-frp-certs vps0
 export FRP_CA_CERT="change_me" # PEM-encoded CA certificate for this FRP pair
 export FRP_CA_KEY="change_me" # PEM-encoded CA private key (keep on operator machine)
 export FRP_CLIENT_CERT="change_me" # PEM-encoded client certificate

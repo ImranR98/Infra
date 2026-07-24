@@ -1,8 +1,8 @@
 #!/bin/bash
 set -euo pipefail
 
-COMP_DIR="$ATLAS_ROOT/targets/$TARGET/k3s/cert-manager"
-source "$ATLAS_ROOT/lib/common.sh"
+COMP_DIR="$INFRA_ROOT/targets/$TARGET/k3s/cert-manager"
+source "$INFRA_ROOT/lib/common.sh"
 
 echo "Waiting for cert-manager CRDs..."
 wait_for_crds 300 certificates.cert-manager.io clusterissuers.cert-manager.io issuers.cert-manager.io

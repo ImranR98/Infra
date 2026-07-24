@@ -68,7 +68,7 @@ The split between `VARS.template.sh` (documentation + validation source) and `VA
 
 ### backup-state remote mode
 
-The remote backup system (SSH into a remote Infra instance, stream tar back over the connection) is a custom shell script workflow. The `ATLAS_BACKUP_STREAM` mode switch is custom.
+The remote backup system (SSH into a remote Infra instance, stream tar back over the connection) is a custom shell script workflow. The `INFRA_BACKUP_STREAM` mode switch is custom.
 
 ### Multi-distro package management
 

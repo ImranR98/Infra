@@ -9,21 +9,21 @@ if [ -z "$COMPONENT" ]; then
     echo "Error: No component specified." >&2
     echo "Usage: $0 <component> [mode]" >&2
     echo "Available components:" >&2
-    for d in "$ATLAS_ROOT/targets/$TARGET/k3s"/*/; do
+    for d in "$INFRA_ROOT/targets/$TARGET/k3s"/*/; do
         [ -d "$d" ] || continue
         printf '  %s\n' "$(basename "$d")"
     done
     exit 1
 fi
 
-COMPONENT_DIR="$ATLAS_ROOT/targets/$TARGET/k3s/$COMPONENT"
+COMPONENT_DIR="$INFRA_ROOT/targets/$TARGET/k3s/$COMPONENT"
 
 if [ ! -d "$COMPONENT_DIR" ]; then
     echo "Error: Unknown component '$COMPONENT'" >&2
     exit 1
 fi
 
-source "$ATLAS_ROOT/lib/common.sh"
+source "$INFRA_ROOT/lib/common.sh"
 source_env
 ensure_envsubst_vars
 
