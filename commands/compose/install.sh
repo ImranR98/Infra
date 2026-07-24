@@ -7,7 +7,7 @@ ensure_envsubst_vars
 render_compose_yaml
 
 # Create host volume dirs from compose.yaml (parent dir for files, full path for dirs).
-yq -r '.services[] | select(.volumes) | .volumes[] | (.source? // .) | split(":") | .[0]' "$COMPOSE_STATE_DIR/compose.yaml" | grep -F "^$COMPOSE_STATE_DIR" | while read -r host_path; do
+yq -r '.services[] | select(.volumes) | .volumes[] | (.source? // .) | split(":") | .[0]' "$COMPOSE_STATE_DIR/compose.yaml" | grep "^$COMPOSE_STATE_DIR" | while read -r host_path; do
 name="$(basename "$host_path")"
 if [[ "$name" =~ \.[a-zA-Z0-9]{1,5}$ ]]; then
     mkdir -p "$(dirname "$host_path")"
