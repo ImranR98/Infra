@@ -20,6 +20,7 @@ spec:
     podSecurityContext: {}
     securityContext:
       allowPrivilegeEscalation: false
+      privileged: true
     persistence:
       enabled: true
       existingClaim: homeassistant-config-pvc

@@ -20,6 +20,7 @@ spec:
       securityContext:
         runAsUser: $MY_UID
         runAsGroup: $MY_UID
+        fsGroup: $MY_UID
       containers:
         - name: syncthing
           image: syncthing/syncthing:2.1.2
