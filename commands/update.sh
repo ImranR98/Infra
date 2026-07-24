@@ -46,7 +46,7 @@ $RENOVATE_BIN \
     --onboarding=false \
     > "$_RENOVATE_LOG" 2>&1 || true
 
-_APPLY_PY="$ATLAS_ROOT/commands/_apply_updates.py"
+_APPLY_PY="$ATLAS_ROOT/commands/_internal/_apply_updates.py"
 _TARGET_FLAG="--target=$TARGET"
 if [ "$DRY_RUN" = true ]; then
     _APPLY_OUT=$(python3 "$_APPLY_PY" --dry-run "$_TARGET_FLAG" < "$_RENOVATE_LOG")

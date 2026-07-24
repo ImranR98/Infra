@@ -45,7 +45,7 @@ The template serves as:
 The variable list `ENVSUBST_VARS` controls which variables envsubst expands. It's built by `get_envsubst_vars()`, which collects:
 
 - All `export`ed variables from the real vars file
-- Built-in variables: `MY_UID`, `TARGET`, `COMPOSE_STATE_DIR`, `COMPOSE_STATE_BACKUP_DIR`, `K3S_STATE_DIR`, `PVC_BACKUP_DIR`
+- Built-in variables: `ATLAS_ROOT`, `MY_UID`, `TARGET`, `COMPOSE_STATE_DIR`, `COMPOSE_STATE_BACKUP_DIR`, `K3S_STATE_DIR`, `PVC_BACKUP_DIR`
 - `DOCKER_GID` and `PROXY_IP` (when applicable)
 
 The final format is a space-separated list with `$` prefixes: `$VAR1 $VAR2 $VAR3...`. This is passed to `envsubst` so that only known variables are expanded — any `$OTHER` reference left over after rendering indicates a missing variable, which validation catches.
@@ -67,18 +67,16 @@ envsubst "$ENVSUBST_VARS" < compose.yaml > $COMPOSE_STATE_DIR/compose.yaml
 | Extension | Behavior |
 |-----------|----------|
 | `*.plain` | Copied as-is, no envsubst. Stripped of `.plain` suffix. |
-| `*.secret` | Rendered via envsubst, then `chmod 600`. Stripped of `.secret` suffix. |
-| `authelia/*` | Special handling for first-time deployment (see below). |
-| `traefik/*` | Rendered via envsubst. Creates empty `acme.json` if missing. |
+| `*.secret` | Rendered via envsubst, then `chmod 600`. Stripped of `.secret` suffix. Has `# IGNORE INITIALLY` bootstrap on first render (see below). |
 | `*` (other) | Rendered via envsubst with standard behavior. |
 
-### Authelia first-time handling
+### `# IGNORE INITIALLY` bootstrap
 
-Authelia configuration files have a special bootstrap mode. On first render (when the destination file doesn't exist yet), lines ending with `# IGNORE INITIALLY` are commented out. This prevents Authelia from failing on missing dependencies during initial deployment. On subsequent renders, all lines are included.
+All `.secret` files support first-time bootstrap. On the very first render (destination doesn't exist yet), lines ending with `# IGNORE INITIALLY` are commented out. This prevents services from failing on missing dependencies during initial deployment. On subsequent renders, all lines are included.
 
-### `acme.json` initialization
+### Per-component `prep.sh` hooks
 
-For Traefik's Let's Encrypt certificate storage, a seed `{}` JSON file is created if one doesn't exist, with `chmod 600`.
+Each component directory under `templates/` can include a `prep.sh` script. `configure_compose_templates()` runs these hooks before rendering the component's templates. This is where component-specific initialization lives — for example, Authelia's `prep.sh` handles `users_database.yml` creation, and Traefik's `prep.sh` seeds an empty `acme.json` with `chmod 600` for Let's Encrypt.
 
 ## K3s variable expansion
 
@@ -124,11 +122,19 @@ Known variables include:
 | `ATLAS_INTERACTIVE` | Detected from stdin | `true` if running in a terminal |
 | `TARGET` | CLI argument | Name of current target |
 | `COMPOSE_STATE_DIR` | Hardcoded | Path to rendered Compose state |
-| `K3S_STATE_DIR` | Hardcoded | Path for K3s NFS-backed persistent storage |
+| `COMPOSE_STATE_BACKUP_DIR` | Hardcoded | Path for Compose state backups |
+| `K3S_STATE_DIR` | Hardcoded | Path for K3s persistent storage (Longhorn) |
 | `PVC_BACKUP_DIR` | Hardcoded | Path for K3s PVC backup archives |
 | `MY_UID` | `id -u` | Current user's UID (1000 if root) |
 | `DOCKER_GID` | `getent group docker` | Docker group GID |
+| `PROXY_IP` | Resolved from `PROXY_HOST` | IP address of the FRP proxy server |
 
 ### `MY_UID` behavior
 
 When running as root (e.g., in a systemd service), `MY_UID` is forced to `1000`. Otherwise it reflects the actual user's UID. This is used for file ownership in bind-mounted Compose volumes.
+
+### `*_HASHABLE` → `*_HASHED` auto-hashing
+
+Variables ending in `_HASHABLE` are automatically hashed to a corresponding `_HASHED` variable using `openssl passwd -6` (SHA-512 `$6$` format). This is used for generating password hashes from cleartext secrets at variable-load time, without storing the hash in plaintext vars files.
+
+For example, if a vars file exports `AUTHELIA_USERS_DATABASE_HASHABLE` (containing bcrypt-compatible password hashes), the system generates `AUTHELIA_USERS_DATABASE_HASHED` with the SHA-512 equivalent. The template references the `_HASHED` version while the `_HASHABLE` source stays in the secrets file.

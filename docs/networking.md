@@ -74,17 +74,9 @@ PreDown = ip route delete <endpoint>/32 via <gateway>
 
 Without this, WireGuard's own handshake packets would be routed into the tunnel instead of out the physical interface.
 
-### K3s startup ordering
+### Systemd restart resilience
 
-A systemd drop-in ensures WireGuard starts *before* K3s:
-
-```
-# /etc/systemd/system/wg-quick@wg0.service.d/order-before-k3s.conf
-[Unit]
-Before=k3s.service
-```
-
-This guarantees the VPN is up before pods begin DNS resolution and network setup.
+WireGuard is configured with automatic restart via a systemd drop-in (`restart.conf`) that sets `Restart=on-failure` and `RestartSec=15`. This ensures the VPN recovers from transient failures without manual intervention.
 
 ## FRP (Fast Reverse Proxy)
 

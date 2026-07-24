@@ -42,13 +42,15 @@ base:
   - csi-driver-nfs
   - cert-manager
   - traefik
-  # ... more infrastructure
+  - host-volumes
+  - longhorn
+  # ... more infrastructure — see groups.yaml for the full list
 
 apps:
   - pvc-backup
   - immich
   - jellyfin
-  # ... applications
+  # ... more applications — see groups.yaml for the full list
 ```
 
 Commands:
@@ -104,21 +106,15 @@ Runs before the standard deletion pipeline. The standard pipeline deletes HelmCh
 ./atlas.sh <target> k3s update-node-ip         # Reconfigure after IP change
 ```
 
-**`setup`** — Downloads the K3s installer (with SHA256 verification against GitHub), writes config drop-ins (node IP auto-detected, SELinux on, node labels set), runs host preparation scripts (`prep-control-plane.sh` creates the NFS state directory), then runs the installer. Creates a `kubectl` group and configures the firewall.
+**`setup`** — Downloads the K3s installer (with SHA256 verification against GitHub), writes config drop-ins (node IP auto-detected, SELinux on, node labels set), then runs the installer. Creates a `kubectl` group and configures the firewall.
 
-**`join`** — Runs from the control-plane. Reads the cluster token, optionally syncs `prep-control-plane.sh` if joining as a `server`, then installs K3s agent or server via SSH. The optional third argument `[agent|server]` defaults to `agent`.
+**`join`** — Runs from the control-plane. Reads the cluster token, then installs K3s agent or server via SSH. The optional third argument `[agent|server]` defaults to `agent`.
 
 **`update-node-ip`** — Detects the node's new IP, writes a config drop-in, restarts K3s, and re-applies network policies. Uses the shared `wait_for_k3s_cluster()` helper from common.sh.
 
-## Host preparation scripts
-
-Atlas includes reusable host preparation scripts that run on every node during setup/join, BEFORE K3s starts.
-
-**`prep-control-plane.sh`** — Runs on control-plane nodes only. Creates the K3s NFS state directory (`$K3S_STATE_DIR`) and pre-creates subdirectories for all persistent volumes discovered by scanning `prereqs.yaml` files. Idempotent — safe to re-run.
-
 ## Storage
 
-All persistent volumes use NFS-backed CSI PVs served by the on-cluster NFS server. Data lives at `$K3S_STATE_DIR` on the host filesystem. See `prep-control-plane.sh` for the setup script.
+Persistent volumes use Longhorn (local block storage) as the primary storage backend. The cluster also retains an NFS server and CSI driver for workloads not yet migrated. Data lives at `$K3S_STATE_DIR` on the host filesystem.
 
 ## PVC backup and restore
 
@@ -127,10 +123,11 @@ A CronJob backs up labeled PVCs to the host filesystem. Restore is a separate At
 ### Backup
 
 The `pvc-backup` component in the `apps` group runs a nightly CronJob at 3AM. For each PVC labeled `auto-backup: "true"`, it:
-1. Scales down all workloads referencing the PVC
-2. Creates a temporary pod that mounts the PVC and a hostPath backup destination
-3. Archives the PVC contents as a `.tar.gz` (with a `timestamp.txt` inside)
-4. Deletes the temp pod and scales workloads back up
+1. Creates a temporary pod that mounts the PVC and a hostPath backup destination
+2. Archives the PVC contents as a `.tar.gz` (with a `timestamp.txt` inside)
+3. Deletes the temp pod
+
+Workloads are NOT scaled down — the backup captures live running state.
 
 Backups are stored at `$PVC_BACKUP_DIR/<pvc-name>.tar.gz` (at `$ATLAS_ROOT/k3s_state_backups/`, gitignored). The filename is constant — each run overwrites the previous copy.
 

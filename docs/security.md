@@ -138,8 +138,8 @@ In a default K3s deployment, HelmChart CR access is restricted to cluster-admin 
 
 Affected charts: authelia (Redis password, DB password, encryption key, OIDC HMAC secret, JWKS key, OIDC client secrets), crowdsec (LAPI secret).
 
-## NFS storage security
+## Storage security
 
-K3s persistent volumes use NFSv4 served by the on-cluster NFS server. NFSv4 traffic between pods and the NFS server traverses the pod network. On a single-node cluster, this traffic stays on localhost — no network exposure. On multi-node clusters, NFS I/O traverses the network in cleartext.
+Most K3s persistent volumes use **Longhorn** (local block storage), which stores data directly on the host's filesystem at `$K3S_STATE_DIR` without network exposure. The cluster also retains an NFS server and CSI driver for workloads not yet migrated to Longhorn.
 
-Mitigations for multi-node deployments: use an isolated storage VLAN between nodes, deploy WireGuard tunnels between storage nodes, or use Flannel WireGuard backend (configured via `flannel-backend: wireguard` in K3s config) which encrypts all pod-to-pod traffic across nodes automatically — including NFS I/O.
+For remaining NFS workloads on multi-node deployments: use an isolated storage VLAN between nodes, deploy WireGuard tunnels between storage nodes, or use Flannel WireGuard backend (configured via `flannel-backend: wireguard-native` in K3s config) which encrypts all pod-to-pod traffic across nodes automatically — including NFS I/O.

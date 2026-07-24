@@ -73,8 +73,8 @@ Template files (*.secret, *.plain) under `compose/templates/` are rendered into 
 
 1. `atlas.sh` starts, sets `ATLAS_ROOT`, detects interactive mode, validates the target exists
 2. Sources `lib/common.sh` (guarded against double-loading via `ATLAS_LIB_LOADED`)
-3. Looks for `VARS.<target>.sh` — sources it, computes `ENVSUBST_VARS`
-4. Checks Docker availability if the command is `compose` or `k3s`
+3. Looks for `VARS.<target>.sh` — sources it, computes `ENVSUBST_VARS` (skipped for `compose generate-frp-certs`)
+4. Checks Docker availability if the command is `compose` or `k3s` (skipped for `backup-state` and `generate-frp-certs` subcommands)
 5. Sources `lib/dispatch.sh` and calls `atlas_dispatch()` with remaining arguments
 6. `atlas_dispatch()` finds and executes the matching script
 
@@ -84,8 +84,9 @@ Template files (*.secret, *.plain) under `compose/templates/` are rendered into 
 - `ATLAS_ROOT` — absolute path to the repo root, always available
 - `TARGET` — name of the current target, always available
 - `COMPOSE_STATE_DIR` — where rendered Compose files live at runtime
+- `COMPOSE_STATE_BACKUP_DIR` — path for Compose state backups
 - `PVC_BACKUP_DIR` — path for K3s PVC backup archives
-- `K3S_STATE_DIR` — path for K3s NFS-backed persistent storage
+- `K3S_STATE_DIR` — path for K3s persistent storage (Longhorn-backed)
 - `ENVSUBST_VARS` — space-separated list of `$VARIABLE` names for envsubst
 - `.secret` — file extension marking templates that should be rendered with restricted permissions
 - `.plain` — file extension marking templates that should be copied verbatim without envsubst
@@ -136,4 +137,4 @@ All memory and storage sizes follow a small set of preset tiers. Every service i
 | small | 5Gi | All small-payload PVCs (databases, config, small app data) |
 | medium | 50Gi | Immich library (metadata cache, thumbnails) |
 | large | 200Gi | Ollama models, Send file uploads |
-| 4Ti | 4096Gi | All NFS/hostPath volumes (media libraries, device sync, backups) |
+| 4Ti | 4096Gi | All persistent volumes (Longhorn-backed, with NFS retained as fallback) |

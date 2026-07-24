@@ -21,15 +21,13 @@ Files under `compose/templates/` use extension suffixes to control how they're r
 | `*.plain` | Copied verbatim, no envsubst. Suffix stripped. For files that must not have variable expansion. |
 | Everything else | envsubst only. |
 
-### Authelia first-time bootstrap
+### `# IGNORE INITIALLY` bootstrap pattern
 
-Authelia configs in `templates/authelia/` get special handling. On the very first render (destination doesn't exist yet), lines ending with `# IGNORE INITIALLY` are commented out. This prevents Authelia from failing on missing dependencies during initial setup. On subsequent renders, all lines are included.
+All `.secret` template files support first-time bootstrap. On the very first render (destination doesn't exist yet), lines ending with `# IGNORE INITIALLY` are commented out. This prevents services from failing on missing dependencies during initial setup. On subsequent renders, all lines are included. This is commonly used for Authelia configuration.
 
-The `$AUTHELIA_USERS_DATABASE` variable is also written directly to a separate `users_database.yml` file.
+### Per-component `prep.sh` hooks
 
-### `acme.json` seeding
-
-The Traefik subdirectory gets an initial `acme.json` with content `{}` and `chmod 600` if the file doesn't exist yet. This is needed for Let's Encrypt certificate storage.
+Each component under `templates/` can include a `prep.sh` that runs before template rendering. This is where component-specific initialization lives — for example, Traefik's `prep.sh` seeds an empty `acme.json` with `chmod 600` for Let's Encrypt certificate storage, and Authelia's `prep.sh` handles `users_database.yml` creation.
 
 ## `compose install`
 

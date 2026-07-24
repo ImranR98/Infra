@@ -33,6 +33,20 @@ A VPS running a Docker Compose stack of public-facing web services and the FRP s
 - **Orchestrator:** Docker Compose
 - **Services:** Traefik reverse proxy, FRP server (frps), Authelia SSO, Plausible analytics, socket-proxy (Docker socket security), Watchtower auto-updater, Shlink URL shortener, Uptime Kuma, metube, ISBN lookup, PixelNtfy, Syncthing relay server, logtfy
 
+### pc0 — Desktop PC (streaming)
+
+A desktop PC running a Docker Compose stack for Owncast live streaming with FRP tunneling.
+
+- **Orchestrator:** Docker Compose
+- **Services:** Traefik reverse proxy, FRPC sidecar (tunnels through vps1), Owncast streaming server, Docker socket proxy
+
+### vps1 — Secondary edge VPS + FRP server
+
+A VPS running a Docker Compose stack with an FRP server dedicated to the pc0 tunnel.
+
+- **Orchestrator:** Docker Compose
+- **Services:** Traefik reverse proxy, FRP server (frps), hello (placeholder service)
+
 ## Target configuration patterns
 
 ### Variable templates
