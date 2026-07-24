@@ -6,7 +6,7 @@ retry() {
     local delay="${2:-5}"
     shift 2
     for _ in $(seq 1 "$tries"); do
-        eval "$*" 2>/dev/null && return 0
+        eval "$@" 2>/dev/null && return 0
         sleep "$delay"
     done
     return 1
