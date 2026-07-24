@@ -368,16 +368,15 @@ The culprit was `monitoring/logtfy`, a Python-based log monitoring service.
 Its `asyncio` event loop defaulted to io_uring, which SELinux on Fedora 44
 doesn't allow for containers.
 
-**Fix:** Add the `PYTHON_IO_URING` environment variable to the deployment:
+**Fix:** Add a runtime environment variable to disable io_uring in the
+application's I/O library:
 
-```yaml
-env:
-  - name: PYTHON_IO_URING
-    value: "0"
-```
+| Runtime | Env var | Effect |
+|---------|---------|--------|
+| Python (asyncio) | `PYTHON_IO_URING=0` | Falls back to `epoll` |
+| Node.js / Deno (libuv) | `UV_USE_IO_URING=0` | Falls back to `epoll` |
 
-This tells Python's `asyncio` to use the older `epoll` backend instead of
-io_uring. No SELinux policy changes needed, no system-level modifications,
+No SELinux policy changes needed, no system-level modifications,
 no new packages.
 
 ---
@@ -439,7 +438,8 @@ sudo ausearch -m avc --start recent | wc -l  # see how many denials it's process
 | `mosquitto/mosquitto.yaml` | Added `fsGroup: 1883` to pod securityContext | Kubelet chowns the Longhorn volume root so mosquitto (UID 1883) can write its data on first start |
 | `navidrome/navidrome.yaml` | Added `fsGroup: $MY_UID` to pod securityContext | Same — kubelet chowns the volume root for navidrome |
 | `gokapi/gokapi.yaml` | Set explicit `command: [/sbin/tini, --, /app/run.sh]` and added `GOKAPI_DEPLOYMENT_PASSWORD` to VARS | Fresh Longhorn data PVC needed a deployment password for one-time init; the `tini` entrypoint override was needed because the Docker image uses `tini` as ENTRYPOINT without `CMD` |
-| `logtfy/logtfy.yaml` | Added `PYTHON_IO_URING: "0"` env var | Prevents `asyncio` io_uring SELinux denials from an unrelated policy gap |
+| `logtfy/logtfy.yaml` | Added `PYTHON_IO_URING: "0"` env var | Prevents Python `asyncio` io_uring SELinux denials |
+| `dscpln/dscpln.yaml` | Added `UV_USE_IO_URING: "0"` env var | Prevents Node.js libuv io_uring SELinux denials |
 | `lib/env.sh` | Added `ATLAS_ROOT` to `get_envsubst_vars()` | Needed for the new CronJob YAML that mounts `$ATLAS_ROOT` |
 | 15 `*/prereqs.yaml` files | Converted NFS PV+PVC pairs to Longhorn PVCs (dynamic provisioning) | All state moved from NFS to Longhorn; static PV blocks removed |
 
