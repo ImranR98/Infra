@@ -49,8 +49,8 @@ fi
 if [ "$vars_found" = true ]; then
     DOCKER_GID="$(getent group docker | cut -d: -f3)" || true
     case "${1:-}" in
-        compose|k3s)
-			if [ -z "$DOCKER_GID" ] && [ "${2:-}" != "backup-state" ] && [ "${2:-}" != "generate-frp-certs" ]; then
+        compose)
+            if [ -z "$DOCKER_GID" ] && [ "${2:-}" != "backup-state" ] && [ "${2:-}" != "generate-frp-certs" ]; then
                 echo "Error: docker group not found. Is Docker installed?" >&2
                 exit 1
             fi
@@ -58,7 +58,7 @@ if [ "$vars_found" = true ]; then
             ;;
     esac
 elif [ -n "${1:-}" ]; then
-    case "$1" in compose|k3s)
+    case "$1" in compose)
         if [ "${2:-}" != "backup-state" ] && [ "${2:-}" != "generate-frp-certs" ]; then
             echo "No VARS.$TARGET.sh or VARS.sh found. Create VARS.$TARGET.sh with variables from targets/$TARGET/VARS.template.sh." >&2
             exit 1
