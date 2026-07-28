@@ -19,16 +19,26 @@ spec:
       - "--entryPoints.web.http.redirections.entryPoint.permanent=true"
       - "--entryPoints.web.http.redirections.entryPoint.priority=10"
 
+      - "--experimental.localPlugins=/plugins-storage"
       - "--experimental.plugins.geoblock.modulename=github.com/PascalMinder/geoblock"
       - "--experimental.plugins.geoblock.version=v0.3.7"
       - "--experimental.plugins.crowdsec-bouncer-traefik-plugin.modulename=github.com/maxlerebourg/crowdsec-bouncer-traefik-plugin"
       - "--experimental.plugins.crowdsec-bouncer-traefik-plugin.version=v1.6.0"
     additionalVolumeMounts:
-      - name: plugins
+      - name: plugins-storage
         mountPath: /plugins-storage
+        subPathExpr: $(POD_NAME)
+    env:
+      - name: POD_NAME
+        valueFrom:
+          fieldRef:
+            fieldPath: metadata.name
     deployment:
       additionalVolumes:
-        - name: plugins
+        - name: plugins-storage
+          hostPath:
+            path: /var/lib/rancher/k3s/agent/traefik-plugins
+            type: DirectoryOrCreate
     ports:
       web:
         port: 80
