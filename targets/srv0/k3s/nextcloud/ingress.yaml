@@ -22,9 +22,19 @@ spec:
     - websecure
     - websecure-proxy
   routes:
+    - match: Host(`nextcloud.$SERVICES_DOMAIN`) && PathPrefix(`/heartbeat`)
+      kind: Rule
+      middlewares:
+        - name: nextcloud-hsts
+          namespace: apps
+      services:
+        - name: nextcloud
+          port: 80
     - match: Host(`nextcloud.$SERVICES_DOMAIN`)
       kind: Rule
       middlewares:
+        - name: nextcloud-hsts
+          namespace: apps
         - name: geoblock
           namespace: base
         - name: crowdsec-bouncer
@@ -36,4 +46,12 @@ spec:
           port: 80
   tls:
     secretName: nextcloud-prod-tls
-
+---
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: nextcloud-hsts
+  namespace: apps
+spec:
+  headers:
+    stsSeconds: 15552000

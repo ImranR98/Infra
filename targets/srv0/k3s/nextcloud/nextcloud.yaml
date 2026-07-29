@@ -59,7 +59,13 @@ spec:
             - name: APACHE_DISABLE_REWRITE_IP
               value: "1"
             - name: TRUSTED_PROXIES
-              value: "10.42.0.0/16, 10.43.0.0/16"
+              value: "127.0.0.1 10.42.0.0/16 10.43.0.0/16 192.168.0.0/16"
+            - name: OVERWRITEPROTOCOL
+              value: "https"
+            - name: OVERWRITECLIURL
+              value: "https://nextcloud.$SERVICES_DOMAIN"
+            - name: NEXTCLOUD_MAINTENANCE_WINDOW_START
+              value: "1"
           volumeMounts:
             - name: nextcloud-data
               mountPath: /var/www/html
