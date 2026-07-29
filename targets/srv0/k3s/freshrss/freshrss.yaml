@@ -16,6 +16,8 @@ spec:
       labels:
         app: freshrss
     spec:
+      securityContext:
+        fsGroup: 33
       containers:
         - name: freshrss
           image: freshrss/freshrss:1.29.1
