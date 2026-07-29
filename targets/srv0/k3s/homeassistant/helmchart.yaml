@@ -48,9 +48,6 @@ spec:
         readOnly: true
       - name: dbus
         mountPath: /run/dbus/system_bus_socket
-    env:
-      - name: AIOHTTP_CLIENT_MAX_SIZE
-        value: "10737418240"
     resources:
       limits:
         memory: 2Gi

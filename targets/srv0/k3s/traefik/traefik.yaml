@@ -18,9 +18,6 @@ spec:
       - "--entryPoints.web.http.redirections.entryPoint.scheme=https"
       - "--entryPoints.web.http.redirections.entryPoint.permanent=true"
       - "--entryPoints.web.http.redirections.entryPoint.priority=10"
-      - "--entryPoints.web.transport.respondingTimeouts.readTimeout=300"
-      - "--entryPoints.websecure.transport.respondingTimeouts.readTimeout=300"
-      - "--entryPoints.websecure-proxy.transport.respondingTimeouts.readTimeout=300"
 
       - "--experimental.plugins.geoblock.modulename=github.com/PascalMinder/geoblock"
       - "--experimental.plugins.geoblock.version=v0.3.7"

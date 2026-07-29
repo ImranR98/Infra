@@ -91,19 +91,6 @@ spec:
   basicAuth:
     secret: cluster-auth-users
 ---
----
-apiVersion: traefik.io/v1alpha1
-kind: Middleware
-metadata:
-  name: no-buffer
-  namespace: base
-spec:
-  buffering:
-    maxRequestBodyBytes: 0
-    maxResponseBodyBytes: 0
-    memRequestBodyBytes: 0
-    memResponseBodyBytes: 0
----
 # IP whitelist for LAN-only routes (Jellyfin LAN access, etc.).
 # Allows direct pod/service traffic from private IP ranges.
 apiVersion: traefik.io/v1alpha1

@@ -22,14 +22,6 @@ spec:
     - websecure
     - websecure-proxy
   routes:
-    - match: Host(`ha.$SERVICES_DOMAIN`) && PathPrefix(`/api/onboarding/backup`)
-      kind: Rule
-      middlewares:
-        - name: no-buffer
-          namespace: base
-      services:
-        - name: homeassistant-home-assistant
-          port: 8080
     - match: Host(`ha.$SERVICES_DOMAIN`)
       kind: Rule
       middlewares:
