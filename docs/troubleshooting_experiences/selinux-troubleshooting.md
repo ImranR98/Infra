@@ -345,7 +345,47 @@ categories. The workload pod then cannot lock them, generating continuous
 backup pod YAML generator (`pvc_backup_pod_yaml()` in `lib/pvc.sh`), just
 as was done for the restore pod.
 
-### 4.7 The io_uring Case (Bonus)
+### 4.7 The HostPath Cross-Pod Denial Pattern
+
+After all Longhorn PVC denials were resolved, a separate pattern remained:
+hostPath volumes under `MAIN_PARENT_DIR` (`/home/imranr/`) were shared
+between multiple pods — Syncthing, MDSCL (three deployments: camera, screenshots,
+screenrecs), and DSCPLN. Each pod mounts the same underlying host directories
+but receives different MCS categories from Kubernetes.
+
+**Symptoms:**
+- Syncthing creates files → DSCPLN can't read them (or vice versa)
+- MDSCL writes files to device sync destination → permissions error on the
+  media-side mount
+- Intermittent `Permission denied` when one pod accesses files created by another
+
+**Root cause:** Unlike Longhorn PVCs (where each pod gets its own volume mount
+and `.so` labels via `fsGroup`), hostPath volumes point to the same filesystem
+inodes. When Pod A (categories `s0:c123,c456`) writes a file, the file carries
+`c123,c456`. When Pod B (categories `s0:c789,c012`) tries to read it, SELinux
+blocks access — same MCS mismatch as the PVC case, but across pods sharing
+one filesystem tree.
+
+**Fix:** Set `seLinuxOptions.level: s0` on the **pod-level** `securityContext`
+for every workload that mounts a hostPath subdirectory under `MAIN_PARENT_DIR`.
+This strips MCS categories from all these pods, so every file they create
+carries `s0` (no categories), readable by any other pod also running at `s0`.
+
+```yaml
+spec:
+  securityContext:
+    runAsUser: $MY_UID
+    runAsGroup: $MY_UID
+    seLinuxOptions:
+      level: s0
+```
+
+**Important:** This only applies to hostPath volumes that are *shared* between
+pods. Single-pod workloads with dedicated volumes don't need this — their MCS
+isolation is beneficial, not harmful. The pattern is: if more than one pod
+reads/writes the same hostPath mount point, unify their SELinux level.
+
+### 4.8 The io_uring Case (Bonus)
 
 After all PVC-related denials were resolved, a smaller set remained:
 
@@ -444,6 +484,8 @@ sudo ausearch -m avc --start recent | wc -l  # see how many denials it's process
 | `gokapi/gokapi.yaml` | Set explicit `command: [/sbin/tini, --, /app/run.sh]` and added `GOKAPI_DEPLOYMENT_PASSWORD` to VARS | Fresh Longhorn data PVC needed a deployment password for one-time init; the `tini` entrypoint override was needed because the Docker image uses `tini` as ENTRYPOINT without `CMD` |
 | `logtfy/logtfy.yaml` | Added `PYTHON_IO_URING: "0"` env var | Prevents Python `asyncio` io_uring SELinux denials |
 | `dscpln/dscpln.yaml` | Added `UV_USE_IO_URING: "0"` env var | Prevents Node.js libuv io_uring SELinux denials |
+| `syncthing/syncthing.yaml` | Added `seLinuxOptions.level: s0` to pod securityContext | HostPath volume under MAIN_PARENT_DIR shared with mdscl/dscpln — all need matching categories |
+| `mdscl/mdscl.yaml` | Added `seLinuxOptions.level: s0` to pod securityContext | Same — shared hostPath volumes with syncthing and dscpln |
 | `lib/env.sh` | Added `INFRA_ROOT` to `get_envsubst_vars()` | Needed for the new CronJob YAML that mounts `$INFRA_ROOT` |
 | 15 `*/prereqs.yaml` files | Converted NFS PV+PVC pairs to Longhorn PVCs (dynamic provisioning) | All state moved from NFS to Longhorn; static PV blocks removed |
 
@@ -464,3 +506,5 @@ sudo ausearch -m avc --start recent | wc -l  # see how many denials it's process
 6. **Backup pods touch production PVCs.** Our backup and restore utility pods both mount live PVCs. Any file they create (even a tiny `__backup_timestamp.txt`) can trigger a cascade of WAL-related `{ lock }` denials on SQLite-backed workloads. These pods need the same pod-level `seLinuxOptions` fix as the restore pods.
 
 7. **io_uring denials are audit spam, not functional breakage.** Both Python asyncio and Node.js libuv fall back to `epoll` when `io_uring_setup()` returns EACCES — the app keeps working. But they retry periodically, generating continuous denials that keep `setroubleshootd` busy and fill the audit log. The fix is app-level (`PYTHON_IO_URING=0` or `UV_USE_IO_URING=0`), which skips the doomed syscall entirely. There is no SELinux boolean for io_uring — the only bypass is `privileged: true`.
+
+8. **HostPath volumes shared between pods need unified SELinux levels.** MCS category isolation is per-pod. If Pod A writes a file and Pod B reads it on the same hostPath mount, their mismatched categories trigger denials. Set pod-level `seLinuxOptions.level: s0` on all workloads sharing the hostPath tree. Only needed for shared hostPath volumes — dedicated volumes or Longhorn PVCs don't have this cross-pod sharing problem.
