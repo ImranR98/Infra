@@ -18,6 +18,8 @@ spec:
     spec:
       securityContext:
         fsGroup: $MY_UID
+        seLinuxOptions:
+          level: s0
       containers:
         - name: dscpln
           image: imranrdev/dscpln:latest@sha256:89ad11f983d92606caf4b1f742857793f1f9b4718934cbc9511e4ae3ad424e80

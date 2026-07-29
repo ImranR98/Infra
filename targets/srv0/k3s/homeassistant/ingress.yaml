@@ -25,9 +25,7 @@ spec:
     - match: Host(`ha.$SERVICES_DOMAIN`) && PathPrefix(`/api/onboarding/backup`)
       kind: Rule
       middlewares:
-        - name: geoblock
-          namespace: base
-        - name: crowdsec-bouncer
+        - name: no-buffer
           namespace: base
       services:
         - name: homeassistant-home-assistant

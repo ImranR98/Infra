@@ -19,6 +19,8 @@ spec:
     spec:
       securityContext:
         fsGroup: $MY_UID
+        seLinuxOptions:
+          level: s0
       containers:
         - name: mdscl-camera
           image: imranrdev/media-date-standardize-copy-loop:latest@sha256:d6e7368ab0846e01049fd62cc645e146bfc9c5a9804430dd4f43fc503ef373b3
@@ -72,6 +74,8 @@ spec:
     spec:
       securityContext:
         fsGroup: $MY_UID
+        seLinuxOptions:
+          level: s0
       containers:
         - name: mdscl-screenshots
           image: imranrdev/media-date-standardize-copy-loop:latest@sha256:d6e7368ab0846e01049fd62cc645e146bfc9c5a9804430dd4f43fc503ef373b3
@@ -125,6 +129,8 @@ spec:
     spec:
       securityContext:
         fsGroup: $MY_UID
+        seLinuxOptions:
+          level: s0
       containers:
         - name: mdscl-screenrecs
           image: imranrdev/media-date-standardize-copy-loop:latest@sha256:d6e7368ab0846e01049fd62cc645e146bfc9c5a9804430dd4f43fc503ef373b3
