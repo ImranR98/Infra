@@ -96,7 +96,7 @@ spec:
   tls:
     secretName: local-tls
   routes:
-    - match: Host(`traefik.cluster.localhost`)
+    - match: Host(`traefik.local`)
       kind: Rule
       middlewares:
         - name: cluster-only

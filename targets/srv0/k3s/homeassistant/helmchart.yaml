@@ -38,6 +38,10 @@ spec:
         hostPath:
           path: /dev/serial/by-id
           type: DirectoryOrCreate
+      - name: usb-tty
+        hostPath:
+          path: /dev/ttyACM0
+          type: CharDevice
       - name: dbus
         hostPath:
           path: /run/dbus/system_bus_socket
@@ -46,6 +50,8 @@ spec:
       - name: usb-serial
         mountPath: /dev/serial/by-id
         readOnly: true
+      - name: usb-tty
+        mountPath: /dev/ttyACM0
       - name: dbus
         mountPath: /run/dbus/system_bus_socket
     resources:

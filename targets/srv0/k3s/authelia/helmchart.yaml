@@ -191,6 +191,8 @@ spec:
             policy: bypass
           - domain: fmd.$SERVICES_DOMAIN
             policy: bypass
+          - domain: nextcloud.$SERVICES_DOMAIN
+            policy: bypass
           - domain: rss.$SERVICES_DOMAIN
             resources:
             - '^/api([/?].*)?$'

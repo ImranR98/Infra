@@ -1,6 +1,6 @@
 # LAN Routes Troubleshooting: A Deep Dive
 
-This document explains the journey of debugging why `*.lan.local` routes failed
+This document explains the journey of debugging why `*.local` routes failed
 on a newly set up K3s node. It is written for someone with basic networking
 knowledge (IP addresses, subnets, ports, firewalls) and Linux familiarity. Every
 new concept is explained as it appears.
@@ -10,7 +10,7 @@ new concept is explained as it appears.
 ## 1. The Problem
 
 When setting up a new K3s node for the first time, everything worked except
-LAN-only routes (`tv.lan.local`, `send.lan.local`). These returned **"connection
+LAN-only routes (`tv.local`, `send.local`). These returned **"connection
 refused"** — a TCP-level error meaning nothing accepted the connection on port
 443.
 
@@ -72,10 +72,10 @@ Application pod
 ### 3.1 First Discovery: Certificates Were Healthy
 
 We started by checking the live cluster. The `local-tls` TLS certificate
-(used by `*.lan.local` routes) was present, valid, and properly issued by
+(used by `*.local` routes) was present, valid, and properly issued by
 cert-manager. The IngressRoutes existed and matched correctly.
 
-However, we noticed that `curl` to `tv.lan.local` from *within* the node
+However, we noticed that `curl` to `tv.local` from *within* the node
 returned `400 Bad Request`, not a working response. This ruled out "connection
 refused" being the *only* symptom — something deeper was wrong.
 
@@ -86,7 +86,7 @@ automatically issues and renews TLS certificates. It uses "Issuers" to create
 "Certificate" resources, which become Kubernetes Secrets containing the actual
 TLS key pair.
 
-Our `local-tls` certificate for `*.lan.local` follows this chain:
+Our `local-tls` certificate for `*.local` follows this chain:
 
 ```
 self-signed-issuer → k3s-local-ca (CA certificate) → ca-issuer → local-tls
@@ -168,7 +168,7 @@ The solution was to split traffic across two entrypoints:
 | `websecure` | 443 | No | LAN clients, direct access |
 | `websecure-proxy` | 8443 | Yes | FRP traffic from vps0 |
 
-- **LAN-only routes** (`*.lan.local`) only listen on `websecure:443`
+- **LAN-only routes** (`*.local`) only listen on `websecure:443`
 - **Public routes** (`*.home.example.org`) listen on **both** entrypoints
 
 This way:
@@ -188,11 +188,11 @@ When we tested after the entrypoint fix, LAN routes worked from the node but
 returned `400 Bad Request`. The Authelia logs revealed why:
 
 ```
-error: no configured session cookie domain matches the url 'https://tv.lan.local/'
+error: no configured session cookie domain matches the url 'https://tv.local/'
 ```
 
 Authelia manages login sessions via cookies tied to specific domains (like
-`home.example.org`). It doesn't know about `*.lan.local` domains, so it rejects
+`home.example.org`). It doesn't know about `*.local` domains, so it rejects
 LAN route authentication requests with a 400 error.
 
 **Why this didn't matter on fresh nodes:** The LAN-only IngressRoutes have
@@ -202,7 +202,7 @@ the LAN routes have no authentication. This is by design: during first-time
 setup, you need unauthenticated access via LAN to configure services.
 
 After initial setup, running a regular deploy adds the authentication back, but
-Authelia can't handle `*.lan.local`. The fix was to re-deploy in initial mode.
+Authelia can't handle `*.local`. The fix was to re-deploy in initial mode.
 
 ### 3.5 The kube-router Network Policy Problem
 

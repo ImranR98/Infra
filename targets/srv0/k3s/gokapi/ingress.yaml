@@ -39,8 +39,8 @@ spec:
 # This breaks Gokapi's first-time setup, so a LAN-only route
 # (defined below) provides unauthenticated access from private IPs.
 #
-# Add <cluster-ip> send.lan.local to /etc/hosts, or configure your
-# router's local DNS to resolve *.lan.local to the cluster IP.
+# Add <cluster-ip> send.local to /etc/hosts, or configure your
+# router's local DNS to resolve *.local to the cluster IP.
 #
 # In non-initial mode this route is auto-blocked (Authelia applied).
 apiVersion: traefik.io/v1alpha1
@@ -52,7 +52,7 @@ spec:
   entryPoints:
     - websecure
   routes:
-    - match: Host(`send.lan.local`)
+    - match: Host(`send.local`)
       kind: Rule
       middlewares:
         - name: lan-whitelist

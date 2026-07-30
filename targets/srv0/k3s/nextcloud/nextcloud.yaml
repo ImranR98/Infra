@@ -20,7 +20,7 @@ spec:
         fsGroup: 33
       containers:
         - name: nextcloud
-          image: nextcloud:34.0.1
+          image: nextcloud:34.0.2
           securityContext:
             allowPrivilegeEscalation: false
           ports:
@@ -63,7 +63,7 @@ spec:
             - name: OVERWRITEPROTOCOL
               value: "https"
             - name: OVERWRITECLIURL
-              value: "https://nextcloud.$SERVICES_DOMAIN"
+              value: "http://localhost"
             - name: NEXTCLOUD_MAINTENANCE_WINDOW_START
               value: "1"
           volumeMounts:
