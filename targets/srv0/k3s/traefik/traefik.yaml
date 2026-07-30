@@ -12,7 +12,7 @@ spec:
       - "--global.sendAnonymousUsage=false"
       - "--global.checkNewVersion=true"
       - "--log.level=INFO"
-      - "--accesslog=true"
+      - "--accesslog.format=json"
       - "--entryPoints.websecure-proxy.proxyProtocol.trustedIPs=127.0.0.1/32,10.42.0.0/16,10.43.0.0/16"
       - "--entryPoints.web.http.redirections.entryPoint.to=websecure"
       - "--entryPoints.web.http.redirections.entryPoint.scheme=https"
@@ -30,6 +30,11 @@ spec:
       additionalVolumes:
         - name: plugins
           emptyDir: {}
+    resources:
+      limits:
+        memory: 2Gi
+      requests:
+        memory: 128Mi
     ports:
       web:
         port: 80

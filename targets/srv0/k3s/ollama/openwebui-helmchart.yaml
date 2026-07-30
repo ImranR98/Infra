@@ -23,6 +23,11 @@ spec:
     pipelines:
       persistence:
         existingClaim: open-webui-pipelines-pvc
+      resources:
+        limits:
+          memory: 8Gi
+        requests:
+          memory: 128Mi
     extraEnvVars:
       - name: ENABLE_OAUTH_SIGNUP
         value: "true"

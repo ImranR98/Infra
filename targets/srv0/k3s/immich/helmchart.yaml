@@ -19,7 +19,7 @@ spec:
               allowPrivilegeEscalation: false
             resources:
               limits:
-                memory: 2Gi
+                memory: 8Gi
               requests:
                 memory: 128Mi
             env:
@@ -69,6 +69,11 @@ spec:
               image:
                 repository: ghcr.io/immich-app/immich-machine-learning
                 tag: v3.0.3-rocm
+              resources:
+                limits:
+                  memory: 8Gi
+                requests:
+                  memory: 128Mi
       defaultPodOptions:
         tolerations:
           - key: scheduling-discouraged
