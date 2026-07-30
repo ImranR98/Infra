@@ -9,14 +9,19 @@ export NTFY_ADMIN_PASSWORD_HASH="change_me" # docker run --rm -it binwiederhier/
 export NTFY_WRITE_ONLY_ACCOUNT_PASSWORD_HASH="change_me" # docker run --rm -it binwiederhier/ntfy user hash
 
 # ====== Geoblock (Traefik middleware) ======
-# Indentation matters
+# Indentation matters — must match spec.plugin.geoblock level in middlewares.yaml (6 spaces).
 export GEOBLOCK_CONFIG_SUBSET='
-          blackListMode: false
-          countries:
-            - CA
-            - CN
-            - CU
+      blackListMode: false
+      countries:
+        - CA
+        - CN
+        - CU
 '
+
+# ====== GeoIP (self-hosted MaxMind GeoLite2) ======
+# Register at https://www.maxmind.com and generate a GeoLite2 license key
+export GEOIPUPDATE_ACCOUNT_ID="change_me"
+export GEOIPUPDATE_LICENSE_KEY="change_me"
 
 # ====== Host Paths ======
 # Ensure these exist before starting services

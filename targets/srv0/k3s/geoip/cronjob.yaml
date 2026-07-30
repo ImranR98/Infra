@@ -1,0 +1,47 @@
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: geoipupdate
+  namespace: base
+spec:
+  schedule: "0 2 * * 0"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      template:
+        spec:
+          securityContext:
+            runAsUser: $MY_UID
+            runAsGroup: $MY_UID
+            fsGroup: $MY_UID
+            runAsNonRoot: true
+          restartPolicy: Never
+          containers:
+            - name: geoipupdate
+              image: maxmindinc/geoipupdate:latest
+              env:
+                - name: GEOIPUPDATE_ACCOUNT_ID
+                  valueFrom:
+                    secretKeyRef:
+                      name: geoipupdate-secret
+                      key: account-id
+                - name: GEOIPUPDATE_LICENSE_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      name: geoipupdate-secret
+                      key: license-key
+                - name: GEOIPUPDATE_EDITION_IDS
+                  value: "GeoLite2-Country"
+                - name: GEOIPUPDATE_DB_DIR
+                  value: "/data"
+              volumeMounts:
+                - name: geoip-data
+                  mountPath: /data
+          volumes:
+            - name: geoip-data
+              persistentVolumeClaim:
+                claimName: geoip-pvc

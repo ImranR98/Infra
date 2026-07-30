@@ -1,5 +1,5 @@
 # Geoblock — allowlist-mode plugin that restricts access by country of origin.
-# Uses the free geojs.io API for IP geolocation lookups.
+# Uses a self-hosted MaxMind GeoLite2 service instead of a third-party API.
 apiVersion: traefik.io/v1alpha1
 kind: Middleware
 metadata:
@@ -13,18 +13,13 @@ spec:
       logLocalRequests: false
       logAllowedRequests: true
       logApiRequests: true
-      api: "https://get.geojs.io/v1/ip/country/{ip}"
-      apiTimeoutMs: 750
-      cacheSize: 15
+      api: "http://geoip-service.base.svc.cluster.local:8080/country/{ip}"
+      apiTimeoutMs: 500
+      cacheSize: 10
       forceMonthlyUpdate: true
       allowUnknownCountries: false
       unknownCountryApiResponse: "nil"
-      blackListMode: false
-      countries:
-        - CA
-        - TZ
-        - US
-        - GB
+      $GEOBLOCK_CONFIG_SUBSET
 ---
 # CrowdSec bouncer — checks IPs against CrowdSec's ban list in streaming mode.
 # Requires CrowdSec LAPI to be running (15.crowdsec.yaml).

@@ -5,6 +5,7 @@ base:
   - csi-driver-nfs
   - cert-manager
   - longhorn
+  - geoip
   - traefik
   - crowdsec
   - authelia

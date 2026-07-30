@@ -32,20 +32,33 @@ grep -q '# IGNORE INITIALLY$' "$COMPONENT_DIR"/*.yaml 2>/dev/null && _has_initia
 
 _build_yaml() {
     local is_initial="${1:-false}"
-    if [ "$is_initial" = true ] && [ -f "$COMPONENT_DIR/kustomization.yaml" ]; then
-        TMP_DIR=$(mktemp -d)
-        _cleanup_dirs+=("$TMP_DIR")
-        for f in "$COMPONENT_DIR"/*.yaml; do
-            [ -f "$f" ] || continue
+
+    # Stage YAML files into a temp dir so we can envsubst BEFORE kustomize.
+    # This lets bare $VAR references (including multi-line shell variables)
+    # sit directly in YAML source files without needing workaround markers.
+    TMP_DIR=$(mktemp -d)
+    _cleanup_dirs+=("$TMP_DIR")
+    for f in "$COMPONENT_DIR"/*.yaml; do
+        [ -f "$f" ] || continue
+        if [ "$is_initial" = true ]; then
             sed '/# IGNORE INITIALLY$/d' "$f" > "$TMP_DIR/$(basename "$f")"
-        done
-        RAW_YAML=$(kubectl kustomize "$TMP_DIR") || { echo "Error: kustomize build failed for $COMPONENT (initial)" >&2; exit 1; }
-    else
-        RAW_YAML=$(kubectl kustomize "$COMPONENT_DIR") || { echo "Error: kustomize build failed for $COMPONENT" >&2; exit 1; }
-    fi
+        else
+            cp "$f" "$TMP_DIR/"
+        fi
+    done
+
+    # envsubst each file in place so variable references expand directly
+    # into the YAML text before kustomize parses it.
+    for f in "$TMP_DIR"/*.yaml; do
+        [ -f "$f" ] || continue
+        envsubst "$ENVSUBST_VARS" < "$f" > "$f.tmp" && mv "$f.tmp" "$f"
+    done
+
+    RAW_YAML=$(kubectl kustomize "$TMP_DIR") || { echo "Error: kustomize build failed for $COMPONENT" >&2; exit 1; }
+
     # kustomize strips YAML quotes; envsubst makes numeric vars bare ints.
     # Kubernetes rejects unquoted ints in env[].value.  Sed re-quotes them.
-    PROCESSED_YAML=$(printf '%s\n' "$RAW_YAML" | envsubst "$ENVSUBST_VARS" | sed -E 's/^(\s+value: )([+-]?[0-9]+)$/\1"\2"/')
+    PROCESSED_YAML=$(printf '%s\n' "$RAW_YAML" | sed -E 's/^(\s+value: )([+-]?[0-9]+)$/\1"\2"/')
 }
 
 _run_hook() {

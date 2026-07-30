@@ -68,7 +68,7 @@ When an IP is banned by CrowdSec, the bouncer middleware blocks it at the ingres
 
 ### Geoblock
 
-A Traefik middleware plugin (`geoblock`) restricts access by country of origin using the free geojs.io geolocation API. It operates in allowlist mode — only requests from configured countries are permitted. This blocks a large percentage of automated attack traffic.
+A Traefik middleware plugin (`geoblock`) restricts access by country of origin using a self-hosted MaxMind GeoLite2 database. It operates in allowlist mode — only requests from configured countries are permitted. This blocks a large percentage of automated attack traffic without leaking visitor IPs to a third-party API.
 
 ### Network policies
 
