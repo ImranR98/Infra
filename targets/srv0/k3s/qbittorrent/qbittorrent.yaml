@@ -16,36 +16,6 @@ spec:
       labels:
         app: qbittorrent
     spec:
-      initContainers:
-        - name: qbittorrent-init
-          image: busybox:1.38.0-uclibc
-          securityContext:
-            runAsUser: 1000
-            runAsGroup: 1000
-          command:
-            - sh
-            - -c
-            - |
-              if [ ! -f /config/qBittorrent/qBittorrent.conf ]; then
-                mkdir -p /config/qBittorrent
-                cat > /config/qBittorrent/qBittorrent.conf << 'EOF'
-              [BitTorrent]
-              Session\DefaultSavePath=/data/downloads
-              Session\Port=56881
-
-              [Preferences]
-              Connection\PortRangeMin=56881
-              Connection\UPnP=false
-              Downloads\SavePath=/data/downloads/
-              Downloads\TempPath=/data/downloads/incomplete/
-              General\Locale=en
-              WebUI\Address=*
-              WebUI\ServerDomains=*
-              EOF
-              fi
-          volumeMounts:
-            - name: config
-              mountPath: /config
       containers:
         - name: qbittorrent
           image: lscr.io/linuxserver/qbittorrent:latest
