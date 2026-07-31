@@ -11,6 +11,8 @@ stringData:
       ansi
       hist: /state/hists/
       site: https://copyparty.home.local
+      acao: copyparty.home.local
+      xff-src: 10.42.0.0/16
 
     [accounts]
       admin: $COPYPARTY_ADMIN_PASSWORD
