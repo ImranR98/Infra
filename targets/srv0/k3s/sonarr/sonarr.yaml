@@ -1,0 +1,68 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sonarr
+  namespace: apps
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: sonarr
+  template:
+    metadata:
+      labels:
+        app: sonarr
+    spec:
+      containers:
+        - name: sonarr
+          image: lscr.io/linuxserver/sonarr:latest
+          securityContext:
+            allowPrivilegeEscalation: false
+          ports:
+            - containerPort: 8989
+          resources:
+            limits:
+              memory: 2Gi
+            requests:
+              memory: 128Mi
+          readinessProbe:
+            tcpSocket:
+              port: 8989
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+          env:
+            - name: PUID
+              value: "$MY_UID"
+            - name: PGID
+              value: "$MY_UID"
+            - name: TZ
+              value: "$TZ"
+          volumeMounts:
+            - name: config
+              mountPath: /config
+            - name: data
+              mountPath: /data
+      volumes:
+        - name: config
+          persistentVolumeClaim:
+            claimName: sonarr-config-pvc
+        - name: data
+          persistentVolumeClaim:
+            claimName: jellyfin-tv-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: sonarr
+  namespace: apps
+spec:
+  type: ClusterIP
+  selector:
+    app: sonarr
+  ports:
+    - port: 8989
+      targetPort: 8989
