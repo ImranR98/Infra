@@ -8,5 +8,5 @@ data:
   etab: |
     /exports *(rw,fsid=0,crossmnt,no_subtree_check,insecure,root_squash)
     /exports/music *(ro,fsid=1,no_subtree_check,insecure,root_squash)
-    /exports/jellyfin-tv *(ro,fsid=2,no_subtree_check,insecure,root_squash)
+    /exports/jellyfin-tv *(rw,fsid=2,no_subtree_check,insecure,no_root_squash)
     /exports/jellyfin-youtube *(ro,fsid=3,no_subtree_check,insecure,root_squash)

@@ -87,6 +87,9 @@ export FMD_REGISTRATIONTOKEN="change_me" # openssl rand -base64 32
 export RADARR_API_KEY="change_me" # openssl rand -hex 16
 export SONARR_API_KEY="change_me" # openssl rand -hex 16
 
+# ====== Prowlarr ======
+export PROWLARR_API_KEY="change_me" # openssl rand -hex 16
+
 # ====== Nextcloud ======
 export NEXTCLOUD_ADMIN_USER="admin"
 export NEXTCLOUD_ADMIN_PASSWORD="change_me" # openssl rand -hex 16

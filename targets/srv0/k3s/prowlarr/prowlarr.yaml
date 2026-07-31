@@ -1,0 +1,68 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: prowlarr
+  namespace: apps
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: prowlarr
+  template:
+    metadata:
+      labels:
+        app: prowlarr
+    spec:
+      containers:
+        - name: prowlarr
+          image: lscr.io/linuxserver/prowlarr:latest
+          securityContext:
+            allowPrivilegeEscalation: false
+          ports:
+            - containerPort: 9696
+          resources:
+            limits:
+              memory: 2Gi
+            requests:
+              memory: 128Mi
+          readinessProbe:
+            tcpSocket:
+              port: 9696
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+          env:
+            - name: PUID
+              value: "$MY_UID"
+            - name: PGID
+              value: "$MY_UID"
+            - name: TZ
+              value: "$TZ"
+            - name: PROWLARR__AUTH__APIKEY
+              valueFrom:
+                secretKeyRef:
+                  name: prowlarr-secret
+                  key: PROWLARR__AUTH__APIKEY
+          volumeMounts:
+            - name: config
+              mountPath: /config
+      volumes:
+        - name: config
+          persistentVolumeClaim:
+            claimName: prowlarr-config-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: prowlarr
+  namespace: apps
+spec:
+  type: ClusterIP
+  selector:
+    app: prowlarr
+  ports:
+    - port: 9696
+      targetPort: 9696
