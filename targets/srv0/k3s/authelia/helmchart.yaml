@@ -169,8 +169,6 @@ spec:
             policy: bypass # IGNORE INITIALLY
           - domain: ha.$SERVICES_DOMAIN # IGNORE INITIALLY
             policy: bypass # IGNORE INITIALLY
-          - domain: send.$SERVICES_DOMAIN # IGNORE INITIALLY
-            policy: bypass # IGNORE INITIALLY
           - domain: ntfy.$SERVICES_DOMAIN
             policy: bypass
           - domain: files.$SERVICES_DOMAIN # IGNORE INITIALLY
