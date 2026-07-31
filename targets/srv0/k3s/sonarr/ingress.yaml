@@ -29,8 +29,6 @@ spec:
           namespace: base
         - name: crowdsec-bouncer
           namespace: base
-        - name: forwardauth-authelia
-          namespace: base
       services:
         - name: sonarr
           port: 8989
