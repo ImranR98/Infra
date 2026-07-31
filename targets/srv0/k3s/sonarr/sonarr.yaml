@@ -41,8 +41,6 @@ spec:
               value: "$MY_UID"
             - name: TZ
               value: "$TZ"
-            - name: SONARR__AUTH__ENABLED
-              value: "true"
             - name: SONARR__AUTH__APIKEY
               valueFrom:
                 secretKeyRef:

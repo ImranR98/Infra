@@ -199,11 +199,6 @@ spec:
             - '^/p/i/?$'
             policy: bypass
           - domain: seerr.$SERVICES_DOMAIN
-            policy: bypass
-          - domain: radarr.$SERVICES_DOMAIN
-            policy: bypass
-          - domain: sonarr.$SERVICES_DOMAIN
-            policy: bypass
           - domain: '*.$SERVICES_DOMAIN'
             policy: two_factor
             subject:

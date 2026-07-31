@@ -41,12 +41,6 @@ spec:
               value: "$MY_UID"
             - name: TZ
               value: "$TZ"
-            - name: RADARR__AUTH__ENABLED
-              value: "true"
-            - name: RADARR__AUTH__METHOD
-              value: "Forms"
-            - name: RADARR__AUTH__REQUIRED
-              value: "Enabled"
             - name: RADARR__AUTH__APIKEY
               valueFrom:
                 secretKeyRef:
