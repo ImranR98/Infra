@@ -43,10 +43,6 @@ spec:
               value: "$TZ"
             - name: SONARR__AUTH__ENABLED
               value: "true"
-            - name: SONARR__AUTH__METHOD
-              value: "Forms"
-            - name: SONARR__AUTH__REQUIRED
-              value: "Enabled"
             - name: SONARR__AUTH__APIKEY
               valueFrom:
                 secretKeyRef:
