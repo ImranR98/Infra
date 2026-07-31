@@ -12,3 +12,12 @@ spec:
     requests:
       storage: 5Gi
   storageClassName: longhorn
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: sonarr-secret
+  namespace: apps
+type: Opaque
+stringData:
+  SONARR__AUTH__APIKEY: "$SONARR_API_KEY"

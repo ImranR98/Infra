@@ -12,3 +12,12 @@ spec:
     requests:
       storage: 5Gi
   storageClassName: longhorn
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: radarr-secret
+  namespace: apps
+type: Opaque
+stringData:
+  RADARR__AUTH__APIKEY: "$RADARR_API_KEY"

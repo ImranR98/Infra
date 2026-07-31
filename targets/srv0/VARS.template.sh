@@ -83,6 +83,10 @@ export DSCPLN_FIRST_WEEK_BIAS_INIT_AMT="1400"
 # ====== FMD ======
 export FMD_REGISTRATIONTOKEN="change_me" # openssl rand -base64 32
 
+# ====== Radarr / Sonarr ======
+export RADARR_API_KEY="change_me" # openssl rand -hex 16
+export SONARR_API_KEY="change_me" # openssl rand -hex 16
+
 # ====== Nextcloud ======
 export NEXTCLOUD_ADMIN_USER="admin"
 export NEXTCLOUD_ADMIN_PASSWORD="change_me" # openssl rand -hex 16
