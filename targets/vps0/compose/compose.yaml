@@ -35,6 +35,8 @@ services:
             - "7000:7000"
             - "8887:8887"
             - "8888:8888"
+            - "56881:56881"
+            - "56881:56881/udp"
         networks:
             - traefik
         healthcheck:
