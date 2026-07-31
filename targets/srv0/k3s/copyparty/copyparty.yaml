@@ -19,6 +19,8 @@ spec:
       securityContext:
         runAsUser: $MY_UID
         runAsGroup: $MY_UID
+        seLinuxOptions:
+          level: s0
       initContainers:
         - name: fix-perms
           image: busybox:1.37
