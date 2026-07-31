@@ -26,6 +26,6 @@ apps:
   - dscpln
   - opencanary
   - fmd
-  - gokapi
+  - chibisafe
   - syncthing
   - copyparty

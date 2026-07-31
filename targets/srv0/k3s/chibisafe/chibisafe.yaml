@@ -1,0 +1,104 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: chibisafe
+  namespace: apps
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: chibisafe
+  template:
+    metadata:
+      labels:
+        app: chibisafe
+    spec:
+      securityContext:
+        fsGroup: $MY_UID
+      initContainers:
+        - name: fix-perms
+          image: busybox:1.37
+          command: ["sh", "-c", "chown -R $MY_UID:$MY_UID /app/uploads /app/database /app/logs"]
+          securityContext:
+            runAsUser: 0
+          volumeMounts:
+            - name: uploads
+              mountPath: /app/uploads
+            - name: database
+              mountPath: /app/database
+            - name: logs
+              mountPath: /app/logs
+      containers:
+        - name: caddy
+          image: caddy:2-alpine
+          ports:
+            - containerPort: 80
+          env:
+            - name: BASE_URL
+              value: ":80"
+          volumeMounts:
+            - name: caddyfile
+              mountPath: /etc/caddy/Caddyfile
+              subPath: Caddyfile
+              readOnly: true
+            - name: uploads
+              mountPath: /app/uploads
+              readOnly: true
+          resources:
+            limits:
+              memory: 256Mi
+            requests:
+              memory: 64Mi
+        - name: chibisafe-server
+          image: chibisafe/chibisafe-server:latest
+          volumeMounts:
+            - name: uploads
+              mountPath: /app/uploads
+            - name: database
+              mountPath: /app/database
+            - name: logs
+              mountPath: /app/logs
+          resources:
+            limits:
+              memory: 1Gi
+            requests:
+              memory: 128Mi
+        - name: chibisafe
+          image: chibisafe/chibisafe:latest
+          env:
+            - name: BASE_API_URL
+              value: "http://localhost:8000"
+          resources:
+            limits:
+              memory: 512Mi
+            requests:
+              memory: 128Mi
+      volumes:
+        - name: caddyfile
+          configMap:
+            name: chibisafe-caddyfile
+        - name: uploads
+          persistentVolumeClaim:
+            claimName: chibisafe-uploads-pvc
+        - name: database
+          persistentVolumeClaim:
+            claimName: chibisafe-db-pvc
+        - name: logs
+          persistentVolumeClaim:
+            claimName: chibisafe-logs-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: chibisafe
+  namespace: apps
+spec:
+  selector:
+    app: chibisafe
+  ports:
+    - name: http
+      port: 80
+      targetPort: 80

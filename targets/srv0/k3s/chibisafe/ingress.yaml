@@ -1,0 +1,57 @@
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: chibisafe-prod-tls
+  namespace: apps
+spec:
+  secretName: chibisafe-prod-tls
+  issuerRef:
+    name: letsencrypt-prod
+    kind: ClusterIssuer
+  dnsNames:
+    - send.$SERVICES_DOMAIN
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: chibisafe-ingress
+  namespace: apps
+spec:
+  entryPoints:
+    - websecure
+    - websecure-proxy
+  routes:
+    - match: Host(`send.$SERVICES_DOMAIN`)
+      kind: Rule
+      middlewares:
+        - name: geoblock
+          namespace: base
+        - name: crowdsec-bouncer
+          namespace: base
+        - name: forwardauth-authelia
+          namespace: base
+      services:
+        - name: chibisafe
+          port: 80
+  tls:
+    secretName: chibisafe-prod-tls
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: chibisafe-ingress-local
+  namespace: apps
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - match: Host(`send.$SERVICES_DOMAIN`) # IGNORE INITIALLY
+      kind: Rule # IGNORE INITIALLY
+      middlewares: # IGNORE INITIALLY
+        - name: lan-whitelist # IGNORE INITIALLY
+          namespace: base # IGNORE INITIALLY
+      services: # IGNORE INITIALLY
+        - name: chibisafe # IGNORE INITIALLY
+          port: 80 # IGNORE INITIALLY
+  tls: {} # IGNORE INITIALLY
