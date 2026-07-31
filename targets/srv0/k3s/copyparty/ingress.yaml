@@ -1,0 +1,18 @@
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: copyparty-ingress
+  namespace: apps
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - match: Host(`copyparty.home.lan`)
+      kind: Rule
+      middlewares:
+        - name: lan-whitelist
+          namespace: base
+      services:
+        - name: copyparty
+          port: 3923
+  tls: {}

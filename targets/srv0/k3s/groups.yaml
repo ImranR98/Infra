@@ -28,3 +28,4 @@ apps:
   - fmd
   - gokapi
   - syncthing
+  - copyparty

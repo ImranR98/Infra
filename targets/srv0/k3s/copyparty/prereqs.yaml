@@ -1,0 +1,35 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: copyparty-config
+  namespace: apps
+type: Opaque
+stringData:
+  copyparty.conf: |
+    [global]
+      e2dsa
+      ansi
+      hist: /state/hists/
+
+    [accounts]
+      admin: $COPYPARTY_ADMIN_PASSWORD
+
+    [/]
+      /w
+      accs:
+        rwmda: admin
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: copyparty-state-pvc
+  namespace: apps
+  labels:
+    auto-backup: "true"
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: longhorn
+  resources:
+    requests:
+      storage: 10Gi

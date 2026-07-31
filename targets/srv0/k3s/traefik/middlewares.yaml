@@ -100,7 +100,7 @@ spec:
       - "172.16.0.0/12"
       - "192.168.0.0/16"
 ---
-# IP whitelist for cluster-local routes (*.cluster domains).
+# IP whitelist for local routes (*.home.lan domains), e.g. traefik dashboard.
 # Only requests originating from the K3s pod network (10.42.0.0/16)
 # are allowed — effectively localhost on a single-node cluster.
 apiVersion: traefik.io/v1alpha1

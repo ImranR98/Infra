@@ -46,9 +46,9 @@ stringData:
       expression:
         - evt.Overflow.Alert.Events[0].GetMeta('target_fqdn') == 'immich.$SERVICES_DOMAIN'
         - evt.Overflow.Alert.GetScenario() in ['crowdsecurity/http-probing']
-        - evt.Meta.http_verb == 'GET'
-        - evt.Meta.http_status == '404'
-        - evt.Meta.http_path matches '/api/assets/.+'
+        - evt.Overflow.Alert.Events[0].GetMeta('http_verb') == 'GET'
+        - evt.Overflow.Alert.Events[0].GetMeta('http_status') == '404'
+        - evt.Overflow.Alert.Events[0].GetMeta('http_path') matches '/api/assets/.+'
   homeassistant.whitelist.yaml: |
     name: imranr/homeassistant
     description: "Whitelist for HomeAssistant"
@@ -57,8 +57,8 @@ stringData:
       expression:
         - evt.Overflow.Alert.Events[0].GetMeta('target_fqdn') == 'ha.$SERVICES_DOMAIN'
         - evt.Overflow.Alert.GetScenario() in ['LePresidente/http-generic-403-bf']
-        - evt.Meta.http_verb == 'POST'
-        - evt.Meta.http_path matches '^/api/webhook/.+'
+        - evt.Overflow.Alert.Events[0].GetMeta('http_verb') == 'POST'
+        - evt.Overflow.Alert.Events[0].GetMeta('http_path') matches '^/api/webhook/.+'
   seerr.whitelist.yaml: |
     name: imranr/seerr
     description: "Whitelist for Seerr"
@@ -67,8 +67,8 @@ stringData:
       expression:
         - evt.Overflow.Alert.Events[0].GetMeta('target_fqdn') == 'seerr.$SERVICES_DOMAIN'
         - evt.Overflow.Alert.GetScenario() in ['crowdsecurity/http-probing', 'LePresidente/http-generic-403-bf']
-        - evt.Meta.http_status == '403'
-        - evt.Meta.http_path matches '^/api/.*'
+        - evt.Overflow.Alert.Events[0].GetMeta('http_status') == '403'
+        - evt.Overflow.Alert.Events[0].GetMeta('http_path') matches '^/api/.*'
 ---
 apiVersion: v1
 kind: Secret
