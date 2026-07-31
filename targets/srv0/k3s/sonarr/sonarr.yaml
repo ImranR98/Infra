@@ -57,7 +57,7 @@ spec:
             claimName: sonarr-config-pvc
         - name: data
           persistentVolumeClaim:
-            claimName: jellyfin-tv-pvc
+            claimName: arrstack-media-pvc
 ---
 apiVersion: v1
 kind: Service

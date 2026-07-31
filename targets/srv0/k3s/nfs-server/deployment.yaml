@@ -69,6 +69,8 @@ spec:
               name: tv-storage
             - mountPath: /exports/jellyfin-youtube
               name: youtube-storage
+            - mountPath: /exports/arrstack-media
+              name: arrstack-media-storage
 
             - mountPath: /var/lib/nfs/etab
               name: nfs-exports
@@ -103,5 +105,9 @@ spec:
         - name: youtube-storage
           hostPath:
             path: $MEDIA_DIR_PATH/YouTube
+            type: DirectoryOrCreate
+        - name: arrstack-media-storage
+          hostPath:
+            path: $ARRSTACK_MEDIA_PATH
             type: DirectoryOrCreate
 

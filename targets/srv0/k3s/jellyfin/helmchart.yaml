@@ -28,6 +28,9 @@ spec:
       - name: youtube
         persistentVolumeClaim:
           claimName: jellyfin-youtube-pvc
+      - name: arrstack-media
+        persistentVolumeClaim:
+          claimName: arrstack-media-pvc
 
     volumeMounts:
       - name: dri
@@ -37,6 +40,9 @@ spec:
         readOnly: true
       - name: youtube
         mountPath: /media/YouTube
+        readOnly: true
+      - name: arrstack-media
+        mountPath: /media/Arrstack
         readOnly: true
 
     resources:

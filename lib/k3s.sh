@@ -65,6 +65,7 @@ node-ip: $node_ip
 flannel-iface-regex: "^(eth|ens|enp|eno|enx|wlan|wlp|wlo|bond|ib)"
 node-label:
   - "hostpath-main=true"
+  - "hostpath-extra-storage=true"
   - "external-exposed=true"
 K3SEOF
     else

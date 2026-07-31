@@ -76,3 +76,35 @@ spec:
       storage: 4096Gi
   storageClassName: nfs
   volumeName: jellyfin-youtube-pv
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: arrstack-media-pv
+spec:
+  capacity:
+    storage: 4096Gi
+  accessModes:
+    - ReadWriteMany
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: nfs
+  csi:
+    driver: nfs.csi.k8s.io
+    volumeHandle: arrstack-media
+    volumeAttributes:
+      server: nfs-server.base.svc.cluster.local
+      share: /arrstack-media
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: arrstack-media-pvc
+  namespace: apps
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 4096Gi
+  storageClassName: nfs
+  volumeName: arrstack-media-pv

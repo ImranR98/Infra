@@ -29,6 +29,7 @@ export MAIN_PARENT_DIR="/path/to/data"
 export MEDIA_DIR_PATH="$MAIN_PARENT_DIR/Main/Media"
 export DSCPLN_TRANSACTIONS_PATH="$MAIN_PARENT_DIR/Main/Notes/Transactions"
 export MDSCL_DEVICE_SYNC_PATH="$MAIN_PARENT_DIR/deviceSync"
+export ARRSTACK_MEDIA_PATH="/mnt/k3s_extra_storage/arrstack_media"
 
 # ====== Authelia ======
 # Use `docker run -it authelia/authelia:latest authelia crypto hash generate argon2` to generate the password hash
