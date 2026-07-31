@@ -10,7 +10,7 @@ spec:
     name: letsencrypt-prod
     kind: ClusterIssuer
   dnsNames:
-    - seer.$SERVICES_DOMAIN
+    - seerr.$SERVICES_DOMAIN
 ---
 apiVersion: traefik.io/v1alpha1
 kind: IngressRoute
@@ -22,7 +22,7 @@ spec:
     - websecure
     - websecure-proxy
   routes:
-    - match: Host(`seer.$SERVICES_DOMAIN`)
+    - match: Host(`seerr.$SERVICES_DOMAIN`)
       kind: Rule
       middlewares:
         - name: geoblock

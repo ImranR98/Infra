@@ -11,6 +11,7 @@ spec:
   createNamespace: false
   version: 3.9.0
   valuesContent: |-
+    fullnameOverride: seerr
     config:
       persistence:
         size: 5Gi
