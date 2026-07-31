@@ -53,8 +53,8 @@ spec:
 # This breaks Jellyfin's first-time setup, so a LAN-only route
 # (defined below) provides unauthenticated access from private IPs.
 #
-# Add <cluster-ip> tv.home.lan to /etc/hosts, or configure your
-# router's local DNS to resolve *.home.lan to the cluster IP.
+# Add <cluster-ip> tv.home.local to /etc/hosts, or configure your
+# router's local DNS to resolve *.home.local to the cluster IP.
 #
 # In non-initial mode this route is auto-blocked (Authelia applied).
 apiVersion: traefik.io/v1alpha1
@@ -66,7 +66,7 @@ spec:
   entryPoints:
     - websecure
   routes:
-    - match: Host(`tv.home.lan`)
+    - match: Host(`tv.home.local`)
       kind: Rule
       middlewares:
         - name: lan-whitelist

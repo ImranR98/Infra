@@ -7,7 +7,7 @@ spec:
   entryPoints:
     - websecure
   routes:
-    - match: Host(`copyparty.home.lan`)
+    - match: Host(`copyparty.home.local`)
       kind: Rule
       middlewares:
         - name: lan-whitelist

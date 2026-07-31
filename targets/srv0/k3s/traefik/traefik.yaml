@@ -100,7 +100,7 @@ spec:
     - websecure
   tls: {}
   routes:
-    - match: Host(`traefik.home.lan`)
+    - match: Host(`traefik.home.local`)
       kind: Rule
       middlewares:
         - name: cluster-only
