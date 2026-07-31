@@ -14,6 +14,7 @@ spec:
     fullnameOverride: seerr
     config:
       persistence:
+        existingClaim: seerr-config
         size: 5Gi
         storageClass: longhorn
     extraEnv:
