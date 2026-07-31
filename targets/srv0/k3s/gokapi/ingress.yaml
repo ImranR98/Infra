@@ -62,5 +62,4 @@ spec:
       services:
         - name: gokapi-svc
           port: 53842
-  tls:
-    secretName: local-tls
+  tls: {}

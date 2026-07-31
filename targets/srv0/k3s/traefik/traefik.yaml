@@ -98,8 +98,7 @@ metadata:
 spec:
   entryPoints:
     - websecure
-  tls:
-    secretName: local-tls
+  tls: {}
   routes:
     - match: Host(`traefik.local`)
       kind: Rule
