@@ -73,8 +73,8 @@ export MOSQUITTO_CREDENTIALS="change_me" # tmpfile=$(mktemp) && mosquitto_passwd
 # ====== FreshRSS ======
 export FRESHRSS_PASSWORD="change_me" # openssl rand -base64 32
 
-# ====== Gokapi ======
-export GOKAPI_DEPLOYMENT_PASSWORD="change_me" # openssl rand -hex 16
+# ====== Plik ======
+export PLIK_ADMIN_PASSWORD="change_me" # openssl rand -hex 16
 
 # ====== D$CPLN ======
 export DSCPLN_DATA_FILE="Acc $(date +%Y).md"

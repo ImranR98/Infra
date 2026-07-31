@@ -1,0 +1,72 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: plik-data-pvc
+  namespace: apps
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: longhorn
+  resources:
+    requests:
+      storage: 200Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: plik-state-pvc
+  namespace: apps
+  labels:
+    auto-backup: "true"
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: longhorn
+  resources:
+    requests:
+      storage: 5Gi
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: plik-config
+  namespace: apps
+type: Opaque
+stringData:
+  plikd.cfg: |
+    Debug               = false
+    LogLevel            = "INFO"
+    ListenPort          = 8080
+    ListenAddress       = "0.0.0.0"
+    NoWebInterface      = false
+    PlikDomain          = "https://send.$SERVICES_DOMAIN"
+    AssumeHTTPS         = true
+    SourceIpHeader      = "X-Forwarded-For"
+    SessionTimeout      = "365d"
+
+    DataBackend = "file"
+    [DataBackendConfig]
+        Directory = "/data/files"
+
+    [MetadataBackendConfig]
+        Driver = "sqlite3"
+        ConnectionString = "/data/state/plik.db"
+
+    MaxFileSizeStr      = "10GB"
+    DefaultTTLStr       = "30d"
+    MaxTTLStr           = "30d"
+
+    FeatureAuthentication = "default"
+    FeatureLocalLogin     = "enabled"
+    DefaultAdminLogin    = "admin"
+    DefaultAdminPassword = "$PLIK_ADMIN_PASSWORD"
+
+    FeatureOneShot        = "enabled"
+    FeatureRemovable      = "enabled"
+    FeatureStream         = "enabled"
+    FeaturePassword       = "enabled"
+    FeatureComments       = "enabled"
+    FeatureSetTTL         = "enabled"
+    FeatureApiTokens      = "enabled"
+    FeatureE2EE           = "enabled"
+    FeatureText           = "enabled"

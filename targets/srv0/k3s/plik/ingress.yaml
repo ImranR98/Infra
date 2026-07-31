@@ -2,10 +2,10 @@
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
-  name: chibisafe-prod-tls
+  name: plik-prod-tls
   namespace: apps
 spec:
-  secretName: chibisafe-prod-tls
+  secretName: plik-prod-tls
   issuerRef:
     name: letsencrypt-prod
     kind: ClusterIssuer
@@ -15,7 +15,7 @@ spec:
 apiVersion: traefik.io/v1alpha1
 kind: IngressRoute
 metadata:
-  name: chibisafe-ingress
+  name: plik-ingress
   namespace: apps
 spec:
   entryPoints:
@@ -32,26 +32,26 @@ spec:
         - name: forwardauth-authelia
           namespace: base
       services:
-        - name: chibisafe
-          port: 80
+        - name: plik
+          port: 8080
   tls:
-    secretName: chibisafe-prod-tls
+    secretName: plik-prod-tls
 ---
 apiVersion: traefik.io/v1alpha1
 kind: IngressRoute
 metadata:
-  name: chibisafe-ingress-local
+  name: plik-ingress-local
   namespace: apps
 spec:
   entryPoints:
     - websecure
   routes:
-    - match: Host(`send.$SERVICES_DOMAIN`) # IGNORE INITIALLY
-      kind: Rule # IGNORE INITIALLY
-      middlewares: # IGNORE INITIALLY
-        - name: lan-whitelist # IGNORE INITIALLY
-          namespace: base # IGNORE INITIALLY
-      services: # IGNORE INITIALLY
-        - name: chibisafe # IGNORE INITIALLY
-          port: 80 # IGNORE INITIALLY
-  tls: {} # IGNORE INITIALLY
+    - match: Host(`send.home.local`)
+      kind: Rule
+      middlewares:
+        - name: lan-whitelist
+          namespace: base
+      services:
+        - name: plik
+          port: 8080
+  tls: {}
