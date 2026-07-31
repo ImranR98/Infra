@@ -10,6 +10,7 @@ stringData:
       e2dsa
       ansi
       hist: /state/hists/
+      site: https://copyparty.home.local
 
     [accounts]
       admin: $COPYPARTY_ADMIN_PASSWORD
