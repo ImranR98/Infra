@@ -22,7 +22,7 @@ spec:
           lifecycle:
             postStart:
               exec:
-                command: ["sh", "-c", "mkdir -p /data/downloads/incomplete && chown 1000:1000 /data/downloads"]
+                command: ["sh", "-c", "mkdir -p /data/downloads/incomplete && chown -R 1000:1000 /data/downloads"]
           securityContext:
             allowPrivilegeEscalation: false
           ports:
