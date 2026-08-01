@@ -51,6 +51,10 @@ spec:
           env:
             - name: PLIKD_FEATURE_AUTHENTICATION
               value: "forced"
+            - name: PLIKD_DEFAULT_ADMIN_LOGIN
+              value: "admin"
+            - name: PLIKD_DEFAULT_ADMIN_PASSWORD
+              value: "$PLIK_ADMIN_PASSWORD"
           readinessProbe:
             httpGet:
               path: /
