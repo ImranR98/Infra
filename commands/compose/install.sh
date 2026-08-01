@@ -9,7 +9,7 @@ render_compose_yaml
 # Create host volume dirs from compose.yaml (parent dir for files, full path for dirs).
 yq -r '.services[] | select(.volumes) | .volumes[] | (.source? // .) | split(":") | .[0]' "$COMPOSE_STATE_DIR/compose.yaml" | grep "^$COMPOSE_STATE_DIR" | while read -r host_path; do
 name="$(basename "$host_path")"
-if [[ "$name" =~ \.(json|yaml|yml|toml|conf|cfg|ini|crt|key|pem|db|sqlite|sqlite3)$ ]]; then
+if [[ "$name" == *.* ]]; then
     mkdir -p "$(dirname "$host_path")"
     if [ "$UID" -eq 0 ]; then
         chown "$MY_UID:$MY_UID" "$(dirname "$host_path")" 2>/dev/null || :
