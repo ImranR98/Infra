@@ -45,7 +45,7 @@ spec:
             main:
               image:
                 repository: ghcr.io/immich-app/immich-server
-                tag: v3.0.3
+                tag: v3.1.0
               env:
                 HWACCEL_VAAPI_ENABLED: "true"
       persistence:
@@ -68,7 +68,7 @@ spec:
             main:
               image:
                 repository: ghcr.io/immich-app/immich-machine-learning
-                tag: v3.0.3-rocm
+                tag: v3.1.0-rocm
               resources:
                 limits:
                   memory: 8Gi

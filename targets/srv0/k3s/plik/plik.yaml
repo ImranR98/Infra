@@ -20,7 +20,7 @@ spec:
         fsGroup: $MY_UID
       initContainers:
         - name: fix-perms
-          image: busybox:1.37
+          image: busybox:1.38
           command: ["sh", "-c", "chown -R $MY_UID:$MY_UID /data"]
           securityContext:
             runAsUser: 0

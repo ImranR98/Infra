@@ -10,7 +10,7 @@ spec:
   failurePolicy: abort
   targetNamespace: base
   createNamespace: false
-  version: 1.21.0
+  version: 1.21.1
   valuesContent: |-
     installCRDs: true
     resources:
