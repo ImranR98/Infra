@@ -106,9 +106,40 @@ export COPYPARTY_ADMIN_PASSWORD="changeme" # openssl rand -hex 16
 # ====== FRP ======
 export PROXY_HOST="vps0.example.org"
 # Generate with: ./infra.sh srv0 compose generate-frp-certs vps0
-export FRP_CA_CERT="change_me" # PEM-encoded CA certificate for this FRP pair
-export FRP_CA_KEY="change_me" # PEM-encoded CA private key (keep on operator machine)
-export FRP_CLIENT_CERT="change_me" # PEM-encoded client certificate
-export FRP_CLIENT_KEY="change_me" # PEM-encoded client private key
-export FRP_PREBOOT_CLIENT_CERT="change_me" # PEM-encoded preboot client certificate
-export FRP_PREBOOT_CLIENT_KEY="change_me" # PEM-encoded preboot client private key
+# Use the heredoc pattern below for multi-line PEM data:
+export FRP_CA_CERT="$(cat <<'FRP_CERT_EOF'
+-----BEGIN CERTIFICATE-----
+<CA-certificate-pem-block>
+-----END CERTIFICATE-----
+FRP_CERT_EOF
+)"
+export FRP_CA_KEY="$(cat <<'FRP_CERT_EOF'
+-----BEGIN PRIVATE KEY-----
+<CA-private-key-pem-block>
+-----END PRIVATE KEY-----
+FRP_CERT_EOF
+)"
+export FRP_CLIENT_CERT="$(cat <<'FRP_CERT_EOF'
+-----BEGIN CERTIFICATE-----
+<client-certificate-pem-block>
+-----END CERTIFICATE-----
+FRP_CERT_EOF
+)"
+export FRP_CLIENT_KEY="$(cat <<'FRP_CERT_EOF'
+-----BEGIN PRIVATE KEY-----
+<client-private-key-pem-block>
+-----END PRIVATE KEY-----
+FRP_CERT_EOF
+)"
+export FRP_PREBOOT_CLIENT_CERT="$(cat <<'FRP_CERT_EOF'
+-----BEGIN CERTIFICATE-----
+<preboot-client-certificate-pem-block>
+-----END CERTIFICATE-----
+FRP_CERT_EOF
+)"
+export FRP_PREBOOT_CLIENT_KEY="$(cat <<'FRP_CERT_EOF'
+-----BEGIN PRIVATE KEY-----
+<preboot-client-private-key-pem-block>
+-----END PRIVATE KEY-----
+FRP_CERT_EOF
+)"

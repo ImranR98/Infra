@@ -16,6 +16,7 @@ services:
             - "--accesslog=true"
             - "--providers.docker=true"
             - "--providers.docker.exposedByDefault=false"
+            - "--providers.docker.network=traefik"
             - "--providers.file.filename=/etc/traefik/dynamic-configuration.yaml"
             - "--entryPoints.web=true"
             - "--entryPoints.web.address=:80"
@@ -58,7 +59,7 @@ services:
 
     # FRP server - reverse proxy tunnel for pc0
     frps:
-        image: fatedier/frps:v0.69.1
+        image: fatedier/frps:v0.70.0
         container_name: frps
         restart: always
         volumes:

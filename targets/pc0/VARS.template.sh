@@ -6,9 +6,30 @@ export DOMAIN_OWNER_EMAIL="contact@$SERVICES_DOMAIN"
 export OWNCAST_ACCESS_TOKEN="change_me" # openssl rand -hex 32
 
 # ====== FRP ======
-export PROXY_HOST="change_me" # e.g. vps1.example.org
+export PROXY_HOST="change_me" # hostname of the FRP server (e.g. vps1.example.org)
 # Generate with: ./infra.sh pc0 compose generate-frp-certs vps1
-export FRP_CA_CERT="change_me" # PEM-encoded CA certificate for this FRP pair
-export FRP_CA_KEY="change_me" # PEM-encoded CA private key (keep on operator machine)
-export FRP_CLIENT_CERT="change_me" # PEM-encoded client certificate
-export FRP_CLIENT_KEY="change_me" # PEM-encoded client private key
+# Use the heredoc pattern below for multi-line PEM data:
+export FRP_CA_CERT="$(cat <<'FRP_CERT_EOF'
+-----BEGIN CERTIFICATE-----
+<CA-certificate-pem-block>
+-----END CERTIFICATE-----
+FRP_CERT_EOF
+)"
+export FRP_CA_KEY="$(cat <<'FRP_CERT_EOF'
+-----BEGIN PRIVATE KEY-----
+<CA-private-key-pem-block>
+-----END PRIVATE KEY-----
+FRP_CERT_EOF
+)"
+export FRP_CLIENT_CERT="$(cat <<'FRP_CERT_EOF'
+-----BEGIN CERTIFICATE-----
+<client-certificate-pem-block>
+-----END CERTIFICATE-----
+FRP_CERT_EOF
+)"
+export FRP_CLIENT_KEY="$(cat <<'FRP_CERT_EOF'
+-----BEGIN PRIVATE KEY-----
+<client-private-key-pem-block>
+-----END PRIVATE KEY-----
+FRP_CERT_EOF
+)"

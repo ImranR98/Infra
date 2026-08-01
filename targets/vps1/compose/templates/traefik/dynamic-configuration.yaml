@@ -1,7 +1,7 @@
 http:
   routers:
     http-to-frps:
-      rule: "Host(`pc0.$SERVICES_DOMAIN`) || Host(`*.pc0.$SERVICES_DOMAIN`)"
+      rule: "Host(`pc.$SERVICES_DOMAIN`) || Host(`*.pc.$SERVICES_DOMAIN`)"
       entryPoints: [web]
       service: http-frps
       priority: 100
@@ -18,7 +18,7 @@ tcp:
         version: 2
   routers:
     https-to-frps:
-      rule: "HostSNI(`pc0.$SERVICES_DOMAIN`) || HostSNI(`*.pc0.$SERVICES_DOMAIN`)"
+      rule: "HostSNI(`pc.$SERVICES_DOMAIN`) || HostSNI(`*.pc.$SERVICES_DOMAIN`)"
       entryPoints: [websecure]
       service: https-frps
       tls:

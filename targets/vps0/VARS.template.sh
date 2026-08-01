@@ -52,6 +52,22 @@ export GEOLITE_LICENSE_KEY="" # (optional, see Shlink docs)
 
 # ====== FRP ======
 # Generate with: ./infra.sh srv0 compose generate-frp-certs vps0
-export FRP_CA_CERT="change_me" # PEM-encoded CA certificate for this FRP pair
-export FRP_SERVER_CERT="change_me" # PEM-encoded server certificate
-export FRP_SERVER_KEY="change_me" # PEM-encoded server private key
+# Use the heredoc pattern below for multi-line PEM data:
+export FRP_CA_CERT="$(cat <<'FRP_CERT_EOF'
+-----BEGIN CERTIFICATE-----
+<CA-certificate-pem-block>
+-----END CERTIFICATE-----
+FRP_CERT_EOF
+)"
+export FRP_SERVER_CERT="$(cat <<'FRP_CERT_EOF'
+-----BEGIN CERTIFICATE-----
+<server-certificate-pem-block>
+-----END CERTIFICATE-----
+FRP_CERT_EOF
+)"
+export FRP_SERVER_KEY="$(cat <<'FRP_CERT_EOF'
+-----BEGIN PRIVATE KEY-----
+<server-private-key-pem-block>
+-----END PRIVATE KEY-----
+FRP_CERT_EOF
+)"

@@ -53,8 +53,6 @@ services:
             - "--providers.docker.endpoint=unix:///socket/docker.sock"
             - "--providers.docker.network=traefik"
             - "--entryPoints.websecure.proxyProtocol.trustedIPs=172.19.0.1/32"
-            - "--entryPoints.web.proxyProtocol.trustedIPs=172.19.0.1/32"
-            - "--entryPoints.rtmp.proxyProtocol.trustedIPs=172.19.0.1/32"
         ports:
             - "127.0.0.1:80:80"
             - "127.0.0.1:443:443"
@@ -114,7 +112,7 @@ services:
         logging: *logging
 
     frpc:
-        image: fatedier/frpc:v0.69.1
+        image: fatedier/frpc:v0.70.0
         container_name: frpc
         restart: always
         volumes:
