@@ -25,6 +25,7 @@ apps:
   - opodsync
   - dscpln
   - opencanary
+  - flaresolverr
   - fmd
   - plik
   - syncthing

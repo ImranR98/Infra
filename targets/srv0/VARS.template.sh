@@ -1,6 +1,7 @@
 # ====== Domain ======
 export SERVICES_DOMAIN="home.example.org"
 export DOMAIN_OWNER_EMAIL="contact@example.org"
+export TZ="America/Toronto"
 
 # ====== Ntfy ======
 export NTFY_WRITE_ONLY_ACCOUNT_TOKEN="change_me" # "tk_$(openssl rand -hex 16)"
