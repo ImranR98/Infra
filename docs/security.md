@@ -8,12 +8,13 @@ Infra takes a defense-in-depth approach to security across the stack: file permi
 
 Secrets never enter git. The convention:
 - `VARS.template.sh` files in each target directory list required variables with placeholder values — these are committed
-- `VARS.<target>.sh` files at the repo root contain actual secrets — these are gitignored
+- `VARS.<target>.sh` files in the `secrets/` directory contain actual secrets — these are gitignored (root fallback supported)
 
 The repo's `.gitignore` includes:
 ```
 /VARS.sh
 /VARS.*.sh
+/secrets/
 ```
 
 ### Template file permissions
@@ -130,7 +131,9 @@ export CROWDSEC_BOUNCER_KEY="change_me"    # openssl rand -hex 32
 
 All secrets are generated with cryptographically secure random values or X.509 certificates rather than hardcoded defaults.
 
-## HelmChart CR secret exposure
+## Known tradeoffs
+
+### HelmChart CR secret exposure
 
 K3s `HelmChart` custom resources embed `valuesContent` directly in the CR spec, which is stored in the Kubernetes API (etcd/SQLite). This means any value passed to a Helm chart via `valuesContent` — including database passwords, encryption keys, JWKS private keys, and OIDC client secrets — is readable by anyone with `get` access to `helmcharts.helm.cattle.io` resources in the relevant namespace.
 

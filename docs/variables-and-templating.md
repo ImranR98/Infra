@@ -5,7 +5,7 @@
 Infra separates configuration into two layers:
 
 1. **Templates** — YAML/TOML/JSON files with `$VARIABLE` placeholders. These live in `targets/` and are version-controlled.
-2. **Variables** — per-target shell scripts that `export` the actual values. These live at the repo root as `VARS.<target>.sh` and are **gitignored**.
+2. **Variables** — per-target shell scripts that `export` the actual values. These live in `secrets/VARS.<target>.sh` and are **gitignored** (root `VARS.<target>.sh` is also supported as a fallback).
 
 This keeps secrets out of git while making infrastructure fully defined and reproducible.
 
@@ -26,13 +26,13 @@ The template serves as:
 
 ### Real variable files
 
-`VARS.<target>.sh` at the repo root is the actual secrets file. It is sourced at runtime to populate the shell environment. If found, it takes priority over a generic `VARS.sh` (which is also supported as a fallback).
+`VARS.<target>.sh` in the `secrets/` directory is the actual secrets file (root is also checked as a fallback). It is sourced at runtime to populate the shell environment. If found, it takes priority over a generic `VARS.sh` (which is also supported as a fallback).
 
 ### Resolution logic
 
 `resolve_vars_file()` in `lib/common.sh` checks:
-1. `VARS.<target>.sh` — per-target secrets
-2. `VARS.sh` — generic fallback
+1. `secrets/VARS.<target>.sh` — per-target secrets (root `VARS.<target>.sh` checked as fallback)
+2. `secrets/VARS.sh` — generic fallback (root `VARS.sh` checked as fallback)
 
 `source_env()` then validates that every variable listed in the template is present in the real file before sourcing it.
 
@@ -135,6 +135,12 @@ When running as root (e.g., in a systemd service), `MY_UID` is forced to `1000`.
 
 ### `*_HASHABLE` → `*_HASHED` auto-hashing
 
-Variables ending in `_HASHABLE` are automatically hashed to a corresponding `_HASHED` variable using `openssl passwd -6` (SHA-512 `$6$` format). This is used for generating password hashes from cleartext secrets at variable-load time, without storing the hash in plaintext vars files.
+Variables ending in `_HASHABLE` are automatically hashed to a corresponding `_HASHED` variable using `openssl passwd -6` (SHA-512 `$6$` crypt format). The value of the `_HASHABLE` variable is piped through `openssl passwd -6 -stdin`, and the resulting `$6$...` hash is exported as the `_HASHED` variable. This is typically used when a template needs an SHA-512 password hash but the vars file already stores the secret in a different format (e.g., bcrypt, cleartext, or a token).
 
-For example, if a vars file exports `AUTHELIA_USERS_DATABASE_HASHABLE` (containing bcrypt-compatible password hashes), the system generates `AUTHELIA_USERS_DATABASE_HASHED` with the SHA-512 equivalent. The template references the `_HASHED` version while the `_HASHABLE` source stays in the secrets file.
+For example, if a vars file exports `AUTHELIA_USERS_DATABASE_HASHABLE` (containing the bcrypt-hashed user database), the system generates `AUTHELIA_USERS_DATABASE_HASHED` — a single SHA-512 crypt hash of the entire database string. The template references the `_HASHED` variable while the `_HASHABLE` source stays in the secrets file.
+
+### Structural `$VARIABLE` placeholders
+
+Some template variables expand to multi-line YAML blocks at indented positions — for example, `$GEOBLOCK_CONFIG_SUBSET` inserts additional `countries:` / `allowUnknownCountries: false` / etc. into a middleware config. These are "structural" variables because they contribute YAML syntax, not just scalar values.
+
+Template files containing bare `$VARIABLE` lines at mapping indentation (no `key:` prefix) fail standard `yq eval` YAML syntax checks because the unexpanded placeholder is invalid YAML. The `validate` command detects this pattern and downgrades it to a warning: *"YAML syntax skipped (structural `$VARIABLE` placeholder)"*. Other validation (variable references, kustomize build, compose config) still runs normally.

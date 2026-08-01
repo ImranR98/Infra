@@ -48,7 +48,7 @@ The concept of "targets" as directory-based configuration units with overridable
 
 ### The `# IGNORE INITIALLY` bootstrap system
 
-The two-phase deployment (initial mode strips markers for safe bootstrapping, then re-running includes everything) is a custom pattern. The Authelia-specific variant (comment out on first render) and the K3s variant (remove on initial, include normally thereafter) are specific to Infra.
+The two-phase deployment (initial mode strips markers for safe bootstrapping, then re-running includes everything) is a custom pattern. The `.secret`-file variant (comment out on first render) and the K3s variant (remove on initial mode, include normally thereafter) are specific to Infra.
 
 ### `.secret` and `.plain` file conventions
 
@@ -56,11 +56,11 @@ The file extension-based rendering behavior (`.secret` → envsubst + chmod 600,
 
 ### The two-tier variable system
 
-The split between `VARS.template.sh` (documentation + validation source) and `VARS.<target>.sh` (actual secrets) is custom. The validation that cross-references template exports with actual file content is custom logic in `lib/common.sh`.
+The split between `VARS.template.sh` (documentation + validation source) and `VARS.<target>.sh` in `secrets/` (actual secrets) is custom. The validation that cross-references template exports with actual file content is custom logic in `lib/common.sh`.
 
 ### Compose template rendering pipeline
 
-`configure_compose_templates()` is custom — it walks the templates directory, classifies files by extension, applies special handling for authelia/ and traefik/ subdirectories, and manages the `.secret`/`.plain` suffix stripping. This is a bespoke rendering pipeline.
+`configure_compose_templates()` is custom — it walks the templates directory, classifies files by extension (`.secret`, `.plain`, or plain envsubst), and runs each component's `prep.sh` hook before rendering. This is a bespoke rendering pipeline.
 
 ### The `post.sh` CRD waiter
 

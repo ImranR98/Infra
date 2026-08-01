@@ -21,7 +21,7 @@ Infra is a shell-driven IaC repo for a multi-machine homelab. One CLI (`./infra.
 ```
 ./infra.sh <target> validate                     # YAML + kustomize + var-reference check
 ./infra.sh <target> list-domains                 # Host(...) domains from IngressRoutes & Compose
-./infra.sh <target> compose install              # Render templates, install systemd unit, start
+./infra.sh <target> compose install              # Render templates, create host dirs, start stack
 ./infra.sh <target> compose restart <service>    # Re-render templates + restart single service
 ./infra.sh <target> compose backup-state [remote]
 ./infra.sh <target> compose generate-frp-certs <server-target>  # mTLS certs for FRP pair

@@ -6,7 +6,7 @@ NS=base
 NAME=storage-test
 PV_NAME="${NAME}-pv"
 PVC_NAME="${NAME}-pvc"
-SIZE=1Gi
+SIZE="${1:-1Gi}"
 TEST_STRING="storage-test-$(date +%s)"
 FAILED=false
 

@@ -42,7 +42,7 @@ If no matching script is found, or if the user provides no arguments, a help scr
 ## How commands work
 
 Every command script:
-1. Is sourced/executed with the remaining CLI arguments
+1. Runs with the remaining CLI arguments after the target and subcommand path
 2. Has access to `$INFRA_ROOT`, `$TARGET`, and all variables from `VARS.<target>.sh`
 3. Sources `lib/common.sh` if it needs shared functions
 4. Uses `get_sudo_cmd()` when root privileges are needed
@@ -50,6 +50,22 @@ Every command script:
 ### The DESC convention
 
 The second line of each `.sh` command file starts with `# DESC:` followed by a human-readable description. This is what the help system displays.
+
+### Boilerplate
+
+```bash
+#!/bin/bash
+# DESC: Short description of what it does
+set -euo pipefail
+source "$INFRA_ROOT/lib/common.sh"
+# ... implementation ...
+```
+
+Create scripts at `commands/<name>.sh` (or `commands/<subdir>/<name>.sh` for subcommands). For target-specific commands, place them at `targets/<target>/commands/` — the dispatch router checks there first.
+
+### Bash sourcing behavior
+
+Commands are sourced, not executed in a subshell. This means `exit` will kill the parent shell and the script has access to all shell state from `infra.sh`. Both `.sh` (bash, must be `chmod +x`) and `.py` (python3, no chmod needed) are supported.
 
 ## Available commands
 
@@ -65,7 +81,7 @@ The second line of each `.sh` command file starts with `# DESC:` followed by a h
 
 | Command | Description |
 |---------|------------|
-| `compose install` | Render templates, install systemd service, start Compose stack |
+| `compose install` | Render templates, start Compose stack via `docker compose up -d` |
 | `compose backup-state` | Backup Compose runtime state (local file or remote via SSH) |
 | `compose generate-frp-certs <target>` | Generate mTLS certificates for an FRP client↔server pair |
 | `compose restart <service>` | Restart a specific Compose service |
@@ -82,20 +98,6 @@ The second line of each `.sh` command file starts with `# DESC:` followed by a h
 | `k3s test-storage <size>` | Run a smoke test: create NFS PV+PVC, write/read data, clean up |
 | `k3s restore-pvc <name> [-y]` | Restore a PVC from a backup archive |
 | `k3s test services` | (srv0 only) Browser-based integration test for all exposed services |
-
-## Writing a new command
-
-1. Create a bash script at `commands/<name>.sh` (or `commands/<subdir>/<name>.sh` for subcommands)
-2. Start the file with:
-   ```bash
-   #!/bin/bash
-   # DESC: Short description of what it does
-   set -euo pipefail
-   source "$INFRA_ROOT/lib/common.sh"
-   ```
-3. At the end, `exec` the script with `"$@"` to receive remaining arguments
-
-If the command should be available only on specific targets, place it in `targets/<target>/commands/` instead. The dispatch router checks that location first.
 
 ## Target-specific overrides
 

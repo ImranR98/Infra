@@ -58,8 +58,8 @@ list_domains() {
     if [ -z "$sd" ]; then sd='$SERVICES_DOMAIN'; fi
 
     _extract_hosts() {
-        grep -rohP "Host\(\x60[^\x60]+\x60\)" "$@" 2>/dev/null | \
-            sed "s/.*\x60\([^\x60]*\)\x60.*/\1/" | \
+        grep -rohP 'Host\(`[^`]+`\)' "$@" 2>/dev/null | \
+            sed 's/.*`\([^`]*\)`.*/\1/' | \
             grep -v '\.localhost'
     }
 
@@ -70,7 +70,7 @@ list_domains() {
     fi
 
     if [ -f "$INFRA_ROOT/targets/$target/compose/compose.yaml" ]; then
-        sed -n 's/.*Host(`\([^`]*\)`).*/\1/p' "$INFRA_ROOT/targets/$target/compose/compose.yaml" | \
+        _extract_hosts "$INFRA_ROOT/targets/$target/compose/compose.yaml" | \
             sed "s/\\\$SERVICES_DOMAIN/${sd}/g" | \
             sort -u
     fi

@@ -19,9 +19,8 @@ AUTO_YES=false
 if [ "${1:-}" = "-y" ]; then AUTO_YES=true; shift; fi
 
 if $ALL_MODE; then
-    if ! $AUTO_YES; then
-        read -p "Restore all auto-backup labeled PVCs from backup archives? [y/N] " confirm
-        case "$confirm" in [yY]*) ;; *) echo "Aborted."; exit 0 ;; esac
+    if ! $AUTO_YES && ! _confirm "Restore all auto-backup labeled PVCs from backup archives?"; then
+        echo "Aborted."; exit 0
     fi
     pvc_restore_all true
     exit $?
@@ -60,17 +59,16 @@ else
     echo ""
 fi
 
-if [ "$AUTO_YES" = false ]; then
-    read -p "Proceed with restore? [y/N] " confirm
-    case "$confirm" in [yY]*) ;; *) echo "Aborted."; exit 0 ;; esac
+if [ "$AUTO_YES" = false ] && ! _confirm "Proceed with restore?"; then
+    echo "Aborted."; exit 0
 fi
 
 SCALED_FILE=$(mktemp)
-trap 'pvc_scale_restore "$PVC_NS" "$SCALED_FILE"; rm -f "$SCALED_FILE"' EXIT
+trap 'pvc_scale_restore "$SCALED_FILE"; rm -f "$SCALED_FILE"' EXIT
 
 pvc_scale_down "$PVC_NS" "$PVC_NAME" "$SCALED_FILE"
 echo "Waiting for pods to terminate..."
-pvc_wait_pods_gone "$PVC_NS" "$SCALED_FILE"
+pvc_wait_pods_gone "$SCALED_FILE"
 
 echo "Waiting for PVC to be ready for mounting..."
 pvc_wait_bound "$PVC_NS" "$PVC_NAME" 150 || exit 1

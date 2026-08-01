@@ -27,7 +27,7 @@ Infra uses a custom two-phase bootstrap for components that depend on resources 
 Two behaviors, depending on context:
 
 - **K3s `initial` mode:** Lines with `# IGNORE INITIALLY` are *removed* from the built YAML before apply. The operator gets a reminder to re-run without `initial` to include them.
-- **Compose Authelia bootstrap:** Lines with `# IGNORE INITIALLY` are *commented out* on first render, then included on subsequent renders.
+- **Compose `.secret` file bootstrap:** Lines with `# IGNORE INITIALLY` are *commented out* on first render, then included on subsequent renders. Applies to all `.secret` template files, not only Authelia.
 
 This lets a greenfield cluster deploy partially, get dependencies up, then complete the deployment.
 

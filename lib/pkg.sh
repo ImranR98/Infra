@@ -28,8 +28,8 @@ install_pkgs() {
     local cmd_str
     printf -v cmd_str '%q ' "$@"
     case "$pkgmgr" in
-        apt) $su bash -c "apt-get install -y $cmd_str" || return 1 ;;
-        dnf) $su bash -c "dnf install -y $cmd_str" || return 1 ;;
+        apt) "$su" bash -c "apt-get install -y $cmd_str" || return 1 ;;
+        dnf) "$su" bash -c "dnf install -y $cmd_str" || return 1 ;;
         rpm-ostree) rpm-ostree install --apply-live --assumeyes $cmd_str || return 1 ;;
         *) return 1 ;;
     esac
@@ -40,20 +40,21 @@ ensure_docker_repo() {
     case "$pkgmgr" in
         apt)
             install_pkgs "$su" "$pkgmgr" curl gnupg
-            $su bash -c 'install -m 0755 -d /etc/apt/keyrings'
+            "$su" bash -c 'install -m 0755 -d /etc/apt/keyrings'
+            local os_id os_codename docker_distro
             os_id=$(. /etc/os-release && echo "${ID:-ubuntu}")
             os_codename=$(. /etc/os-release && echo "$VERSION_CODENAME")
             case "$os_id" in
                 debian) docker_distro="debian" ;;
                 *)      docker_distro="ubuntu" ;;
             esac
-            curl -fsSL "https://download.docker.com/linux/$docker_distro/gpg" | $su bash -c 'gpg --dearmor -o /etc/apt/keyrings/docker.gpg'
-            echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/$docker_distro $os_codename stable" | $su bash -c 'tee /etc/apt/sources.list.d/docker.list >/dev/null'
-            $su bash -c "$pkgmgr update -qq"
+            curl -fsSL "https://download.docker.com/linux/$docker_distro/gpg" | "$su" bash -c 'gpg --dearmor -o /etc/apt/keyrings/docker.gpg'
+            echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/$docker_distro $os_codename stable" | "$su" bash -c 'tee /etc/apt/sources.list.d/docker.list >/dev/null'
+            "$su" bash -c "$pkgmgr update -qq"
             ;;
         dnf)
-            $su bash -c "$pkgmgr install -y dnf-plugins-core"
-            $su bash -c "$pkgmgr config-manager --add-repo https://download.docker.com/linux/fedora/docker-ce.repo"
+            "$su" bash -c "$pkgmgr install -y dnf-plugins-core"
+            "$su" bash -c "$pkgmgr config-manager --add-repo https://download.docker.com/linux/fedora/docker-ce.repo"
             ;;
         rpm-ostree)
             rpm-ostree refresh-md

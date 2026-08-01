@@ -24,7 +24,7 @@ fi
 
 if [ ! -d "$INFRA_ROOT/targets/$1" ]; then
     echo "Unknown target: $1" >&2
-    echo "Available targets: $(ls -1 "$INFRA_ROOT/targets" | tr '\n' ' ')" >&2
+    echo "Available targets: $(cd "$INFRA_ROOT/targets" && printf '%s ' */ | sed 's|/||g')" >&2
     exit 1
 fi
 export TARGET="$1"

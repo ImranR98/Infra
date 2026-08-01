@@ -92,7 +92,12 @@ vps0 runs a single Traefik instance that receives all public HTTP and HTTPS traf
 - `plausible.$SERVICES_DOMAIN` — Plausible analytics
 - `uptime.$SERVICES_DOMAIN` — Uptime Kuma monitoring
 - `ln.$SERVICES_DOMAIN` / `ui.ln.$SERVICES_DOMAIN` — Shlink URL shortener and web client
-- `isbn.$SERVICES_DOMAIN`, `ytdl.$SERVICES_DOMAIN`, `ikom.$SERVICES_DOMAIN`, `pixelntfy.$SERVICES_DOMAIN`, `apps.obtainium.$SERVICES_DOMAIN`, `sb25.$SERVICES_DOMAIN`
+- `isbn.$SERVICES_DOMAIN` — ISBN book barcode lookup
+- `ytdl.$SERVICES_DOMAIN` — yt-dlp web frontend (metube)
+- `ikom.$SERVICES_DOMAIN` — Ikomm (self-hosted service)
+- `pixelntfy.$SERVICES_DOMAIN` — PixelNtfy push notifications
+- `apps.obtainium.$SERVICES_DOMAIN` — Obtainium app update checker
+- `sb25.$SERVICES_DOMAIN` — SB25 (self-hosted service)
 
 These are configured via Docker container labels on the Traefik provider. Each `Host(...)` label tells Traefik to load-balance to the matching Docker container on the internal `traefik` network.
 
@@ -121,7 +126,7 @@ Use `./infra.sh <client-target> compose generate-frp-certs <server-target>` to g
 
 ### Health checks
 
-frps has a health check hitting its admin API healthz endpoint (`:7500`). frpc uses a process-level health check (`pgrep frpc`). This allows Docker (and systemd) to detect and restart unhealthy tunnels.
+frps has a health check hitting its admin API healthz endpoint (`:7500`). frpc uses a process-level health check (`pgrep frpc`). This allows Docker's health check system to detect and restart unhealthy tunnels; Docker's `restart: always` policy recovers from crashes and reboot.
 
 ## Preboot FRPC (LUKS unlock)
 

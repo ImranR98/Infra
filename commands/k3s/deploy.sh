@@ -110,9 +110,7 @@ _k3s_delete() {
             if [ -z "$pvc_name" ]; then continue; fi
             echo "Deleting PVC $ns/$pvc_name..."
             _delete_resource_with_timeout pvc "$ns" "$pvc_name"
-            kubectl get pv -o json 2>/dev/null | jq -r --arg name "$pvc_name" --arg ns "$ns" '.items[] | select(.status.phase == "Released" and .spec.claimRef.name == $name and .spec.claimRef.namespace == $ns) | .metadata.name' | while read -r pv; do
-                kubectl patch pv "$pv" --type=json -p='[{"op": "remove", "path": "/spec/claimRef/uid"}]' 2>/dev/null || true
-            done
+            pvc_release_pv "$pvc_name" "$ns"
         done <<< "$_pvcs"
     fi
 }

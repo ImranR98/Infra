@@ -1,5 +1,4 @@
 #!/bin/bash
-set -euo pipefail
 
 _desc() {
     local f="$1"

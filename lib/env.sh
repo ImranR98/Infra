@@ -3,7 +3,11 @@
 
 resolve_vars_file() {
     local target="${1:-${TARGET:-}}"
-    if [ -f "$INFRA_ROOT/VARS.${target}.sh" ]; then
+    if [ -f "$INFRA_ROOT/secrets/VARS.${target}.sh" ]; then
+        echo "$INFRA_ROOT/secrets/VARS.${target}.sh"
+    elif [ -f "$INFRA_ROOT/secrets/VARS.sh" ]; then
+        echo "$INFRA_ROOT/secrets/VARS.sh"
+    elif [ -f "$INFRA_ROOT/VARS.${target}.sh" ]; then
         echo "$INFRA_ROOT/VARS.${target}.sh"
     elif [ -f "$INFRA_ROOT/VARS.sh" ]; then
         echo "$INFRA_ROOT/VARS.sh"
@@ -39,7 +43,9 @@ source_env() {
     source "$vars_file"
 
     # Auto-hash any variable ending in _HASHABLE → _HASHED
-    while IFS='=' read -r var value; do
+    while IFS= read -r line; do
+        var="${line%%=*}"
+        value="${line#*=}"
         case "$var" in *_HASHABLE)
             hashed_var="${var%_HASHABLE}_HASHED"
             printf -v "$hashed_var" '%s' "$(printf '%s' "$value" | openssl passwd -6 -stdin)"

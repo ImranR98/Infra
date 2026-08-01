@@ -19,11 +19,15 @@ $hv"
 }
 
 _has_structural_vars() {
-    local dir="$1"
-    for f in "$dir"/*.yaml "$dir"/*.yml; do
-        [ -f "$f" ] || continue
-        grep -qP '^\s+\$[A-Z_][A-Z_0-9]*\s*$' "$f" && return 0
-    done
+    local path="$1"
+    if [ -f "$path" ]; then
+        grep -qP '^\s+\$[A-Z_][A-Z_0-9]*\s*$' "$path" && return 0
+    elif [ -d "$path" ]; then
+        for f in "$path"/*.yaml "$path"/*.yml; do
+            [ -f "$f" ] || continue
+            grep -qP '^\s+\$[A-Z_][A-Z_0-9]*\s*$' "$f" && return 0
+        done
+    fi
     return 1
 }
 
@@ -58,9 +62,11 @@ _count_ref_errors() {
     local known_vars="$1" file="$2"
     local ref_errors; ref_errors=$(_check_var_refs "$known_vars" "$file")
     if [ -n "$ref_errors" ]; then
-        echo "$ref_errors"
-        errors=$((errors + $(echo "$ref_errors" | wc -l)))
+        echo "$ref_errors" >&2
+        echo "$(echo "$ref_errors" | wc -l)"
+        return 0
     fi
+    echo 0
 }
 
 _validate_k3s() {
@@ -97,7 +103,7 @@ VOLUMES")
         local yaml_files=()
         for yf in "$comp_dir"/*.yaml "$comp_dir"/*.yml; do if [ -f "$yf" ]; then yaml_files+=("$yf"); fi; done
         for yf in "${yaml_files[@]}"; do
-            _count_ref_errors "$known_vars" "$yf"
+            errors=$((errors + $(_count_ref_errors "$known_vars" "$yf")))
         done
     done
 
@@ -113,16 +119,24 @@ _validate_compose() {
         [ -f "$f" ] || continue
         if [[ "$f" =~ \.(yaml|yml)$ ]]; then
             if ! yq eval '.' "$f" >/dev/null 2>&1; then
-                echo "Error: $(basename "$f") has invalid YAML syntax"
-                errors=$((errors + 1))
+                if _has_structural_vars "$f"; then
+                    echo "Warning: $(basename "$f") YAML syntax skipped (structural \$VARIABLE placeholder)"
+                else
+                    echo "Error: $(basename "$f") has invalid YAML syntax"
+                    errors=$((errors + 1))
+                fi
             fi
         fi
     done
     while IFS= read -r -d '' f; do
         [[ "$f" =~ \.(yaml|yml)$ ]] || continue
         if ! yq eval '.' "$f" >/dev/null 2>&1; then
-            echo "Error: $(basename "$f") has invalid YAML syntax"
-            errors=$((errors + 1))
+            if _has_structural_vars "$f"; then
+                echo "Warning: $(basename "$f") YAML syntax skipped (structural \$VARIABLE placeholder)"
+            else
+                echo "Error: $(basename "$f") has invalid YAML syntax"
+                errors=$((errors + 1))
+            fi
         fi
     done < <(find "$INFRA_ROOT/targets/$target/compose/templates" -type f -print0 2>/dev/null)
 
@@ -134,7 +148,7 @@ COMPOSE_STATE_DIR")
     local compose_files=("$INFRA_ROOT/targets/$target/compose/compose.yaml")
     for f in "$INFRA_ROOT/targets/$target/compose/templates"/*; do if [ -f "$f" ]; then compose_files+=("$f"); fi; done
     for f in "${compose_files[@]}"; do
-        _count_ref_errors "$known_vars" "$f"
+        errors=$((errors + $(_count_ref_errors "$known_vars" "$f")))
     done
 
     if command -v docker >/dev/null 2>&1 && docker compose version >/dev/null 2>&1; then

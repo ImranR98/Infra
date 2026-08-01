@@ -20,9 +20,8 @@ AUTO_YES=false
 if [ "${1:-}" = "-y" ]; then AUTO_YES=true; shift; fi
 
 if $ALL_MODE; then
-    if ! $AUTO_YES; then
-        read -p "Back up all auto-backup labeled PVCs? [y/N] " confirm
-        case "$confirm" in [yY]*) ;; *) echo "Aborted."; exit 0 ;; esac
+    if ! $AUTO_YES && ! _confirm "Back up all auto-backup labeled PVCs?"; then
+        echo "Aborted."; exit 0
     fi
     pvc_backup_all true
     exit $?
@@ -58,9 +57,8 @@ else
     echo ""
 fi
 
-if [ "$AUTO_YES" = false ]; then
-    read -p "Proceed with backup? [y/N] " confirm
-    case "$confirm" in [yY]*) ;; *) echo "Aborted."; exit 0 ;; esac
+if [ "$AUTO_YES" = false ] && ! _confirm "Proceed with backup?"; then
+    echo "Aborted."; exit 0
 fi
 
 TIMESTAMP=$(date -Iseconds)

@@ -35,9 +35,7 @@ Each component under `templates/` can include a `prep.sh` that runs before templ
 ./infra.sh <target> compose install
 ```
 
-Runs the rendering pipeline, creates host directories for bind-mounted volumes (with `$MY_UID` ownership), and starts the Compose stack via `docker compose up -d --remove-orphans`. The Compose project name equals the target name.
-
-Services survive reboots through their individual `restart:` policies (`unless-stopped` or `always`). Docker's daemon restarts containers with these policies automatically at boot — no systemd unit is needed.
+Renders templates, creates host directories for bind-mounted volumes (with `$MY_UID` ownership), and starts the Compose stack via `docker compose up -d --remove-orphans`. The Compose project name equals the target name. Reboot survival is handled by each container's `restart:` policy — no systemd wrapper is needed.
 
 Volume paths are auto-created. If a path has a file extension (e.g., `config.json`), its parent directory is created instead.
 

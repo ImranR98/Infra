@@ -10,7 +10,7 @@ Every target directory contains:
 - Either a `compose/` directory (Docker Compose stack), a `k3s/` directory (Kubernetes workloads), or both
 - Optionally a `commands/` directory with target-specific command overrides
 
-The actual secrets live outside the target directory, at the repo root, as `VARS.<target>.sh`. These files are gitignored.
+The actual secrets live outside the target directory, in `secrets/VARS.<target>.sh`. These files are gitignored (root `VARS.<target>.sh` is also supported as fallback).
 
 ## Current targets
 
@@ -31,7 +31,7 @@ The main homelab server. Runs a full K3s cluster with ~20 application workloads,
 A VPS running a Docker Compose stack of public-facing web services and the FRP server that provides NAT traversal for srv0.
 
 - **Orchestrator:** Docker Compose
-- **Services:** Traefik reverse proxy, FRP server (frps), Authelia SSO, Plausible analytics, socket-proxy (Docker socket security), Watchtower auto-updater, Shlink URL shortener, Uptime Kuma, metube, ISBN lookup, PixelNtfy, Syncthing relay server, logtfy
+- **Services:** Traefik reverse proxy, FRP server (frps), Authelia SSO, Plausible analytics, Docker socket proxy (via `wollomatic/socket-proxy`), Watchtower auto-updater, Shlink URL shortener, Uptime Kuma, metube, ISBN lookup, PixelNtfy, Syncthing relay server, logtfy
 
 ### pc0 — Desktop PC (streaming)
 
@@ -77,6 +77,6 @@ Any target can override a global command by placing a script at `targets/<name>/
 
 1. Create `targets/<name>/` with `VARS.template.sh`
 2. Add `compose/compose.yaml` and/or `k3s/` directory as needed
-3. Create `VARS.<name>.sh` at the repo root following the template
+3. Create `secrets/VARS.<name>.sh` following the template
 4. Any target-specific commands go in `targets/<name>/commands/`
 5. The target is immediately usable: `./infra.sh <name> <command>`

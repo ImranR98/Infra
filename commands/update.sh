@@ -39,12 +39,17 @@ trap 'rm -f "$_RENOVATE_LOG"' EXIT
 export LOG_LEVEL=debug LOG_FORMAT=json
 
 echo "Scanning for updates via Renovate..."
+_renovate_rc=0
 $RENOVATE_BIN \
     --platform=local \
     --base-dir="$INFRA_ROOT" \
     --require-config=required \
     --onboarding=false \
-    > "$_RENOVATE_LOG" 2>&1 || true
+    > "$_RENOVATE_LOG" 2>&1 || _renovate_rc=$?
+
+if [ "$_renovate_rc" -ne 0 ] || ! grep -q '"packageFiles"' "$_RENOVATE_LOG" 2>/dev/null; then
+    echo "Warning: Renovate scan may have failed (exit=$_renovate_rc, check $_RENOVATE_LOG)" >&2
+fi
 
 _APPLY_PY="$INFRA_ROOT/commands/_internal/_apply_updates.py"
 _TARGET_FLAG="--target=$TARGET"
@@ -75,7 +80,8 @@ for f in "$INFRA_ROOT/targets/$TARGET/compose/compose.yaml" $(find "$INFRA_ROOT/
 
         echo "  $_plugin_name: $_ver_num -> $_latest (github.com/$_repo)"
         if [ "$DRY_RUN" = false ]; then
-            sed -i "s|plugins\.$_plugin_name\.version=$_ver_num|plugins.$_plugin_name.version=$_latest|" "$_plugin_tmp"
+            _ver_num_esc=$(echo "$_ver_num" | sed 's/\./\\./g')
+            sed -i "s|plugins\.$_plugin_name\.version=$_ver_num_esc|plugins.$_plugin_name.version=$_latest|" "$_plugin_tmp"
         fi
     done < <(grep -oP 'plugins\.[^.]+\.modulename=github\.com/[^\s"]+' "$f")
 

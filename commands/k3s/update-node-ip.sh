@@ -81,16 +81,10 @@ if [ -n "$node_name" ]; then
     kubectl annotate node "$node_name" flannel.alpha.coreos.com/public-ip="$new_ip" --overwrite 2>/dev/null || true
 
     if command -v python3 >/dev/null 2>&1; then
-        kubectl get node "$node_name" -o json 2>/dev/null | python3 -c "
-import sys, json
-node = json.load(sys.stdin)
-addrs = node.get('status', {}).get('addresses', [])
-for a in addrs:
-    if a.get('type') == 'InternalIP':
-        a['address'] = '$new_ip'
-json.dump({'status': {'addresses': addrs}}, sys.stdout)
-" > /tmp/k3s-node-status-patch.json 2>/dev/null && \
+        _patch_ip="$INFRA_ROOT/commands/_internal/_patch_node_ip.py"
+        if kubectl get node "$node_name" -o json 2>/dev/null | python3 "$_patch_ip" "$new_ip" > /tmp/k3s-node-status-patch.json 2>/dev/null; then
             kubectl patch node "$node_name" --subresource=status --type=merge -p "$(cat /tmp/k3s-node-status-patch.json)" 2>/dev/null || true
+        fi
         rm -f /tmp/k3s-node-status-patch.json
     fi
 fi

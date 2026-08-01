@@ -75,7 +75,7 @@ ENDSCRIPT
 echo "Syncing files to client..."
 ssh "${SSH_USER}@${CLIENT_IP}" "mkdir -p /tmp/lib" 2>/dev/null
 rsync -az "$installer" "${SSH_USER}@${CLIENT_IP}:/tmp/agent-install.sh"
-rsync -az "$INFRA_ROOT/lib/common.sh" "${SSH_USER}@${CLIENT_IP}:/tmp/lib/"
+rsync -az "$INFRA_ROOT/lib/" "${SSH_USER}@${CLIENT_IP}:/tmp/lib/"
 
 ssh -t "${SSH_USER}@${CLIENT_IP}" \
     "INFRA_INTERACTIVE=true bash /tmp/agent-install.sh '${SERVER_URL}' '${TOKEN}' '${ROLE}'"

@@ -10,6 +10,17 @@ pvc_find_namespace() {
         '.items[] | select(.metadata.name == $name) | .metadata.namespace' 2>/dev/null || true
 }
 
+# pvc_release_pv <pvc-name> <namespace>
+# Clears claimRef.uid on Released PVs that reference the PVC, making them Available.
+pvc_release_pv() {
+    local pvc_name="${1:?}" ns="${2:?}"
+    kubectl get pv -o json 2>/dev/null | jq -r --arg name "$pvc_name" --arg ns "$ns" \
+        '.items[] | select(.status.phase == "Released" and .spec.claimRef.name == $name and .spec.claimRef.namespace == $ns) | .metadata.name' \
+        | while read -r pv; do
+            kubectl patch pv "$pv" --type=json -p='[{"op": "remove", "path": "/spec/claimRef/uid"}]' 2>/dev/null || true
+        done
+}
+
 # pvc_find_workloads <namespace> <pvc-name> → "kind/name" per line (stdout)
 # Finds Deployments + StatefulSets referencing the PVC. Skips DaemonSets.
 pvc_find_workloads() {
@@ -21,7 +32,7 @@ pvc_find_workloads() {
 
 # pvc_scale_down <namespace> <pvc-name> <scaled-file>
 # Records replica counts to scaled-file, scales each workload to 0.
-# Writes "kind/name/replicas" lines. Returns 0 if any scaled, 1 if none.
+# Writes "namespace/kind/name/replicas" lines. Returns 0 if any scaled, 1 if none.
 pvc_scale_down() {
     local ns="${1:?}" pvc="${2:?}" scaled_file="${3:?}"
     local workloads kind wname reps did_scale=false
@@ -30,7 +41,7 @@ pvc_scale_down() {
         kind="${w%%/*}"
         wname="${w##*/}"
         reps=$(kubectl get "$kind" "$wname" -n "$ns" -o jsonpath='{.spec.replicas}' 2>/dev/null || echo 1)
-        echo "$kind/$wname/$reps" >> "$scaled_file"
+        echo "$ns/$kind/$wname/$reps" >> "$scaled_file"
         if [ "$reps" != "0" ]; then
             kubectl scale "$kind" "$wname" -n "$ns" --replicas=0
             did_scale=true
@@ -39,21 +50,22 @@ pvc_scale_down() {
     $did_scale
 }
 
-# pvc_wait_pods_gone <namespace> <scaled-file>
-# Reads scaled-file, waits for pods of scaled workloads to terminate.
+# pvc_wait_pods_gone <scaled-file>
+# Reads scaled-file (ns/kind/name/reps format), waits for pods to terminate.
 # Warns on timeout but does not abort.
 pvc_wait_pods_gone() {
-    local ns="${1:?}" scaled_file="${2:?}"
+    local scaled_file="${1:?}"
     [ -f "$scaled_file" ] || return 0
     while IFS= read -r entry; do
-        local kind wname selector
-        kind=$(echo "$entry" | cut -d/ -f1)
-        wname=$(echo "$entry" | cut -d/ -f2)
+        local ns kind wname selector
+        ns=$(echo "$entry" | cut -d/ -f1)
+        kind=$(echo "$entry" | cut -d/ -f2)
+        wname=$(echo "$entry" | cut -d/ -f3)
         selector=$(kubectl get "$kind" "$wname" -n "$ns" -o jsonpath='{.spec.selector.matchLabels}' 2>/dev/null | \
             jq -r 'to_entries | map("\(.key)=\(.value)") | join(",")')
         [ -n "$selector" ] || continue
         if ! kubectl wait --for=delete pod -n "$ns" --selector="$selector" --timeout=180s 2>/dev/null; then
-            echo "WARNING: pods for $kind/$wname did not terminate within 180s" >&2
+            echo "WARNING: pods for $ns/$kind/$wname did not terminate within 180s" >&2
         fi
     done < "$scaled_file"
 }
@@ -73,19 +85,20 @@ pvc_wait_bound() {
     return 1
 }
 
-# pvc_scale_restore <namespace> <scaled-file>
-# Reads scaled-file, restores each workload to its original replica count.
+# pvc_scale_restore <scaled-file>
+# Reads scaled-file (ns/kind/name/reps format), restores each workload.
 pvc_scale_restore() {
-    local ns="${1:?}" scaled_file="${2:?}"
+    local scaled_file="${1:?}"
     [ -f "$scaled_file" ] || return 0
     while IFS= read -r entry; do
-        local kind wname reps
-        kind=$(echo "$entry" | cut -d/ -f1)
-        wname=$(echo "$entry" | cut -d/ -f2)
-        reps=$(echo "$entry" | cut -d/ -f3)
-        echo "Restoring $kind/$wname to $reps replicas..."
+        local ns kind wname reps
+        ns=$(echo "$entry" | cut -d/ -f1)
+        kind=$(echo "$entry" | cut -d/ -f2)
+        wname=$(echo "$entry" | cut -d/ -f3)
+        reps=$(echo "$entry" | cut -d/ -f4)
+        echo "Restoring $ns/$kind/$wname to $reps replicas..."
         kubectl scale "$kind" "$wname" -n "$ns" --replicas="$reps" 2>/dev/null || \
-            echo "WARNING: failed to restore $kind/$wname — it may still be scaled to 0" >&2
+            echo "WARNING: failed to restore $ns/$kind/$wname — it may still be scaled to 0" >&2
     done < "$scaled_file"
 }
 
@@ -328,29 +341,12 @@ pvc_restore_all() {
             continue
         fi
 
-        workloads=$(pvc_find_workloads "$ns" "$name")
-        for w in $workloads; do
-            kind="${w%%/*}"
-            wname="${w##*/}"
-            reps=$(kubectl get "$kind" "$wname" -n "$ns" -o jsonpath='{.spec.replicas}' 2>/dev/null || echo 1)
-            echo "$ns/$kind/$wname/$reps" >> "$scaled_file_all"
-            if [ "$reps" != "0" ]; then
-                kubectl scale "$kind" "$wname" -n "$ns" --replicas=0 2>/dev/null
-            fi
-        done
+        pvc_scale_down "$ns" "$name" "$scaled_file_all"
     done <<< "$pvc_list"
 
     if [ -s "$scaled_file_all" ]; then
         echo "Waiting for all pods to terminate..."
-        while IFS= read -r entry; do
-            ns=$(echo "$entry" | cut -d/ -f1)
-            kind=$(echo "$entry" | cut -d/ -f2)
-            wname=$(echo "$entry" | cut -d/ -f3)
-            selector=$(kubectl get "$kind" "$wname" -n "$ns" -o jsonpath='{.spec.selector.matchLabels}' 2>/dev/null | jq -r 'to_entries | map("\(.key)=\(.value)") | join(",")')
-            [ -n "$selector" ] || continue
-            kubectl wait --for=delete pod -n "$ns" --selector="$selector" --timeout=180s 2>/dev/null || \
-                echo "WARNING: pods for $ns/$kind/$wname did not terminate within 180s" >&2
-        done < "$scaled_file_all"
+        pvc_wait_pods_gone "$scaled_file_all"
     fi
 
     # Phase 2 — restore each PVC
@@ -381,15 +377,7 @@ pvc_restore_all() {
     # Phase 3 — bulk scale-up
     if [ -s "$scaled_file_all" ]; then
         echo "Restoring all workloads..."
-        while IFS= read -r entry; do
-            ns=$(echo "$entry" | cut -d/ -f1)
-            kind=$(echo "$entry" | cut -d/ -f2)
-            wname=$(echo "$entry" | cut -d/ -f3)
-            reps=$(echo "$entry" | cut -d/ -f4)
-            echo "  Restoring $ns/$kind/$wname to $reps replicas..."
-            kubectl scale "$kind" "$wname" -n "$ns" --replicas="$reps" 2>/dev/null || \
-                echo "WARNING: failed to restore $ns/$kind/$wname" >&2
-        done < "$scaled_file_all"
+        pvc_scale_restore "$scaled_file_all"
     fi
 
     rm -f "$scaled_file_all"
