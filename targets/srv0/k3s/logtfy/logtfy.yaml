@@ -84,7 +84,7 @@ stringData:
                 "module": "traefik_accesslogs_custom",
                 "ntfyTopic": "logtfy",
                 "pattern": "fmd.*requestAccess.*\" 200",
-                "enabled": false
+                "enabled": true
             }
         ]
     }

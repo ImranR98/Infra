@@ -74,13 +74,12 @@ stringData:
             },
             "Webhook": {
               "class": "opencanary.logger.WebhookHandler",
-              "url": "http://ntfy.base.svc.cluster.local:3000/${TARGET}_services_opencanary",
+              "url": "https://ntfy.sh/${OPENCANARY_NTFY_SECRET_TOPIC}",
               "method": "POST",
               "data": "%(message)s",
               "status_code": 200,
               "headers": {
-                "Title": "OpenCanary on ${TARGET}",
-                "Authorization": "Bearer $NTFY_WRITE_ONLY_ACCOUNT_TOKEN"
+                "Title": "OpenCanary on ${TARGET}"
               }
             }
           }
