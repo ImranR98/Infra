@@ -48,6 +48,9 @@ spec:
               memory: 512Mi
             requests:
               memory: 128Mi
+          env:
+            - name: PLIKD_FEATURE_AUTHENTICATION
+              value: "forced"
           readinessProbe:
             httpGet:
               path: /
