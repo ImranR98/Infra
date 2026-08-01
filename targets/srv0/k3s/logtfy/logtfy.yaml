@@ -76,14 +76,15 @@ stringData:
             {
                 "module": "traefik_geoblock_allowed_requests_k8s",
                 "loggerArg": "kube-system",
-                "ntfyTopic": "logtfy",
+                "ntfyTopic": "traefik",
                 "defaultPriority": "1",
                 "enabled": true
             },
             {
-                "module": "traefik_accesslogs_custom",
+                "module": "traefik_accesslogs_custom_k8s",
+                "loggerArg": "kube-system",
                 "ntfyTopic": "logtfy",
-                "pattern": "fmd.*requestAccess.*\" 200",
+                "parserArg": "DownstreamStatus\":200,.*fmd.*requestAccess",
                 "enabled": true
             }
         ]
@@ -112,7 +113,7 @@ spec:
         fsGroup: $MY_UID
       containers:
         - name: logtfy
-          image: imranrdev/logtfy:latest@sha256:3750795017ca552f22e3b8028b6c8e0d9f0ca85b5bb5ae3f8e324e8c767d4088
+          image: imranrdev/logtfy:latest@sha256:61a10ce675bc4c58adb2d124b9fdc9a610d12ab1391149942c3ef958ed32fbf8
           volumeMounts:
             - name: journal
               mountPath: /var/log/journal
