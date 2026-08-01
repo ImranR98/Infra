@@ -10,7 +10,7 @@ source "$INFRA_ROOT/lib/frp-certs.sh"
 SERVER_TARGET="$1"
 if [ -z "$SERVER_TARGET" ] || [ ! -f "$INFRA_ROOT/targets/$SERVER_TARGET/VARS.template.sh" ]; then
     echo "Usage: $0 <target> compose generate-frp-certs <server-target>" >&2
-    echo "  <server-target> is the VPS running frps (e.g., vps0 or vps1)" >&2
+    echo "  <server-target> is the VPS running frps (e.g., vps0)" >&2
     exit 1
 fi
 

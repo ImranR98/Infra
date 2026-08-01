@@ -98,6 +98,7 @@ vps0 runs a single Traefik instance that receives all public HTTP and HTTPS traf
 - `pixelntfy.$SERVICES_DOMAIN` — PixelNtfy push notifications
 - `apps.obtainium.$SERVICES_DOMAIN` — Obtainium app update checker
 - `sb25.$SERVICES_DOMAIN` — SB25 (self-hosted service)
+- `owncast.$SERVICES_DOMAIN` — Owncast live streaming (web UI + RTMP ingest on `:1935`)
 
 These are configured via Docker container labels on the Traefik provider. Each `Host(...)` label tells Traefik to load-balance to the matching Docker container on the internal `traefik` network.
 
@@ -118,7 +119,7 @@ TLS passthrough is used for srv0 traffic so that both targets don't need to coor
 
 ### Authentication
 
-FRP uses mutual TLS (mTLS) for authentication. A per-pair CA issues client and server certificates. The server (`frps`) verifies the client's certificate against the CA and the client verifies the server's certificate likewise. Each FRP pair (srv0↔vps0, pc0↔vps1) uses a separate CA with no cross-pair trust. Preboot and post-boot FRPC on srv0 use different client certificates for credential isolation.
+FRP uses mutual TLS (mTLS) for authentication. A per-pair CA issues client and server certificates. The server (`frps`) verifies the client's certificate against the CA and the client verifies the server's certificate likewise. Preboot and post-boot FRPC on srv0 use different client certificates for credential isolation.
 
 ### Certificate generation
 

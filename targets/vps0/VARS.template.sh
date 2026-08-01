@@ -50,6 +50,9 @@ export SHLINK_DB_PASSWORD="change_me" # openssl rand -hex 32
 export SHLINK_API_KEY="change_me" # openssl rand -hex 32
 export GEOLITE_LICENSE_KEY="" # (optional, see Shlink docs)
 
+# ====== Owncast ======
+export OWNCAST_ACCESS_TOKEN="change_me"    # openssl rand -hex 32
+
 # ====== FRP ======
 # Generate with: ./infra.sh srv0 compose generate-frp-certs vps0
 # Use the heredoc pattern below for multi-line PEM data:

@@ -31,21 +31,7 @@ The main homelab server. Runs a full K3s cluster with ~20 application workloads,
 A VPS running a Docker Compose stack of public-facing web services and the FRP server that provides NAT traversal for srv0.
 
 - **Orchestrator:** Docker Compose
-- **Services:** Traefik reverse proxy, FRP server (frps), Authelia SSO, Plausible analytics, Docker socket proxy (via `wollomatic/socket-proxy`), Watchtower auto-updater, Shlink URL shortener, Uptime Kuma, metube, ISBN lookup, PixelNtfy, Syncthing relay server, logtfy
-
-### pc0 — Desktop PC (streaming)
-
-A desktop PC running a Docker Compose stack for Owncast live streaming with FRP tunneling.
-
-- **Orchestrator:** Docker Compose
-- **Services:** Traefik reverse proxy, FRPC sidecar (tunnels through vps1), Owncast streaming server, Docker socket proxy
-
-### vps1 — Secondary edge VPS + FRP server
-
-A VPS running a Docker Compose stack with an FRP server dedicated to the pc0 tunnel.
-
-- **Orchestrator:** Docker Compose
-- **Services:** Traefik reverse proxy, FRP server (frps), hello (placeholder service)
+- **Services:** Traefik reverse proxy, FRP server (frps), Authelia SSO, Plausible analytics, Docker socket proxy (via `wollomatic/socket-proxy`), Watchtower auto-updater, Shlink URL shortener, Uptime Kuma, metube, ISBN lookup, PixelNtfy, Syncthing relay server, logtfy, Owncast live streaming
 
 ## Target configuration patterns
 

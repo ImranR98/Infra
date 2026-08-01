@@ -176,6 +176,8 @@ services:
             - "--entryPoints.web.address=:80"
             - "--entryPoints.websecure=true"
             - "--entryPoints.websecure.address=:443"
+            - "--entryPoints.rtmp=true"
+            - "--entryPoints.rtmp.address=:1935"
             - "--certificatesresolvers.le.acme.email=$DOMAIN_OWNER_EMAIL"
             - "--certificatesresolvers.le.acme.storage=/acme/acme.json"
             # TLS-ALPN-01 avoids intercepting /.well-known/acme-challenge/ on :80,
@@ -188,6 +190,7 @@ services:
         ports:
             - "80:80"
             - "443:443"
+            - "1935:1935"
         volumes:
             - $COMPOSE_STATE_DIR/traefik/acme:/acme
             - $COMPOSE_STATE_DIR/traefik/dynamic-configuration.yaml:/etc/traefik/dynamic-configuration.yaml
@@ -437,6 +440,50 @@ services:
             - traefik
         restart: unless-stopped
         mem_limit: 512M
+        logging: *logging
+
+    # Owncast Auth - Token-based access control for Owncast viewer
+    owncast-auth:
+        image: python:3-alpine
+        container_name: owncast-auth
+        restart: unless-stopped
+        mem_limit: 64M
+        command: python3 /app/auth.py
+        environment:
+            - OWNCAST_ACCESS_TOKEN=$OWNCAST_ACCESS_TOKEN
+        volumes:
+            - $COMPOSE_STATE_DIR/owncast-auth/auth.py:/app/auth.py:ro
+        networks:
+            - traefik
+        logging: *logging
+
+    # Owncast - Live streaming server
+    owncast:
+        image: owncast/owncast:0.2.5
+        container_name: owncast
+        restart: unless-stopped
+        mem_limit: 2G
+        depends_on:
+            - traefik
+        volumes:
+            - $COMPOSE_STATE_DIR/owncast:/app/data
+        labels:
+            - "traefik.enable=true"
+            - "traefik.http.routers.owncast.rule=Host(`owncast.$SERVICES_DOMAIN`)"
+            - "traefik.http.routers.owncast.entrypoints=websecure"
+            - "traefik.http.routers.owncast.tls.certresolver=le"
+            - "traefik.http.routers.owncast.tls=true"
+            - "traefik.http.routers.owncast.middlewares=owncast-auth,geoblock@file"
+            - "traefik.http.middlewares.owncast-auth.forwardauth.address=http://owncast-auth:3000/"
+            - "traefik.http.services.owncast.loadbalancer.server.port=8080"
+            - "traefik.tcp.routers.owncast-rtmp.rule=HostSNI(`owncast.$SERVICES_DOMAIN`)"
+            - "traefik.tcp.routers.owncast-rtmp.entrypoints=rtmp"
+            - "traefik.tcp.routers.owncast-rtmp.service=owncast-rtmp"
+            - "traefik.tcp.routers.owncast-rtmp.tls=true"
+            - "traefik.tcp.routers.owncast-rtmp.tls.certresolver=le"
+            - "traefik.tcp.services.owncast-rtmp.loadbalancer.server.port=1935"
+        networks:
+            - traefik
         logging: *logging
 
     # Logtfy - Log Monitoring and ntfy Alerting

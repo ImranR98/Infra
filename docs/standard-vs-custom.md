@@ -84,7 +84,7 @@ The plugin version checker in `update.sh` that queries the GitHub Releases API a
 
 ### FRP certificate generation
 
-The `generate-frp-certs` command generates per-pair CA and X.509 certificates for mTLS authentication between FRP clients and servers. It supports preboot-specific client certificates, and outputs copy-paste blocks for VARS files.
+The `generate-frp-certs` command generates per-pair CA and X.509 certificates for mTLS authentication between an FRP client and server. It supports preboot-specific client certificates, and outputs copy-paste blocks for VARS files.
 
 ### Preboot FRPC + dracut-crypt-ssh
 

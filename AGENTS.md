@@ -13,8 +13,6 @@ Infra is a shell-driven IaC repo for a multi-machine homelab. One CLI (`./infra.
 |--------|-------------|------|
 | `srv0` | K3s (primary) + Compose sidecar | Main home server, LUKS-encrypted root |
 | `vps0` | Compose | Web-services VPS + FRP server |
-| `pc0` | Compose | Owncast streaming PC |
-| `vps1` | Compose | Secondary VPS + FRP server for pc0 |
 
 ## Essential commands
 
