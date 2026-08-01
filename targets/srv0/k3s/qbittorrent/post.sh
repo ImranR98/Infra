@@ -1,6 +1,9 @@
 #!/bin/bash
 set -euo pipefail
 source "$INFRA_ROOT/lib/common.sh"
+# The linuxserver/qbittorrent image ignores QBT_WEBUI_PASSWORD — API calls
+# are the only way to set credentials. The s6-overlay init system also means
+# the pod must NOT set runAsUser/runAsGroup; use PUID/PGID env vars instead.
 
 echo "=== qBittorrent Setup ==="
 echo "Waiting for qBittorrent to be ready..."
