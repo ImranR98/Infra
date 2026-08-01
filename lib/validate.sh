@@ -3,13 +3,28 @@
 
 _build_known_vars() {
     local target="$1"; shift
-    local known="$*"
+    local known="$*" hashed_vars
     while IFS= read -r v; do
         if [ -z "$v" ]; then continue; fi
         known+="
 $v"
     done < <(get_template_export_names "$target")
+    # Derive _HASHED counterparts for every _HASHABLE variable
+    hashed_vars=$(echo "$known" | grep '_HASHABLE$' | sed 's/_HASHABLE$/_HASHED/')
+    for hv in $hashed_vars; do
+        known+="
+$hv"
+    done
     echo "$known"
+}
+
+_has_structural_vars() {
+    local dir="$1"
+    for f in "$dir"/*.yaml "$dir"/*.yml; do
+        [ -f "$f" ] || continue
+        grep -qP '^\s+\$[A-Z_][A-Z_0-9]*\s*$' "$f" && return 0
+    done
+    return 1
 }
 
 _check_var_refs() {
@@ -53,6 +68,7 @@ _validate_k3s() {
 
     local known_vars; known_vars=$(_build_known_vars "$target" "MY_UID
 TARGET
+INFRA_ROOT
 COMPOSE_STATE_DIR
 COMPOSE_STATE_BACKUP_DIR
 K3S_STATE_DIR
@@ -69,7 +85,13 @@ VOLUMES")
         [ -f "$kfile" ] || { echo "Error: $comp missing kustomization.yaml"; errors=$((errors + 1)); continue; }
 
         if command -v kubectl >/dev/null 2>&1; then
-            kubectl kustomize "$comp_dir" >/dev/null || { echo "Error: $comp kustomize build failed"; errors=$((errors + 1)); }
+            local k_err; k_err=$(kubectl kustomize "$comp_dir" 2>&1 1>/dev/null) || {
+                if echo "$k_err" | grep -q "could not find expected ':'" && _has_structural_vars "$comp_dir"; then
+                    echo "Warning: $comp kustomize skipped (structural \$VARIABLE placeholder)"
+                else
+                    echo "Error: $comp kustomize build failed"; errors=$((errors + 1))
+                fi
+            }
         fi
 
         local yaml_files=()
