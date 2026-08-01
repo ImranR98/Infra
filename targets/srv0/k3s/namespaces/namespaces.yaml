@@ -16,12 +16,3 @@ metadata:
     pod-security.kubernetes.io/audit: baseline
     pod-security.kubernetes.io/warn: privileged
     pod-security.kubernetes.io/enforce: privileged
----
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: monitoring
-  labels:
-    pod-security.kubernetes.io/audit: baseline
-    pod-security.kubernetes.io/warn: baseline
-    pod-security.kubernetes.io/enforce: baseline

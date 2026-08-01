@@ -67,7 +67,7 @@ apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: external-exposed-node-syslog-pvc
-  namespace: monitoring
+  namespace: apps
 spec:
   accessModes:
     - ReadWriteMany

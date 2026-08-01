@@ -9,9 +9,9 @@ base:
   - traefik
   - crowdsec
   - authelia
+  - pvc-backup
   - ntfy
 apps:
-  - pvc-backup
   - immich
   - logtfy
   - jellyfin
