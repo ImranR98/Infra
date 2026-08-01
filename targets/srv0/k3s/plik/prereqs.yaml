@@ -40,7 +40,6 @@ stringData:
     ListenAddress       = "0.0.0.0"
     NoWebInterface      = false
     PlikDomain          = "https://send.$SERVICES_DOMAIN"
-    DownloadDomain      = "https://dl.$SERVICES_DOMAIN"
     AssumeHTTPS         = true
     SourceIpHeader      = "X-Forwarded-For"
     SessionTimeout      = "365d"
@@ -57,7 +56,7 @@ stringData:
     DefaultTTLStr       = "30d"
     MaxTTLStr           = "30d"
 
-    FeatureAuthentication = "default"
+    FeatureAuthentication = "forced"
     FeatureLocalLogin     = "enabled"
     DefaultAdminLogin    = "admin"
     DefaultAdminPassword = "$PLIK_ADMIN_PASSWORD"
