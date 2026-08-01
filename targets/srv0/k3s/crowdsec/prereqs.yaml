@@ -75,8 +75,7 @@ stringData:
     whitelist:
       reason: "Uploading/downloading files from Plik can cause false positives"
       expression:
-        - evt.Overflow.Alert.Events[0].GetMeta('target_fqdn') == 'send.$SERVICES_DOMAIN'
-        - evt.Overflow.Alert.GetScenario() in ['LePresidente/http-generic-403-bf', 'crowdsecurity/http-probing', 'crowdsecurity/http-crawl-non_statics']
+        - evt.Overflow.Alert.Events[0].GetMeta('target_fqdn') in ['send.$SERVICES_DOMAIN', 'dl.$SERVICES_DOMAIN'] && evt.Overflow.Alert.GetScenario() in ['LePresidente/http-generic-403-bf', 'crowdsecurity/http-probing', 'crowdsecurity/http-crawl-non_statics']
 ---
 apiVersion: v1
 kind: Secret

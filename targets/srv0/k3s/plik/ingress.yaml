@@ -11,6 +11,7 @@ spec:
     kind: ClusterIssuer
   dnsNames:
     - send.$SERVICES_DOMAIN
+    - dl.$SERVICES_DOMAIN
 ---
 apiVersion: traefik.io/v1alpha1
 kind: IngressRoute
@@ -19,6 +20,7 @@ metadata:
   namespace: apps
 spec:
   entryPoints:
+    - web
     - websecure
     - websecure-proxy
   routes:
@@ -40,18 +42,23 @@ spec:
 apiVersion: traefik.io/v1alpha1
 kind: IngressRoute
 metadata:
-  name: plik-ingress-local
+  name: plik-ingress-dl
   namespace: apps
 spec:
   entryPoints:
+    - web
     - websecure
+    - websecure-proxy
   routes:
-    - match: Host(`send.home.local`)
+    - match: Host(`dl.$SERVICES_DOMAIN`)
       kind: Rule
       middlewares:
-        - name: lan-whitelist
+        - name: geoblock
+          namespace: base
+        - name: crowdsec-bouncer
           namespace: base
       services:
         - name: plik
           port: 8080
-  tls: {}
+  tls:
+    secretName: plik-prod-tls

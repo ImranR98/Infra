@@ -40,6 +40,7 @@ stringData:
     ListenAddress       = "0.0.0.0"
     NoWebInterface      = false
     PlikDomain          = "https://send.$SERVICES_DOMAIN"
+    DownloadDomain      = "https://dl.$SERVICES_DOMAIN"
     AssumeHTTPS         = true
     SourceIpHeader      = "X-Forwarded-For"
     SessionTimeout      = "365d"
