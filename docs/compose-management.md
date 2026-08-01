@@ -1,6 +1,6 @@
 # Docker Compose Management
 
-Infra wraps Compose stacks as systemd units. This doc focuses on Infra-specific conventions — not on what Compose or systemd are.
+Compose stacks are started via `docker compose up -d` and survive reboots through Docker's native restart policies (`restart: unless-stopped` or `restart: always` on each service). The Docker daemon itself (managed by its own systemd unit) restarts containers with these policies at boot — no separate systemd wrapper is needed for the Compose stack.
 
 ## Template rendering pipeline
 
@@ -35,9 +35,11 @@ Each component under `templates/` can include a `prep.sh` that runs before templ
 ./infra.sh <target> compose install
 ```
 
-Runs the rendering pipeline, creates host directories for bind-mounted volumes (with `$MY_UID` ownership), and installs a systemd unit named `<target>.service` that runs `docker compose up/down`. The Compose project name equals the target name.
+Runs the rendering pipeline, creates host directories for bind-mounted volumes (with `$MY_UID` ownership), and starts the Compose stack via `docker compose up -d --remove-orphans`. The Compose project name equals the target name.
 
-Volume paths are auto-created. If a path has a file extension (e.g., `config.json`), its parent directory is created instead. On SELinux systems, the unit file gets `systemd_unit_file_t` context.
+Services survive reboots through their individual `restart:` policies (`unless-stopped` or `always`). Docker's daemon restarts containers with these policies automatically at boot — no systemd unit is needed.
+
+Volume paths are auto-created. If a path has a file extension (e.g., `config.json`), its parent directory is created instead.
 
 ## `compose backup-state`
 

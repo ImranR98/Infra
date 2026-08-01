@@ -1,5 +1,5 @@
 #!/bin/bash
-# DESC: Render templates, install systemd service, start Compose stack
+# DESC: Render templates and start Compose stack
 set -euo pipefail
 source "$INFRA_ROOT/lib/common.sh"
 ensure_envsubst_vars
@@ -24,26 +24,6 @@ done
 
 configure_compose_templates "$TARGET"
 
-cat > "$COMPOSE_STATE_DIR/$TARGET.service" << EOF
-[Unit]
-Description=$TARGET start
-StartLimitIntervalSec=0
+docker compose -p "$TARGET" -f "$COMPOSE_STATE_DIR/compose.yaml" up -d --remove-orphans
 
-[Service]
-User=$UID
-Type=simple
-ExecStart=/usr/bin/docker compose -p $TARGET -f $COMPOSE_STATE_DIR/compose.yaml up
-ExecStop=/usr/bin/docker compose -p $TARGET -f $COMPOSE_STATE_DIR/compose.yaml down
-Restart=always
-RestartSec=30
-
-[Install]
-WantedBy=multi-user.target
-EOF
-SU=$(get_sudo_cmd)
-$SU bash -c 'mv "$1" "$2"' _ "$COMPOSE_STATE_DIR/$TARGET.service" "/etc/systemd/system/$TARGET.service"
-command -v chcon >/dev/null 2>&1 && $SU bash -c 'chcon -t "$1" "$2"' _ systemd_unit_file_t "/etc/systemd/system/$TARGET.service" 2>/dev/null || true
-$SU bash -c 'systemctl daemon-reload' && $SU bash -c "systemctl enable $TARGET.service"
-$SU bash -c "systemctl restart $TARGET.service" 2>/dev/null || $SU bash -c "systemctl start $TARGET.service"
-
-echo "Installed and started $TARGET service."
+echo "Installed and started $TARGET Compose stack. Services restart on boot via Docker restart policies."

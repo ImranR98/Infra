@@ -6,7 +6,7 @@ Infra sits in an interesting space on the homelab automation spectrum. It uses w
 
 ### Docker and Docker Compose
 
-Docker and Docker Compose are used exactly as documented — `docker compose up`, `docker compose down`, standard `compose.yaml` format with no extensions. Infra simply renders templates and wraps the lifecycle in systemd units. Any Docker user could look at the rendered `compose.yaml` and understand it immediately.
+Docker and Docker Compose are used exactly as documented — `docker compose up -d`, `docker compose down`, standard `compose.yaml` format with no extensions. Infra renders templates and starts the stack directly. Reboot survival comes from Docker's native `restart: unless-stopped` policies, not a systemd wrapper. Any Docker user could look at the rendered `compose.yaml` and understand it immediately.
 
 ### K3s
 
@@ -34,7 +34,7 @@ All Kubernetes applications are deployed via standard CRDs, HelmCharts, and stan
 
 ### systemd
 
-Services run as standard systemd units with `Type=simple`, `Restart=always`, `WantedBy=multi-user.target`. No custom unit types or non-standard properties.
+WireGuard tunnels run as standard `wg-quick@wg0` systemd units with a restart drop-in. The Docker daemon, K3s, and other host services are managed by their standard systemd units. Compose stacks are not wrapped in systemd — they rely on Docker's native restart policies.
 
 ## Custom: Infra-specific glue
 
@@ -96,6 +96,6 @@ The `AllowedIPs` rewrite and endpoint dead-loop fix in `wireguard.sh` are specif
 
 ## What this means for users
 
-- **If you know Docker, Kubernetes, WireGuard, and systemd**, you'll understand the deployed services immediately. Infra does not invent new abstractions for these — it uses them in standard, documented ways.
+- **If you know Docker, Kubernetes, and WireGuard**, you'll understand the deployed services immediately. Infra does not invent new abstractions for these — it uses them in standard, documented ways.
 - **If you want to understand how Infra orchestrates these tools**, you'll need to learn the custom dispatch system, the templating conventions, and the bootstrap patterns. These are not standard tools — they're the glue unique to this repo.
 - **If you want to port Infra to a standard tool**, the custom glue maps roughly to: the dispatch system (like Task or Make), the variable model (like Ansible vault or SOPS), the component lifecycle (like Helm hooks or ArgoCD sync waves). But Infra is intentionally kept simple — bash scripts and envsubst — to remain understandable and maintainable by one person.

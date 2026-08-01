@@ -95,7 +95,7 @@ Template files (*.secret, *.plain) under `compose/templates/` are rendered into 
 
 Infra supports two workload orchestrators, and a target can use either or both:
 
-**Docker Compose** — Simple service composition. Each target with Compose gets a systemd unit that runs `docker compose up/down`. Suitable for VPS-style deployments.
+**Docker Compose** — Simple service composition. Each target's Compose stack is started via `docker compose up -d` and survives reboots through Docker's native restart policies on each service. Suitable for VPS-style deployments.
 
 **K3s (Kubernetes)** — Full container orchestration. Used for the primary homelab server. Components are deployed via `kubectl kustomize` with a hook-based lifecycle.
 
