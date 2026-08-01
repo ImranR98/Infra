@@ -56,7 +56,7 @@ stringData:
     DefaultTTLStr       = "30d"
     MaxTTLStr           = "30d"
 
-    FeatureAuthentication = "forced"
+    FeatureAuthentication = "default"
     FeatureLocalLogin     = "enabled"
     DefaultAdminLogin    = "admin"
     DefaultAdminPassword = "$PLIK_ADMIN_PASSWORD"
