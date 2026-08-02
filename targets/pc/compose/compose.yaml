@@ -59,7 +59,6 @@ services:
         container_name: syncthing
         restart: unless-stopped
         mem_limit: 2G
-        user: "$MY_UID:$MY_UID"
         environment:
             - PUID=$MY_UID
             - PGID=$MY_UID
