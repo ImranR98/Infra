@@ -46,26 +46,35 @@ if [ -n "$(resolve_vars_file "$TARGET")" ]; then
         export ENVSUBST_VARS="$(get_envsubst_vars)"
     fi
 fi
-if [ "$vars_found" = true ]; then
-    DOCKER_GID="$(getent group docker | cut -d: -f3)" || true
-    case "${1:-}" in
-        compose)
-            if [ -z "$DOCKER_GID" ] && [ "${2:-}" != "backup-state" ] && [ "${2:-}" != "generate-frp-certs" ]; then
-                echo "Error: docker group not found. Is Docker installed?" >&2
-                exit 1
-            fi
-            [ -n "$DOCKER_GID" ] && export DOCKER_GID
-            ;;
-    esac
-elif [ -n "${1:-}" ]; then
-    case "$1" in compose)
-        if [ "${2:-}" != "backup-state" ] && [ "${2:-}" != "generate-frp-certs" ]; then
+
+# Set up MY_UID, DOCKER_GID, ENVSUBST_VARS for compose commands
+case "${1:-}" in compose)
+    if [ "${2:-}" != "backup-state" ] && [ "${2:-}" != "generate-frp-certs" ]; then
+        if ! $vars_found && [ -f "$INFRA_ROOT/targets/$TARGET/VARS.template.sh" ]; then
             echo "No VARS.$TARGET.sh or VARS.sh found. Create VARS.$TARGET.sh with variables from targets/$TARGET/VARS.template.sh." >&2
             exit 1
         fi
-        ;;
-    esac
-fi
+        if [ -z "${MY_UID:-}" ]; then
+            if [ "$(id -u)" -eq 0 ]; then
+                export MY_UID=1000
+            else
+                export MY_UID=$(id -u)
+            fi
+        fi
+        if [ -z "${DOCKER_GID:-}" ]; then
+            DOCKER_GID="$(getent group docker | cut -d: -f3)" || true
+            if [ -z "$DOCKER_GID" ]; then
+                echo "Error: docker group not found. Is Docker installed?" >&2
+                exit 1
+            fi
+            export DOCKER_GID
+        fi
+        if [ -z "${ENVSUBST_VARS:-}" ]; then
+            export ENVSUBST_VARS="$(get_envsubst_vars)"
+        fi
+    fi
+    ;;
+esac
 
 source "$INFRA_ROOT/lib/dispatch.sh"
 infra_dispatch "$@"

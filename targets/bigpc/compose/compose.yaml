@@ -1,0 +1,82 @@
+x-logging: &logging
+    options:
+        max-size: 10m
+        max-file: 5
+
+services:
+    dockerproxy_priv:
+        image: wollomatic/socket-proxy:1
+        restart: unless-stopped
+        read_only: true
+        mem_limit: 512M
+        cap_drop:
+            - ALL
+        security_opt:
+            - no-new-privileges
+        user: "65534:$DOCKER_GID"
+        healthcheck:
+            test: ["CMD", "./healthcheck"]
+            interval: 10s
+            timeout: 5s
+            retries: 2
+        logging: *logging
+        container_name: dockerproxy_priv
+        command:
+            - "-loglevel=info"
+            - '-allowGET=/v1\..{1,2}/(containers/.*|images/.*)'
+            - '-allowPOST=/v1\..{1,2}/(containers/.*|images/.*|networks/.*)'
+            - '-allowDELETE=/v1\..{1,2}/(containers/.*|images/.*)'
+            - "-allowHEAD=/_ping"
+            - "-shutdowngracetime=5"
+            - "-watchdoginterval=600"
+            - "-stoponwatchdog"
+            - "-proxysocketendpoint=/socket/docker.sock"
+            - "-proxysocketendpointfilemode=0600"
+            - "-allowhealthcheck"
+        volumes:
+            - /var/run/docker.sock:/var/run/docker.sock:ro
+            - dockerproxy_priv:/socket/
+        labels:
+            - "com.centurylinklabs.watchtower.enable=false"
+
+    watchtower:
+        container_name: watchtower
+        restart: unless-stopped
+        mem_limit: 512M
+        image: nickfedor/watchtower # PRESERVE_MAJOR
+        volumes:
+            - dockerproxy_priv:/socket/:ro
+        depends_on:
+            - dockerproxy_priv
+        environment:
+            WATCHTOWER_CLEANUP: "true"
+            WATCHTOWER_POLL_INTERVAL: 7200
+            DOCKER_HOST: "unix:///socket/docker.sock"
+        logging: *logging
+
+    syncthing:
+        image: linuxserver/syncthing:latest # PRESERVE_MAJOR
+        container_name: syncthing
+        restart: unless-stopped
+        mem_limit: 2G
+        user: "$MY_UID:$MY_UID"
+        environment:
+            - PUID=$MY_UID
+            - PGID=$MY_UID
+        volumes:
+            - $COMPOSE_STATE_DIR/syncthing/config:/config
+            - $COMPOSE_STATE_DIR/syncthing/data:/data
+        ports:
+            - "127.0.0.1:8384:8384"
+            - "22000:22000/tcp"
+            - "22000:22000/udp"
+            - "21027:21027/udp"
+        logging: *logging
+
+volumes:
+    dockerproxy_priv:
+        driver: local
+        driver_opts:
+            type: tmpfs
+            device: tmpfs
+            o: size=1k,uid=65534,gid=0,mode=0700,noexec
