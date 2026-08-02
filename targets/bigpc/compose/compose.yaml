@@ -43,7 +43,7 @@ services:
         container_name: watchtower
         restart: unless-stopped
         mem_limit: 512M
-        image: nickfedor/watchtower # PRESERVE_MAJOR
+        image: nickfedor/watchtower
         volumes:
             - dockerproxy_priv:/socket/:ro
         depends_on:
@@ -55,7 +55,7 @@ services:
         logging: *logging
 
     syncthing:
-        image: linuxserver/syncthing:latest # PRESERVE_MAJOR
+        image: syncthing/syncthing
         container_name: syncthing
         restart: unless-stopped
         mem_limit: 2G
@@ -63,8 +63,7 @@ services:
             - PUID=$MY_UID
             - PGID=$MY_UID
         volumes:
-            - $COMPOSE_STATE_DIR/syncthing/config:/config
-            - $COMPOSE_STATE_DIR/syncthing/data:/data
+            - /home/$USER:/var/syncthing
         ports:
             - "127.0.0.1:8384:8384"
             - "22000:22000/tcp"
