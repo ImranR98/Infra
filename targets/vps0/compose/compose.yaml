@@ -220,6 +220,7 @@ services:
     plausible_db:
         image: postgres:16-alpine # PRESERVE_MAJOR
         container_name: plausible_db
+        user: "$MY_UID:$MY_UID"
         restart: unless-stopped
         mem_limit: 8G
         volumes:
