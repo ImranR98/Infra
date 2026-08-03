@@ -64,7 +64,7 @@ source_env() {
 
     # Auto-detect if any nodes have the has-amdgpu label for GPU-aware components.
     if command -v kubectl >/dev/null 2>&1; then
-        if kubectl get nodes --no-headers -l has-amdgpu=true 2>/dev/null | grep -q .; then
+        if kubectl get nodes --no-headers -l has-amdgpu=true | grep -q Ready; then
             export GPU_NODES_AVAILABLE=true
         else
             export GPU_NODES_AVAILABLE=false
