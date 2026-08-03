@@ -203,7 +203,6 @@ spec:
             subject:
             - 'group:admins'
       regulation:
-        max_retries: 3
+        max_retries: 30
         find_time: 120
         ban_time: 300
-        mode: authentication
