@@ -157,10 +157,10 @@ read -r -p "Should $NODE_NAME store Longhorn replicas? [y/N] " response
 case "$response" in [yY]|[yY][eE][sS])
     kubectl label node "$NODE_NAME" node.longhorn.io/create-default-disk=true --overwrite
     echo "Labeled $NODE_NAME with node.longhorn.io/create-default-disk=true."
-    echo ""
-    echo "NOTE: If you now have multiple Longhorn storage nodes, you may need to"
-    echo "increase the default replica count. Run:"
-    echo "  kubectl -n longhorn-system patch setting.longhorn.io default-replica-count --type=merge -p '{\"value\":\"2\"}'"
+    CURRENT_REPLICAS=$(kubectl -n longhorn-system get setting.longhorn.io default-replica-count -o jsonpath='{.value}' 2>/dev/null || echo 0)
+    NEW_REPLICAS=$((CURRENT_REPLICAS + 1))
+    kubectl -n longhorn-system patch setting.longhorn.io default-replica-count --type=merge -p "{\"value\":\"$NEW_REPLICAS\"}"
+    echo "Longhorn replica count auto-incremented: $CURRENT_REPLICAS → $NEW_REPLICAS"
     ;;
 *)
     echo "Longhorn will attach existing volumes to $NODE_NAME but will not place replicas there."

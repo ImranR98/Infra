@@ -16,6 +16,7 @@ spec:
       enabled: true
       existingClaim: ollama-models-pvc
     ollama:
+      mountPath: /.ollama
       gpu:
         enabled: $GPU_NODES_AVAILABLE
         type: amd
@@ -45,3 +46,6 @@ spec:
         operator: Equal
         value: "true"
         effect: PreferNoSchedule
+    extraEnv:
+      - name: OLLAMA_MODELS
+        value: /.ollama
