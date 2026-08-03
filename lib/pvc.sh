@@ -132,30 +132,15 @@ spec:
     seLinuxOptions:
       level: "s0"
   restartPolicy: Never
-  initContainers:
-  - name: gtar
-    image: alpine:3.21
-    securityContext:
-      privileged: true
-      runAsUser: 0
-    command:
-    - sh
-    - -c
-    - |
-      apk add --no-cache tar >/dev/null 2>&1
-      cp "$(which tar)" /gtar/
-    volumeMounts:
-    - name: gtar-bin
-      mountPath: /gtar
   containers:
   - name: backup
-    image: alpine:3.21
+    image: debian:bookworm-slim
     command:
     - sh
     - -c
     - |
       echo "$timestamp" > /data/__backup_timestamp.txt
-      if ! /gtar/tar czf /backup/"$dest_file" -C /data $excl_flags --sparse --warning=no-file-changed --warning=no-file-removed --ignore-failed-read .; then
+      if ! tar czf /backup/"$dest_file" -C /data $excl_flags --sparse --warning=no-file-changed --warning=no-file-removed --ignore-failed-read .; then
         echo "ERROR: tar archive creation failed" >&2
         rm -f /data/__backup_timestamp.txt
         exit 1
@@ -165,14 +150,11 @@ spec:
         echo "ERROR: backup archive is empty" >&2
         exit 1
       fi
-      chown ${MY_UID}:${MY_UID} /backup/"$dest_file" 2>/dev/null || true
     volumeMounts:
     - name: data
       mountPath: /data
     - name: backup-dest
       mountPath: /backup
-    - name: gtar-bin
-      mountPath: /gtar
   volumes:
   - name: data
     persistentVolumeClaim:
@@ -181,8 +163,6 @@ spec:
     hostPath:
       path: $backup_dir
       type: DirectoryOrCreate
-  - name: gtar-bin
-    emptyDir: {}
 PODEOF
 }
 
