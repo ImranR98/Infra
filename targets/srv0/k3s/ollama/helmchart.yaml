@@ -13,8 +13,7 @@ spec:
   version: 1.70.0
   valuesContent: |-
     persistentVolume:
-      enabled: true
-      existingClaim: ollama-models-pvc
+      enabled: false
     ollama:
       mountPath: /.ollama
       gpu:
