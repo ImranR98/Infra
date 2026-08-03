@@ -206,3 +206,4 @@ spec:
         max_retries: 3
         find_time: 120
         ban_time: 300
+        mode: authentication
