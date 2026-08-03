@@ -39,8 +39,9 @@ spec:
           namespace: base
         - name: crowdsec-bouncer
           namespace: base
-        - name: forwardauth-authelia
-          namespace: base
+        # No forwardauth-authelia: Nextcloud is fully bypassed in Authelia's
+        # access control, and apps like Floccus send Authorization headers
+        # that Authelia's regulation counts as failed 1FA attempts.
       services:
         - name: nextcloud
           port: 80
