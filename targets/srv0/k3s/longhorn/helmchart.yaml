@@ -19,16 +19,9 @@ spec:
       storageMinimalAvailablePercentage: 5
       nodeDownPodDeletionPolicy: delete-both-statefulset-and-deployment-pod
       orphanAutoDeletion: true
+    createDefaultDiskLabeledNodes: true
     persistence:
       defaultClass: true
       defaultClassReplicaCount: 1
-    longhornManager:
-      nodeSelector:
-        hostpath-main: "true"
-    longhornDriver:
-      nodeSelector:
-        hostpath-main: "true"
     longhornUI:
-      nodeSelector:
-        hostpath-main: "true"
       replicas: 1

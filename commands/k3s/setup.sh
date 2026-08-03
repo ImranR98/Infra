@@ -50,16 +50,17 @@ echo "Log out and back in for group membership to take effect, or use: newgrp ku
 
 echo ""
 echo "=== Node Labels ==="
-echo "If this node has an AMD GPU, label it for GPU-accelerated workloads:"
+kubectl label node "$(hostname)" node.longhorn.io/create-default-disk=true --overwrite
+echo "$(hostname) labeled as a Longhorn storage node."
+echo "If this node has an AMD GPU, also label it:"
 echo "  kubectl label node $(hostname) has-amdgpu=true --overwrite"
-echo ""
-echo "When adding a future node that should be avoided by most workloads:"
-echo "  kubectl taint node <node-name> scheduling-discouraged=true:PreferNoSchedule"
-echo "GPU workloads (those with matching tolerations and GPU node affinity)"
-echo "can still land on it."
 
 configure_k3s_firewall
 configure_k3s_sysctl
+
+echo ""
+echo "=== AMD GPU device plugin ==="
+kubectl apply -f https://raw.githubusercontent.com/ROCm/k8s-device-plugin/master/k8s-ds-amdgpu-dp.yaml
 
 echo ""
 echo "Waiting for cluster to be ready..."

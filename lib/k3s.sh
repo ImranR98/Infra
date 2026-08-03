@@ -71,9 +71,7 @@ K3SEOF
     else
         cat > "$config_file" <<K3SEOF
 selinux: true
-flannel-backend: wireguard-native
 node-ip: $node_ip
-flannel-iface-regex: "^(eth|ens|enp|eno|enx|wlan|wlp|wlo|bond|ib)"
 K3SEOF
     fi
 }

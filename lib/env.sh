@@ -61,6 +61,17 @@ source_env() {
     fi
 
     export TARGET="$target"
+
+    # Auto-detect if any nodes have the has-amdgpu label for GPU-aware components.
+    if command -v kubectl >/dev/null 2>&1; then
+        if kubectl get nodes --no-headers -l has-amdgpu=true 2>/dev/null | grep -q .; then
+            export GPU_NODES_AVAILABLE=true
+        else
+            export GPU_NODES_AVAILABLE=false
+        fi
+    else
+        export GPU_NODES_AVAILABLE=false
+    fi
 }
 
 get_envsubst_vars() {
@@ -70,7 +81,7 @@ get_envsubst_vars() {
         vars="$vars $(grep -oP 'export \K[A-Z_][A-Z_0-9]*' "$vars_file" | tr '\n' ' ')"
     fi
 
-    for v in MY_UID TARGET COMPOSE_STATE_DIR COMPOSE_STATE_BACKUP_DIR K3S_STATE_DIR PVC_BACKUP_DIR INFRA_ROOT DOCKER_GID PROXY_IP; do
+    for v in MY_UID TARGET COMPOSE_STATE_DIR COMPOSE_STATE_BACKUP_DIR K3S_STATE_DIR PVC_BACKUP_DIR INFRA_ROOT DOCKER_GID PROXY_IP GPU_NODES_AVAILABLE; do
         case " $vars " in *" $v "*) ;; *) vars="$vars $v" ;; esac
     done
 
