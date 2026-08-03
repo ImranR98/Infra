@@ -21,10 +21,8 @@ spec:
         enabled: $GPU_NODES_AVAILABLE
         type: amd
     resources:
-      limits:
-        memory: 2Gi
       requests:
-        memory: 128Mi
+        memory: 2Gi
     podSecurityContext:
       fsGroup: $MY_UID
       runAsUser: $MY_UID
