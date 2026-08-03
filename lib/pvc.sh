@@ -132,17 +132,30 @@ spec:
     seLinuxOptions:
       level: "s0"
   restartPolicy: Never
-  containers:
-  - name: backup
+  initContainers:
+  - name: gtar
     image: alpine:3.21
     securityContext:
       privileged: true
+      runAsUser: 0
+    command:
+    - sh
+    - -c
+    - |
+      apk add --no-cache tar >/dev/null 2>&1
+      cp "$(which tar)" /gtar/
+    volumeMounts:
+    - name: gtar-bin
+      mountPath: /gtar
+  containers:
+  - name: backup
+    image: alpine:3.21
     command:
     - sh
     - -c
     - |
       echo "$timestamp" > /data/__backup_timestamp.txt
-      if ! tar czf /backup/"$dest_file" -C /data $excl_flags .; then
+      if ! /gtar/tar czf /backup/"$dest_file" -C /data $excl_flags --sparse --warning=no-file-changed --warning=no-file-removed --ignore-failed-read .; then
         echo "ERROR: tar archive creation failed" >&2
         rm -f /data/__backup_timestamp.txt
         exit 1
@@ -158,6 +171,8 @@ spec:
       mountPath: /data
     - name: backup-dest
       mountPath: /backup
+    - name: gtar-bin
+      mountPath: /gtar
   volumes:
   - name: data
     persistentVolumeClaim:
@@ -166,6 +181,8 @@ spec:
     hostPath:
       path: $backup_dir
       type: DirectoryOrCreate
+  - name: gtar-bin
+    emptyDir: {}
 PODEOF
 }
 
