@@ -68,14 +68,14 @@ spec:
             main:
               image:
                 repository: ghcr.io/immich-app/immich-machine-learning
-                tag: v3.1.0-rocm
-              env:
-                HSA_OVERRIDE_GFX_VERSION: "12.0.1"
+                tag: v3.1.0
               resources:
                 limits:
                   memory: 8Gi
                 requests:
                   memory: 128Mi
+              env:
+                DEVICE: cpu
       defaultPodOptions:
         tolerations:
           - key: scheduling-discouraged
