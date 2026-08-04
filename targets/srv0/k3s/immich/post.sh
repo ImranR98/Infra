@@ -12,6 +12,8 @@ if [ "${GPU_NODES_AVAILABLE:-false}" = "true" ]; then
     sleep 5  # let Helm finish reconciling
     kubectl patch deployment -n apps immich-machine-learning --type=json \
       -p='[{"op":"add","path":"/spec/template/spec/containers/0/resources/limits/amd.com~1gpu","value":"1"},{"op":"add","path":"/spec/template/spec/containers/0/resources/requests/amd.com~1gpu","value":"1"}]' 2>/dev/null || true
+    kubectl patch deployment -n apps immich-machine-learning --type=strategic \
+      -p='{"spec":{"strategy":{"type":"Recreate"}}}' 2>/dev/null || true
     kubectl rollout restart deployment/immich-machine-learning -n apps
 fi
 

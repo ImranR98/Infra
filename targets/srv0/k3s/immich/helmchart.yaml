@@ -69,6 +69,8 @@ spec:
               image:
                 repository: ghcr.io/immich-app/immich-machine-learning
                 tag: v3.1.0-rocm
+              env:
+                HSA_OVERRIDE_GFX_VERSION: "12.0.1"
               resources:
                 limits:
                   memory: 8Gi
