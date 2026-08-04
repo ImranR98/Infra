@@ -513,10 +513,10 @@ services:
     # Immich - Gallery
     immich-server:
         container_name: immich-server
-        image: ghcr.io/immich-app/immich-server:release
+        image: ghcr.io/immich-app/immich-server:release-rocm
         extends: # uncomment this section for hardware acceleration - see https://immich.app/docs/features/hardware-transcoding
-            file: $STATE_DIR/immich/hwaccel.transcoding.yml
-            service: vaapi # set to one of [nvenc, quicksync, rkmpp, vaapi, vaapi-wsl] for accelerated transcoding
+            file: $STATE_DIR/immich/hwaccel.ml.yml
+            service: rocm # set to one of [nvenc, quicksync, rkmpp, vaapi, vaapi-wsl] for accelerated transcoding
         user: 1000:1000
         volumes:
             - $STATE_DIR/immich/upload:/usr/src/app/upload
