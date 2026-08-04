@@ -74,8 +74,10 @@ spec:
                   memory: 8Gi
                 requests:
                   memory: 128Mi
-              env:
-                DEVICE: cpu
+              securityContext:
+                capabilities:
+                  add:
+                    - IPC_LOCK
       defaultPodOptions:
         tolerations:
           - key: scheduling-discouraged
