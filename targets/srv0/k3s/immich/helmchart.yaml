@@ -68,16 +68,12 @@ spec:
             main:
               image:
                 repository: ghcr.io/immich-app/immich-machine-learning
-                tag: v3.1.0
+                tag: v3.1.0-rocm
               resources:
                 limits:
                   memory: 8Gi
                 requests:
                   memory: 128Mi
-              securityContext:
-                capabilities:
-                  add:
-                    - IPC_LOCK
       defaultPodOptions:
         tolerations:
           - key: scheduling-discouraged
