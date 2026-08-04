@@ -72,8 +72,10 @@ spec:
               resources:
                 limits:
                   memory: 8Gi
+                  amd.com/gpu: 1
                 requests:
                   memory: 128Mi
+                  amd.com/gpu: 1
       defaultPodOptions:
         tolerations:
           - key: scheduling-discouraged

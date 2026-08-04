@@ -6,15 +6,13 @@ set -euo pipefail
 source "$INFRA_ROOT/lib/common.sh"
 source_env
 
-# --- GPU resource patch (Immich Helm chart strips custom resource types) ---
+# --- GPU: use Recreate strategy to avoid GPU resource deadlock ---
+# The Immich Helm chart defaults to RollingUpdate. With a single GPU
+# node, the new pod cannot start while the old pod holds amd.com/gpu.
+# Recreate kills the old pod first, freeing the GPU for the new one.
 if [ "${GPU_NODES_AVAILABLE:-false}" = "true" ]; then
-    echo "GPU nodes detected — adding amd.com/gpu to immich-machine-learning..."
-    sleep 5  # let Helm finish reconciling
-    kubectl patch deployment -n apps immich-machine-learning --type=json \
-      -p='[{"op":"add","path":"/spec/template/spec/containers/0/resources/limits/amd.com~1gpu","value":"1"},{"op":"add","path":"/spec/template/spec/containers/0/resources/requests/amd.com~1gpu","value":"1"}]' 2>/dev/null || true
     kubectl patch deployment -n apps immich-machine-learning --type=strategic \
       -p='{"spec":{"strategy":{"type":"Recreate"}}}' 2>/dev/null || true
-    kubectl rollout restart deployment/immich-machine-learning -n apps
 fi
 
 echo "=== Checking Immich configuration ==="
