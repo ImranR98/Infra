@@ -54,6 +54,8 @@ kubectl label node "$(hostname)" node.longhorn.io/create-default-disk=true --ove
 echo "$(hostname) labeled as a Longhorn storage node."
 echo "If this node has an AMD GPU, also label it:"
 echo "  kubectl label node $(hostname) has-amdgpu=true --overwrite"
+kubectl label node "$(hostname)" has-homeassistant-hardware=true --overwrite
+echo "$(hostname) labeled as a homeassistant hardware node."
 
 configure_k3s_firewall
 configure_k3s_sysctl
