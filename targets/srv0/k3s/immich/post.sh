@@ -1,6 +1,6 @@
 #!/bin/bash
-# DESC: GPU resource patch + seed Immich configuration via the internal API
-#       on first deploy. Idempotent — skips if OAuth is already configured.
+# DESC: Seed Immich configuration via the internal API on first deploy.
+#       Idempotent — skips if OAuth is already configured.
 set -euo pipefail
 
 source "$INFRA_ROOT/lib/common.sh"
@@ -15,10 +15,7 @@ if ! retry 60 5 "kubectl -n apps wait --for=condition=Ready pod -l app.kubernete
 fi
 
 # Reset admin password and check idempotency in one shot.
-# The password reset always succeeds (Inquirer raises ERR_USE_AFTER_CLOSE
-# after setting the password — harmless).  We get a fresh token and
-# check whether OAuth is already configured.
-PWD=$(openssl rand -hex 12)
+# PWD is used in the printf heredoc below — kept short for the TTY pipe.
 
 echo "Ensuring admin access..."
 # Enable password login so we can authenticate
@@ -41,9 +38,13 @@ _try_login() {
 }
 
 # Attempt 1: assume admin exists, reset its password and login
+# immich-admin reset-admin-password uses an interactive Inquirer.js prompt that reads
+# from /dev/tty. When stdin is a pipe (kubectl exec -i), Inquirer falls back to stdin
+# but needs time between prompts. We send password, confirm, then with a delay the
+# "Invalidate existing sessions?" answer so each lands on the right prompt.
 echo "Admin exists. Resetting password..."
-echo "$PWD" | kubectl exec -i -n apps deploy/immich-server -- \
-    timeout 10 immich-admin reset-admin-password 2>/dev/null || true
+{ printf '%s\n%s\n' "$PWD" "$PWD"; sleep 3; printf 'Y\n'; } | kubectl exec -i -n apps deploy/immich-server -- \
+    timeout 30 immich-admin reset-admin-password 2>/dev/null || true
 sleep 2
 
 if ! _try_login "$PWD"; then
