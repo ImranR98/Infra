@@ -52,8 +52,9 @@ spec:
     podSecurityContext:
       runAsUser: $MY_UID
       runAsGroup: $MY_UID
-    containerSecurityContext:
-      allowPrivilegeEscalation: false
+    securityContext:
+      privileged: true
+      allowPrivilegeEscalation: true
     affinity:
       nodeAffinity:
         preferredDuringSchedulingIgnoredDuringExecution:

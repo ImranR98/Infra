@@ -59,10 +59,6 @@ configure_k3s_firewall
 configure_k3s_sysctl
 
 echo ""
-echo "=== AMD GPU device plugin ==="
-kubectl apply -f https://raw.githubusercontent.com/ROCm/k8s-device-plugin/master/k8s-ds-amdgpu-dp.yaml
-
-echo ""
 echo "Waiting for cluster to be ready..."
 systemctl enable --now k3s
 wait_for_k3s_cluster

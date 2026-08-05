@@ -46,6 +46,9 @@ spec:
               image:
                 repository: ghcr.io/immich-app/immich-server
                 tag: v3.1.0
+              securityContext:
+                privileged: true
+                allowPrivilegeEscalation: true
               env:
                 HWACCEL_VAAPI_ENABLED: "true"
       persistence:
@@ -69,13 +72,14 @@ spec:
               image:
                 repository: ghcr.io/immich-app/immich-machine-learning
                 tag: v3.1.0-rocm
+              securityContext:
+                privileged: true
+                allowPrivilegeEscalation: true
               resources:
                 limits:
                   memory: 8Gi
-                  amd.com/gpu: 1
                 requests:
                   memory: 128Mi
-                  amd.com/gpu: 1
       defaultPodOptions:
         tolerations:
           - key: scheduling-discouraged

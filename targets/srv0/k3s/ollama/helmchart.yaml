@@ -12,13 +12,27 @@ spec:
   failurePolicy: abort
   version: 1.70.0
   valuesContent: |-
+    image:
+      tag: "0.32.4-rocm"
+    volumes:
+      - name: dev-kfd
+        hostPath:
+          path: /dev/kfd
+          type: CharDevice
+      - name: dev-dri
+        hostPath:
+          path: /dev/dri
+    volumeMounts:
+      - name: dev-kfd
+        mountPath: /dev/kfd
+      - name: dev-dri
+        mountPath: /dev/dri
+    securityContext:
+      privileged: true
     persistentVolume:
       enabled: false
     ollama:
       mountPath: /.ollama
-      gpu:
-        enabled: $GPU_NODES_AVAILABLE
-        type: amd
     resources:
       requests:
         memory: 2Gi
