@@ -30,7 +30,7 @@ spec:
         - name: crowdsec-bouncer
           namespace: base
       services:
-        - name: headlamp-headlamp
+        - name: headlamp
           port: 80
   tls:
     secretName: headlamp-prod-tls
