@@ -59,7 +59,6 @@ stringData:
             "fallbackConfig": "ntfy_official"
         },
         "modulesEnabledByDefault": false,
-        "catchModuleCrashes": false,
         "allowModuleFailCount": 3,
         "moduleCustomization": [
             {
