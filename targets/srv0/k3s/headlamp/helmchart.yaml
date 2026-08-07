@@ -24,6 +24,8 @@ spec:
         callbackURL: "https://k8s.$SERVICES_DOMAIN/oidc-callback"
         scopes: "openid profile email groups"
         usePKCE: true
+      extraArgs:
+        - "-log-level=debug"
     clusterRoleBinding:
       clusterRoleName: cluster-admin
     resources:
