@@ -23,7 +23,7 @@ x-socket-proxy: &socket-proxy
 services:
     # FRP server - reverse proxy tunnel for home server
     frps:
-        image: fatedier/frps:v0.70.0
+        image: fatedier/frps:v0.70.1
         container_name: frps
         restart: always
         volumes:
@@ -184,7 +184,7 @@ services:
             # letting srv0 cert-manager pass through the FRP tunnel.
             - "--certificatesresolvers.le.acme.tlsChallenge=true"
             - "--experimental.plugins.geoblock.modulename=github.com/PascalMinder/geoblock"
-            - "--experimental.plugins.geoblock.version=v0.3.7"
+            - "--experimental.plugins.geoblock.version=v0.3.8"
             - "--providers.docker.endpoint=unix:///socket/docker.sock"
             - "--providers.docker.network=traefik"
         ports:

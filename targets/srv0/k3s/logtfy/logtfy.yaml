@@ -59,7 +59,6 @@ stringData:
             "fallbackConfig": "ntfy_official"
         },
         "modulesEnabledByDefault": false,
-        "allowModuleFailCount": 3,
         "moduleCustomization": [
             {
                 "module": "ssh_logins",
