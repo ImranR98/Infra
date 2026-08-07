@@ -14,6 +14,25 @@ spec:
   valuesContent: |-
     config:
       inCluster: true
+      # Per-user OIDC identity is NOT enabled: the kube-apiserver has no OIDC
+      # provider configured, so Authelia-issued tokens are rejected with 401
+      # when Headlamp proxies them to the API. Headlamp therefore acts as its
+      # own Service Account (cluster-admin via clusterRoleBinding below); the
+      # Authelia forward-auth middleware on the IngressRoute is the sole
+      # identity gate.
+      # To enable per-user identity instead (flip this to false):
+      #   1. /etc/rancher/k3s/config.yaml.d/20-oidc.yaml:
+      #      kube-apiserver-arg:
+      #        - "oidc-issuer-url=https://auth.$SERVICES_DOMAIN"
+      #        - "oidc-client-id=headlamp"
+      #        - "oidc-username-claim=preferred_username"
+      #        - "oidc-groups-claim=groups"
+      #        - "oidc-username-prefix=authelia:"
+      #        - "oidc-groups-prefix=authelia:"
+      #   2. systemctl restart k3s
+      #   3. The authelia-admins-cluster-admin ClusterRoleBinding (oidc-rbac.yaml)
+      #      already grants the authelia:admins group cluster-admin.
+      unsafeUseServiceAccountToken: true
       oidc:
         secret:
           create: true
