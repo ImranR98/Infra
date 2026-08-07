@@ -82,7 +82,7 @@ current_target/compose_live_state/   # Rendered Compose state (gitignored, ephem
 - **`groups.yaml`** — deploy order = listed order; delete order = reverse. Deleting `base` refuses if Bound PVCs exist (must delete `apps` first).
 - **Hook scripts:** `prep.sh` runs before apply, `post.sh` after, `delete.sh` before standard deletion.
 - **`wait_for_crds(timeout_seconds, crd1 crd2...)`** — helper for `post.sh` hooks to wait until CRDs are established.
-- **Storage:** Longhorn (primary) at `$K3S_STATE_DIR`; NFS retained as fallback. PVC backups at `$PVC_BACKUP_DIR`.
+- **Storage:** Longhorn (primary) at `$K3S_STATE_DIR`; NFS retained as fallback. PVC backups at `$PVC_BACKUP_DIR`. Backup archives are written via the `nfs-backup` StorageClass into a `pvc-*` subdir of `$PVC_BACKUP_DIR` (the CSI volume's live backend), then moved to the top level — **never delete `$PVC_BACKUP_DIR/pvc-*` subdirs while the `pvc-backup-dest` PVC exists**; doing so breaks every mount of that volume.
 
 ## Resource sizing tiers (use these, never ad-hoc)
 

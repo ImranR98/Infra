@@ -330,6 +330,11 @@ pvc_backup_data() {
     # csi-driver-nfs provisions each volume as a subdir (named after the PV)
     # under the share. Move the archive up to the top-level backup dir to keep
     # the conventional layout used by the restore flow.
+    # WARNING: the $backup_dir/<pv_name> subdir is the LIVE backend of the
+    # pvc-backup-dest volume — never delete it while the PVC exists, or every
+    # mount of the volume fails with ENOENT (backup pods hang in
+    # ContainerCreating and time out). Only archive FILES inside it may be
+    # moved/removed.
     local pv_name
     pv_name=$(kubectl get pvc pvc-backup-dest -n "$ns" -o jsonpath='{.spec.volumeName}' 2>/dev/null || true)
     if [ -n "$pv_name" ] && [ -f "$backup_dir/$pv_name/$dest_file" ]; then
