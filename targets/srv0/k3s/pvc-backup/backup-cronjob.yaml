@@ -64,7 +64,7 @@ metadata:
 rules:
   - apiGroups: [""]
     resources: ["persistentvolumeclaims"]
-    verbs: ["get", "list"]
+    verbs: ["get", "list", "create", "delete"]
   - apiGroups: [""]
     resources: ["pods"]
     verbs: ["create", "get", "delete", "list", "watch"]

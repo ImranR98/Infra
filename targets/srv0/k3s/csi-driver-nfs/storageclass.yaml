@@ -1,0 +1,16 @@
+---
+# RWX NFS-backed storage class for the shared PVC backup destination.
+# Backend: nfs-server pod (pinned to srv0) exporting /exports/backups,
+# which is the hostPath $PVC_BACKUP_DIR on srv0.
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: nfs-backup
+provisioner: nfs.csi.k8s.io
+parameters:
+  server: nfs-server.base.svc.cluster.local
+  share: /exports/backups
+reclaimPolicy: Delete
+volumeBindingMode: Immediate
+mountOptions:
+  - nfsvers=4.2

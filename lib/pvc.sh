@@ -123,12 +123,47 @@ pvc_node_ready() {
     [ "$ready" = "True" ]
 }
 
+# pvc_ensure_backup_dest <namespace>
+# Ensures the shared RWX NFS PVC used as the backup destination exists and is
+# Bound in the given namespace. NFS is used (not hostPath) so backup pods can
+# write the same archive location regardless of which node they run on.
+pvc_ensure_backup_dest() {
+    local ns="${1:?}"
+    if ! kubectl get pvc pvc-backup-dest -n "$ns" >/dev/null 2>&1; then
+        kubectl apply -f - <<PVC_EOF
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: pvc-backup-dest
+  namespace: $ns
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 5Gi
+  storageClassName: nfs-backup
+PVC_EOF
+    fi
+    local max_tries=30
+    for _ in $(seq 1 "$max_tries"); do
+        if [ "$(kubectl get pvc pvc-backup-dest -n "$ns" -o jsonpath='{.status.phase}' 2>/dev/null)" = "Bound" ]; then
+            return 0
+        fi
+        sleep 2
+    done
+    echo "Error: pvc-backup-dest in $ns did not become Bound" >&2
+    return 1
+}
+
 # pvc_backup_pod_yaml <pvc-name> <namespace> <backup-dir> <dest-file> <timestamp> [exclude-patterns] [node]
 # Prints the backup pod YAML to stdout. Caller pipes to kubectl apply.
 # exclude-patterns: optional space-separated tar --exclude patterns (e.g. "index-*.db")
 # node: optional node name; the pod is scheduled there (RWO volumes must be
 # mounted where they're currently attached — scheduling elsewhere would force
 # a cross-node Longhorn migration that can hang while the workload holds it).
+# <backup-dir> is accepted for signature compatibility but no longer used:
+# the archive is written to the shared pvc-backup-dest NFS PVC at /backup.
 pvc_backup_pod_yaml() {
     local pvc="${1:?}" ns="${2:?}" backup_dir="${3:?}" dest_file="${4:?}" timestamp="${5:?}"
     local exclude="${6:-}" node="${7:-}"
@@ -197,9 +232,8 @@ $tolerations
     persistentVolumeClaim:
       claimName: $pvc
   - name: backup-dest
-    hostPath:
-      path: $backup_dir
-      type: DirectoryOrCreate
+    persistentVolumeClaim:
+      claimName: pvc-backup-dest
 PODEOF
 }
 
@@ -273,6 +307,12 @@ pvc_backup_data() {
             return 1
         fi
         echo "  Volume hosted on node $node — backup pod scheduled there"
+    fi
+
+    # Archive destination is a shared NFS PVC so any node can write it.
+    if ! pvc_ensure_backup_dest "$ns"; then
+        echo "  ERROR: could not prepare backup destination for $ns/$pvc" >&2
+        return 1
     fi
 
     pvc_backup_pod_yaml "$pvc" "$ns" "$backup_dir" "$dest_file" "$timestamp" "$exclude" "$node" | kubectl apply -f -

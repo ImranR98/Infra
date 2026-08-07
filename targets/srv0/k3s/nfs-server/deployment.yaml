@@ -71,6 +71,8 @@ spec:
               name: youtube-storage
             - mountPath: /exports/arrstack-media
               name: arrstack-media-storage
+            - mountPath: /exports/backups
+              name: backups-storage
 
             - mountPath: /var/lib/nfs/etab
               name: nfs-exports
@@ -109,5 +111,9 @@ spec:
         - name: arrstack-media-storage
           hostPath:
             path: $ARRSTACK_MEDIA_PATH
+            type: DirectoryOrCreate
+        - name: backups-storage
+          hostPath:
+            path: $PVC_BACKUP_DIR
             type: DirectoryOrCreate
 
