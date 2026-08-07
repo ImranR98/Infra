@@ -174,7 +174,8 @@ spec:
               - 'authorization_code'
             access_token_signed_response_alg: 'none'
             userinfo_signed_response_alg: 'none'
-            token_endpoint_auth_method: 'client_secret_post'
+            # Headlamp's backend uses HTTP Basic auth for the token exchange.
+            token_endpoint_auth_method: 'client_secret_basic'
       log:
         level: info
       totp:
