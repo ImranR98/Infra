@@ -102,12 +102,36 @@ pvc_scale_restore() {
     done < "$scaled_file"
 }
 
-# pvc_backup_pod_yaml <pvc-name> <namespace> <backup-dir> <dest-file> <timestamp> [exclude-patterns]
+# pvc_volume_node <pvc-name> <namespace> → node name hosting the volume (stdout)
+# Maps PVC → PV → CSI volume handle → Longhorn volume currentNodeID.
+# Returns empty for non-Longhorn volumes, unattached volumes, or query errors.
+pvc_volume_node() {
+    local pvc="${1:?}" ns="${2:?}"
+    local pv_name handle
+    pv_name=$(kubectl get pvc "$pvc" -n "$ns" -o jsonpath='{.spec.volumeName}' 2>/dev/null || true)
+    [ -n "$pv_name" ] || return 0
+    handle=$(kubectl get pv "$pv_name" -o jsonpath='{.spec.csi.volumeHandle}' 2>/dev/null || true)
+    [ -n "$handle" ] || return 0
+    kubectl -n longhorn-system get volume "$handle" -o jsonpath='{.status.currentNodeID}' 2>/dev/null || true
+}
+
+# pvc_node_ready <node> → 0 if the node reports Ready=True, 1 otherwise.
+pvc_node_ready() {
+    local node="${1:?}"
+    local ready
+    ready=$(kubectl get node "$node" -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}' 2>/dev/null || true)
+    [ "$ready" = "True" ]
+}
+
+# pvc_backup_pod_yaml <pvc-name> <namespace> <backup-dir> <dest-file> <timestamp> [exclude-patterns] [node]
 # Prints the backup pod YAML to stdout. Caller pipes to kubectl apply.
 # exclude-patterns: optional space-separated tar --exclude patterns (e.g. "index-*.db")
+# node: optional node name; the pod is scheduled there (RWO volumes must be
+# mounted where they're currently attached — scheduling elsewhere would force
+# a cross-node Longhorn migration that can hang while the workload holds it).
 pvc_backup_pod_yaml() {
     local pvc="${1:?}" ns="${2:?}" backup_dir="${3:?}" dest_file="${4:?}" timestamp="${5:?}"
-    local exclude="${6:-}"
+    local exclude="${6:-}" node="${7:-}"
     local pod_name
     pod_name="backup-$(echo "$pvc" | tr '_' '-')"
     local excl_flags=""
@@ -115,6 +139,17 @@ pvc_backup_pod_yaml() {
         for pat in $exclude; do
             excl_flags="$excl_flags --exclude=$pat"
         done
+    fi
+    local node_selector=""
+    local tolerations=""
+    if [ -n "$node" ]; then
+        node_selector="  nodeSelector:
+    kubernetes.io/hostname: $node"
+        # Tolerate the PreferNoSchedule taint used on desktop nodes (bigpc).
+        tolerations="  tolerations:
+    - key: scheduling-discouraged
+      operator: Exists
+      effect: PreferNoSchedule"
     fi
     cat <<PODEOF
 apiVersion: v1
@@ -132,6 +167,8 @@ spec:
     seLinuxOptions:
       level: "s0"
   restartPolicy: Never
+$node_selector
+$tolerations
   containers:
   - name: backup
     image: debian:bookworm-slim
@@ -223,11 +260,28 @@ PODEOF
 # Creates backup pod, waits for success, cleans up. Returns 0 on success.
 pvc_backup_data() {
     local pvc="${1:?}" ns="${2:?}" backup_dir="${3:?}" dest_file="${4:?}" timestamp="${5:?}" exclude="${6:-}"
-    local pod_name
+    local pod_name node
     pod_name="backup-$(echo "$pvc" | tr '_' '-')"
-    pvc_backup_pod_yaml "$pvc" "$ns" "$backup_dir" "$dest_file" "$timestamp" "$exclude" | kubectl apply -f -
+
+    # Schedule the backup pod on the node currently hosting the volume (RWO).
+    # Fail fast if that node is not Ready instead of hanging in ContainerCreating
+    # for the full wait timeout.
+    node=$(pvc_volume_node "$pvc" "$ns")
+    if [ -n "$node" ]; then
+        if ! pvc_node_ready "$node"; then
+            echo "  ERROR: volume for $ns/$pvc is attached to node '$node' which is not Ready; skipping" >&2
+            return 1
+        fi
+        echo "  Volume hosted on node $node — backup pod scheduled there"
+    fi
+
+    pvc_backup_pod_yaml "$pvc" "$ns" "$backup_dir" "$dest_file" "$timestamp" "$exclude" "$node" | kubectl apply -f -
     if ! kubectl wait --for=jsonpath='{.status.phase}'=Succeeded "pod/$pod_name" -n "$ns" --timeout=600s 2>/dev/null; then
         echo "  ERROR: backup pod failed for $ns/$pvc" >&2
+        echo "  --- pod status ---" >&2
+        kubectl describe pod "$pod_name" -n "$ns" 2>/dev/null | tail -30 >&2 || true
+        echo "  --- pod logs ---" >&2
+        kubectl logs "pod/$pod_name" -n "$ns" --tail=30 2>/dev/null >&2 || true
         kubectl delete pod "$pod_name" -n "$ns" --ignore-not-found 2>/dev/null || true
         return 1
     fi
