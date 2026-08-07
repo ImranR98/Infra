@@ -234,3 +234,4 @@ stringData:
     $AUTHELIA_JWKS_KEY
   oidc.immich.client-secret: "${AUTHELIA_IMMICH_CLIENT_SECRET_HASHED}"
   oidc.openwebui.client-secret: "${AUTHELIA_OPENWEBUI_CLIENT_SECRET_HASHED}"
+  oidc.headlamp.client-secret: "${AUTHELIA_HEADLAMP_CLIENT_SECRET_HASHED}"

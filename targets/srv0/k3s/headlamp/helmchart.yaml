@@ -1,0 +1,33 @@
+---
+apiVersion: helm.cattle.io/v1
+kind: HelmChart
+metadata:
+  name: headlamp
+  namespace: apps
+spec:
+  chart: headlamp
+  repo: https://kubernetes-sigs.github.io/headlamp
+  failurePolicy: abort
+  targetNamespace: apps
+  createNamespace: false
+  version: 0.44.0
+  valuesContent: |-
+    config:
+      inCluster: true
+      oidc:
+        secret:
+          create: true
+          name: headlamp-oidc
+        clientID: headlamp
+        clientSecret: "$AUTHELIA_HEADLAMP_CLIENT_SECRET_HASHABLE"
+        issuerURL: "https://auth.$SERVICES_DOMAIN"
+        callbackURL: "https://k8s.$SERVICES_DOMAIN/oidc-callback"
+        scopes: "openid profile email groups"
+        usePKCE: true
+    clusterRoleBinding:
+      clusterRoleName: cluster-admin
+    resources:
+      limits:
+        memory: 512Mi
+      requests:
+        memory: 128Mi

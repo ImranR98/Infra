@@ -56,6 +56,7 @@ export AUTHELIA_JWKS_KEY="-----BEGIN PRIVATE KEY-----
                   -----END PRIVATE KEY-----"
 export AUTHELIA_IMMICH_CLIENT_SECRET_HASHABLE="change_me" # docker run authelia/authelia:latest authelia crypto hash generate pbkdf2 --variant sha512 --random --random.length 72 --random.charset rfc3986
 export AUTHELIA_OPENWEBUI_CLIENT_SECRET_HASHABLE="change_me" # docker run authelia/authelia:latest authelia crypto hash generate pbkdf2 --variant sha512 --random --random.length 72 --random.charset rfc3986
+export AUTHELIA_HEADLAMP_CLIENT_SECRET_HASHABLE="change_me" # docker run authelia/authelia:latest authelia crypto hash generate pbkdf2 --variant sha512 --random --random.length 72 --random.charset rfc3986
 
 # ====== Crowdsec ======
 export CROWDSEC_BOUNCER_KEY="change_me" # openssl rand -hex 32

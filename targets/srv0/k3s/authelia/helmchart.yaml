@@ -154,6 +154,27 @@ spec:
             access_token_signed_response_alg: 'none'
             userinfo_signed_response_alg: 'none'
             token_endpoint_auth_method: 'client_secret_basic'
+          - client_id: 'headlamp'
+            client_name: 'Headlamp'
+            client_secret:
+               path: '/secrets/oidc/oidc.headlamp.client-secret'
+            public: false
+            authorization_policy: 'two_factor'
+            require_pkce: true
+            redirect_uris:
+              - 'https://k8s.$SERVICES_DOMAIN/oidc-callback'
+            scopes:
+              - 'openid'
+              - 'profile'
+              - 'groups'
+              - 'email'
+            response_types:
+              - 'code'
+            grant_types:
+              - 'authorization_code'
+            access_token_signed_response_alg: 'none'
+            userinfo_signed_response_alg: 'none'
+            token_endpoint_auth_method: 'client_secret_post'
       log:
         level: info
       totp:
