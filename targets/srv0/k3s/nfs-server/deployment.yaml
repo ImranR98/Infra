@@ -110,7 +110,7 @@ spec:
             type: DirectoryOrCreate
         - name: arrstack-media-storage
           hostPath:
-            path: $ARRSTACK_MEDIA_PATH
+            path: $SECONDARY_STORAGE_PATH/arrstack_media
             type: DirectoryOrCreate
         - name: backups-storage
           hostPath:
