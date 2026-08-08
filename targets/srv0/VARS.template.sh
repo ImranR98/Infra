@@ -87,12 +87,21 @@ export RPI_CAMERA_IP="192.168.8.XX"
 export FRIGATE_RTSP_PASSWORD="change_me"
 export FRIGATE_MQTT_PASSWORD="change_me" # openssl rand -hex 16 (also add `frigate` user to MOSQUITTO_CREDENTIALS)
 export HA_MQTT_PASSWORD="change_me" # openssl rand -hex 16 (also add `homeassistant` user to MOSQUITTO_CREDENTIALS)
-# Cameras block rendered into frigate/helmchart.yaml's config (envsubst before
-# kustomize). Multi-line YAML: the whole "cameras:" map. The template line provides
-# 6 spaces, so every line is indented 6 + target-indent (config block strips 6).
+# Deployment-specific Frigate config (go2rtc streams, cameras) appended to the
+# hardcoded section in frigate/helmchart.yaml (envsubst before kustomize).
+# Multi-line YAML: the template line provides 6 spaces, so every line is indented
+# 6 + target-indent (the config block strips 6). $RPI_CAMERA_IP expands when this
+# file is sourced; {FRIGATE_*} tokens are substituted by Frigate at runtime.
 # GUI config-editor changes don't survive restarts - scrape them back into here.
-# {FRIGATE_*} tokens are substituted by Frigate at runtime.
-export FRIGATE_CAMERAS="cameras:
+export FRIGATE_ADDITIONAL_CONFIG="go2rtc:
+        streams:
+          # Frigate owns the single persistent connection to the Pi; HA live view,
+          # detect and record all consume the local restream, so feed open/close
+          # churn never touches the Pi. #timeout=5 tears down a stale connection
+          # (the Pi's USB webcam occasionally hiccups) and retries in seconds.
+          cam: rtsp://admin:{FRIGATE_RTSP_PASSWORD}@$RPI_CAMERA_IP:8554/cam#timeout=5
+      
+      cameras:
         # Default camera: rpi go2rtc webcam stream (targets/rpi)
         cam:
           ffmpeg:
@@ -160,9 +169,9 @@ export FRIGATE_CAMERAS="cameras:
         #         - path: http://192.168.8.XX/cgi-bin/video.cgi?type=mjpeg
         #           roles:
         #             - detect
-        # Example 4: camera behind an exotic source via Frigate's go2rtc restream:
-        #   define the source in the go2rtc section of frigate/helmchart.yaml
-        #   (e.g. streams: backyard: rtsp://...), then consume it locally:
+        # Example 4: camera behind an exotic source via Frigate's go2rtc
+        #   restream - add the source to go2rtc.streams above (e.g.
+        #   backyard: rtsp://...), then consume it locally:
         #   backyard:
         #     ffmpeg:
         #       inputs:

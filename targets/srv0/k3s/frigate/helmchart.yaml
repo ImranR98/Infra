@@ -40,18 +40,12 @@ spec:
         # The ROCm image could also drive an ONNX detector (auto-detected) later.
         hwaccel_args: -hwaccel_flags allow_profile_mismatch -hwaccel vaapi -hwaccel_device /dev/dri/renderD129 -hwaccel_output_format nv12
         retry_interval: 5
-      go2rtc:
-        streams:
-          # Frigate owns the single persistent connection to the Pi; HA live view,
-          # detect and record all consume the local restream, so feed open/close
-          # churn never touches the Pi. #timeout=5 tears down a stale connection
-          # (the Pi's USB webcam occasionally hiccups) and retries in seconds.
-          cam: rtsp://admin:{FRIGATE_RTSP_PASSWORD}@$RPI_CAMERA_IP:8554/cam#timeout=5
       detectors:
         cpu:
           type: cpu
-      # Full cameras block comes from $FRIGATE_CAMERAS (see targets/srv0/VARS.template.sh)
-      $FRIGATE_CAMERAS
+      # Deployment-specific config (go2rtc streams, cameras) comes from
+      # FRIGATE_ADDITIONAL_CONFIG in targets/srv0/VARS.template.sh
+      $FRIGATE_ADDITIONAL_CONFIG
     persistence:
       config:
         enabled: true
