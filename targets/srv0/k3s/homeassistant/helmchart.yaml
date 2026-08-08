@@ -66,12 +66,12 @@ spec:
         script: !include scripts.yaml
         scene: !include scenes.yaml
 
-        # MQTT broker (mosquitto in apps)
-        mqtt:
-          broker: mosquitto
-          port: 1883
-          username: homeassistant
-          password: "$HA_MQTT_PASSWORD"
+        # NOTE: MQTT broker config cannot live in configuration.yaml anymore
+        # (modern HA accepts only UI config flow for the broker). After applying,
+        # add MQTT once in the HA UI: Settings > Devices & Services > Add
+        # Integration > MQTT: broker=mosquitto, port=1883, user=homeassistant,
+        # password=<HA_MQTT_PASSWORD>. Frigate's MQTT discovery then auto-creates
+        # camera/event entities.
 
         # Frigate NVR integration
         frigate:
