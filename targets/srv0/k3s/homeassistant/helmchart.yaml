@@ -119,15 +119,17 @@ spec:
             mkdir -p "$CARD_DIR"
             card_latest="$(wget -qO- https://api.github.com/repos/$CARD/releases/latest | sed -n 's/.*"tag_name": *"\([^"]*\)".*/\1/p' | head -1)" || true
             [ -n "$card_latest" ] || card_latest="v7.27.4"
-            if [ "$(cat "$CARD_DIR/.installed-version" 2>/dev/null)" != "$card_latest" ]; then
-              echo "installing advanced-camera-card $card_latest"
+            # Layout token guards against stale installs (e.g. pre-zip layout) with the same version
+            card_version="$card_latest+zip"
+            if [ "$(cat "$CARD_DIR/.installed-version" 2>/dev/null)" != "$card_version" ]; then
+              echo "installing advanced-camera-card $card_version"
               tmpdir=$(mktemp -d)
               wget -qO- "https://github.com/$CARD/releases/download/$card_latest/advanced-camera-card.zip" -O "$tmpdir/card.zip"
               rm -rf "$CARD_DIR"
               mkdir -p "$CARD_DIR"
               unzip -q -o "$tmpdir/card.zip" -d "$CARD_DIR"
               rm -rf "$tmpdir"
-              echo "$card_latest" > "$CARD_DIR/.installed-version"
+              echo "$card_version" > "$CARD_DIR/.installed-version"
             fi
         volumeMounts:
           - name: homeassistant-home-assistant-pvc
