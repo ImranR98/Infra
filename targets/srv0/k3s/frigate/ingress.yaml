@@ -32,7 +32,10 @@ spec:
         - name: forwardauth-authelia
           namespace: base
       services:
+        # Frigate 0.17 serves 8971 (http-auth) over HTTPS with its own cert, which
+        # Traefik's plain-HTTP backend forwarding can't handle. Use the plain 5000
+        # listener instead - external access is still gated by Authelia here.
         - name: frigate
-          port: 8971
+          port: 5000
   tls:
     secretName: frigate-prod-tls
