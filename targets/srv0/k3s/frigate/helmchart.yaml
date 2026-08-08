@@ -32,6 +32,13 @@ spec:
         password: '{FRIGATE_MQTT_PASSWORD}'
       ffmpeg:
         hwaccel_args: preset-vaapi
+        retry_interval: 5
+      go2rtc:
+        streams:
+          # Frigate owns the single persistent connection to the Pi; HA live view,
+          # detect and record all consume the local restream, so feed open/close
+          # churn never touches the Pi.
+          cam: rtsp://admin:{FRIGATE_RTSP_PASSWORD}@$RPI_CAMERA_IP:8554/cam
       detectors:
         cpu:
           type: cpu
@@ -40,13 +47,16 @@ spec:
         cam:
           ffmpeg:
             inputs:
-              - path: rtsp://admin:{FRIGATE_RTSP_PASSWORD}@$RPI_CAMERA_IP:8554/cam
+              - path: rtsp://127.0.0.1:8554/cam
                 roles:
                   - detect
+              - path: rtsp://127.0.0.1:8554/cam
+                roles:
+                  - record
           detect:
-            width: 1280
-            height: 960
-            fps: 5
+            width: 640
+            height: 480
+            fps: 15
           record:
             enabled: true
             events:
