@@ -1,0 +1,16 @@
+#!/bin/sh
+set -e
+
+# Generate and persist the RTSP/API password on first start.
+# Prints it to the logs so it can be recovered without reading the file.
+if [ ! -s /config/password ]; then
+    python3 -c 'import secrets; print(secrets.token_hex(16))' > /config/password
+fi
+# Keep the persisted copy readable by the host user (container runs as root)
+chmod 644 /config/password
+echo "go2rtc: password -> $(cat /config/password)" >&2
+
+# Substitute the placeholder with the persisted password (hex chars only, sed-safe).
+sed -i "s/{{GO2RTC_PASSWORD}}/$(cat /config/password)/g" /config/go2rtc.yaml
+
+exec go2rtc -config /config/go2rtc.yaml

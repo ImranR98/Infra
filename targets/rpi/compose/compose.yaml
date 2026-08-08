@@ -1,0 +1,30 @@
+x-logging: &logging
+    options:
+        max-size: 10m
+        max-file: 5
+
+services:
+    # go2rtc - RTSP/WebRTC media server for the USB webcam
+    # Host /dev/video0 (webcam) is remapped to /dev/video2 in the container so that
+    # the Pi's hardware H.264 encoder (/dev/video11 = bcm2835-codec-encode) can sit
+    # at /dev/video0 - ffmpeg's h264_v4l2m2m opens /dev/video0 by default.
+    # The webcam's UVC metadata node (/dev/video1) is deliberately not mapped.
+    go2rtc:
+        image: alexxit/go2rtc:1.9.14
+        container_name: go2rtc
+        restart: unless-stopped
+        mem_limit: 512M
+        cpus: "1.0"
+        read_only: true
+        tmpfs:
+            - /tmp
+        devices:
+            - /dev/video11:/dev/video0
+            - /dev/video0:/dev/video2
+        volumes:
+            - $COMPOSE_STATE_DIR/go2rtc:/config
+        command: ["sh", "/config/entrypoint.sh"]
+        ports:
+            - "8554:8554"
+            - "127.0.0.1:1984:1984"
+        logging: *logging

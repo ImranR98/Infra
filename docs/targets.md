@@ -33,6 +33,17 @@ A VPS running a Docker Compose stack of public-facing web services and the FRP s
 - **Orchestrator:** Docker Compose
 - **Services:** Traefik reverse proxy, FRP server (frps), Authelia SSO, Plausible analytics, Docker socket proxy (via `wollomatic/socket-proxy`), Watchtower auto-updater, Shlink URL shortener, Uptime Kuma, metube, ISBN lookup, PixelNtfy, Syncthing relay server, logtfy, Owncast live streaming
 
+### rpi — Raspberry Pi 400 webcam RTSP
+
+A Raspberry Pi 400 (Ubuntu 24.04, arm64) running a single minimal Compose service (`go2rtc`) that turns a USB webcam into an authenticated RTSP stream.
+
+- **Orchestrator:** Docker Compose
+- **Services:** go2rtc (`alexxit/go2rtc:1.9.14`)
+- **Stream:** `rtsp://admin:<password>@<pi>:8554/cam`
+- **Video path:** single lazy FFmpeg source — reads the webcam as MJPEG and transcodes to H.264 using the Pi's hardware encoder (`bcm2835-codec-encode` /dev/video11 via `h264_v4l2m2m`, ~zero CPU). Falls back to software x264 if the `#hardware=v4l2m2m` param is dropped.
+- **Device mapping:** webcam `/dev/video0` → container `/dev/video2`; H.264 encoder `/dev/video11` → container `/dev/video0` (ffmpeg's default m2m device path). The webcam's UVC metadata node (`/dev/video1`) is not mapped.
+- **Auth:** username hardcoded to `admin`; password is auto-generated on first start, printed to `docker logs go2rtc`, and persisted at `current_target/compose_live_state/go2rtc/password` so it survives reboots. RTSP requires the password; the WebUI (`:1984`) is loopback-only and requires login.
+
 ## Target configuration patterns
 
 ### Variable templates
