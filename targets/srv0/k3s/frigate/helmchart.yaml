@@ -19,7 +19,9 @@ spec:
       privileged: true
     image:
       repository: ghcr.io/blakeblackshear/frigate
-      tag: 0.17.2
+      # ROCm build: proper AMD GPU stack (vainfo works on the RX 9070/RDNA4).
+      # The standard image's bundled Mesa hangs probing RDNA4.
+      tag: 0.17.2-rocm
     env:
       # {FRIGATE_*_PASSWORD} tokens in `config` are substituted by Frigate from these env vars
       FRIGATE_RTSP_PASSWORD: "$FRIGATE_RTSP_PASSWORD"
@@ -31,11 +33,11 @@ spec:
         user: frigate
         password: '{FRIGATE_MQTT_PASSWORD}'
       ffmpeg:
-        # VAAPI decode via /dev/dri. NOTE: the old 0.14.1 image bundled a Mesa
-        # without RDNA4 (RX 9070) support, so its vainfo probe hung on renderD129
-        # and blocked go2rtc config generation - fixed by the newer image. The pod
-        # is privileged, so all host devices appear in /dev regardless of mounts.
-        hwaccel_args: preset-vaapi
+        # VAAPI decode pinned to the discrete GPU (renderD129 = RX 9070; the iGPU
+        # is renderD128). Explicit device because the auto-selector probes devices
+        # in arbitrary order. The ROCm image could also drive an ONNX detector
+        # (auto-detected) if a model is configured later.
+        hwaccel_args: -hwaccel_flags allow_profile_mismatch -hwaccel vaapi -hwaccel_device /dev/dri/renderD129 -hwaccel_output_format vaapi
         retry_interval: 5
       go2rtc:
         streams:
@@ -84,11 +86,16 @@ spec:
       - name: dri
         hostPath:
           path: /dev/dri
+      - name: kfd
+        hostPath:
+          path: /dev/kfd
     extraVolumeMounts:
       - name: frigate-media
         mountPath: /media/frigate
       - name: dri
         mountPath: /dev/dri
+      - name: kfd
+        mountPath: /dev/kfd
     # Prefer the AMD GPU node (bigpc, has-amdgpu=true) - same convention as jellyfin.
     # Falls back to srv0 (which also has /dev/dri) if bigpc is unavailable.
     affinity:
