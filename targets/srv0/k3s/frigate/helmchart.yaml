@@ -57,7 +57,7 @@ spec:
       media:
         enabled: false
     extraVolumes:
-      - name: media
+      - name: frigate-media
         hostPath:
           path: $SECONDARY_STORAGE_PATH/frigate
           type: DirectoryOrCreate
@@ -65,7 +65,7 @@ spec:
         hostPath:
           path: /dev/dri
     extraVolumeMounts:
-      - name: media
+      - name: frigate-media
         mountPath: /media/frigate
       - name: dri
         mountPath: /dev/dri
