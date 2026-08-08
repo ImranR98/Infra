@@ -70,7 +70,19 @@ export LOCALHOST_AUTH_PASSWORD_HASH="change_me" # openssl passwd -6 'password'
 export IMMICH_DB_PASSWORD="change_me" # openssl rand -hex 16
 
 # ====== Mosquitto ======
+# Format: mosquitto password file lines ("user:hash"). Add app users:
+#   tmpfile=$(mktemp) && mosquitto_passwd -b "$tmpfile" frigate '<FRIGATE_MQTT_PASSWORD>' \
+#     && mosquitto_passwd -b "$tmpfile" homeassistant '<HA_MQTT_PASSWORD>' && cat "$tmpfile"
 export MOSQUITTO_CREDENTIALS="change_me" # tmpfile=$(mktemp) && mosquitto_passwd -b "$tmpfile" admin 'your-password' && cat "$tmpfile" && rm "$tmpfile"
+
+# ====== Frigate (NVR) ======
+# Host running the rpi go2rtc stream (targets/rpi)
+export RPI_CAMERA_IP="192.168.8.XX"
+# Password of the rpi go2rtc stream: `docker logs go2rtc` on the Pi, or
+# current_target/compose_live_state/go2rtc/password. Update if the Pi password regenerates.
+export FRIGATE_RTSP_PASSWORD="change_me"
+export FRIGATE_MQTT_PASSWORD="change_me" # openssl rand -hex 16 (also add `frigate` user to MOSQUITTO_CREDENTIALS)
+export HA_MQTT_PASSWORD="change_me" # openssl rand -hex 16 (also add `homeassistant` user to MOSQUITTO_CREDENTIALS)
 
 # ====== FreshRSS ======
 export FRESHRSS_PASSWORD="change_me" # openssl rand -base64 32

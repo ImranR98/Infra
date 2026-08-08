@@ -1,0 +1,76 @@
+---
+apiVersion: helm.cattle.io/v1
+kind: HelmChart
+metadata:
+  name: frigate
+  namespace: apps
+spec:
+  chart: frigate
+  repo: https://blakeblackshear.github.io/blakeshome-charts/
+  failurePolicy: abort
+  targetNamespace: apps
+  createNamespace: false
+  version: 7.8.0
+  valuesContent: |-
+    strategyType: Recreate
+    image:
+      repository: ghcr.io/blakeblackshear/frigate
+      tag: 0.14.1
+    env:
+      # {FRIGATE_*_PASSWORD} tokens in `config` are substituted by Frigate from these env vars
+      FRIGATE_RTSP_PASSWORD: "$FRIGATE_RTSP_PASSWORD"
+      FRIGATE_MQTT_PASSWORD: "$FRIGATE_MQTT_PASSWORD"
+    config: |-
+      mqtt:
+        host: mosquitto
+        port: 1883
+        user: frigate
+        password: '{FRIGATE_MQTT_PASSWORD}'
+      ffmpeg:
+        hwaccel_args: preset-vaapi
+      detectors:
+        cpu:
+          type: cpu
+      cameras:
+        # Default camera: rpi go2rtc webcam stream (targets/rpi)
+        cam:
+          ffmpeg:
+            inputs:
+              - path: rtsp://admin:{FRIGATE_RTSP_PASSWORD}@$RPI_CAMERA_IP:8554/cam
+                roles:
+                  - detect
+          detect:
+            width: 1280
+            height: 960
+            fps: 5
+          record:
+            enabled: true
+            events:
+              retain:
+                default: 7
+          snapshots:
+            enabled: true
+    persistence:
+      config:
+        enabled: true
+        existingClaim: frigate-config-pvc
+      media:
+        enabled: false
+    extraVolumes:
+      - name: media
+        hostPath:
+          path: $SECONDARY_STORAGE_PATH/frigate
+          type: DirectoryOrCreate
+      - name: dri
+        hostPath:
+          path: /dev/dri
+    extraVolumeMounts:
+      - name: media
+        mountPath: /media/frigate
+      - name: dri
+        mountPath: /dev/dri
+    resources:
+      limits:
+        memory: 2Gi
+      requests:
+        memory: 128Mi

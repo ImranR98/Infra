@@ -22,7 +22,7 @@ The main homelab server. Runs a full K3s cluster with ~20 application workloads,
 
 - **Orchestrator:** K3s (control-plane node) + Docker Compose sidecar
 - **K3s workloads (base):** Namespaces, NFS server, NFS CSI driver, cert-manager, Traefik ingress, CrowdSec, Authelia SSO, ntfy notifications
-- **K3s workloads (apps):** Immich, Jellyfin, Navidrome, Home Assistant, Nextcloud, Ollama + Open WebUI, FreshRSS, mosquitto, Syncthing, mdScl, OPodSync, D$CPLN, OpenCanary, FMD, logtfy
+- **K3s workloads (apps):** Immich, Jellyfin, Navidrome, Home Assistant, Nextcloud, Ollama + Open WebUI, FreshRSS, mosquitto, Syncthing, mdScl, OPodSync, D$CPLN, OpenCanary, FMD, logtfy, Frigate NVR (consumes the `rpi` webcam stream; media on `$SECONDARY_STORAGE_PATH/frigate`; wired to mosquitto MQTT and the Home Assistant integration, with HACS + Frigate integration auto-installed by a Home Assistant init container)
 - **Compose:** FRPC sidecar (tunnels K3s services through the FRP server)
 - **Special:** LUKS-aware preboot FRPC for remote SSH unlock of encrypted root filesystem
 
@@ -43,6 +43,7 @@ A Raspberry Pi 400 (Ubuntu 24.04, arm64) running a single minimal Compose servic
 - **Video path:** single lazy FFmpeg source — reads the webcam as MJPEG and transcodes to H.264 using the Pi's hardware encoder (`bcm2835-codec-encode` /dev/video11 via `h264_v4l2m2m`, ~zero CPU). Falls back to software x264 if the `#hardware=v4l2m2m` param is dropped.
 - **Device mapping:** webcam `/dev/video0` → container `/dev/video2`; H.264 encoder `/dev/video11` → container `/dev/video0` (ffmpeg's default m2m device path). The webcam's UVC metadata node (`/dev/video1`) is not mapped.
 - **Auth:** username hardcoded to `admin`; password is auto-generated on first start, printed to `docker logs go2rtc`, and persisted at `current_target/compose_live_state/go2rtc/password` so it survives reboots. RTSP requires the password; the WebUI (`:1984`) is loopback-only and requires login.
+- **Consumed by:** Frigate NVR on `srv0` (as a second RTSP client, via `FRIGATE_RTSP_PASSWORD` in srv0's VARS)
 
 ## Target configuration patterns
 

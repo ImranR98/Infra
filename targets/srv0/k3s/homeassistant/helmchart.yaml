@@ -42,6 +42,61 @@ spec:
         - 10.0.0.0/8
         - 172.16.0.0/12
         - 192.168.0.0/16
+      templateConfig: |-
+        # Loads default set of integrations. Do not remove.
+        default_config:
+
+        {{- if .Values.serviceMonitor.enabled }}
+        prometheus:
+        {{- end }}
+
+        {{- if or .Values.ingress.enabled .Values.ingress.external .Values.httpRoute.enabled }}
+        http:
+          use_x_forwarded_for: true
+          trusted_proxies:
+            {{- range .Values.configuration.trusted_proxies }}
+            - {{ . }}
+            {{- end }}
+        {{- end}}
+        # Load frontend themes from the themes folder
+        frontend:
+          themes: !include_dir_merge_named themes
+
+        automation: !include automations.yaml
+        script: !include scripts.yaml
+        scene: !include scenes.yaml
+
+        # MQTT broker (mosquitto in apps)
+        mqtt:
+          broker: mosquitto
+          port: 1883
+          username: homeassistant
+          password: "$HA_MQTT_PASSWORD"
+
+        # Frigate NVR integration
+        frigate:
+          url: http://frigate:5000
+    initContainers:
+      # Installs HACS + the Frigate integration into /config/custom_components.
+      # Idempotent: only fills missing directories, so HACS-driven updates survive.
+      - name: hacs-install
+        image: busybox:1.36
+        command:
+          - /bin/sh
+          - -ec
+          - |
+            set -e
+            mkdir -p /config/custom_components
+            if [ ! -d /config/custom_components/hacs ]; then
+              wget -qO- https://github.com/hacs/integration/releases/download/2.0.5/hacs.zip | unzip -d /config/custom_components/hacs -
+            fi
+            if [ ! -d /config/custom_components/frigate ]; then
+              wget -qO- https://github.com/blakeblackshear/frigate-hass-integration/archive/refs/tags/v5.15.4.tar.gz | tar xz -C /tmp
+              cp -r /tmp/frigate-hass-integration-5.15.4/custom_components/frigate /config/custom_components/
+            fi
+        volumeMounts:
+          - name: homeassistant-home-assistant-pvc
+            mountPath: /config
     additionalVolumes:
       - name: usb-serial
         hostPath:
