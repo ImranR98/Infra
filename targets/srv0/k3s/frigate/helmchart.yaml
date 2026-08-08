@@ -19,7 +19,7 @@ spec:
       privileged: true
     image:
       repository: ghcr.io/blakeblackshear/frigate
-      tag: 0.14.1
+      tag: 0.17.2
     env:
       # {FRIGATE_*_PASSWORD} tokens in `config` are substituted by Frigate from these env vars
       FRIGATE_RTSP_PASSWORD: "$FRIGATE_RTSP_PASSWORD"
@@ -31,10 +31,10 @@ spec:
         user: frigate
         password: '{FRIGATE_MQTT_PASSWORD}'
       ffmpeg:
-        # VAAPI decode via the iGPU (renderD128, Granite Ridge). Only that render
-        # node is mounted: with a single device Frigate's GPU selector skips the
-        # vainfo probe entirely (probing the RX 9070's RDNA4 node hangs with the
-        # image's bundled Mesa, blocking go2rtc config generation).
+        # VAAPI decode via /dev/dri. NOTE: the old 0.14.1 image bundled a Mesa
+        # without RDNA4 (RX 9070) support, so its vainfo probe hung on renderD129
+        # and blocked go2rtc config generation - fixed by the newer image. The pod
+        # is privileged, so all host devices appear in /dev regardless of mounts.
         hwaccel_args: preset-vaapi
         retry_interval: 5
       go2rtc:
@@ -81,17 +81,14 @@ spec:
       - name: frigate-media
         persistentVolumeClaim:
           claimName: frigate-media-pvc
-      # Only the iGPU render node (renderD128 = Granite Ridge). Mounting the full
-      # /dev/dri would expose the RX 9070 node (renderD129, RDNA4) which hangs
-      # vainfo with the bundled Mesa -> see ffmpeg.hwaccel_args comment.
       - name: dri
         hostPath:
-          path: /dev/dri/renderD128
+          path: /dev/dri
     extraVolumeMounts:
       - name: frigate-media
         mountPath: /media/frigate
       - name: dri
-        mountPath: /dev/dri/renderD128
+        mountPath: /dev/dri
     # Prefer the AMD GPU node (bigpc, has-amdgpu=true) - same convention as jellyfin.
     # Falls back to srv0 (which also has /dev/dri) if bigpc is unavailable.
     affinity:
