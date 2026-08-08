@@ -62,9 +62,9 @@ spec:
         frontend:
           themes: !include_dir_merge_named themes
           # Advanced Camera Card (smooth dashboard live view via go2rtc restream);
-          # installed by the integration-update init container
+          # installed by the integration-update init container (zip layout: dist/)
           extra_module_url:
-            - /local/community/advanced-camera-card/advanced-camera-card.js
+            - /local/community/advanced-camera-card/dist/advanced-camera-card.js
 
         automation: !include automations.yaml
         script: !include scripts.yaml
@@ -122,10 +122,10 @@ spec:
             if [ "$(cat "$CARD_DIR/.installed-version" 2>/dev/null)" != "$card_latest" ]; then
               echo "installing advanced-camera-card $card_latest"
               tmpdir=$(mktemp -d)
-              wget -qO- "https://github.com/$CARD/releases/download/$card_latest/advanced-camera-card.js" -O "$tmpdir/advanced-camera-card.js"
+              wget -qO- "https://github.com/$CARD/releases/download/$card_latest/advanced-camera-card.zip" -O "$tmpdir/card.zip"
               rm -rf "$CARD_DIR"
               mkdir -p "$CARD_DIR"
-              cp "$tmpdir/advanced-camera-card.js" "$CARD_DIR/"
+              unzip -q -o "$tmpdir/card.zip" -d "$CARD_DIR"
               rm -rf "$tmpdir"
               echo "$card_latest" > "$CARD_DIR/.installed-version"
             fi
