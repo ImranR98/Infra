@@ -73,9 +73,10 @@ spec:
         # password=<HA_MQTT_PASSWORD>. Frigate's MQTT discovery then auto-creates
         # camera/event entities.
 
-        # Frigate NVR integration
-        frigate:
-          url: http://frigate:5000
+        # NOTE: the Frigate integration (v5.15.4) ignores configuration.yaml
+        # ("Set up this integration using YAML is not supported"). Add it via the
+        # UI config flow: Settings > Devices & Services > Add Integration >
+        # Frigate > URL http://frigate:5000 (internal unauth port).
     initContainers:
       # Keeps the Frigate integration installed + up to date in /config/custom_components.
       # Checks the latest GitHub release on every pod start and re-extracts when newer
