@@ -5,10 +5,11 @@ x-logging: &logging
 
 services:
     # go2rtc - RTSP/WebRTC media server for the USB webcam
-    # Host /dev/video0 (webcam) is remapped to /dev/video2 in the container so that
-    # the Pi's hardware H.264 encoder (/dev/video11 = bcm2835-codec-encode) can sit
-    # at /dev/video0 - ffmpeg's h264_v4l2m2m opens /dev/video0 by default.
+    # Host /dev/video0 (webcam) is remapped to /dev/video2 in the container.
     # The webcam's UVC metadata node (/dev/video1) is deliberately not mapped.
+    # The Pi's hardware H.264 encoder (/dev/video11) is NOT mapped anymore:
+    # h264_v4l2m2m wedges at the driver level (see go2rtc.yaml comment), so
+    # encoding is software x264.
     go2rtc:
         image: alexxit/go2rtc:1.9.14
         container_name: go2rtc
@@ -19,7 +20,6 @@ services:
         tmpfs:
             - /tmp
         devices:
-            - /dev/video11:/dev/video0
             - /dev/video0:/dev/video2
         volumes:
             - $COMPOSE_STATE_DIR/go2rtc:/config

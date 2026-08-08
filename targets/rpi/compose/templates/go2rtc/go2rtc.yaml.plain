@@ -9,8 +9,6 @@ rtsp:
     password: "{{GO2RTC_PASSWORD}}"
 
 ffmpeg:
-    # h264_v4l2m2m rejects the MJPEG decoder's full-range yuvj420p output - force yuv420p
-    "h264/v4l2m2m": "-c:v h264_v4l2m2m -g 50 -bf 0 -pix_fmt:v yuv420p"
     # Pipe ffmpeg output to go2rtc via stdout (MPEG-TS) instead of RTSP ingest:
     # the RTSP muxer writes its SDP before the encoder emits SPS/PPS, so clients
     # joining mid-stream never get them. TS carries them in-band from the start.
@@ -18,12 +16,11 @@ ffmpeg:
 
 streams:
     # cam: USB webcam RTSP stream
-    # Single FFmpeg source: reads the webcam (container /dev/video2) directly as MJPEG
-    # and transcodes to H.264 with the Pi's hardware encoder (v4l2m2m, opens the
-    # container's /dev/video0 which is remapped to the host's bcm2835-codec-encode).
-    # Reading the device directly (instead of chaining off the go2rtc stream) is
-    # required: over RTP the dimensions are unknown until the first frame, but the
-    # v4l2m2m encoder needs them at init.
-    # Fallback: drop '#hardware=v4l2m2m' to use software x264.
+    # Single FFmpeg source: reads the webcam (container /dev/video2) directly as
+    # MJPEG and transcodes to H.264 with software x264 (libx264). The Pi's hardware
+    # encoder (h264_v4l2m2m via bcm2835-codec) was dropped: it wedges at the driver
+    # level under client churn/load (ffmpeg freezes, no recovery without reboot).
+    # Software encoding costs ~1 core of the Pi 400 but is fully reliable.
+    # The entrypoint watchdog restarts the source if it ever stalls.
     cam:
-        - ffmpeg:device?video=/dev/video2&input_format=mjpeg&video_size=1280x960&framerate=15#video=h264#hardware=v4l2m2m
+        - ffmpeg:device?video=/dev/video2&input_format=mjpeg&video_size=1280x960&framerate=15#video=h264
