@@ -22,7 +22,7 @@ The main homelab server. Runs a full K3s cluster with ~20 application workloads,
 
 - **Orchestrator:** K3s (control-plane node) + Docker Compose sidecar
 - **K3s workloads (base):** Namespaces, NFS server, NFS CSI driver, cert-manager, Traefik ingress, CrowdSec, Authelia SSO, ntfy notifications
-- **K3s workloads (apps):** Immich, Jellyfin, Navidrome, Home Assistant, Nextcloud, Ollama + Open WebUI, FreshRSS, mosquitto, Syncthing, mdScl, OPodSync, D$CPLN, OpenCanary, FMD, logtfy, Frigate NVR (consumes the `rpi` webcam stream; media on `$SECONDARY_STORAGE_PATH/frigate`; wired to mosquitto MQTT and the Home Assistant integration, with HACS + Frigate integration auto-installed by a Home Assistant init container)
+- **K3s workloads (apps):** Immich, Jellyfin, Navidrome, Home Assistant, Nextcloud, Ollama + Open WebUI, FreshRSS, mosquitto, Syncthing, mdScl, OPodSync, D$CPLN, OpenCanary, FMD, logtfy, Frigate NVR (consumes the `rpi` webcam stream; media on `$SECONDARY_STORAGE_PATH/frigate`; wired to mosquitto MQTT and the Home Assistant integration, whose init container auto-installs and auto-updates the Frigate integration on every pod start — no HACS)
 - **Compose:** FRPC sidecar (tunnels K3s services through the FRP server)
 - **Special:** LUKS-aware preboot FRPC for remote SSH unlock of encrypted root filesystem
 
