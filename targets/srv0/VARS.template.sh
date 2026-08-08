@@ -80,8 +80,6 @@ export IMMICH_DB_PASSWORD="change_me" # openssl rand -hex 16
 export MOSQUITTO_CREDENTIALS="change_me" # tmpfile=$(mktemp) && mosquitto_passwd -b "$tmpfile" admin 'your-password' && cat "$tmpfile" && rm "$tmpfile"
 
 # ====== Frigate (NVR) ======
-# Host running the rpi go2rtc stream (targets/rpi)
-export RPI_CAMERA_IP="192.168.8.XX"
 # Password of the rpi go2rtc stream: `docker logs go2rtc` on the Pi, or
 # current_target/compose_live_state/go2rtc/password. Update if the Pi password regenerates.
 export FRIGATE_RTSP_PASSWORD="change_me"
@@ -90,26 +88,21 @@ export HA_MQTT_PASSWORD="change_me" # openssl rand -hex 16 (also add `homeassist
 # Deployment-specific Frigate config (go2rtc streams, cameras) appended to the
 # hardcoded section in frigate/helmchart.yaml (envsubst before kustomize).
 # Multi-line YAML: the template line provides 6 spaces, so every line is indented
-# 6 + target-indent (the config block strips 6). $RPI_CAMERA_IP expands when this
-# file is sourced; {FRIGATE_*} tokens are substituted by Frigate at runtime.
+# 6 + target-indent (the config block strips 6). {FRIGATE_*} tokens are
+# substituted by Frigate at runtime.
 # GUI config-editor changes don't survive restarts - scrape them back into here.
 export FRIGATE_ADDITIONAL_CONFIG="go2rtc:
         streams:
-          # Frigate owns the single persistent connection to the Pi; HA live view,
-          # detect and record all consume the local restream, so feed open/close
-          # churn never touches the Pi. #timeout=5 tears down a stale connection
-          # (the Pi's USB webcam occasionally hiccups) and retries in seconds.
-          cam: rtsp://admin:{FRIGATE_RTSP_PASSWORD}@$RPI_CAMERA_IP:8554/cam#timeout=5
-      
+          rpi: rtsp://admin:{FRIGATE_RTSP_PASSWORD}@192.168.8.XX:8554/rpi#timeout=5
       cameras:
         # Default camera: rpi go2rtc webcam stream (targets/rpi)
-        cam:
+        rpi:
           ffmpeg:
             inputs:
-              - path: rtsp://127.0.0.1:8554/cam
+              - path: rtsp://127.0.0.1:8554/rpi
                 roles:
                   - detect
-              - path: rtsp://127.0.0.1:8554/cam
+              - path: rtsp://127.0.0.1:8554/rpi
                 roles:
                   - record
           detect:
@@ -126,11 +119,6 @@ export FRIGATE_ADDITIONAL_CONFIG="go2rtc:
                 days: 7
           snapshots:
             enabled: true
-          zones:
-            door:
-              coordinates: 0.247,0.112,0.714,0.092,0.709,1,0.249,1,0.259,0.977
-              loitering_time: 0
-              friendly_name: Door
         # -------- HOW TO ADD MORE CAMERAS (copy + uncomment a block) --------
         # Example 1: LAN IP camera over RTSP (most common)
         #   doorbell:
@@ -149,7 +137,7 @@ export FRIGATE_ADDITIONAL_CONFIG="go2rtc:
         #       detections:
         #         retain:
         #           days: 7
-        # Example 2: USB camera plugged into the frigate node itself (bigpc).
+        # Example 2: USB camera plugged into the frigate node itself.
         #   Path is the V4L2 device inside the container (the pod is privileged,
         #   so all /dev/video* nodes of the node are visible).
         #   local_usb:
