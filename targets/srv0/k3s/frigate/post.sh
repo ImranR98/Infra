@@ -24,11 +24,6 @@ event entities. Live view, detection and recordings then work end to end.
 Recordings are written over NFS to srv0's $SECONDARY_STORAGE_PATH/frigate
 (the pod prefers the has-amdgpu node, bigpc).
 
-Note: the Frigate integration's detect switch may come up OFF after a
-Home Assistant restart (HA doesn't apply Frigate's retained MQTT state).
-The automation "Frigate detect on at startup" in HA's automations.yaml
-turns it on automatically at every HA start (idempotent).
-
 Maintenance notes:
 - If the rpi go2rtc password ever regenerates (password file deleted),
   update FRIGATE_RTSP_PASSWORD in secrets/VARS.srv0.sh and re-apply:
