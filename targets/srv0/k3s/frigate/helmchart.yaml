@@ -13,6 +13,10 @@ spec:
   version: 7.8.0
   valuesContent: |-
     strategyType: Recreate
+    # SELinux-enforcing host: privileged needed for hostPath media volume + /dev/dri
+    # (same precedent as jellyfin; also recommended by Frigate docs)
+    securityContext:
+      privileged: true
     image:
       repository: ghcr.io/blakeblackshear/frigate
       tag: 0.14.1
