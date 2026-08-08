@@ -21,6 +21,8 @@ Frigate deployed. Manual steps remaining (Home Assistant UI):
 
 After step 2, Frigate's MQTT discovery auto-creates the camera and
 event entities. Live view, detection and recordings then work end to end.
+Recordings are written over NFS to srv0's $SECONDARY_STORAGE_PATH/frigate
+(the pod prefers the has-amdgpu node, bigpc).
 
 Maintenance notes:
 - If the rpi go2rtc password ever regenerates (password file deleted),

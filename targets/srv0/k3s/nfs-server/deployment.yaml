@@ -71,6 +71,8 @@ spec:
               name: youtube-storage
             - mountPath: /exports/arrstack-media
               name: arrstack-media-storage
+            - mountPath: /exports/frigate
+              name: frigate-storage
             - mountPath: /exports/backups
               name: backups-storage
 
@@ -111,6 +113,10 @@ spec:
         - name: arrstack-media-storage
           hostPath:
             path: $SECONDARY_STORAGE_PATH/arrstack_media
+            type: DirectoryOrCreate
+        - name: frigate-storage
+          hostPath:
+            path: $SECONDARY_STORAGE_PATH/frigate
             type: DirectoryOrCreate
         - name: backups-storage
           hostPath:

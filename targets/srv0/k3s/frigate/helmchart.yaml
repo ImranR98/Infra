@@ -60,11 +60,12 @@ spec:
         existingClaim: frigate-config-pvc
       media:
         enabled: false
+    # NFS-backed media (recordings stay on srv0's $SECONDARY_STORAGE_PATH/frigate,
+    # exported by the nfs-server component) while Frigate runs on the GPU node
     extraVolumes:
       - name: frigate-media
-        hostPath:
-          path: $SECONDARY_STORAGE_PATH/frigate
-          type: DirectoryOrCreate
+        persistentVolumeClaim:
+          claimName: frigate-media-pvc
       - name: dri
         hostPath:
           path: /dev/dri
@@ -73,6 +74,23 @@ spec:
         mountPath: /media/frigate
       - name: dri
         mountPath: /dev/dri
+    # Prefer the AMD GPU node (bigpc, has-amdgpu=true) - same convention as jellyfin.
+    # Falls back to srv0 (which also has /dev/dri) if bigpc is unavailable.
+    affinity:
+      nodeAffinity:
+        preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            preference:
+              matchExpressions:
+                - key: has-amdgpu
+                  operator: In
+                  values:
+                    - "true"
+    tolerations:
+      - key: scheduling-discouraged
+        operator: Equal
+        value: "true"
+        effect: PreferNoSchedule
     resources:
       limits:
         memory: 2Gi
