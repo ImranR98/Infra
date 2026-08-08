@@ -35,9 +35,10 @@ spec:
       ffmpeg:
         # VAAPI decode pinned to the discrete GPU (renderD129 = RX 9070; the iGPU
         # is renderD128). Explicit device because the auto-selector probes devices
-        # in arbitrary order. The ROCm image could also drive an ONNX detector
-        # (auto-detected) if a model is configured later.
-        hwaccel_args: -hwaccel_flags allow_profile_mismatch -hwaccel vaapi -hwaccel_device /dev/dri/renderD129 -hwaccel_output_format vaapi
+        # in arbitrary order. -hwaccel_output_format nv12: decode on the GPU but
+        # deliver CPU frames, so the detect/record filter chains (fps, scale) work.
+        # The ROCm image could also drive an ONNX detector (auto-detected) later.
+        hwaccel_args: -hwaccel_flags allow_profile_mismatch -hwaccel vaapi -hwaccel_device /dev/dri/renderD129 -hwaccel_output_format nv12
         retry_interval: 5
       go2rtc:
         streams:
