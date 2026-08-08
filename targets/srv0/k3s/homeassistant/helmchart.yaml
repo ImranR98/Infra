@@ -61,6 +61,10 @@ spec:
         # Load frontend themes from the themes folder
         frontend:
           themes: !include_dir_merge_named themes
+          # Advanced Camera Card (smooth dashboard live view via go2rtc restream);
+          # installed by the integration-update init container
+          extra_module_url:
+            - /local/community/advanced-camera-card/advanced-camera-card.js
 
         automation: !include automations.yaml
         script: !include scripts.yaml
@@ -91,8 +95,9 @@ spec:
           - |
             set -e
             COMP=/config/custom_components
+            WWW=/config/www/community
             REPO=blakeblackshear/frigate-hass-integration
-            mkdir -p "$COMP"
+            mkdir -p "$COMP" "$WWW"
             # HACS is not used anymore - clean up any previous install
             rm -rf "$COMP/hacs"
             latest="$(wget -qO- https://api.github.com/repos/$REPO/releases/latest | sed -n 's/.*"tag_name": *"\([^"]*\)".*/\1/p' | head -1)" || true
@@ -105,6 +110,24 @@ spec:
               cp -r "$tmpdir/frigate-hass-integration-${latest#v}/custom_components/frigate" "$COMP/"
               rm -rf "$tmpdir"
               echo "$latest" > "$COMP/frigate/.installed-version"
+            fi
+            # Advanced Camera Card (smooth dashboard live view from go2rtc restream).
+            # No HACS: the card JS is downloaded directly and registered via
+            # configuration.yaml frontend.extra_module_url (see templateConfig).
+            CARD=dermotduffy/advanced-camera-card
+            CARD_DIR="$WWW/advanced-camera-card"
+            mkdir -p "$CARD_DIR"
+            card_latest="$(wget -qO- https://api.github.com/repos/$CARD/releases/latest | sed -n 's/.*"tag_name": *"\([^"]*\)".*/\1/p' | head -1)" || true
+            [ -n "$card_latest" ] || card_latest="v7.27.4"
+            if [ "$(cat "$CARD_DIR/.installed-version" 2>/dev/null)" != "$card_latest" ]; then
+              echo "installing advanced-camera-card $card_latest"
+              tmpdir=$(mktemp -d)
+              wget -qO- "https://github.com/$CARD/releases/download/$card_latest/advanced-camera-card.js" -O "$tmpdir/advanced-camera-card.js"
+              rm -rf "$CARD_DIR"
+              mkdir -p "$CARD_DIR"
+              cp "$tmpdir/advanced-camera-card.js" "$CARD_DIR/"
+              rm -rf "$tmpdir"
+              echo "$card_latest" > "$CARD_DIR/.installed-version"
             fi
         volumeMounts:
           - name: homeassistant-home-assistant-pvc
