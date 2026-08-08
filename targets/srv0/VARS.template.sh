@@ -72,8 +72,11 @@ export IMMICH_DB_PASSWORD="change_me" # openssl rand -hex 16
 # ====== Mosquitto ======
 # Format: mosquitto password file lines ("user:hash"), ONE LINE PER ENTRY, each line
 # indented with 4 spaces (rendered into a YAML block scalar, like AUTHELIA_USERS_DATABASE).
-# Add app users with: tmpfile=$(mktemp) && mosquitto_passwd -b "$tmpfile" frigate '<FRIGATE_MQTT_PASSWORD>' \
-#   && mosquitto_passwd -b "$tmpfile" homeassistant '<HA_MQTT_PASSWORD>' && cat "$tmpfile"
+# IMPORTANT: generate hashes with the SAME mosquitto_passwd version as the runtime
+# image (eclipse-mosquitto:2.0.22-openssl). Newer mosquitto_passwd (2.1+) emits
+# $7$1000$ hashes that 2.0.x cannot decode ("Unable to decode password salt").
+#   tmpfile=$(mktemp) && docker run --rm -v "$tmpfile":/pw eclipse-mosquitto:2.0.22-openssl mosquitto_passwd -b /pw frigate '<FRIGATE_MQTT_PASSWORD>' \
+#   && docker run --rm -v "$tmpfile":/pw eclipse-mosquitto:2.0.22-openssl mosquitto_passwd -b /pw homeassistant '<HA_MQTT_PASSWORD>' && cat "$tmpfile"
 export MOSQUITTO_CREDENTIALS="change_me" # tmpfile=$(mktemp) && mosquitto_passwd -b "$tmpfile" admin 'your-password' && cat "$tmpfile" && rm "$tmpfile"
 
 # ====== Frigate (NVR) ======
