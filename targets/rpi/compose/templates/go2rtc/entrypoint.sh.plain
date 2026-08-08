@@ -18,7 +18,7 @@ sed -i "s/{{GO2RTC_PASSWORD}}/$(cat /config/password)/g" /config/go2rtc.yaml
 # makes no packet progress, kill the ffmpeg process - go2rtc respawns it fresh.
 (
     AUTH="admin:$(cat /config/password)"
-    API="http://127.0.0.1:1984/api/streams?src=cam"
+    API="http://127.0.0.1:1984/api/streams?src=rpi"
     _packets() {
         curl -s -u "$AUTH" "$API" 2>/dev/null |
             python3 -c 'import json,sys

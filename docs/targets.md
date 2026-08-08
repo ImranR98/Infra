@@ -39,7 +39,7 @@ A Raspberry Pi 400 (Ubuntu 24.04, arm64) running a single minimal Compose servic
 
 - **Orchestrator:** Docker Compose
 - **Services:** go2rtc (`alexxit/go2rtc:1.9.14`)
-- **Stream:** `rtsp://admin:<password>@<pi>:8554/cam`
+- **Stream:** `rtsp://admin:<password>@<pi>:8554/rpi`
 - **Video path:** single lazy FFmpeg source — reads the webcam as MJPEG and transcodes to H.264 with software x264 (~1 core). The Pi's hardware encoder (`h264_v4l2m2m` via bcm2835-codec) was dropped because it wedges at the driver level under load; an entrypoint watchdog restarts the source if it ever stalls.
 - **Device mapping:** webcam `/dev/video0` → container `/dev/video2` (the webcam's UVC metadata node `/dev/video1` is not mapped; the encoder device is not used).
 - **Auth:** username hardcoded to `admin`; password is auto-generated on first start, printed to `docker logs go2rtc`, and persisted at `current_target/compose_live_state/go2rtc/password` so it survives reboots. RTSP requires the password; the WebUI (`:1984`) is loopback-only and requires login.
