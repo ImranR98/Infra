@@ -96,14 +96,13 @@ spec:
         mountPath: /dev/dri
       - name: kfd
         mountPath: /dev/kfd
-    # Prefer the AMD GPU node (bigpc, has-amdgpu=true) - same convention as jellyfin.
-    # Falls back to srv0 (which also has /dev/dri) if bigpc is unavailable.
+    # Bigpc is a hard requirement: the ROCm image needs /dev/kfd and decode is
+    # pinned to the discrete GPU (renderD129), neither of which exists on srv0.
     affinity:
       nodeAffinity:
-        preferredDuringSchedulingIgnoredDuringExecution:
-          - weight: 100
-            preference:
-              matchExpressions:
+        requiredDuringSchedulingIgnoredDuringExecution:
+          nodeSelectorTerms:
+            - matchExpressions:
                 - key: has-amdgpu
                   operator: In
                   values:
