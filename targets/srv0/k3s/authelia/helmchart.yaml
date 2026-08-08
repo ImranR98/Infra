@@ -48,6 +48,10 @@ spec:
           secret:
             secretName: authelia-oidc-secrets
     configMap:
+      server:
+        timeouts:
+          read: "30 seconds"
+          write: "30 seconds"
       authentication_backend:
         ldap:
           enabled: false
