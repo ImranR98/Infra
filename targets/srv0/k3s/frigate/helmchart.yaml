@@ -50,28 +50,8 @@ spec:
       detectors:
         cpu:
           type: cpu
-      cameras:
-        # Default camera: rpi go2rtc webcam stream (targets/rpi)
-        cam:
-          ffmpeg:
-            inputs:
-              - path: rtsp://127.0.0.1:8554/cam
-                roles:
-                  - detect
-              - path: rtsp://127.0.0.1:8554/cam
-                roles:
-                  - record
-          detect:
-            width: 640
-            height: 480
-            fps: 15
-          record:
-            enabled: true
-            events:
-              retain:
-                default: 7
-          snapshots:
-            enabled: true
+      # Full cameras block comes from $FRIGATE_CAMERAS (see targets/srv0/VARS.template.sh)
+      $FRIGATE_CAMERAS
     persistence:
       config:
         enabled: true

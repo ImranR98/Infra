@@ -87,6 +87,93 @@ export RPI_CAMERA_IP="192.168.8.XX"
 export FRIGATE_RTSP_PASSWORD="change_me"
 export FRIGATE_MQTT_PASSWORD="change_me" # openssl rand -hex 16 (also add `frigate` user to MOSQUITTO_CREDENTIALS)
 export HA_MQTT_PASSWORD="change_me" # openssl rand -hex 16 (also add `homeassistant` user to MOSQUITTO_CREDENTIALS)
+# Cameras block rendered into frigate/helmchart.yaml's config (envsubst before
+# kustomize). Multi-line YAML: the whole "cameras:" map. The template line provides
+# 6 spaces, so every line is indented 6 + target-indent (config block strips 6).
+# GUI config-editor changes don't survive restarts - scrape them back into here.
+# {FRIGATE_*} tokens are substituted by Frigate at runtime.
+export FRIGATE_CAMERAS="cameras:
+        # Default camera: rpi go2rtc webcam stream (targets/rpi)
+        cam:
+          ffmpeg:
+            inputs:
+              - path: rtsp://127.0.0.1:8554/cam
+                roles:
+                  - detect
+              - path: rtsp://127.0.0.1:8554/cam
+                roles:
+                  - record
+          detect:
+            width: 640
+            height: 480
+            fps: 15
+          record:
+            enabled: true
+            alerts:
+              retain:
+                days: 7
+            detections:
+              retain:
+                days: 7
+          snapshots:
+            enabled: true
+          zones:
+            door:
+              coordinates: 0.247,0.112,0.714,0.092,0.709,1,0.249,1,0.259,0.977
+              loitering_time: 0
+              friendly_name: Door
+        # -------- HOW TO ADD MORE CAMERAS (copy + uncomment a block) --------
+        # Example 1: LAN IP camera over RTSP (most common)
+        #   doorbell:
+        #     ffmpeg:
+        #       inputs:
+        #         - path: rtsp://user:password@192.168.8.XX:554/stream1
+        #           roles:
+        #             - detect
+        #             - record
+        #     detect:
+        #       width: 1280
+        #       height: 720
+        #       fps: 5
+        #     record:
+        #       enabled: true
+        #       detections:
+        #         retain:
+        #           days: 7
+        # Example 2: USB camera plugged into the frigate node itself (bigpc).
+        #   Path is the V4L2 device inside the container (the pod is privileged,
+        #   so all /dev/video* nodes of the node are visible).
+        #   local_usb:
+        #     ffmpeg:
+        #       inputs:
+        #         - path: /dev/video0
+        #           roles:
+        #             - detect
+        #     detect:
+        #       width: 1280
+        #       height: 720
+        #       fps: 5
+        # Example 3: HTTP/MJPEG source (old webcams, some NVRs)
+        #   old_cam:
+        #     ffmpeg:
+        #       inputs:
+        #         - path: http://192.168.8.XX/cgi-bin/video.cgi?type=mjpeg
+        #           roles:
+        #             - detect
+        # Example 4: camera behind an exotic source via Frigate's go2rtc restream:
+        #   define the source in the go2rtc section of frigate/helmchart.yaml
+        #   (e.g. streams: backyard: rtsp://...), then consume it locally:
+        #   backyard:
+        #     ffmpeg:
+        #       inputs:
+        #         - path: rtsp://127.0.0.1:8554/backyard
+        #           roles:
+        #             - detect
+        #             - record
+        #     detect:
+        #       width: 1280
+        #       height: 720
+        #       fps: 5"
 
 # ====== FreshRSS ======
 export FRESHRSS_PASSWORD="change_me" # openssl rand -base64 32
