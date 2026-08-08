@@ -70,9 +70,10 @@ export LOCALHOST_AUTH_PASSWORD_HASH="change_me" # openssl passwd -6 'password'
 export IMMICH_DB_PASSWORD="change_me" # openssl rand -hex 16
 
 # ====== Mosquitto ======
-# Format: mosquitto password file lines ("user:hash"). Add app users:
-#   tmpfile=$(mktemp) && mosquitto_passwd -b "$tmpfile" frigate '<FRIGATE_MQTT_PASSWORD>' \
-#     && mosquitto_passwd -b "$tmpfile" homeassistant '<HA_MQTT_PASSWORD>' && cat "$tmpfile"
+# Format: mosquitto password file lines ("user:hash"), ONE LINE PER ENTRY, each line
+# indented with 4 spaces (rendered into a YAML block scalar, like AUTHELIA_USERS_DATABASE).
+# Add app users with: tmpfile=$(mktemp) && mosquitto_passwd -b "$tmpfile" frigate '<FRIGATE_MQTT_PASSWORD>' \
+#   && mosquitto_passwd -b "$tmpfile" homeassistant '<HA_MQTT_PASSWORD>' && cat "$tmpfile"
 export MOSQUITTO_CREDENTIALS="change_me" # tmpfile=$(mktemp) && mosquitto_passwd -b "$tmpfile" admin 'your-password' && cat "$tmpfile" && rm "$tmpfile"
 
 # ====== Frigate (NVR) ======

@@ -39,7 +39,10 @@ metadata:
   namespace: apps
 type: Opaque
 stringData:
-  password_file: $MOSQUITTO_CREDENTIALS
+  # Block scalar: multi-line MOSQUITTO_CREDENTIALS value (one "user:hash" line per
+  # entry, all lines indented 4 spaces in VARS) renders as a column-0 password file.
+  password_file: |-
+    $MOSQUITTO_CREDENTIALS
 ---
 # Single TLS cert for cluster + LAN.  External clients see hostname mismatch
 # (connect via IP).  require_certificate: false disables verification; TLS still works.
