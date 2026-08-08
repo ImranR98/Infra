@@ -12,6 +12,10 @@ spec:
   createNamespace: false
   version: 3.2.0
   valuesContent: |-
+    # Recreate: the config PVC is RWO Longhorn - RollingUpdate deadlocks (new pod
+    # can't attach while the old one holds the volume, e.g. after node moves).
+    deploymentStrategy:
+      type: Recreate
     persistence:
       config:
         existingClaim: jellyfin-config-pvc

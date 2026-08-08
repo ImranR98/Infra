@@ -8,6 +8,10 @@ metadata:
     app: geoip-service
 spec:
   replicas: 1
+  # Recreate: the geoip PVC is RWO Longhorn - RollingUpdate deadlocks on the
+  # volume (new pod can't attach while the old pod holds it).
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app: geoip-service
