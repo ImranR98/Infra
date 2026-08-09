@@ -5,3 +5,4 @@ resources:
   - helmchart.yaml
   - ingress.yaml
   - oidc-rbac.yaml
+  - readonly-clusterrole.yaml
