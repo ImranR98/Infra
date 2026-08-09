@@ -11,6 +11,7 @@ base:
   - authelia
   - pvc-backup
   - ntfy
+  - descheduler
 apps:
   - immich
   - logtfy

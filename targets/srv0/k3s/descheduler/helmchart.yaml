@@ -1,0 +1,71 @@
+---
+apiVersion: helm.cattle.io/v1
+kind: HelmChart
+metadata:
+  name: descheduler
+  namespace: kube-system
+spec:
+  chart: descheduler
+  repo: https://kubernetes-sigs.github.io/descheduler
+  failurePolicy: abort
+  targetNamespace: kube-system
+  createNamespace: false
+  version: 0.36.0
+  valuesContent: |-
+    kind: CronJob
+    schedule: "*/2 * * * *"
+    # Rebalances pods that drifted due to soft affinities / PreferNoSchedule
+    # taints being evaluated only at scheduling time:
+    #   - RemovePodsViolatingNodeTaints: evicts pods on bigpc that do NOT
+    #     tolerate its scheduling-discouraged taint (only if they fit
+    #     elsewhere, i.e. srv0). GPU pods tolerate it -> never touched.
+    #   - RemovePodsViolatingNodeAffinity: evicts pods (ollama/jellyfin/
+    #     immich) whose PREFERRED node (has-amdgpu=true) can now fit them;
+    #     while bigpc is unavailable there is no better node -> no eviction,
+    #     so no thrash loop.
+    # Hard-affinity pods (frigate, homeassistant, nfs-server) have no
+    # alternate fitting node -> never evicted.
+    deschedulerPolicy:
+      maxNoOfPodsToEvictPerNode: 2
+      maxNoOfPodsToEvictPerNamespace: 3
+      maxNoOfPodsToEvictTotal: 5
+      profiles:
+        - name: "k3s-rebalance"
+          pluginConfig:
+            - name: "DefaultEvictor"
+              args:
+                nodeFit: true
+                minPodAge: 15m
+                # Jellyfin/ollama/immich use emptyDir/hostPath volumes; the
+                # default PodsWithLocalStorage protection would block them
+                # from ever being rebalanced. Safe to disable here: such pods
+                # either should move to bigpc (the goal) or are pinned by hard
+                # affinities (frigate, nfs-server) that NodeFit still enforces.
+                podProtections:
+                  defaultDisabled:
+                    - PodsWithLocalStorage
+            - name: "RemovePodsViolatingNodeTaints"
+              args:
+                includePreferNoSchedule: true
+                includedTaints:
+                  - scheduling-discouraged
+                # Longhorn instance-managers are node-local volume pods that
+                # legitimately run on tainted nodes; excluding them prevents
+                # futile eviction attempts every cycle.
+                namespaces:
+                  exclude:
+                    - longhorn-system
+            - name: "RemovePodsViolatingNodeAffinity"
+              args:
+                nodeAffinityType:
+                  - preferredDuringSchedulingIgnoredDuringExecution
+          plugins:
+            deschedule:
+              enabled:
+                - "RemovePodsViolatingNodeTaints"
+                - "RemovePodsViolatingNodeAffinity"
+    resources:
+      limits:
+        memory: 512Mi
+      requests:
+        memory: 128Mi
