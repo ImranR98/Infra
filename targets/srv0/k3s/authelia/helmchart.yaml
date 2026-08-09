@@ -181,7 +181,7 @@ spec:
             # Headlamp's backend uses HTTP Basic auth for the token exchange.
             token_endpoint_auth_method: 'client_secret_basic'
       log:
-        level: info
+        level: debug
       totp:
         issuer: $SERVICES_DOMAIN
       access_control:
