@@ -143,7 +143,8 @@ _validate_compose() {
     local known_vars; known_vars=$(_build_known_vars "$target" "MY_UID
 TARGET
 DOCKER_GID
-COMPOSE_STATE_DIR")
+COMPOSE_STATE_DIR
+USER")
 
     local compose_files=("$INFRA_ROOT/targets/$target/compose/compose.yaml")
     for f in "$INFRA_ROOT/targets/$target/compose/templates"/*; do if [ -f "$f" ]; then compose_files+=("$f"); fi; done
