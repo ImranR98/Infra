@@ -4,6 +4,8 @@
 
 `infra.sh` delegates all command routing to `infra_dispatch()` in `lib/dispatch.sh`. This function takes the remaining arguments after the target name and resolves them to an executable script.
 
+Before any command runs, `infra.sh` checks the machine's hostname against the target name. If they don't match, it prints a warning and (when stdin is a terminal) waits for the user to press Enter before continuing. When running non-interactively the warning is printed but the prompt is skipped.
+
 ### Resolution order
 
 For each argument in the command string, dispatch searches two directories (in order):

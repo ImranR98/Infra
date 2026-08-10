@@ -30,6 +30,15 @@ fi
 export TARGET="$1"
 shift
 
+# Warn if this machine's hostname does not match the target name
+if [ "$(hostname)" != "$TARGET" ]; then
+    echo "Warning: hostname '$(hostname)' does not match target '$TARGET'." >&2
+    echo "Deploying may apply the wrong configuration. Press Enter to continue." >&2
+    if [ "$INFRA_INTERACTIVE" = true ]; then
+        read -r
+    fi
+fi
+
 source "$INFRA_ROOT/lib/common.sh"
 
 vars_found=false
