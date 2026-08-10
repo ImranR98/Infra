@@ -36,7 +36,7 @@ stringData:
     whitelist:
       reason: "Downloading from Navidrome using client apps can cause false positives"
       expression:
-        - evt.Overflow.Alert.Events[0].GetMeta('target_fqdn') == 'music.$SERVICES_DOMAIN'
+        - evt.Meta.target_fqdn == 'music.$SERVICES_DOMAIN'
         - evt.Overflow.Alert.GetScenario() in ['crowdsecurity/http-probing', 'crowdsecurity/http-crawl-non_statics']
   immich.whitelist.yaml: |
     name: imranr/immich
@@ -44,38 +44,45 @@ stringData:
     whitelist:
       reason: "Browsing Immich can cause false positives"
       expression:
-        - evt.Overflow.Alert.Events[0].GetMeta('target_fqdn') == 'immich.$SERVICES_DOMAIN'
+        - evt.Meta.target_fqdn == 'immich.$SERVICES_DOMAIN'
         - evt.Overflow.Alert.GetScenario() in ['crowdsecurity/http-probing']
-        - evt.Overflow.Alert.Events[0].GetMeta('http_verb') == 'GET'
-        - evt.Overflow.Alert.Events[0].GetMeta('http_status') == '404'
-        - evt.Overflow.Alert.Events[0].GetMeta('http_path') matches '/api/assets/.+'
+        - evt.Meta.http_verb == 'GET'
+        - evt.Meta.http_status == '404'
+        - evt.Meta.http_path matches '/api/assets/.+'
   homeassistant.whitelist.yaml: |
     name: imranr/homeassistant
     description: "Whitelist for HomeAssistant"
     whitelist:
       reason: "HomeAssistant webhooks can cause false positives"
       expression:
-        - evt.Overflow.Alert.Events[0].GetMeta('target_fqdn') == 'ha.$SERVICES_DOMAIN'
+        - evt.Meta.target_fqdn == 'ha.$SERVICES_DOMAIN'
         - evt.Overflow.Alert.GetScenario() in ['LePresidente/http-generic-403-bf']
-        - evt.Overflow.Alert.Events[0].GetMeta('http_verb') == 'POST'
-        - evt.Overflow.Alert.Events[0].GetMeta('http_path') matches '^/api/webhook/.+'
+        - evt.Meta.http_verb == 'POST'
+        - evt.Meta.http_path matches '^/api/webhook/.+'
   seerr.whitelist.yaml: |
     name: imranr/seerr
     description: "Whitelist for Seerr"
     whitelist:
       reason: "Browsing Seerr without login causes 403 on API endpoints"
       expression:
-        - evt.Overflow.Alert.Events[0].GetMeta('target_fqdn') == 'seerr.$SERVICES_DOMAIN'
+        - evt.Meta.target_fqdn == 'seerr.$SERVICES_DOMAIN'
         - evt.Overflow.Alert.GetScenario() in ['crowdsecurity/http-probing', 'LePresidente/http-generic-403-bf']
-        - evt.Overflow.Alert.Events[0].GetMeta('http_status') == '403'
-        - evt.Overflow.Alert.Events[0].GetMeta('http_path') matches '^/api/.*'
+        - evt.Meta.http_status == '403'
+        - evt.Meta.http_path matches '^/api/.*'
   plik.whitelist.yaml: |
     name: imranr/plik
     description: "Whitelist for Plik"
     whitelist:
       reason: "Uploading/downloading files from Plik can cause false positives"
       expression:
-        - evt.Overflow.Alert.Events[0].GetMeta('target_fqdn') == 'send.$SERVICES_DOMAIN' && evt.Overflow.Alert.GetScenario() in ['LePresidente/http-generic-403-bf', 'crowdsecurity/http-probing', 'crowdsecurity/http-crawl-non_statics']
+        - evt.Meta.target_fqdn == 'send.$SERVICES_DOMAIN' && evt.Overflow.Alert.GetScenario() in ['LePresidente/http-generic-403-bf', 'crowdsecurity/http-probing', 'crowdsecurity/http-crawl-non_statics']
+  chibisafe.whitelist.yaml: |
+    name: imranr/chibisafe
+    description: "Whitelist for Chibisafe"
+    whitelist:
+      reason: "Uploading files to Chibisafe can cause false positives"
+      expression:
+        - evt.Meta.target_fqdn == 'send.$SERVICES_DOMAIN' && evt.Overflow.Alert.GetScenario() in ['LePresidente/http-generic-403-bf', 'crowdsecurity/http-probing', 'crowdsecurity/http-crawl-non_statics']
 ---
 apiVersion: v1
 kind: Secret

@@ -115,6 +115,9 @@ spec:
         - name: crowdsec-lapi-configs
           mountPath: /etc/crowdsec/postoverflows/s01-whitelist/plik.yaml
           subPath: plik.whitelist.yaml
+        - name: crowdsec-lapi-configs
+          mountPath: /etc/crowdsec/postoverflows/s01-whitelist/chibisafe.yaml
+          subPath: chibisafe.whitelist.yaml
       persistentVolume:
         config:
           enabled: false
