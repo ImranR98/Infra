@@ -319,9 +319,9 @@ pvc_backup_data() {
     if ! kubectl wait --for=jsonpath='{.status.phase}'=Succeeded "pod/$pod_name" -n "$ns" --timeout=900s 2>/dev/null; then
         echo "  ERROR: backup pod failed for $ns/$pvc" >&2
         echo "  --- pod status ---" >&2
-        kubectl describe pod "$pod_name" -n "$ns" 2>/dev/null >&2 || true
+        kubectl describe pod "$pod_name" -n "$ns" 2>&1 || true
         echo "  --- pod logs ---" >&2
-        kubectl logs "pod/$pod_name" -n "$ns" --tail=100 2>/dev/null >&2 || true
+        kubectl logs "pod/$pod_name" -n "$ns" --tail=100 2>&1 || true
         kubectl delete pod "$pod_name" -n "$ns" --ignore-not-found 2>/dev/null || true
         return 1
     fi
