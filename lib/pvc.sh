@@ -316,12 +316,12 @@ pvc_backup_data() {
     fi
 
     pvc_backup_pod_yaml "$pvc" "$ns" "$backup_dir" "$dest_file" "$timestamp" "$exclude" "$node" | kubectl apply -f -
-    if ! kubectl wait --for=jsonpath='{.status.phase}'=Succeeded "pod/$pod_name" -n "$ns" --timeout=600s 2>/dev/null; then
+    if ! kubectl wait --for=jsonpath='{.status.phase}'=Succeeded "pod/$pod_name" -n "$ns" --timeout=900s 2>/dev/null; then
         echo "  ERROR: backup pod failed for $ns/$pvc" >&2
         echo "  --- pod status ---" >&2
-        kubectl describe pod "$pod_name" -n "$ns" 2>/dev/null | tail -30 >&2 || true
+        kubectl describe pod "$pod_name" -n "$ns" 2>/dev/null >&2 || true
         echo "  --- pod logs ---" >&2
-        kubectl logs "pod/$pod_name" -n "$ns" --tail=30 2>/dev/null >&2 || true
+        kubectl logs "pod/$pod_name" -n "$ns" --tail=100 2>/dev/null >&2 || true
         kubectl delete pod "$pod_name" -n "$ns" --ignore-not-found 2>/dev/null || true
         return 1
     fi
@@ -405,7 +405,7 @@ pvc_restore_data() {
     local pod_name
     pod_name="restore-$(echo "$pvc" | tr '_' '-')"
     pvc_restore_pod_yaml "$pvc" "$ns" "$backup_dir" "$src_file" | kubectl apply -f -
-    if ! kubectl wait --for=jsonpath='{.status.phase}'=Succeeded "pod/$pod_name" -n "$ns" --timeout=600s 2>/dev/null; then
+    if ! kubectl wait --for=jsonpath='{.status.phase}'=Succeeded "pod/$pod_name" -n "$ns" --timeout=900s 2>/dev/null; then
         echo "  ERROR: restore pod failed for $ns/$pvc" >&2
         kubectl delete pod "$pod_name" -n "$ns" --ignore-not-found 2>/dev/null || true
         return 1
