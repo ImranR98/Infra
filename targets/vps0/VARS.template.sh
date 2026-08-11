@@ -61,23 +61,23 @@ export GEOLITE_LICENSE_KEY="" # (optional, see Shlink docs)
 export OWNCAST_ACCESS_TOKEN="change_me"    # openssl rand -hex 32
 
 # ====== FRP ======
-# Generate with: ./infra.sh srv0 compose generate-frp-certs vps0
+# Generate with: ./infra.sh srv0 compose generate-mtls-certs vps0
 # Use the heredoc pattern below for multi-line PEM data:
-export FRP_CA_CERT="$(cat <<'FRP_CERT_EOF'
+export MTLS_CA_CERT="$(cat <<'MTLS_CERT_EOF'
 -----BEGIN CERTIFICATE-----
 <CA-certificate-pem-block>
 -----END CERTIFICATE-----
-FRP_CERT_EOF
+MTLS_CERT_EOF
 )"
-export FRP_SERVER_CERT="$(cat <<'FRP_CERT_EOF'
+export MTLS_SERVER_CERT="$(cat <<'MTLS_CERT_EOF'
 -----BEGIN CERTIFICATE-----
 <server-certificate-pem-block>
 -----END CERTIFICATE-----
-FRP_CERT_EOF
+MTLS_CERT_EOF
 )"
-export FRP_SERVER_KEY="$(cat <<'FRP_CERT_EOF'
+export MTLS_SERVER_KEY="$(cat <<'MTLS_CERT_EOF'
 -----BEGIN PRIVATE KEY-----
 <server-private-key-pem-block>
 -----END PRIVATE KEY-----
-FRP_CERT_EOF
+MTLS_CERT_EOF
 )"

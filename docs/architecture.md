@@ -73,8 +73,8 @@ Template files (*.secret, *.plain) under `compose/templates/` are rendered into 
 
 1. `infra.sh` starts, sets `INFRA_ROOT`, detects interactive mode, validates the target exists
 2. Sources `lib/common.sh` (guarded against double-loading via `INFRA_LIB_LOADED`)
-3. Looks for `VARS.<target>.sh` in `secrets/` (root fallback) — sources it, computes `ENVSUBST_VARS` (skipped for `compose generate-frp-certs`)
-4. Checks Docker availability if the command is `compose` or `k3s` (skipped for `backup-state` and `generate-frp-certs` subcommands)
+3. Looks for `VARS.<target>.sh` in `secrets/` (root fallback) — sources it, computes `ENVSUBST_VARS` (skipped for `compose generate-mtls-certs`)
+4. Checks Docker availability if the command is `compose` or `k3s` (skipped for `backup-state` and `generate-mtls-certs` subcommands)
 5. Sources `lib/dispatch.sh` and calls `infra_dispatch()` with remaining arguments
 6. `infra_dispatch()` finds and executes the matching script
 

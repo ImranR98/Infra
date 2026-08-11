@@ -45,7 +45,7 @@ vars_found=false
 _skip_source=false
 case "${1:-}" in
     compose) case "${2:-}" in
-        generate-frp-certs) _skip_source=true ;;
+        generate-mtls-certs) _skip_source=true ;;
     esac ;;
 esac
 if [ -n "$(resolve_vars_file "$TARGET")" ]; then
@@ -58,7 +58,7 @@ fi
 
 # Set up MY_UID, DOCKER_GID, ENVSUBST_VARS for compose commands
 case "${1:-}" in compose)
-    if [ "${2:-}" != "backup-state" ] && [ "${2:-}" != "generate-frp-certs" ]; then
+        if [ "${2:-}" != "backup-state" ] && [ "${2:-}" != "generate-mtls-certs" ]; then
         if ! $vars_found && [ -f "$INFRA_ROOT/targets/$TARGET/VARS.template.sh" ]; then
             echo "No VARS.$TARGET.sh or VARS.sh found. Create VARS.$TARGET.sh with variables from targets/$TARGET/VARS.template.sh." >&2
             exit 1

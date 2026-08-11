@@ -53,13 +53,13 @@ Creates a `.tar` of `current_target/compose_live_state/` via an Alpine Docker co
 
 SSHs into a remote Infra instance and streams the tar back. The remote end sets `INFRA_BACKUP_STREAM=true`, which makes the backup script write tar to stdout instead of a file. The local end captures stdout to disk. Old backups are pruned by `$BACKUP_RETENTION` (default: keep 1).
 
-## `compose generate-frp-certs`
+## `compose generate-mtls-certs`
 
 ```bash
-./infra.sh <client-target> compose generate-frp-certs <server-target>
+./infra.sh <client-target> compose generate-mtls-certs <server-target>
 ```
 
-Generates mTLS certificates for an FRP client↔server pair. Creates a per-pair CA, a server certificate for the VPS target, and client certificates for the current target (including a preboot-specific client cert if `FRP_PREBOOT_CLIENT_CERT` is in the template). Outputs copy-paste blocks for both targets' VARS files. VARS files are never modified automatically.
+Generates mTLS certificates for a client↔server pair (used by FRP on srv0↔vps0, but not FRP-specific). Creates a per-pair CA, a server certificate (CN = server target) for the server target, and client certificates for the current target (including a preboot-specific client cert if `MTLS_PREBOOT_CLIENT_CERT` is in the template). Outputs copy-paste blocks for both targets' VARS files. VARS files are never modified automatically.
 
 ## `compose restart`
 

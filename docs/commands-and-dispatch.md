@@ -85,7 +85,7 @@ Commands are sourced, not executed in a subshell. This means `exit` will kill th
 |---------|------------|
 | `compose install` | Render templates, start Compose stack via `docker compose up -d` |
 | `compose backup-state` | Backup Compose runtime state (local file or remote via SSH) |
-| `compose generate-frp-certs <target>` | Generate mTLS certificates for an FRP client↔server pair |
+| `compose generate-mtls-certs <target>` | Generate mTLS certificates for a client↔server pair |
 | `compose restart <service>` | Restart a specific Compose service |
 
 ### K3s subcommands

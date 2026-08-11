@@ -123,7 +123,7 @@ FRP uses mutual TLS (mTLS) for authentication. A per-pair CA issues client and s
 
 ### Certificate generation
 
-Use `./infra.sh <client-target> compose generate-frp-certs <server-target>` to generate certificates for a client↔server pair. The command outputs copy-paste blocks for the VARS files of both targets. See `commands/compose/generate-frp-certs.sh`.
+Use `./infra.sh <client-target> compose generate-mtls-certs <server-target>` to generate certificates for a client↔server pair. The command outputs copy-paste blocks for the VARS files of both targets. See `commands/compose/generate-mtls-certs.sh`.
 
 ### Health checks
 

@@ -126,7 +126,7 @@ Compose services typically use:
 The `VARS.template.sh` files include comments with generation commands for each secret:
 
 ```bash
-export FRP_CLIENT_CERT="change_me"         # ./infra.sh <target> compose generate-frp-certs <server>
+export MTLS_CLIENT_CERT="change_me"        # ./infra.sh <target> compose generate-mtls-certs <server>
 export AUTHELIA_DB_PASSWORD="change_me"    # openssl rand -base64 32
 export CROWDSEC_BOUNCER_KEY="change_me"    # openssl rand -hex 32
 ```

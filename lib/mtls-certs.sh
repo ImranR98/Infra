@@ -1,15 +1,15 @@
 #!/bin/bash
-# FRP mTLS cert generation.  Output to stdout/temp only; never touches VARS files.
+# mTLS cert generation.  Output to stdout/temp only; never touches VARS files.
 
-_frp_certs_temp_dir() {
-    local d="/tmp/frp-certs-$$"
+_mtls_certs_temp_dir() {
+    local d="/tmp/mtls-certs-$$"
     mkdir -p "$d"
     echo "$d"
 }
 
-generate_frp_ca() {
+generate_mtls_ca() {
     local outdir="$1"
-    local subj="${2:-/CN=frp-ca}"
+    local subj="${2:-/CN=mtls-ca}"
     openssl req -x509 -newkey rsa:4096 \
         -keyout "$outdir/ca.key" \
         -out "$outdir/ca.crt" \
@@ -83,9 +83,9 @@ print_copy_paste_block() {
     local file_path="$3"
 
     echo "  # $target_label"
-    echo "  export $var_name=\"\$(cat <<'FRP_CERT_EOF'"
+    echo "  export $var_name=\"\$(cat <<'MTLS_CERT_EOF'"
     cat "$file_path"
-    echo "FRP_CERT_EOF"
+    echo "MTLS_CERT_EOF"
     echo ")\""
     echo ""
 }

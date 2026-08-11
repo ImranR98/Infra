@@ -22,7 +22,7 @@ Infra is a shell-driven IaC repo for a multi-machine homelab. One CLI (`./infra.
 ./infra.sh <target> compose install              # Render templates, create host dirs, start stack
 ./infra.sh <target> compose restart <service>    # Re-render templates + restart single service
 ./infra.sh <target> compose backup-state [remote]
-./infra.sh <target> compose generate-frp-certs <server-target>  # mTLS certs for FRP pair
+./infra.sh <target> compose generate-mtls-certs <server-target>  # mTLS certs for a client↔server pair
 ./infra.sh <target> k3s setup                    # Bootstrap a K3s control-plane node
 ./infra.sh <target> k3s join <ip> <user> [agent|server]
 ./infra.sh <target> k3s group base apply|initial|delete
