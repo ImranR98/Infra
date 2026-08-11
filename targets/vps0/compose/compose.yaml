@@ -461,7 +461,7 @@ services:
             - NTFY_URL=$CCT26_NTFY_URL
         labels:
             - "traefik.enable=true"
-            - "traefik.http.routers.cct26.rule=Host(`cct26.$SERVICES_DOMAIN`)"
+            - "traefik.http.routers.cct26.rule=Host(`example.org.$SERVICES_DOMAIN`)"
             - "traefik.http.routers.cct26.entrypoints=websecure"
             - "traefik.http.routers.cct26.tls.certresolver=le"
             - "traefik.http.routers.cct26.tls=true"
