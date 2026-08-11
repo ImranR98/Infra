@@ -26,6 +26,14 @@ The main homelab server. Runs a full K3s cluster with ~20 application workloads,
 - **Compose:** FRPC sidecar (tunnels K3s services through the FRP server)
 - **Special:** LUKS-aware preboot FRPC for remote SSH unlock of encrypted root filesystem
 
+### bigpc — Desktop workstation (AMD GPU)
+
+A desktop machine running a small Docker Compose stack (socket proxy, Watchtower, Syncthing). Its AMD GPU is preferred by Frigate NVR on srv0 for hardware-accelerated object detection.
+
+- **Orchestrator:** Docker Compose
+- **Services:** dockerproxy_priv (read-only Docker socket proxy), Watchtower, Syncthing (host network)
+- **Special:** LUKS-aware preboot crypt-ssh — embeds an SSH server in the initramfs for direct LAN unlock of the encrypted root filesystem on port 8887 (no FRP tunnel)
+
 ### vps0 — Web-services VPS + FRP server
 
 A VPS running a Docker Compose stack of public-facing web services and the FRP server that provides NAT traversal for srv0.

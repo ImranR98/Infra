@@ -88,7 +88,7 @@ The `generate-frp-certs` command generates per-pair CA and X.509 certificates fo
 
 ### Preboot FRPC + dracut-crypt-ssh
 
-The initramfs integration for remote LUKS unlock is customized for Infra's FRP infrastructure. While `dracut-crypt-ssh` is an existing project, the FRPC preboot integration and the `check_root_luks.sh` detection logic are custom.
+The initramfs integration for remote LUKS unlock is customized for Infra's FRP infrastructure. While `dracut-crypt-ssh` is an existing project, the FRPC preboot integration and the `check_root_luks.sh` detection logic (a `lib/` helper, not a CLI command) are custom. `bigpc` uses a crypt-ssh-only variant that patches the dropbear port to 8887 for direct LAN unlock instead of tunneling through FRP.
 
 ### WireGuard routing customizations
 

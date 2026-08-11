@@ -139,6 +139,8 @@ When the home server's root disk is LUKS-encrypted, the initramfs needs network 
 
 This allows the home server to boot unattended: the initramfs starts FRPC, tunnels SSH through the FRP server, and the operator can SSH in to provide the LUKS passphrase remotely.
 
+`bigpc` skips the FRPC step: its `install-preboot` variant installs only crypt-ssh with the dropbear port patched to 8887, so the initramfs SSH is reachable directly over the LAN (ethernet required — the wifi-net module is not installed).
+
 ### How it works
 
 ```

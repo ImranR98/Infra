@@ -4,7 +4,7 @@ set -euo pipefail
 source "$INFRA_ROOT/lib/common.sh"
 
 echo "=== Check if root partition is LUKS-encrypted ==="
-if bash "$INFRA_ROOT/commands/compose/check_root_luks.sh"; then
+if bash "$INFRA_ROOT/lib/check_root_luks.sh"; then
     echo "LUKS detected. Installing remote unlock..."
     configure_compose_templates "$TARGET"
 

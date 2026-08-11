@@ -31,7 +31,7 @@ The runtime state directory (`current_target/compose_live_state/`) is fully giti
 
 ### Detection
 
-`check_root_luks.sh` determines whether the root filesystem is on a LUKS-encrypted device by:
+`check_root_luks.sh` (a `lib/` helper) determines whether the root filesystem is on a LUKS-encrypted device by:
 1. Finding the root block device via `findmnt`
 2. Tracing device dependencies with `lsblk -s` to detect `crypt` type devices
 
@@ -43,6 +43,8 @@ When LUKS is detected, the srv0-specific `compose install-preboot` command sets 
 2. **frpc-preboot** embeds an FRP client in the initramfs that tunnels SSH (port 8887) through the FRP server
 3. On boot, the operator connects to the FRP server on port 8887, which tunnels to the initramfs SSH
 4. The operator provides the LUKS passphrase via SSH, the root unlocks, and boot continues
+
+`bigpc` instead runs `install-preboot` with only the crypt-ssh module: the initramfs SSH server listens directly on port 8887 over the LAN (no FRP tunnel).
 
 This is critical for unattended reboots of an encrypted server without physical access.
 
