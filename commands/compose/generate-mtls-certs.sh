@@ -54,16 +54,16 @@ echo ""
 # ====== Print VARS.sh (common, for client) ======
 echo "Paste into VARS.${CLIENT_TARGET}.sh:"
 echo ""
-echo "  # --- mTLS CA (shared for this pair) ---"
+echo "# --- mTLS CA (shared for this pair) ---"
 print_copy_paste_block "$CLIENT_TARGET" "MTLS_CA_CERT" "$OUTDIR/ca.crt"
 print_copy_paste_block "$CLIENT_TARGET" "MTLS_CA_KEY" "$OUTDIR/ca.key"
 
-echo "  # --- mTLS client certificate ---"
+echo "# --- mTLS client certificate ---"
 print_copy_paste_block "$CLIENT_TARGET" "MTLS_CLIENT_CERT" "$OUTDIR/$CLIENT_TARGET-client.crt"
 print_copy_paste_block "$CLIENT_TARGET" "MTLS_CLIENT_KEY" "$OUTDIR/$CLIENT_TARGET-client.key"
 
 if [ "$HAS_PREBOOT" = true ]; then
-    echo "  # --- mTLS preboot client certificate ---"
+    echo "# --- mTLS preboot client certificate ---"
     print_copy_paste_block "$CLIENT_TARGET" "MTLS_PREBOOT_CLIENT_CERT" "$OUTDIR/$CLIENT_TARGET-preboot.crt"
     print_copy_paste_block "$CLIENT_TARGET" "MTLS_PREBOOT_CLIENT_KEY" "$OUTDIR/$CLIENT_TARGET-preboot.key"
 fi
@@ -71,10 +71,10 @@ fi
 # ====== Print VARS for server ======
 echo "Paste into VARS.${SERVER_TARGET}.sh:"
 echo ""
-echo "  # --- mTLS CA (shared for this pair) ---"
+echo "# --- mTLS CA (shared for this pair) ---"
 print_copy_paste_block "$SERVER_TARGET" "MTLS_CA_CERT" "$OUTDIR/ca.crt"
 
-echo "  # --- mTLS server certificate ---"
+echo "# --- mTLS server certificate ---"
 print_copy_paste_block "$SERVER_TARGET" "MTLS_SERVER_CERT" "$OUTDIR/server.crt"
 print_copy_paste_block "$SERVER_TARGET" "MTLS_SERVER_KEY" "$OUTDIR/server.key"
 

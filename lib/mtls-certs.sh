@@ -82,8 +82,8 @@ print_copy_paste_block() {
     local var_name="$2"
     local file_path="$3"
 
-    echo "  # $target_label"
-    echo "  export $var_name=\"\$(cat <<'MTLS_CERT_EOF'"
+    echo "# $target_label"
+    echo "export $var_name=\"\$(cat <<'MTLS_CERT_EOF'"
     cat "$file_path"
     echo "MTLS_CERT_EOF"
     echo ")\""
