@@ -34,6 +34,18 @@
             "module": "watchtower_updates",
             "ntfyTopic": "logtfy",
             "enabled": true
+        },
+        {
+            "module": "generic_logs",
+            "moduleInstances": [
+                {
+                    "name": "frps_ssh_preboot",
+                    "enabled": true,
+                    "loggerArg": "frps stderr2stdout",
+                    "parserArg": "{\"regex\":\"\\\\[ssh-preboot\\\\] get a user connection\",\"title\":\"FRP: SSH preboot connection\",\"message\":\"New connection to the ssh-preboot tunnel:\"}",
+                    "ntfyTopic": "logtfy"
+                }
+            ]
         }
     ]
 }
