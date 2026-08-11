@@ -9,7 +9,7 @@ spec:
   repo: https://blog.pavelsklenar.com/home-assistant-helm-chart/
   targetNamespace: apps
   createNamespace: false
-  version: 0.3.72
+  version: 0.3.74
   valuesContent: |-
     deploymentStrategy: Recreate
     controller:
@@ -84,7 +84,7 @@ spec:
       # Network failures never block HA startup - the existing install is kept and a
       # pinned fallback version is used for fresh installs.
       - name: integration-update
-        image: busybox:1.36
+        image: busybox:1.38
         command:
           - /bin/sh
           - -ec
