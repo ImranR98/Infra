@@ -48,6 +48,7 @@ export CCT26_LLM_BASE_URL="change_me"   # LLM API base URL
 export CCT26_LLM_MODEL="change_me"      # LLM model name
 export CCT26_LLM_API_KEY="change_me"    # openssl rand -hex 32
 export CCT26_NTFY_URL="change_me"       # ntfy topic URL for notifications
+export CCT26_NTFY_AUTH="change_me"      # Authorization header value, e.g. "Bearer <ntfy token>"
 
 # ====== strelaysrv Relay Server ======
 export STRELAYSRV_PROVIDED_BY="$DOMAIN_OWNER_EMAIL"
