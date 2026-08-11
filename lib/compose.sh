@@ -45,7 +45,10 @@ configure_compose_templates() {
                 else
                     envsubst "$ENVSUBST_VARS" < "$src" > "$dst"
                 fi
-                chmod 600 "$dst" ;;
+                chmod 600 "$dst"
+                if [ "$(id -u)" -eq 0 ]; then
+                    chown "$MY_UID:$MY_UID" "$dst" 2>/dev/null || :
+                fi ;;
             *)
                 envsubst "$ENVSUBST_VARS" < "$src" > "$dst" ;;
         esac
