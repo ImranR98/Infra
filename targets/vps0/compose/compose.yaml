@@ -443,6 +443,34 @@ services:
         mem_limit: 512M
         logging: *logging
 
+    # CCT26 - Reddit + LLM tool
+    cct26:
+        container_name: cct26
+        image: imranrdev/cct26
+        restart: unless-stopped
+        mem_limit: 2G
+        depends_on:
+            - traefik
+        volumes:
+            - $COMPOSE_STATE_DIR/cct26:/app/data
+        environment:
+            - REDDIT_COOKIE=$CCT26_REDDIT_COOKIE
+            - LLM_BASE_URL=$CCT26_LLM_BASE_URL
+            - LLM_MODEL=$CCT26_LLM_MODEL
+            - LLM_API_KEY=$CCT26_LLM_API_KEY
+            - NTFY_URL=$CCT26_NTFY_URL
+        labels:
+            - "traefik.enable=true"
+            - "traefik.http.routers.cct26.rule=Host(`cct26.$SERVICES_DOMAIN`)"
+            - "traefik.http.routers.cct26.entrypoints=websecure"
+            - "traefik.http.routers.cct26.tls.certresolver=le"
+            - "traefik.http.routers.cct26.tls=true"
+            - "traefik.http.routers.cct26.middlewares=authelia@file"
+            - "traefik.http.services.cct26.loadbalancer.server.port=3000"
+        networks:
+            - traefik
+        logging: *logging
+
     # Owncast Auth - Token-based access control for Owncast viewer
     owncast-auth:
         image: python:3-alpine
