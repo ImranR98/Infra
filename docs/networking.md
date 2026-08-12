@@ -91,23 +91,23 @@ vps0 runs a single Traefik instance that receives all public HTTP and HTTPS traf
 **`$BASE_SERVICES_DOMAIN`** (the original domain) — public apps, no Authelia:
 
 - `plausible.$BASE_SERVICES_DOMAIN` — Plausible analytics (public; the tracking script is loaded by other pages)
-- `ln.$BASE_SERVICES_DOMAIN` — Shlink URL shortener API
-- `isbn.$BASE_SERVICES_DOMAIN` — ISBN book barcode lookup
 - `ikom.$BASE_SERVICES_DOMAIN` — Ikomm old URL (301 → `ikom.$CLOUD_SERVICES_DOMAIN`)
-- `pixelntfy.$BASE_SERVICES_DOMAIN` — PixelNtfy push notifications
 - `apps.obtainium.$BASE_SERVICES_DOMAIN` — Obtainium app update checker
 - `sb25.$BASE_SERVICES_DOMAIN` — SB25 (self-hosted service)
-- `example.org.$BASE_SERVICES_DOMAIN` — CCT26 (Reddit + LLM tool)
-- `owncast.$BASE_SERVICES_DOMAIN` — Owncast live streaming (web UI + RTMP ingest on `:1935`)
 
-**`$CLOUD_SERVICES_DOMAIN`** (e.g. `cloud.$BASE_SERVICES_DOMAIN`) — Authelia-protected services:
+**`$CLOUD_SERVICES_DOMAIN`** (e.g. `cloud.$BASE_SERVICES_DOMAIN`) — the remaining services (public, no Authelia unless noted):
 
-- `auth.$CLOUD_SERVICES_DOMAIN` — Authelia SSO admin
-- `traefik.$CLOUD_SERVICES_DOMAIN` — Traefik dashboard
-- `ytdl.$CLOUD_SERVICES_DOMAIN` — metube
-- `ikom.$CLOUD_SERVICES_DOMAIN` — Ikomm
-- `ui.ln.$CLOUD_SERVICES_DOMAIN` — Shlink web client (API stays at `ln.$BASE_SERVICES_DOMAIN`)
-- `uptime.$CLOUD_SERVICES_DOMAIN` — Uptime Kuma monitoring
+- `auth.$CLOUD_SERVICES_DOMAIN` — Authelia SSO admin (Authelia-protected)
+- `traefik.$CLOUD_SERVICES_DOMAIN` — Traefik dashboard (Authelia-protected)
+- `ytdl.$CLOUD_SERVICES_DOMAIN` — metube (Authelia-protected)
+- `ikom.$CLOUD_SERVICES_DOMAIN` — Ikomm (Authelia-protected)
+- `ui.ln.$CLOUD_SERVICES_DOMAIN` — Shlink web client (Authelia-protected)
+- `uptime.$CLOUD_SERVICES_DOMAIN` — Uptime Kuma monitoring (Authelia-protected)
+- `ln.$CLOUD_SERVICES_DOMAIN` — Shlink URL shortener API (public — short links must redirect for anyone)
+- `isbn.$CLOUD_SERVICES_DOMAIN` — ISBN book barcode lookup (public)
+- `pixelntfy.$CLOUD_SERVICES_DOMAIN` — PixelNtfy push notifications (public — tracking pixels load on third-party sites)
+- `owncast.$CLOUD_SERVICES_DOMAIN` — Owncast live streaming (web UI + RTMP ingest on `:1935`; own token auth, not Authelia)
+- `cct26.$CLOUD_SERVICES_DOMAIN` — CCT26 (Reddit + LLM tool; resolves to the same URL as before — `example.org.$BASE_SERVICES_DOMAIN`)
 
 These are configured via Docker container labels on the Traefik provider. Each `Host(...)` label tells Traefik to load-balance to the matching Docker container on the internal `traefik` network.
 

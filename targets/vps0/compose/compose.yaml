@@ -318,7 +318,7 @@ services:
             - traefik
         labels:
             - "traefik.enable=true"
-            - "traefik.http.routers.pixelntfy.rule=Host(`pixelntfy.$BASE_SERVICES_DOMAIN`)"
+            - "traefik.http.routers.pixelntfy.rule=Host(`pixelntfy.$CLOUD_SERVICES_DOMAIN`)"
             - "traefik.http.routers.pixelntfy.entrypoints=websecure"
             - "traefik.http.routers.pixelntfy.tls.certresolver=le"
             - "traefik.http.routers.pixelntfy.tls=true"
@@ -327,7 +327,7 @@ services:
             - NTFY_TOPIC=$PIXELNTFY_TOPIC
             - NTFY_SERVER_URL=https://ntfy.sh
             - PORT=80
-            - ANALYTICS_SCRIPT_ELEMENT=<script defer data-domain="pixelntfy.$BASE_SERVICES_DOMAIN" src="https://plausible.$BASE_SERVICES_DOMAIN/js/script.js"></script>
+            - ANALYTICS_SCRIPT_ELEMENT=<script defer data-domain="pixelntfy.$CLOUD_SERVICES_DOMAIN" src="https://plausible.$BASE_SERVICES_DOMAIN/js/script.js"></script>
         networks:
             - traefik
         logging: *logging
@@ -342,14 +342,14 @@ services:
             - traefik
         labels:
             - "traefik.enable=true"
-            - "traefik.http.routers.isbn-lookup.rule=Host(`isbn.$BASE_SERVICES_DOMAIN`)"
+            - "traefik.http.routers.isbn-lookup.rule=Host(`isbn.$CLOUD_SERVICES_DOMAIN`)"
             - "traefik.http.routers.isbn-lookup.entrypoints=websecure"
             - "traefik.http.routers.isbn-lookup.tls.certresolver=le"
             - "traefik.http.routers.isbn-lookup.tls=true"
             - "traefik.http.services.isbn-lookup.loadbalancer.server.port=80"
         environment:
             - PORT=80
-            - ANALYTICS_SCRIPT_ELEMENT=<script defer data-domain="isbn.$BASE_SERVICES_DOMAIN" src="https://plausible.$BASE_SERVICES_DOMAIN/js/script.js"></script>
+            - ANALYTICS_SCRIPT_ELEMENT=<script defer data-domain="isbn.$CLOUD_SERVICES_DOMAIN" src="https://plausible.$BASE_SERVICES_DOMAIN/js/script.js"></script>
         networks:
             - traefik
         logging: *logging
@@ -467,7 +467,7 @@ services:
             - SCRAPE_INTERVAL_HOURS=2
         labels:
             - "traefik.enable=true"
-            - "traefik.http.routers.cct26.rule=Host(`example.org.$BASE_SERVICES_DOMAIN`)"
+            - "traefik.http.routers.cct26.rule=Host(`cct26.$CLOUD_SERVICES_DOMAIN`)"
             - "traefik.http.routers.cct26.entrypoints=websecure"
             - "traefik.http.routers.cct26.tls.certresolver=le"
             - "traefik.http.routers.cct26.tls=true"
@@ -503,14 +503,14 @@ services:
             - $COMPOSE_STATE_DIR/owncast:/app/data
         labels:
             - "traefik.enable=true"
-            - "traefik.http.routers.owncast.rule=Host(`owncast.$BASE_SERVICES_DOMAIN`)"
+            - "traefik.http.routers.owncast.rule=Host(`owncast.$CLOUD_SERVICES_DOMAIN`)"
             - "traefik.http.routers.owncast.entrypoints=websecure"
             - "traefik.http.routers.owncast.tls.certresolver=le"
             - "traefik.http.routers.owncast.tls=true"
             - "traefik.http.routers.owncast.middlewares=owncast-auth,geoblock@file"
             - "traefik.http.middlewares.owncast-auth.forwardauth.address=http://owncast-auth:3000/"
             - "traefik.http.services.owncast.loadbalancer.server.port=8080"
-            - "traefik.tcp.routers.owncast-rtmp.rule=HostSNI(`owncast.$BASE_SERVICES_DOMAIN`)"
+            - "traefik.tcp.routers.owncast-rtmp.rule=HostSNI(`owncast.$CLOUD_SERVICES_DOMAIN`)"
             - "traefik.tcp.routers.owncast-rtmp.entrypoints=rtmp"
             - "traefik.tcp.routers.owncast-rtmp.service=owncast-rtmp"
             - "traefik.tcp.routers.owncast-rtmp.tls=true"
@@ -558,7 +558,7 @@ services:
         image: shlinkio/shlink:stable
         container_name: shlink
         environment:
-            - SHORT_DOMAIN_HOST=ln.$BASE_SERVICES_DOMAIN
+            - SHORT_DOMAIN_HOST=ln.$CLOUD_SERVICES_DOMAIN
             - SHORT_DOMAIN_SCHEMA=https
             - DB_DRIVER=postgres
             - DB_HOST=shlink_db
@@ -575,7 +575,7 @@ services:
         mem_limit: 2G
         labels:
             - "traefik.enable=true"
-            - "traefik.http.routers.shlink.rule=Host(`ln.$BASE_SERVICES_DOMAIN`)"
+            - "traefik.http.routers.shlink.rule=Host(`ln.$CLOUD_SERVICES_DOMAIN`)"
             - "traefik.http.routers.shlink.entrypoints=websecure"
             - "traefik.http.routers.shlink.tls.certresolver=le"
             - "traefik.http.routers.shlink.tls=true"
@@ -601,8 +601,8 @@ services:
         image: shlinkio/shlink-web-client:stable
         container_name: shlink_web_client
         environment:
-            - SHLINK_SERVER_URL=https://ln.$BASE_SERVICES_DOMAIN
-            - SHLINK_SERVER_NAME=ln.$BASE_SERVICES_DOMAIN
+            - SHLINK_SERVER_URL=https://ln.$CLOUD_SERVICES_DOMAIN
+            - SHLINK_SERVER_NAME=ln.$CLOUD_SERVICES_DOMAIN
             - SHLINK_SERVER_API_KEY=$SHLINK_API_KEY
         networks:
             - traefik
