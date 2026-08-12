@@ -93,8 +93,8 @@ vps0 runs a single Traefik instance that receives all public HTTP and HTTPS traf
 - `plausible.$BASE_SERVICES_DOMAIN` — Plausible analytics (public; the tracking script is loaded by other pages)
 - `ln.$BASE_SERVICES_DOMAIN` — Shlink URL shortener API (public — short links must redirect for anyone; the web UI lives at `ui.ln.$CLOUD_SERVICES_DOMAIN`)
 - `ikom.$BASE_SERVICES_DOMAIN` — Ikomm old URL (301 → `ikom.$CLOUD_SERVICES_DOMAIN`)
+- `sb25.$BASE_SERVICES_DOMAIN` — SB25 old URL (301 → `sb25.$CLOUD_SERVICES_DOMAIN`)
 - `apps.obtainium.$BASE_SERVICES_DOMAIN` — Obtainium app update checker
-- `sb25.$BASE_SERVICES_DOMAIN` — SB25 (self-hosted service)
 
 **`$CLOUD_SERVICES_DOMAIN`** (e.g. `cloud.$BASE_SERVICES_DOMAIN`) — the remaining services (public, no Authelia unless noted):
 
@@ -108,6 +108,7 @@ vps0 runs a single Traefik instance that receives all public HTTP and HTTPS traf
 - `pixelntfy.$CLOUD_SERVICES_DOMAIN` — PixelNtfy push notifications (public — tracking pixels load on third-party sites)
 - `owncast.$CLOUD_SERVICES_DOMAIN` — Owncast live streaming (web UI + RTMP ingest on `:1935`; own token auth, not Authelia)
 - `cct26.$CLOUD_SERVICES_DOMAIN` — CCT26 (Reddit + LLM tool; resolves to the same URL as before — `example.org.$BASE_SERVICES_DOMAIN`)
+- `sb25.$CLOUD_SERVICES_DOMAIN` — SB25 (self-hosted service; own token auth, not Authelia)
 
 These are configured via Docker container labels on the Traefik provider. Each `Host(...)` label tells Traefik to load-balance to the matching Docker container on the internal `traefik` network.
 

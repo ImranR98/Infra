@@ -433,10 +433,18 @@ services:
             - traefik
         labels:
             - "traefik.enable=true"
-            - "traefik.http.routers.sb25.rule=Host(`sb25.$BASE_SERVICES_DOMAIN`)"
+            - "traefik.http.routers.sb25.rule=Host(`sb25.$CLOUD_SERVICES_DOMAIN`)"
             - "traefik.http.routers.sb25.entrypoints=websecure"
             - "traefik.http.routers.sb25.tls.certresolver=le"
             - "traefik.http.routers.sb25.tls=true"
+            - "traefik.http.routers.sb25-redirect.rule=Host(`sb25.$BASE_SERVICES_DOMAIN`)"
+            - "traefik.http.routers.sb25-redirect.entryPoints=websecure"
+            - "traefik.http.routers.sb25-redirect.tls.certresolver=le"
+            - "traefik.http.routers.sb25-redirect.tls=true"
+            - "traefik.http.routers.sb25-redirect.middlewares=sb25-redirect-rewrite"
+            - 'traefik.http.middlewares.sb25-redirect-rewrite.redirectregex.regex=^https://sb25\.$BASE_SERVICES_DOMAIN/(.*)'
+            - 'traefik.http.middlewares.sb25-redirect-rewrite.redirectregex.replacement=https://sb25.$CLOUD_SERVICES_DOMAIN/$${1}'
+            - 'traefik.http.middlewares.sb25-redirect-rewrite.redirectregex.permanent=true'
             - "traefik.http.services.sb25.loadbalancer.server.port=3000"
             - "com.centurylinklabs.watchtower.enable=false"
         environment:
