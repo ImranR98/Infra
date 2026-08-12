@@ -121,6 +121,10 @@ current_target/compose_live_state/   # Rendered Compose state (gitignored, ephem
 - `$DOCKER_GID` — Docker group GID
 - `$PROXY_IP` — resolved from `$PROXY_HOST`
 
+## Applying changes
+
+Always apply changes to machines through `./infra.sh` commands (`compose install`, `compose restart <service>`, `k3s deploy`, `k3s group ...`) — never raw `docker`/`docker compose`/`kubectl` for mutations. Direct inspection (logs, `docker inspect`, `curl`, `kubectl get`) is fine.
+
 ## Writing a new command
 
 ```bash
