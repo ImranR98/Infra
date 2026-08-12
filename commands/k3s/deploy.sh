@@ -71,7 +71,7 @@ _k3s_apply() {
     # Everything else keeps client-side apply semantics.
     local _ssa _rest
     _ssa=$(printf '%s\n' "$PROCESSED_YAML" | yq 'select(.kind == "ConfigMap" and has("binaryData"))')
-    _rest=$(printf '%s\n' "$PROCESSED_YAML" | yq 'select(not (.kind == "ConfigMap" and has("binaryData")))')
+    _rest=$(printf '%s\n' "$PROCESSED_YAML" | yq 'select(.kind != "ConfigMap" or (has("binaryData") | not))')
     [ -n "$_ssa" ] && printf '%s\n' "$_ssa" | kubectl apply --server-side -f -
     [ -n "$_rest" ] && printf '%s\n' "$_rest" | kubectl apply -f -
 }
