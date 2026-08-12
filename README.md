@@ -8,7 +8,7 @@ Infra is a single-repo, shell-driven infrastructure-as-code system for managing 
 
 - **One CLI for everything.** `./infra.sh <target> <command>` is the entry point. Targets are named machines; commands do the work.
 - **Docker Compose management.** Render templates, spin up Compose stacks as systemd services, back up runtime state, swap individual services.
-- **K3s cluster management.** Bootstrap control-plane nodes, join remote agent nodes via SSH, deploy Kubernetes workloads through `kubectl kustomize` with a full component lifecycle (apply, delete, diff, render, initial bootstrap).
+- **K3s cluster management.** Bootstrap control-plane nodes, join remote agent nodes via SSH, deploy Kubernetes workloads through `kubectl kustomize` with a full component lifecycle (apply, delete, diff, render).
 - **Declarative configuration.** All infrastructure is defined as YAML/TOML/JSON templates with `$VARIABLE` placeholders. Per-target environment files provide secrets at runtime.
 - **Automated updates.** Renovate scans all Docker images, Helm charts, and Traefik plugins across the repo and applies version bumps to source files automatically.
 - **Networking built in.** WireGuard VPN with split-tunnel routing, FRP reverse proxy tunneling for NAT traversal, and preboot FRPC for LUKS-encrypted root SSH unlock.
@@ -50,7 +50,7 @@ Read these in order to develop your understanding of the repo:
 | 9 | [docs/security.md](docs/security.md) | Secrets, LUKS, authentication, and hardening |
 | 10 | [docs/standard-vs-custom.md](docs/standard-vs-custom.md) | How Infra combines standard tools with custom glue |
 
-(*) Assumes Compose/K3s familiarity. Focuses on Infra conventions: `.secret`/`.plain`, `# IGNORE INITIALLY`, hook scripts, `groups.yaml`, etc.
+(*) Assumes Compose/K3s familiarity. Focuses on Infra conventions: `.secret`/`.plain`, hook scripts, `groups.yaml`, etc.
 
 ## Requirements
 

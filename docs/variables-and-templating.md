@@ -67,12 +67,12 @@ envsubst "$ENVSUBST_VARS" < compose.yaml > $COMPOSE_STATE_DIR/compose.yaml
 | Extension | Behavior |
 |-----------|----------|
 | `*.plain` | Copied as-is, no envsubst. Stripped of `.plain` suffix. |
-| `*.secret` | Rendered via envsubst, then `chmod 600`. Stripped of `.secret` suffix. Has `# IGNORE INITIALLY` bootstrap on first render (see below). |
+| `*.secret` | Rendered via envsubst, then `chmod 600`. Stripped of `.secret` suffix. |
 | `*` (other) | Rendered via envsubst with standard behavior. |
 
-### `# IGNORE INITIALLY` bootstrap
+### First-run gate (`AUTHELIA_HEADER_GATE_ENABLED`)
 
-All `.secret` files support first-time bootstrap. On the very first render (destination doesn't exist yet), lines ending with `# IGNORE INITIALLY` are commented out. This prevents services from failing on missing dependencies during initial deployment. On subsequent renders, all lines are included.
+First-run behavior is driven by a sentinel file rather than line markers. In `configure_compose_templates()`, if the target has an `authelia` template dir but the rendered Authelia config (`$COMPOSE_STATE_DIR/authelia/config/configuration.yml`) has never been created, `AUTHELIA_HEADER_GATE_ENABLED` is exported as `"true"` for that render. This enables the `authelia-header-gate` Traefik middleware, which returns 401 for requests without a valid Authelia session. Once the sentinel exists, the VARS value (default `"false"`) wins. Setting `AUTHELIA_HEADER_GATE_ENABLED="true"` in the VARS file forces the gate on permanently. The same variable is auto-set to `"true"` on srv0 when the `authelia` Service is absent from `base` (see [k3s-management.md](k3s-management.md)).
 
 ### Per-component `prep.sh` hooks
 

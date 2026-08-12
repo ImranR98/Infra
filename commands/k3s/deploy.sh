@@ -27,25 +27,23 @@ source "$INFRA_ROOT/lib/common.sh"
 source_env
 ensure_envsubst_vars
 
-_has_initial_markers=false
-grep -q '# IGNORE INITIALLY$' "$COMPONENT_DIR"/*.yaml 2>/dev/null && _has_initial_markers=true
-
 _build_yaml() {
-    local is_initial="${1:-false}"
-
-    # Stage YAML files into a temp dir so we can envsubst BEFORE kustomize.
+    # Stage files into a temp dir so we can envsubst BEFORE kustomize.
     # This lets bare $VAR references (including multi-line shell variables)
     # sit directly in YAML source files without needing workaround markers.
     TMP_DIR=$(mktemp -d)
     _cleanup_dirs+=("$TMP_DIR")
-    for f in "$COMPONENT_DIR"/*.yaml; do
-        [ -f "$f" ] || continue
-        if [ "$is_initial" = true ]; then
-            sed '/# IGNORE INITIALLY$/d' "$f" > "$TMP_DIR/$(basename "$f")"
-        else
+    # Copy every file (YAML resources plus plugin files for the traefik
+    # component's configMapGenerator); kustomize ignores unreferenced files.
+    # dotglob is enabled in a subshell so hidden files like .traefik.yml
+    # are staged too.
+    (
+        shopt -s dotglob
+        for f in "$COMPONENT_DIR"/*; do
+            [ -f "$f" ] || continue
             cp "$f" "$TMP_DIR/"
-        fi
-    done
+        done
+    )
 
     # envsubst each file in place so variable references expand directly
     # into the YAML text before kustomize parses it.
@@ -64,12 +62,6 @@ _build_yaml() {
 _run_hook() {
     local hook="$1"
     if [ -f "$COMPONENT_DIR/$hook" ]; then bash "$COMPONENT_DIR/$hook"; fi
-}
-
-_initial_reminder() {
-    $_has_initial_markers || return 0
-    [ -f "$COMPONENT_DIR/kustomization.yaml" ] || return 0
-    echo "REMINDER: Re-run without 'initial' once prerequisites are ready to complete deployment." >&2
 }
 
 _k3s_apply() {
@@ -124,25 +116,22 @@ trap 'rm -rf "${_cleanup_dirs[@]:-}"' EXIT
 case "$MODE" in
     apply)
         _run_hook prep.sh
-        _build_yaml false
+        if ! kubectl get service authelia -n base >/dev/null 2>&1; then
+            export AUTHELIA_HEADER_GATE_ENABLED="true"
+        fi
+        _build_yaml
         _k3s_apply
         _run_hook post.sh ;;
-    initial)
-        _run_hook prep.sh
-        _build_yaml true
-        _k3s_apply
-        _run_hook post.sh
-        _initial_reminder ;;
     delete)
-        _build_yaml false
+        _build_yaml
         _k3s_delete ;;
     diff)
-        _build_yaml false
+        _build_yaml
         _k3s_diff ;;
     yaml)
-        _build_yaml false
+        _build_yaml
         _k3s_yaml ;;
     *)
-        echo "Error: Unknown mode '$MODE'. Valid modes: apply, initial, delete, diff, yaml" >&2
+        echo "Error: Unknown mode '$MODE'. Valid modes: apply, delete, diff, yaml" >&2
         exit 1 ;;
 esac

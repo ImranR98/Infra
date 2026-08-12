@@ -1,0 +1,3 @@
+displayName: Authelia Header Gate
+runtime: wasm
+type: middleware

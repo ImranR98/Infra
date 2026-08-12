@@ -3,9 +3,9 @@
 set -euo pipefail
 source "$INFRA_ROOT/lib/common.sh"
 
-GROUP="${1:?Usage: $0 <base|apps> [apply|initial|delete]}"
+GROUP="${1:?Usage: $0 <base|apps> [apply|delete]}"
 MODE="${2:-apply}"
-case "$MODE" in apply|initial|delete) ;; *) echo "Usage: $0 <base|apps> [apply|initial|delete]" >&2; exit 1 ;; esac
+case "$MODE" in apply|delete) ;; *) echo "Usage: $0 <base|apps> [apply|delete]" >&2; exit 1 ;; esac
 
 _groups_file="$INFRA_ROOT/targets/$TARGET/k3s/groups.yaml"
 if [ ! -f "$_groups_file" ]; then

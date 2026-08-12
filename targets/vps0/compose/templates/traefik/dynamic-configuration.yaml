@@ -10,6 +10,17 @@ http:
           - Remote-Groups
           - Remote-Name
           - Remote-Email
+    authelia-header-gate:
+      plugin:
+        authelia-header-gate:
+          trustedHeaders:
+            - Remote-User
+          blocking: "$AUTHELIA_HEADER_GATE_ENABLED"
+    authelia-with-optional-header-gate:
+      chain:
+        middlewares:
+          - authelia
+          - authelia-header-gate
     geoblock:
       plugin:
         geoblock:

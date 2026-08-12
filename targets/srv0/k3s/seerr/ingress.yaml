@@ -27,8 +27,6 @@ spec:
       middlewares:
         - name: crowdsec-bouncer
           namespace: base
-        - name: forwardauth-authelia
-          namespace: base
       services:
         - name: seerr
           port: 80

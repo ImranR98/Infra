@@ -21,6 +21,13 @@ configure_compose_templates() {
     local template_dir="$INFRA_ROOT/targets/$target/compose/templates"
     [ -d "$template_dir" ] || return 0
 
+    # First-deploy detection for the Authelia header gate: if the rendered
+    # Authelia config has never been created, treat this as a bootstrap run
+    # and enable the gate.
+    if [ -d "$template_dir/authelia" ] && [ ! -f "$COMPOSE_STATE_DIR/authelia/config/configuration.yml" ]; then
+        export AUTHELIA_HEADER_GATE_ENABLED="true"
+    fi
+
     declare -A _compose_hooks_run
 
     while IFS= read -r -d '' src; do
@@ -40,11 +47,7 @@ configure_compose_templates() {
         case "$rel" in
             *.plain) cp "$src" "$dst" ;;
             *.secret)
-                if [ ! -f "$dst" ] && grep -q '# IGNORE INITIALLY$' "$src" 2>/dev/null; then
-                    sed '/# IGNORE INITIALLY$/ s/^/# /' "$src" | envsubst "$ENVSUBST_VARS" > "$dst"
-                else
-                    envsubst "$ENVSUBST_VARS" < "$src" > "$dst"
-                fi
+                envsubst "$ENVSUBST_VARS" < "$src" > "$dst"
                 chmod 600 "$dst"
                 if [ "$(id -u)" -eq 0 ]; then
                     chown "$MY_UID:$MY_UID" "$dst" 2>/dev/null || :

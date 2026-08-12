@@ -20,16 +20,23 @@ Each K3s workload lives in `targets/<target>/k3s/<component>/`. The Infra-specif
 
 All component YAML goes through a two-stage pipeline: kustomize builds the raw YAML, then `envsubst` expands `$VARIABLE` references before applying to the cluster. This means template variables work in any YAML file — HelmChart values, IngressRoutes, Secrets, etc.
 
-## The `# IGNORE INITIALLY` bootstrap pattern
+## First-run protection: the Authelia header gate
 
-Infra uses a custom two-phase bootstrap for components that depend on resources from other components. YAML lines ending with `# IGNORE INITIALLY` reference objects that won't exist yet during initial deployment (e.g., a `Certificate` referencing a `ClusterIssuer` that hasn't been deployed).
+Infra has no manual two-phase bootstrap. Instead, services that must be publicly
+accessible once the cluster is up (Jellyfin, Immich, Home Assistant, Navidrome,
+Opodsync) route through the `authelia-with-optional-header-gate` middleware
+chain: their Authelia access-control rule stays `bypass`, and the
+`authelia-header-gate` WASM plugin does the work. The plugin returns **401 for
+any request lacking a `Remote-User` header** while `blocking: "true"` — which
+happens automatically on the first `group base apply`, because the `authelia`
+Service doesn't exist yet and `AUTHELIA_HEADER_GATE_ENABLED` is set to `"true"`
+for that run. Once Authelia is deployed, a re-apply leaves the variable at its
+VARS value (default `"false"`) and the gate passes everyone through.
 
-Two behaviors, depending on context:
-
-- **K3s `initial` mode:** Lines with `# IGNORE INITIALLY` are *removed* from the built YAML before apply. The operator gets a reminder to re-run without `initial` to include them.
-- **Compose `.secret` file bootstrap:** Lines with `# IGNORE INITIALLY` are *commented out* on first render, then included on subsequent renders. Applies to all `.secret` template files, not only Authelia.
-
-This lets a greenfield cluster deploy partially, get dependencies up, then complete the deployment.
+Set `AUTHELIA_HEADER_GATE_ENABLED="true"` in the VARS file to force the gate on
+permanently. The same variable drives the gate on Compose targets (vps0), where
+the sentinel is the rendered Authelia config file — see
+[variables-and-templating.md](variables-and-templating.md).
 
 ## Group-based deployment (`groups.yaml`)
 
@@ -57,7 +64,7 @@ Commands:
 
 ```bash
 ./infra.sh <target> k3s group base apply      # Deploy infra in order
-./infra.sh <target> k3s group base initial    # Bootstrap with IGNORE INITIALLY
+./infra.sh <target> k3s group apps apply      # Deploy apps in order
 ./infra.sh <target> k3s group apps delete     # Tear down apps (reverse order)
 ./infra.sh <target> k3s group base delete     # Then infra (reverse order)
 ```
@@ -91,8 +98,7 @@ Runs before the standard deletion pipeline. The standard pipeline deletes HelmCh
 
 | Mode | Behavior |
 |------|----------|
-| `apply` | Full deploy: prep.sh → kustomize → envsubst → apply → post.sh |
-| `initial` | Bootstrap: same pipeline but `# IGNORE INITIALLY` lines are stripped |
+| `apply` | Full deploy: prep.sh → kustomize → envsubst → apply → post.sh. Auto-enables the header gate if the `authelia` Service is missing. |
 | `delete` | Teardown: delete.sh → HelmChart cleanup → resource deletion → PVC cleanup |
 | `diff` | `kubectl diff` — preview changes without applying |
 | `yaml` | Print rendered YAML to stdout |

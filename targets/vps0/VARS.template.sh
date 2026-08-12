@@ -31,6 +31,11 @@ export AUTHELIA_DB_ENCRYPTION_KEY="change_me" # openssl rand -hex 128
 export AUTHELIA_SESSION_SECRET="change_me" # openssl rand -hex 128
 export AUTHELIA_JWT_SECRET="change_me" # openssl rand -hex 128
 
+# ====== Authelia header gate ======
+# Set to "true" to force the gate on (blocking all requests without a valid
+# Authelia session). Auto-enabled on first deploy; leave "false" otherwise.
+export AUTHELIA_HEADER_GATE_ENABLED="false"
+
 # ====== Plausible Analytics ======
 export PLAUSIBLE_SECRET_KEY="change_me" # openssl rand -base64 48
 export PLAUSIBLE_TOTP_VAULT_KEY="change_me" # openssl rand -base64 32

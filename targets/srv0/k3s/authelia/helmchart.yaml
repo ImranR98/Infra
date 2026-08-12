@@ -191,38 +191,17 @@ spec:
             resources:
             - '^/\.well-known/acme-challenge/.*$'
             policy: bypass
-          - domain: tv.$SERVICES_DOMAIN # IGNORE INITIALLY
-            policy: bypass # IGNORE INITIALLY
-          - domain: ha.$SERVICES_DOMAIN # IGNORE INITIALLY
-            policy: bypass # IGNORE INITIALLY
-          - domain: ntfy.$SERVICES_DOMAIN
+          - domain: tv.$SERVICES_DOMAIN
             policy: bypass
-          - domain: files.$SERVICES_DOMAIN # IGNORE INITIALLY
-            resources: # IGNORE INITIALLY
-            - '^/share([/?].*)?$' # IGNORE INITIALLY
-            - '^/static([/?].*)?$' # IGNORE INITIALLY
-            - '^/api/public([/?].*)?$' # IGNORE INITIALLY
-            policy: bypass # IGNORE INITIALLY
-          - domain: music.$SERVICES_DOMAIN # IGNORE INITIALLY
-            policy: bypass # IGNORE INITIALLY
-          - domain: immich.$SERVICES_DOMAIN # IGNORE INITIALLY
-            policy: bypass # IGNORE INITIALLY
+          - domain: ha.$SERVICES_DOMAIN
+            policy: bypass
+          - domain: music.$SERVICES_DOMAIN
+            policy: bypass
+          - domain: immich.$SERVICES_DOMAIN
+            policy: bypass
           - domain: auth.$SERVICES_DOMAIN
             policy: bypass
-          - domain: opodsync.$SERVICES_DOMAIN # IGNORE INITIALLY
-            policy: bypass # IGNORE INITIALLY
-          - domain: gpt.$SERVICES_DOMAIN
-            policy: bypass
-          - domain: fmd.$SERVICES_DOMAIN
-            policy: bypass
-          - domain: nextcloud.$SERVICES_DOMAIN
-            policy: bypass
-          - domain: rss.$SERVICES_DOMAIN
-            resources:
-            - '^/api([/?].*)?$'
-            - '^/p/i/?$'
-            policy: bypass
-          - domain: seerr.$SERVICES_DOMAIN
+          - domain: opodsync.$SERVICES_DOMAIN
             policy: bypass
           - domain: '*.$SERVICES_DOMAIN'
             policy: two_factor

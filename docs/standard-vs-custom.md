@@ -46,9 +46,15 @@ The command routing in `lib/dispatch.sh` is custom. It walks directory trees to 
 
 The concept of "targets" as directory-based configuration units with overridable commands is custom. While similar to Ansible's inventory or NixOS's configurations, the implementation is from scratch — each target is a directory, and the dispatch router and variable resolution logic tie everything together.
 
-### The `# IGNORE INITIALLY` bootstrap system
+### The Authelia header gate
 
-The two-phase deployment (initial mode strips markers for safe bootstrapping, then re-running includes everything) is a custom pattern. The `.secret`-file variant (comment out on first render) and the K3s variant (remove on initial mode, include normally thereafter) are specific to Infra.
+The first-run protection is a custom Traefik WASM plugin (`authelia-header-gate`,
+built with TinyGo and loaded via `--experimental.localplugins`) plus an automatic
+variable (`AUTHELIA_HEADER_GATE_ENABLED`) that is set to `"true"` only when a
+first deploy is detected (missing Authelia sentinel/config on the target). It
+blocks requests without an Authelia session during bootstrap, then passes
+everything once the VARS value (`"false"`) wins. This replaces a manual
+two-phase deployment pattern.
 
 ### `.secret` and `.plain` file conventions
 

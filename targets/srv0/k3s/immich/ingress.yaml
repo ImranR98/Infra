@@ -29,7 +29,7 @@ spec:
           namespace: base
         - name: crowdsec-bouncer
           namespace: base
-        - name: forwardauth-authelia
+        - name: authelia-with-optional-header-gate
           namespace: base
       services:
         - name: immich-server

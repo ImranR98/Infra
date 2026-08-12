@@ -195,14 +195,14 @@ Authelia manages login sessions via cookies tied to specific domains (like
 `home.example.org`). It doesn't know about `*.local` domains, so it rejects
 LAN route authentication requests with a 400 error.
 
-**Why this didn't matter on fresh nodes:** The LAN-only IngressRoutes have
-`# IGNORE INITIALLY` markers on the `forwardauth-authelia` middleware lines.
-During initial deployment (`k3s deploy --initial`), these lines are stripped —
-the LAN routes have no authentication. This is by design: during first-time
-setup, you need unauthenticated access via LAN to configure services.
-
-After initial setup, running a regular deploy adds the authentication back, but
-Authelia can't handle `*.local`. The fix was to re-deploy in initial mode.
+**Why this didn't matter on fresh nodes:** The LAN-only IngressRoutes never use
+Authelia — they only carry the `lan-whitelist` middleware. Public routes use the
+`authelia-with-optional-header-gate` chain, but that doesn't apply to
+`*.home.local`. During first-time setup, LAN access is unauthenticated by
+design (the Authelia `bypass` rules let the header gate do the bootstrap
+blocking instead). The `forwardauth-authelia` middleware was deliberately
+removed from LAN routes so Authelia's cookie handling can never interfere with
+local access.
 
 ### 3.5 The kube-router Network Policy Problem
 

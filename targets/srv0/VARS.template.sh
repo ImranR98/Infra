@@ -58,6 +58,11 @@ export AUTHELIA_IMMICH_CLIENT_SECRET_HASHABLE="change_me" # docker run authelia/
 export AUTHELIA_OPENWEBUI_CLIENT_SECRET_HASHABLE="change_me" # docker run authelia/authelia:latest authelia crypto hash generate pbkdf2 --variant sha512 --random --random.length 72 --random.charset rfc3986
 export AUTHELIA_HEADLAMP_CLIENT_SECRET_HASHABLE="change_me" # docker run authelia/authelia:latest authelia crypto hash generate pbkdf2 --variant sha512 --random --random.length 72 --random.charset rfc3986
 
+# ====== Authelia header gate ======
+# Set to "true" to force the gate on (blocking all requests without a valid
+# Authelia session). Auto-enabled on first deploy; leave "false" otherwise.
+export AUTHELIA_HEADER_GATE_ENABLED="false"
+
 # ====== Crowdsec ======
 export CROWDSEC_BOUNCER_KEY="change_me" # openssl rand -hex 32
 export CROWDSEC_LAPI_SECRET="change_me" # openssl rand -hex 32

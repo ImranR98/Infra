@@ -5,3 +5,11 @@ resources:
   - traefik.yaml
   - middlewares.yaml
   - prereqs.yaml
+configMapGenerator:
+  - name: traefik-local-plugins
+    namespace: kube-system
+    files:
+      - plugin.wasm
+      - .traefik.yml
+    options:
+      disableNameSuffixHash: true

@@ -112,3 +112,31 @@ spec:
   ipAllowList:
     sourceRange:
       - "10.42.0.0/16"
+---
+# Header gate: blocks requests lacking trusted Authelia headers while enabled.
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: authelia-header-gate
+  namespace: base
+spec:
+  plugin:
+    authelia-header-gate:
+      trustedHeaders:
+        - Remote-User
+      blocking: "$AUTHELIA_HEADER_GATE_ENABLED"
+---
+# Chain used by services that are publicly accessible normally but protected
+# during bootstrap (their Authelia rule stays `bypass`; the gate does the work).
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: authelia-with-optional-header-gate
+  namespace: base
+spec:
+  chain:
+    middlewares:
+      - name: forwardauth-authelia
+        namespace: base
+      - name: authelia-header-gate
+        namespace: base

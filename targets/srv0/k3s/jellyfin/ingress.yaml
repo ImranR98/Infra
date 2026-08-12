@@ -37,7 +37,7 @@ spec:
       middlewares:
         - name: crowdsec-bouncer
           namespace: base
-        - name: forwardauth-authelia
+        - name: authelia-with-optional-header-gate
           namespace: base
         - name: jellyfin-ratelimit
           namespace: apps
@@ -47,14 +47,14 @@ spec:
   tls:
     secretName: jellyfin-prod-tls
 ---
-# In initial mode, tv.$SERVICES_DOMAIN is protected by Authelia.
-# This breaks Jellyfin's first-time setup, so a LAN-only route
-# (defined below) provides unauthenticated access from private IPs.
+# In initial mode, tv.$SERVICES_DOMAIN is protected by the Authelia header gate
+# while it is enabled. This breaks Jellyfin's first-time setup, so a LAN-only
+# route (defined below) provides unauthenticated access from private IPs.
 #
 # Add <cluster-ip> tv.home.local to /etc/hosts, or configure your
 # router's local DNS to resolve *.home.local to the cluster IP.
 #
-# In non-initial mode this route is auto-blocked (Authelia applied).
+# The LAN route is always direct and unauthenticated (lan-whitelist only).
 apiVersion: traefik.io/v1alpha1
 kind: IngressRoute
 metadata:
@@ -69,8 +69,6 @@ spec:
       middlewares:
         - name: lan-whitelist
           namespace: base
-        - name: forwardauth-authelia # IGNORE INITIALLY
-          namespace: base # IGNORE INITIALLY
       services:
         - name: jellyfin
           port: 8096

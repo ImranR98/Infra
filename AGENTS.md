@@ -25,9 +25,9 @@ Infra is a shell-driven IaC repo for a multi-machine homelab. One CLI (`./infra.
 ./infra.sh <target> compose generate-mtls-certs <server-target>  # mTLS certs for a client↔server pair
 ./infra.sh <target> k3s setup                    # Bootstrap a K3s control-plane node
 ./infra.sh <target> k3s join <ip> <user> [agent|server]
-./infra.sh <target> k3s group base apply|initial|delete
-./infra.sh <target> k3s group apps apply|initial|delete
-./infra.sh <target> k3s deploy <component> [apply|initial|delete|diff|yaml]
+./infra.sh <target> k3s group base apply|delete
+./infra.sh <target> k3s group apps apply|delete
+./infra.sh <target> k3s deploy <component> [apply|delete|diff|yaml]
 ./infra.sh <target> k3s update-node-ip
 ./infra.sh <target> k3s test-storage <size>
 ./infra.sh <target> k3s restore-pvc <name> [-y]
@@ -71,7 +71,6 @@ current_target/compose_live_state/   # Rendered Compose state (gitignored, ephem
 - **`$ENVSUBST_VARS`** — allowlist of variable names for `envsubst`; only known vars are expanded. Built automatically from the VARS file.
 - **`.secret`** suffix → envsubst + `chmod 600`, suffix stripped
 - **`.plain`** suffix → copied verbatim (no envsubst), suffix stripped
-- **`# IGNORE INITIALLY`** — on first render (destination doesn't exist), lines ending with this are commented out (Compose) or removed (K3s `initial` mode). On subsequent runs they're fully included. Used for bootstrap dependencies.
 - **`_HASHABLE` → `_HASHED`** — variables ending in `_HASHABLE` are auto-hashed with `openssl passwd -6` into a corresponding `_HASHED` variable.
 - **Multi-line vars** preserve YAML indentation — whitespace in export values matters.
 - **Template rendering pipeline:** `compose.yaml` and `templates/*` → `current_target/compose_live_state/`. Never edit files in `current_target/`.
@@ -79,6 +78,7 @@ current_target/compose_live_state/   # Rendered Compose state (gitignored, ephem
 ## K3s conventions
 
 - **`kubectl kustomize` → `envsubst` → `kubectl apply`** — all component YAML goes through this pipeline. `$VARIABLE` references work in any YAML file.
+- **Authelia header gate** — `AUTHELIA_HEADER_GATE_ENABLED` controls the `authelia-header-gate` Traefik WASM plugin middleware (`"true"` = 401 without an Authelia session). Auto-enabled on first deploy: vps0 when `$COMPOSE_STATE_DIR/authelia/config/configuration.yml` doesn't exist, srv0 when the `authelia` Service is absent from `base`. Auto-detection only ever sets it to `"true"`; the VARS value (default `"false"`) wins otherwise. Services that are publicly accessible after bootstrap use the `authelia-with-optional-header-gate` chain (Authelia `bypass` + gate).
 - **`groups.yaml`** — deploy order = listed order; delete order = reverse. Deleting `base` refuses if Bound PVCs exist (must delete `apps` first).
 - **Hook scripts:** `prep.sh` runs before apply, `post.sh` after, `delete.sh` before standard deletion.
 - **`wait_for_crds(timeout_seconds, crd1 crd2...)`** — helper for `post.sh` hooks to wait until CRDs are established.
