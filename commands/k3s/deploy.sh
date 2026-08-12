@@ -65,7 +65,15 @@ _run_hook() {
 }
 
 _k3s_apply() {
-    printf '%s\n' "$PROCESSED_YAML" | kubectl apply -f -
+    # ConfigMaps/Secrets with binaryData can exceed the 256KiB limit of the
+    # last-applied-configuration annotation that client-side apply stores, so
+    # they go through server-side apply (which stores no such annotation).
+    # Everything else keeps client-side apply semantics.
+    local _ssa _rest
+    _ssa=$(printf '%s\n' "$PROCESSED_YAML" | yq 'select(.kind == "ConfigMap" and has("binaryData"))')
+    _rest=$(printf '%s\n' "$PROCESSED_YAML" | yq 'select(not (.kind == "ConfigMap" and has("binaryData")))')
+    [ -n "$_ssa" ] && printf '%s\n' "$_ssa" | kubectl apply --server-side -f -
+    [ -n "$_rest" ] && printf '%s\n' "$_rest" | kubectl apply -f -
 }
 
 _delete_resource_with_timeout() {
