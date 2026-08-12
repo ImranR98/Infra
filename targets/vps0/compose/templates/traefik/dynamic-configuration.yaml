@@ -2,7 +2,7 @@ http:
   middlewares:
     authelia:
       forwardAuth:
-        address: http://authelia:9091/api/verify?rd=https://$TARGET.$SERVICES_DOMAIN/
+        address: http://authelia:9091/api/verify?rd=https://auth.$CLOUD_SERVICES_DOMAIN/
         maxResponseBodySize: 1048576
         trustForwardHeader: true
         authResponseHeaders:
@@ -10,17 +10,6 @@ http:
           - Remote-Groups
           - Remote-Name
           - Remote-Email
-    authelia-header-gate:
-      plugin:
-        authelia-header-gate:
-          trustedHeaders:
-            - Remote-User
-          blocking: "$AUTHELIA_HEADER_GATE_ENABLED"
-    authelia-with-optional-header-gate:
-      chain:
-        middlewares:
-          - authelia
-          - authelia-header-gate
     geoblock:
       plugin:
         geoblock:
@@ -38,7 +27,7 @@ http:
           $GEOBLOCK_CONFIG_SUBSET
   routers:
     http-to-frps:
-      rule: "Host(`home.$SERVICES_DOMAIN`) || Host(`*.home.$SERVICES_DOMAIN`)"
+      rule: "Host(`home.$BASE_SERVICES_DOMAIN`) || Host(`*.home.$BASE_SERVICES_DOMAIN`)"
       entryPoints: [web]
       service: http-frps
       priority: 100
@@ -55,7 +44,7 @@ tcp:
         version: 2
   routers:
     https-to-frps:
-      rule: "HostSNI(`home.$SERVICES_DOMAIN`) || HostSNI(`*.home.$SERVICES_DOMAIN`)"
+      rule: "HostSNI(`home.$BASE_SERVICES_DOMAIN`) || HostSNI(`*.home.$BASE_SERVICES_DOMAIN`)"
       entryPoints: [websecure]
       service: https-frps
       tls:

@@ -70,10 +70,6 @@ envsubst "$ENVSUBST_VARS" < compose.yaml > $COMPOSE_STATE_DIR/compose.yaml
 | `*.secret` | Rendered via envsubst, then `chmod 600`. Stripped of `.secret` suffix. |
 | `*` (other) | Rendered via envsubst with standard behavior. |
 
-### First-run gate (`AUTHELIA_HEADER_GATE_ENABLED`)
-
-First-run behavior is driven by a sentinel file rather than line markers. In `configure_compose_templates()`, if the target has an `authelia` template dir but the rendered Authelia config (`$COMPOSE_STATE_DIR/authelia/config/configuration.yml`) has never been created, `AUTHELIA_HEADER_GATE_ENABLED` is exported as `"true"` for that render. This enables the `authelia-header-gate` Traefik middleware, which returns 401 for requests without a valid Authelia session. Once the sentinel exists, the VARS value (default `"false"`) wins. Setting `AUTHELIA_HEADER_GATE_ENABLED="true"` in the VARS file forces the gate on permanently. The same variable is auto-set to `"true"` on srv0 when the `authelia` Service is absent from `base` (see [k3s-management.md](k3s-management.md)).
-
 ### Per-component `prep.sh` hooks
 
 Each component directory under `templates/` can include a `prep.sh` script. `configure_compose_templates()` runs these hooks before rendering the component's templates. This is where component-specific initialization lives — for example, Authelia's `prep.sh` handles `users_database.yml` creation, and Traefik's `prep.sh` seeds an empty `acme.json` with `chmod 600` for Let's Encrypt.

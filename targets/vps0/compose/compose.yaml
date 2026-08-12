@@ -120,7 +120,7 @@ services:
             - traefik
         labels:
             - "traefik.enable=true"
-            - "traefik.http.routers.authelia.rule=Host(`$TARGET.$SERVICES_DOMAIN`)"
+            - "traefik.http.routers.authelia.rule=Host(`auth.$CLOUD_SERVICES_DOMAIN`)"
             - "traefik.http.routers.authelia.entryPoints=websecure"
             - "traefik.http.routers.authelia.tls.certresolver=le"
             - "traefik.http.routers.authelia.tls=true"
@@ -185,7 +185,6 @@ services:
             - "--certificatesresolvers.le.acme.tlsChallenge=true"
             - "--experimental.plugins.geoblock.modulename=github.com/PascalMinder/geoblock"
             - "--experimental.plugins.geoblock.version=v0.3.8"
-            - "--experimental.localplugins.authelia-header-gate.modulename=github.com/imranr/authelia-header-gate"
             - "--providers.docker.endpoint=unix:///socket/docker.sock"
             - "--providers.docker.network=traefik"
         ports:
@@ -196,11 +195,10 @@ services:
             - $COMPOSE_STATE_DIR/traefik/acme:/acme
             - $COMPOSE_STATE_DIR/traefik/dynamic-configuration.yaml:/etc/traefik/dynamic-configuration.yaml
             - $COMPOSE_STATE_DIR/traefik/logs:/var/log/traefik/
-            - $COMPOSE_STATE_DIR/traefik/plugins-local:/plugins-local:ro
             - dockerproxy:/socket/:ro
         labels:
             - "traefik.enable=true"
-            - "traefik.http.routers.traefik-dashboard.rule=Host(`traefik.$TARGET.$SERVICES_DOMAIN`)"
+            - "traefik.http.routers.traefik-dashboard.rule=Host(`traefik.$CLOUD_SERVICES_DOMAIN`)"
             - "traefik.http.routers.traefik-dashboard.entrypoints=websecure"
             - "traefik.http.routers.traefik-dashboard.tls.certresolver=le"
             - "traefik.http.routers.traefik-dashboard.tls=true"
@@ -298,16 +296,15 @@ services:
                 soft: 65535
                 hard: 65535
         environment:
-            - BASE_URL=https://plausible.$SERVICES_DOMAIN
+            - BASE_URL=https://plausible.$BASE_SERVICES_DOMAIN
             - SECRET_KEY_BASE=$PLAUSIBLE_SECRET_KEY
             - TOTP_VAULT_KEY=$PLAUSIBLE_TOTP_VAULT_KEY
         labels:
             - "traefik.enable=true"
-            - "traefik.http.routers.plausible.rule=Host(`plausible.$SERVICES_DOMAIN`)"
+            - "traefik.http.routers.plausible.rule=Host(`plausible.$BASE_SERVICES_DOMAIN`)"
             - "traefik.http.routers.plausible.entrypoints=websecure"
             - "traefik.http.routers.plausible.tls.certresolver=le"
             - "traefik.http.routers.plausible.tls=true"
-            - "traefik.http.routers.plausible.middlewares=authelia-with-optional-header-gate@file"
             - "traefik.http.services.plausible.loadbalancer.server.port=8000"
         logging: *logging
 
@@ -321,7 +318,7 @@ services:
             - traefik
         labels:
             - "traefik.enable=true"
-            - "traefik.http.routers.pixelntfy.rule=Host(`pixelntfy.$SERVICES_DOMAIN`)"
+            - "traefik.http.routers.pixelntfy.rule=Host(`pixelntfy.$BASE_SERVICES_DOMAIN`)"
             - "traefik.http.routers.pixelntfy.entrypoints=websecure"
             - "traefik.http.routers.pixelntfy.tls.certresolver=le"
             - "traefik.http.routers.pixelntfy.tls=true"
@@ -330,7 +327,7 @@ services:
             - NTFY_TOPIC=$PIXELNTFY_TOPIC
             - NTFY_SERVER_URL=https://ntfy.sh
             - PORT=80
-            - ANALYTICS_SCRIPT_ELEMENT=<script defer data-domain="pixelntfy.$SERVICES_DOMAIN" src="https://plausible.$SERVICES_DOMAIN/js/script.js"></script>
+            - ANALYTICS_SCRIPT_ELEMENT=<script defer data-domain="pixelntfy.$BASE_SERVICES_DOMAIN" src="https://plausible.$BASE_SERVICES_DOMAIN/js/script.js"></script>
         networks:
             - traefik
         logging: *logging
@@ -345,14 +342,14 @@ services:
             - traefik
         labels:
             - "traefik.enable=true"
-            - "traefik.http.routers.isbn-lookup.rule=Host(`isbn.$SERVICES_DOMAIN`)"
+            - "traefik.http.routers.isbn-lookup.rule=Host(`isbn.$BASE_SERVICES_DOMAIN`)"
             - "traefik.http.routers.isbn-lookup.entrypoints=websecure"
             - "traefik.http.routers.isbn-lookup.tls.certresolver=le"
             - "traefik.http.routers.isbn-lookup.tls=true"
             - "traefik.http.services.isbn-lookup.loadbalancer.server.port=80"
         environment:
             - PORT=80
-            - ANALYTICS_SCRIPT_ELEMENT=<script defer data-domain="isbn.$SERVICES_DOMAIN" src="https://plausible.$SERVICES_DOMAIN/js/script.js"></script>
+            - ANALYTICS_SCRIPT_ELEMENT=<script defer data-domain="isbn.$BASE_SERVICES_DOMAIN" src="https://plausible.$BASE_SERVICES_DOMAIN/js/script.js"></script>
         networks:
             - traefik
         logging: *logging
@@ -371,7 +368,7 @@ services:
         mem_limit: 2G
         labels:
             - "traefik.enable=true"
-            - "traefik.http.routers.metube.rule=Host(`ytdl.$SERVICES_DOMAIN`)"
+            - "traefik.http.routers.metube.rule=Host(`ytdl.$CLOUD_SERVICES_DOMAIN`)"
             - "traefik.http.routers.metube.entrypoints=websecure"
             - "traefik.http.routers.metube.tls.certresolver=le"
             - "traefik.http.routers.metube.tls=true"
@@ -387,7 +384,7 @@ services:
             - traefik
         labels:
             - "traefik.enable=true"
-            - "traefik.http.routers.obtainium_apps.rule=Host(`apps.obtainium.$SERVICES_DOMAIN`)"
+            - "traefik.http.routers.obtainium_apps.rule=Host(`apps.obtainium.$BASE_SERVICES_DOMAIN`)"
             - "traefik.http.routers.obtainium_apps.entrypoints=websecure"
             - "traefik.http.routers.obtainium_apps.tls.certresolver=le"
             - "traefik.http.routers.obtainium_apps.tls=true"
@@ -406,11 +403,19 @@ services:
             - traefik
         labels:
             - "traefik.enable=true"
-            - "traefik.http.routers.ikom.rule=Host(`ikom.$SERVICES_DOMAIN`)"
+            - "traefik.http.routers.ikom.rule=Host(`ikom.$CLOUD_SERVICES_DOMAIN`)"
             - "traefik.http.routers.ikom.entrypoints=websecure"
             - "traefik.http.routers.ikom.tls.certresolver=le"
             - "traefik.http.routers.ikom.tls=true"
             - "traefik.http.routers.ikom.middlewares=authelia@file"
+            - "traefik.http.routers.ikom-redirect.rule=Host(`ikom.$BASE_SERVICES_DOMAIN`)"
+            - "traefik.http.routers.ikom-redirect.entryPoints=websecure"
+            - "traefik.http.routers.ikom-redirect.tls.certresolver=le"
+            - "traefik.http.routers.ikom-redirect.tls=true"
+            - "traefik.http.routers.ikom-redirect.middlewares=ikom-redirect-rewrite"
+            - 'traefik.http.middlewares.ikom-redirect-rewrite.redirectregex.regex=^https://ikom\.$BASE_SERVICES_DOMAIN/(.*)'
+            - 'traefik.http.middlewares.ikom-redirect-rewrite.redirectregex.replacement=https://ikom.$CLOUD_SERVICES_DOMAIN/${1}'
+            - 'traefik.http.middlewares.ikom-redirect-rewrite.redirectregex.permanent=true'
             - "traefik.http.services.ikom.loadbalancer.server.port=3000"
         volumes:
             - "$COMPOSE_STATE_DIR/ikom:/app/data"
@@ -428,7 +433,7 @@ services:
             - traefik
         labels:
             - "traefik.enable=true"
-            - "traefik.http.routers.sb25.rule=Host(`sb25.$SERVICES_DOMAIN`)"
+            - "traefik.http.routers.sb25.rule=Host(`sb25.$BASE_SERVICES_DOMAIN`)"
             - "traefik.http.routers.sb25.entrypoints=websecure"
             - "traefik.http.routers.sb25.tls.certresolver=le"
             - "traefik.http.routers.sb25.tls=true"
@@ -462,7 +467,7 @@ services:
             - SCRAPE_INTERVAL_HOURS=2
         labels:
             - "traefik.enable=true"
-            - "traefik.http.routers.cct26.rule=Host(`example.org.$SERVICES_DOMAIN`)"
+            - "traefik.http.routers.cct26.rule=Host(`example.org.$BASE_SERVICES_DOMAIN`)"
             - "traefik.http.routers.cct26.entrypoints=websecure"
             - "traefik.http.routers.cct26.tls.certresolver=le"
             - "traefik.http.routers.cct26.tls=true"
@@ -498,14 +503,14 @@ services:
             - $COMPOSE_STATE_DIR/owncast:/app/data
         labels:
             - "traefik.enable=true"
-            - "traefik.http.routers.owncast.rule=Host(`owncast.$SERVICES_DOMAIN`)"
+            - "traefik.http.routers.owncast.rule=Host(`owncast.$BASE_SERVICES_DOMAIN`)"
             - "traefik.http.routers.owncast.entrypoints=websecure"
             - "traefik.http.routers.owncast.tls.certresolver=le"
             - "traefik.http.routers.owncast.tls=true"
             - "traefik.http.routers.owncast.middlewares=owncast-auth,geoblock@file"
             - "traefik.http.middlewares.owncast-auth.forwardauth.address=http://owncast-auth:3000/"
             - "traefik.http.services.owncast.loadbalancer.server.port=8080"
-            - "traefik.tcp.routers.owncast-rtmp.rule=HostSNI(`owncast.$SERVICES_DOMAIN`)"
+            - "traefik.tcp.routers.owncast-rtmp.rule=HostSNI(`owncast.$BASE_SERVICES_DOMAIN`)"
             - "traefik.tcp.routers.owncast-rtmp.entrypoints=rtmp"
             - "traefik.tcp.routers.owncast-rtmp.service=owncast-rtmp"
             - "traefik.tcp.routers.owncast-rtmp.tls=true"
@@ -553,7 +558,7 @@ services:
         image: shlinkio/shlink:stable
         container_name: shlink
         environment:
-            - SHORT_DOMAIN_HOST=ln.$SERVICES_DOMAIN
+            - SHORT_DOMAIN_HOST=ln.$BASE_SERVICES_DOMAIN
             - SHORT_DOMAIN_SCHEMA=https
             - DB_DRIVER=postgres
             - DB_HOST=shlink_db
@@ -570,7 +575,7 @@ services:
         mem_limit: 2G
         labels:
             - "traefik.enable=true"
-            - "traefik.http.routers.shlink.rule=Host(`ln.$SERVICES_DOMAIN`)"
+            - "traefik.http.routers.shlink.rule=Host(`ln.$BASE_SERVICES_DOMAIN`)"
             - "traefik.http.routers.shlink.entrypoints=websecure"
             - "traefik.http.routers.shlink.tls.certresolver=le"
             - "traefik.http.routers.shlink.tls=true"
@@ -596,8 +601,8 @@ services:
         image: shlinkio/shlink-web-client:stable
         container_name: shlink_web_client
         environment:
-            - SHLINK_SERVER_URL=https://ln.$SERVICES_DOMAIN
-            - SHLINK_SERVER_NAME=ln.$SERVICES_DOMAIN
+            - SHLINK_SERVER_URL=https://ln.$BASE_SERVICES_DOMAIN
+            - SHLINK_SERVER_NAME=ln.$BASE_SERVICES_DOMAIN
             - SHLINK_SERVER_API_KEY=$SHLINK_API_KEY
         networks:
             - traefik
@@ -608,7 +613,7 @@ services:
         mem_limit: 512M
         labels:
             - "traefik.enable=true"
-            - "traefik.http.routers.shlink_web_client.rule=Host(`ui.ln.$SERVICES_DOMAIN`)"
+            - "traefik.http.routers.shlink_web_client.rule=Host(`ui.ln.$CLOUD_SERVICES_DOMAIN`)"
             - "traefik.http.routers.shlink_web_client.entrypoints=websecure"
             - "traefik.http.routers.shlink_web_client.tls.certresolver=le"
             - "traefik.http.routers.shlink_web_client.tls=true"
@@ -631,7 +636,7 @@ services:
             - $COMPOSE_STATE_DIR/uptime:/app/data/
         labels:
             - "traefik.enable=true"
-            - "traefik.http.routers.uptime.rule=Host(`uptime.$SERVICES_DOMAIN`)"
+            - "traefik.http.routers.uptime.rule=Host(`uptime.$CLOUD_SERVICES_DOMAIN`)"
             - "traefik.http.routers.uptime.entrypoints=websecure"
             - "traefik.http.routers.uptime.tls.certresolver=le"
             - "traefik.http.routers.uptime.tls=true"

@@ -21,15 +21,7 @@ Files under `compose/templates/` use extension suffixes to control how they're r
 | `*.plain` | Copied verbatim, no envsubst. Suffix stripped. For files that must not have variable expansion. |
 | Everything else | envsubst only. |
 
-### First-run gate (`AUTHELIA_HEADER_GATE_ENABLED`)
-
-`.secret` files render unconditionally on every run. Bootstrap protection is
-handled by the `authelia-header-gate` Traefik middleware instead: on the first
-`compose install` (no rendered `$COMPOSE_STATE_DIR/authelia/config/configuration.yml`
-yet), `configure_compose_templates()` exports `AUTHELIA_HEADER_GATE_ENABLED="true"`,
-so gated routers return 401 without an Authelia session. Once the sentinel
-exists, the VARS value (default `"false"`) wins and the gate passes everything.
-This is commonly used for Authelia configuration.
+`.secret` files render unconditionally on every run — there is no first-run line stripping.
 
 ### Per-component `prep.sh` hooks
 

@@ -21,13 +21,6 @@ configure_compose_templates() {
     local template_dir="$INFRA_ROOT/targets/$target/compose/templates"
     [ -d "$template_dir" ] || return 0
 
-    # First-deploy detection for the Authelia header gate: if the rendered
-    # Authelia config has never been created, treat this as a bootstrap run
-    # and enable the gate.
-    if [ -d "$template_dir/authelia" ] && [ ! -f "$COMPOSE_STATE_DIR/authelia/config/configuration.yml" ]; then
-        export AUTHELIA_HEADER_GATE_ENABLED="true"
-    fi
-
     declare -A _compose_hooks_run
 
     while IFS= read -r -d '' src; do
@@ -60,8 +53,16 @@ configure_compose_templates() {
 
 list_domains() {
     local target="${1:-$TARGET}"
-    local sd="${SERVICES_DOMAIN:-}"
-    if [ -z "$sd" ]; then sd='$SERVICES_DOMAIN'; fi
+
+    # Substitute every domain variable from the environment, falling back to
+    # the literal $VAR placeholder when unset (so other targets still show
+    # their raw references without a VARS file loaded).
+    local sed_args=() v val
+    for v in SERVICES_DOMAIN BASE_SERVICES_DOMAIN CLOUD_SERVICES_DOMAIN; do
+        val="${!v:-}"
+        if [ -z "$val" ]; then val="\$$v"; fi
+        sed_args+=(-e "s/\\\$$v/${val}/g")
+    done
 
     _extract_hosts() {
         grep -rohP 'Host\(`[^`]+`\)' "$@" 2>/dev/null | \
@@ -71,13 +72,13 @@ list_domains() {
 
     if [ -d "$INFRA_ROOT/targets/$target/k3s" ]; then
         _extract_hosts --include='*.yaml' "$INFRA_ROOT/targets/$target/k3s" | \
-            sed "s/\\\$SERVICES_DOMAIN/${sd}/g" | \
+            sed "${sed_args[@]}" | \
             sort -u
     fi
 
     if [ -f "$INFRA_ROOT/targets/$target/compose/compose.yaml" ]; then
         _extract_hosts "$INFRA_ROOT/targets/$target/compose/compose.yaml" | \
-            sed "s/\\\$SERVICES_DOMAIN/${sd}/g" | \
+            sed "${sed_args[@]}" | \
             sort -u
     fi
 }

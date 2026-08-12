@@ -1,5 +1,9 @@
 # ====== Domain ======
-export SERVICES_DOMAIN="staging.example.org"
+# Base domain: services that stay on the original domain (public apps, FRP tunnel).
+export BASE_SERVICES_DOMAIN="staging.example.org"
+# Cloud tier domain: Authelia-protected services live here. Independent variable —
+# set it explicitly in the secrets file (typically cloud.$BASE_SERVICES_DOMAIN).
+export CLOUD_SERVICES_DOMAIN="cloud.$BASE_SERVICES_DOMAIN"
 export DOMAIN_OWNER_EMAIL="contact@example.org"
 
 # ====== Logtfy ======
@@ -30,11 +34,6 @@ export AUTHELIA_USERS_DATABASE="users:
 export AUTHELIA_DB_ENCRYPTION_KEY="change_me" # openssl rand -hex 128
 export AUTHELIA_SESSION_SECRET="change_me" # openssl rand -hex 128
 export AUTHELIA_JWT_SECRET="change_me" # openssl rand -hex 128
-
-# ====== Authelia header gate ======
-# Set to "true" to force the gate on (blocking all requests without a valid
-# Authelia session). Auto-enabled on first deploy; leave "false" otherwise.
-export AUTHELIA_HEADER_GATE_ENABLED="false"
 
 # ====== Plausible Analytics ======
 export PLAUSIBLE_SECRET_KEY="change_me" # openssl rand -base64 48

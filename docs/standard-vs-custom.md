@@ -46,15 +46,16 @@ The command routing in `lib/dispatch.sh` is custom. It walks directory trees to 
 
 The concept of "targets" as directory-based configuration units with overridable commands is custom. While similar to Ansible's inventory or NixOS's configurations, the implementation is from scratch — each target is a directory, and the dispatch router and variable resolution logic tie everything together.
 
-### The Authelia header gate
+### The Authelia header gate (srv0)
 
-The first-run protection is a custom Traefik WASM plugin (`authelia-header-gate`,
+The first-run protection on srv0 is a custom Traefik WASM plugin (`authelia-header-gate`,
 built with TinyGo and loaded via `--experimental.localplugins`) plus an automatic
 variable (`AUTHELIA_HEADER_GATE_ENABLED`) that is set to `"true"` only when a
-first deploy is detected (missing Authelia sentinel/config on the target). It
+first deploy is detected (the `authelia` Service is absent from `base`). It
 blocks requests without an Authelia session during bootstrap, then passes
 everything once the VARS value (`"false"`) wins. This replaces a manual
-two-phase deployment pattern.
+two-phase deployment pattern. vps0 does not use the gate — its Authelia-protected
+services live on the `$CLOUD_SERVICES_DOMAIN` zone instead.
 
 ### `.secret` and `.plain` file conventions
 

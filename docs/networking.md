@@ -86,26 +86,35 @@ FRP provides NAT traversal for the home server. **vps0** runs `frps` (FRP server
 
 vps0 runs a single Traefik instance that receives all public HTTP and HTTPS traffic on ports 80 and 443. Traefik inspects the `Host` header (HTTP) or SNI (HTTPS) and splits traffic by domain:
 
-**vps0-local services** — served directly by containers running on vps0:
+**vps0-local services** — served directly by containers running on vps0. vps0 splits its domains into two zones:
 
-- `authelia.$TARGET.$SERVICES_DOMAIN` — Authelia SSO admin
-- `plausible.$SERVICES_DOMAIN` — Plausible analytics
-- `uptime.$SERVICES_DOMAIN` — Uptime Kuma monitoring
-- `ln.$SERVICES_DOMAIN` / `ui.ln.$SERVICES_DOMAIN` — Shlink URL shortener and web client
-- `isbn.$SERVICES_DOMAIN` — ISBN book barcode lookup
-- `ytdl.$SERVICES_DOMAIN` — yt-dlp web frontend (metube)
-- `ikom.$SERVICES_DOMAIN` — Ikomm (self-hosted service)
-- `pixelntfy.$SERVICES_DOMAIN` — PixelNtfy push notifications
-- `apps.obtainium.$SERVICES_DOMAIN` — Obtainium app update checker
-- `sb25.$SERVICES_DOMAIN` — SB25 (self-hosted service)
-- `owncast.$SERVICES_DOMAIN` — Owncast live streaming (web UI + RTMP ingest on `:1935`)
+**`$BASE_SERVICES_DOMAIN`** (the original domain) — public apps, no Authelia:
+
+- `plausible.$BASE_SERVICES_DOMAIN` — Plausible analytics (public; the tracking script is loaded by other pages)
+- `ln.$BASE_SERVICES_DOMAIN` — Shlink URL shortener API
+- `isbn.$BASE_SERVICES_DOMAIN` — ISBN book barcode lookup
+- `ikom.$BASE_SERVICES_DOMAIN` — Ikomm old URL (301 → `ikom.$CLOUD_SERVICES_DOMAIN`)
+- `pixelntfy.$BASE_SERVICES_DOMAIN` — PixelNtfy push notifications
+- `apps.obtainium.$BASE_SERVICES_DOMAIN` — Obtainium app update checker
+- `sb25.$BASE_SERVICES_DOMAIN` — SB25 (self-hosted service)
+- `example.org.$BASE_SERVICES_DOMAIN` — CCT26 (Reddit + LLM tool)
+- `owncast.$BASE_SERVICES_DOMAIN` — Owncast live streaming (web UI + RTMP ingest on `:1935`)
+
+**`$CLOUD_SERVICES_DOMAIN`** (e.g. `cloud.$BASE_SERVICES_DOMAIN`) — Authelia-protected services:
+
+- `auth.$CLOUD_SERVICES_DOMAIN` — Authelia SSO admin
+- `traefik.$CLOUD_SERVICES_DOMAIN` — Traefik dashboard
+- `ytdl.$CLOUD_SERVICES_DOMAIN` — metube
+- `ikom.$CLOUD_SERVICES_DOMAIN` — Ikomm
+- `ui.ln.$CLOUD_SERVICES_DOMAIN` — Shlink web client (API stays at `ln.$BASE_SERVICES_DOMAIN`)
+- `uptime.$CLOUD_SERVICES_DOMAIN` — Uptime Kuma monitoring
 
 These are configured via Docker container labels on the Traefik provider. Each `Host(...)` label tells Traefik to load-balance to the matching Docker container on the internal `traefik` network.
 
-**srv0-proxied services** — requests for `home.$SERVICES_DOMAIN` and `*.home.$SERVICES_DOMAIN` are forwarded through the FRP tunnel to srv0's K3s Traefik ingress. This routing is defined in Traefik's file provider (`dynamic-configuration.yaml`) rather than Docker labels, because the destination (FRPS) is the intermediary, not a direct container:
+**srv0-proxied services** — requests for `home.$BASE_SERVICES_DOMAIN` and `*.home.$BASE_SERVICES_DOMAIN` are forwarded through the FRP tunnel to srv0's K3s Traefik ingress. This routing is defined in Traefik's file provider (`dynamic-configuration.yaml`) rather than Docker labels, because the destination (FRPS) is the intermediary, not a direct container:
 
-- **HTTP** (`:80`): Traefik routes `Host(home.$SERVICES_DOMAIN) || Host(*.home.$SERVICES_DOMAIN)` on the `web` entrypoint to `http://frps:8080`. FRPS receives the plain HTTP request and proxies it through the FRP tunnel to srv0's K3s Traefik ingress.
-- **HTTPS** (`:443`): Traefik routes `HostSNI(home.$SERVICES_DOMAIN) || HostSNI(*.home.$SERVICES_DOMAIN)` on the `websecure` entrypoint to `frps:8443` with `tls.passthrough: true`. vps0's Traefik does **not** terminate TLS — it forwards the raw encrypted TCP stream with Proxy Protocol v2. TLS termination, certificate issuance, and renewal are handled entirely by cert-manager on srv0's K3s cluster.
+- **HTTP** (`:80`): Traefik routes `Host(home.$BASE_SERVICES_DOMAIN) || Host(*.home.$BASE_SERVICES_DOMAIN)` on the `web` entrypoint to `http://frps:8080`. FRPS receives the plain HTTP request and proxies it through the FRP tunnel to srv0's K3s Traefik ingress.
+- **HTTPS** (`:443`): Traefik routes `HostSNI(home.$BASE_SERVICES_DOMAIN) || HostSNI(*.home.$BASE_SERVICES_DOMAIN)` on the `websecure` entrypoint to `frps:8443` with `tls.passthrough: true`. vps0's Traefik does **not** terminate TLS — it forwards the raw encrypted TCP stream with Proxy Protocol v2. TLS termination, certificate issuance, and renewal are handled entirely by cert-manager on srv0's K3s cluster.
 
 TLS passthrough is used for srv0 traffic so that both targets don't need to coordinate certificates. If vps0 terminated TLS, it would need to hold and renew srv0's certificates, creating a coupling between independent targets. Instead, vps0 treats the TLS stream as opaque bytes and srv0's cert-manager maintains its own Let's Encrypt lifecycle independently.
 
