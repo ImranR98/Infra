@@ -20,6 +20,8 @@ Each K3s workload lives in `targets/<target>/k3s/<component>/`. The Infra-specif
 
 All component YAML goes through a two-stage pipeline: kustomize builds the raw YAML, then `envsubst` expands `$VARIABLE` references before applying to the cluster. This means template variables work in any YAML file — HelmChart values, IngressRoutes, Secrets, etc.
 
+ConfigMaps containing `binaryData` (e.g. the `traefik-local-plugins` ConfigMap with the WASM plugin) are applied with `kubectl apply --server-side`: client-side apply stores the whole object in a `last-applied-configuration` annotation, which exceeds the 256KiB annotation limit for large binaries. Server-side apply stores no such annotation and handles field removals via ownership. Everything else uses client-side apply.
+
 ## First-run protection: the Authelia header gate
 
 Infra has no manual two-phase bootstrap. Instead, services that must be publicly

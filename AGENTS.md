@@ -77,7 +77,7 @@ current_target/compose_live_state/   # Rendered Compose state (gitignored, ephem
 
 ## K3s conventions
 
-- **`kubectl kustomize` → `envsubst` → `kubectl apply`** — all component YAML goes through this pipeline. `$VARIABLE` references work in any YAML file.
+- **`kubectl kustomize` → `envsubst` → `kubectl apply`** — all component YAML goes through this pipeline. `$VARIABLE` references work in any YAML file. ConfigMaps with `binaryData` are applied via `kubectl apply --server-side` (client-side apply's `last-applied-configuration` annotation exceeds the 256KiB limit for large binaries); everything else is client-side.
 - **Authelia header gate** — `AUTHELIA_HEADER_GATE_ENABLED` controls the `authelia-header-gate` Traefik WASM plugin middleware (`"true"` = 401 without an Authelia session). Auto-enabled on first deploy: vps0 when `$COMPOSE_STATE_DIR/authelia/config/configuration.yml` doesn't exist, srv0 when the `authelia` Service is absent from `base`. Auto-detection only ever sets it to `"true"`; the VARS value (default `"false"`) wins otherwise. Services that are publicly accessible after bootstrap use the `authelia-with-optional-header-gate` chain (Authelia `bypass` + gate).
 - **`groups.yaml`** — deploy order = listed order; delete order = reverse. Deleting `base` refuses if Bound PVCs exist (must delete `apps` first).
 - **Hook scripts:** `prep.sh` runs before apply, `post.sh` after, `delete.sh` before standard deletion.
