@@ -414,7 +414,7 @@ services:
             - "traefik.http.routers.ikom-redirect.tls=true"
             - "traefik.http.routers.ikom-redirect.middlewares=ikom-redirect-rewrite"
             - 'traefik.http.middlewares.ikom-redirect-rewrite.redirectregex.regex=^https://ikom\.$BASE_SERVICES_DOMAIN/(.*)'
-            - 'traefik.http.middlewares.ikom-redirect-rewrite.redirectregex.replacement=https://ikom.$CLOUD_SERVICES_DOMAIN/${1}'
+            - 'traefik.http.middlewares.ikom-redirect-rewrite.redirectregex.replacement=https://ikom.$CLOUD_SERVICES_DOMAIN/$${1}'
             - 'traefik.http.middlewares.ikom-redirect-rewrite.redirectregex.permanent=true'
             - "traefik.http.services.ikom.loadbalancer.server.port=3000"
         volumes:
