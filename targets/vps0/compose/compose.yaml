@@ -558,7 +558,7 @@ services:
         image: shlinkio/shlink:stable
         container_name: shlink
         environment:
-            - SHORT_DOMAIN_HOST=ln.$CLOUD_SERVICES_DOMAIN
+            - SHORT_DOMAIN_HOST=ln.$BASE_SERVICES_DOMAIN
             - SHORT_DOMAIN_SCHEMA=https
             - DB_DRIVER=postgres
             - DB_HOST=shlink_db
@@ -575,7 +575,7 @@ services:
         mem_limit: 2G
         labels:
             - "traefik.enable=true"
-            - "traefik.http.routers.shlink.rule=Host(`ln.$CLOUD_SERVICES_DOMAIN`)"
+            - "traefik.http.routers.shlink.rule=Host(`ln.$BASE_SERVICES_DOMAIN`)"
             - "traefik.http.routers.shlink.entrypoints=websecure"
             - "traefik.http.routers.shlink.tls.certresolver=le"
             - "traefik.http.routers.shlink.tls=true"
@@ -601,8 +601,8 @@ services:
         image: shlinkio/shlink-web-client:stable
         container_name: shlink_web_client
         environment:
-            - SHLINK_SERVER_URL=https://ln.$CLOUD_SERVICES_DOMAIN
-            - SHLINK_SERVER_NAME=ln.$CLOUD_SERVICES_DOMAIN
+            - SHLINK_SERVER_URL=https://ln.$BASE_SERVICES_DOMAIN
+            - SHLINK_SERVER_NAME=ln.$BASE_SERVICES_DOMAIN
             - SHLINK_SERVER_API_KEY=$SHLINK_API_KEY
         networks:
             - traefik

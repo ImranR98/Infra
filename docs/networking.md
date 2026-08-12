@@ -91,6 +91,7 @@ vps0 runs a single Traefik instance that receives all public HTTP and HTTPS traf
 **`$BASE_SERVICES_DOMAIN`** (the original domain) — public apps, no Authelia:
 
 - `plausible.$BASE_SERVICES_DOMAIN` — Plausible analytics (public; the tracking script is loaded by other pages)
+- `ln.$BASE_SERVICES_DOMAIN` — Shlink URL shortener API (public — short links must redirect for anyone; the web UI lives at `ui.ln.$CLOUD_SERVICES_DOMAIN`)
 - `ikom.$BASE_SERVICES_DOMAIN` — Ikomm old URL (301 → `ikom.$CLOUD_SERVICES_DOMAIN`)
 - `apps.obtainium.$BASE_SERVICES_DOMAIN` — Obtainium app update checker
 - `sb25.$BASE_SERVICES_DOMAIN` — SB25 (self-hosted service)
@@ -103,7 +104,6 @@ vps0 runs a single Traefik instance that receives all public HTTP and HTTPS traf
 - `ikom.$CLOUD_SERVICES_DOMAIN` — Ikomm (Authelia-protected)
 - `ui.ln.$CLOUD_SERVICES_DOMAIN` — Shlink web client (Authelia-protected)
 - `uptime.$CLOUD_SERVICES_DOMAIN` — Uptime Kuma monitoring (Authelia-protected)
-- `ln.$CLOUD_SERVICES_DOMAIN` — Shlink URL shortener API (public — short links must redirect for anyone)
 - `isbn.$CLOUD_SERVICES_DOMAIN` — ISBN book barcode lookup (public)
 - `pixelntfy.$CLOUD_SERVICES_DOMAIN` — PixelNtfy push notifications (public — tracking pixels load on third-party sites)
 - `owncast.$CLOUD_SERVICES_DOMAIN` — Owncast live streaming (web UI + RTMP ingest on `:1935`; own token auth, not Authelia)
