@@ -180,6 +180,21 @@ spec:
             userinfo_signed_response_alg: 'none'
             # Headlamp's backend uses HTTP Basic auth for the token exchange.
             token_endpoint_auth_method: 'client_secret_basic'
+          - client_id: 'linkwarden'
+            client_name: 'Linkwarden'
+            client_secret:
+               path: '/secrets/oidc/oidc.linkwarden.client-secret'
+            public: false
+            authorization_policy: 'one_factor'
+            consent_mode: 'implicit'
+            redirect_uris:
+              - 'https://links.$SERVICES_DOMAIN/api/v1/auth/callback/authelia'
+            scopes:
+              - 'openid'
+              - 'profile'
+              - 'groups'
+              - 'email'
+            userinfo_signed_response_alg: 'none'
       log:
         level: debug
       totp:
@@ -198,6 +213,8 @@ spec:
           - domain: music.$SERVICES_DOMAIN
             policy: bypass
           - domain: immich.$SERVICES_DOMAIN
+            policy: bypass
+          - domain: links.$SERVICES_DOMAIN
             policy: bypass
           - domain: auth.$SERVICES_DOMAIN
             policy: bypass

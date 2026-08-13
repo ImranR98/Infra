@@ -1,0 +1,56 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: linkwarden-secrets
+  namespace: apps
+type: Opaque
+stringData:
+  NEXTAUTH_SECRET: "$LINKWARDEN_NEXTAUTH_SECRET"
+  POSTGRES_PASSWORD: "$LINKWARDEN_DB_PASSWORD"
+  MEILI_MASTER_KEY: "$LINKWARDEN_MEILI_MASTER_KEY"
+  AUTHELIA_CLIENT_SECRET: "$AUTHELIA_LINKWARDEN_CLIENT_SECRET_HASHABLE"
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: linkwarden-data-pvc
+  namespace: apps
+  labels:
+    auto-backup: "true"
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+  storageClassName: longhorn
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: linkwarden-db-pvc
+  namespace: apps
+  labels:
+    auto-backup: "true"
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+  storageClassName: longhorn
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: linkwarden-meili-pvc
+  namespace: apps
+  labels:
+    auto-backup: "true"
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+  storageClassName: longhorn

@@ -23,6 +23,7 @@ apps:
   - ollama
   - nextcloud
   - freshrss
+  - linkwarden
   - opodsync
   - dscpln
   - opencanary

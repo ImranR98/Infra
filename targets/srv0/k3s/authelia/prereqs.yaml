@@ -235,3 +235,4 @@ stringData:
   oidc.immich.client-secret: "${AUTHELIA_IMMICH_CLIENT_SECRET_HASHED}"
   oidc.openwebui.client-secret: "${AUTHELIA_OPENWEBUI_CLIENT_SECRET_HASHED}"
   oidc.headlamp.client-secret: "${AUTHELIA_HEADLAMP_CLIENT_SECRET_HASHED}"
+  oidc.linkwarden.client-secret: "${AUTHELIA_LINKWARDEN_CLIENT_SECRET_HASHED}"

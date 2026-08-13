@@ -57,6 +57,7 @@ export AUTHELIA_JWKS_KEY="-----BEGIN PRIVATE KEY-----
 export AUTHELIA_IMMICH_CLIENT_SECRET_HASHABLE="change_me" # docker run authelia/authelia:latest authelia crypto hash generate pbkdf2 --variant sha512 --random --random.length 72 --random.charset rfc3986
 export AUTHELIA_OPENWEBUI_CLIENT_SECRET_HASHABLE="change_me" # docker run authelia/authelia:latest authelia crypto hash generate pbkdf2 --variant sha512 --random --random.length 72 --random.charset rfc3986
 export AUTHELIA_HEADLAMP_CLIENT_SECRET_HASHABLE="change_me" # docker run authelia/authelia:latest authelia crypto hash generate pbkdf2 --variant sha512 --random --random.length 72 --random.charset rfc3986
+export AUTHELIA_LINKWARDEN_CLIENT_SECRET_HASHABLE="change_me" # docker run authelia/authelia:latest authelia crypto hash generate pbkdf2 --variant sha512 --random --random.length 72 --random.charset rfc3986
 
 # ====== Authelia header gate ======
 # Set to "true" to force the gate on (blocking all requests without a valid
@@ -179,6 +180,13 @@ export FRIGATE_ADDITIONAL_CONFIG="go2rtc:
 
 # ====== FreshRSS ======
 export FRESHRSS_PASSWORD="change_me" # openssl rand -base64 32
+
+# ====== Linkwarden ======
+# AUTHELIA_LINKWARDEN_CLIENT_SECRET_HASHABLE (above) must be the same random
+# password Linkwarden receives as its OIDC client secret.
+export LINKWARDEN_NEXTAUTH_SECRET="change_me" # openssl rand -base64 32
+export LINKWARDEN_DB_PASSWORD="change_me" # openssl rand -hex 16
+export LINKWARDEN_MEILI_MASTER_KEY="change_me" # openssl rand -base64 32
 
 # ====== Plik ======
 export PLIK_ADMIN_PASSWORD="change_me" # openssl rand -hex 16
