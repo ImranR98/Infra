@@ -83,6 +83,16 @@ stringData:
       reason: "Uploading files to Chibisafe can cause false positives"
       expression:
         - evt.Meta.target_fqdn == 'send.$SERVICES_DOMAIN' && evt.Overflow.Alert.GetScenario() in ['LePresidente/http-generic-403-bf', 'crowdsecurity/http-probing', 'crowdsecurity/http-crawl-non_statics']
+  linkwarden.whitelist.yaml: |
+    name: imranr/linkwarden
+    description: "Whitelist for Linkwarden"
+    whitelist:
+      reason: "Linkwarden is a SPA: the UI fetches /api/v1 archive previews in bursts, tripping crawl scenarios"
+      expression:
+        - evt.Meta.target_fqdn == 'links.$SERVICES_DOMAIN'
+        - evt.Overflow.Alert.GetScenario() in ['crowdsecurity/http-probing', 'crowdsecurity/http-crawl-non_statics']
+        - evt.Meta.http_verb == 'GET'
+        - evt.Meta.http_path matches '^/api/v1/.+'
 ---
 apiVersion: v1
 kind: Secret
