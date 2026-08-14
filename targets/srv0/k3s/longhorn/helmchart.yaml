@@ -19,6 +19,7 @@ spec:
       storageMinimalAvailablePercentage: 5
       nodeDownPodDeletionPolicy: delete-both-statefulset-and-deployment-pod
       orphanAutoDeletion: true
+      concurrentAutomaticEngineUpgradePerNodeLimit: 1
     createDefaultDiskLabeledNodes: true
     persistence:
       defaultClass: true
