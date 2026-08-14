@@ -15,7 +15,10 @@ spec:
     controller:
       type: Deployment
     image:
-      tag: stable
+      repository: ghcr.io/home-assistant/home-assistant
+      # Pinned to the chart's appVersion (chart tracks latest HA release) so
+      # Renovate can manage bumps; a floating "stable" would only get digest-pinned.
+      tag: 2026.8.2
     podSecurityContext: {}
     hostNetwork: true
     dnsPolicy: ClusterFirstWithHostNet

@@ -13,7 +13,8 @@ spec:
   version: 1.74.0
   valuesContent: |-
     image:
-      tag: "0.32.4-rocm"
+      repository: ollama/ollama
+      tag: "0.32.13-rocm"
     volumes:
       - name: dev-kfd
         hostPath:

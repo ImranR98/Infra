@@ -13,7 +13,7 @@
       "customType": "regex",
       "fileMatch": ["targets/.+/k3s/.*\\.yaml$"],
       "matchStrings": [
-        "repository:\\s*(?<depName>\\S+)\\s*\\n(?:[^\\n]*\\n){0,10}?\\s*tag:\\s*(?<currentValue>\\S+)"
+        "repository:\\s*(?<depName>\\S+)\\s*\\n(?:[^\\n]*\\n){0,10}?\\s*tag:\\s*\"?(?<currentValue>[^\"\\s@#]+)(?:@sha256:\\S+)?\"?"
       ],
       "datasourceTemplate": "docker",
       "versioningTemplate": "docker"

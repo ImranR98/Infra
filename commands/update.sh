@@ -47,7 +47,7 @@ $RENOVATE_BIN \
     --onboarding=false \
     > "$_RENOVATE_LOG" 2>&1 || _renovate_rc=$?
 
-if [ "$_renovate_rc" -ne 0 ] || ! grep -q '"packageFiles"' "$_RENOVATE_LOG" 2>/dev/null; then
+if [ "$_renovate_rc" -ne 0 ] || ! grep -q 'packageFiles' "$_RENOVATE_LOG" 2>/dev/null; then
     echo "Warning: Renovate scan may have failed (exit=$_renovate_rc, check $_RENOVATE_LOG)" >&2
 fi
 
