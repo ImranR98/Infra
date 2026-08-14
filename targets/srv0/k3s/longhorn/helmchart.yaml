@@ -10,7 +10,7 @@ spec:
   failurePolicy: abort
   targetNamespace: longhorn-system
   createNamespace: true
-  version: 1.12.0
+  version: 1.12.1
   valuesContent: |-
     defaultSettings:
       defaultReplicaCount: 1

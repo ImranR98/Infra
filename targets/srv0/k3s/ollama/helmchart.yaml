@@ -10,7 +10,7 @@ spec:
   targetNamespace: apps
   createNamespace: false
   failurePolicy: abort
-  version: 1.73.0
+  version: 1.74.0
   valuesContent: |-
     image:
       tag: "0.32.4-rocm"

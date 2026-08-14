@@ -23,7 +23,7 @@ x-socket-proxy: &socket-proxy
 services:
     # FRP server - reverse proxy tunnel for home server
     frps:
-        image: fatedier/frps:v0.70.1
+        image: fatedier/frps:v0.71.0
         container_name: frps
         restart: always
         volumes:
