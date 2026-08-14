@@ -54,6 +54,14 @@ spec:
                   key: MEILI_MASTER_KEY
             - name: STORAGE_FOLDER
               value: data
+            - name: ARCHIVE_TAKE_COUNT
+              value: "$LINKWARDEN_ARCHIVE_TAKE_COUNT"
+            # Full inlining (audio/video/fonts/CSS/images) minus JS, which the
+            # static-page snapshot can't execute anyway. Monolith buffers assets
+            # in RAM, so keep ARCHIVE_TAKE_COUNT=1 + 16Gi limit for media-heavy
+            # pages. Per-link escape hatch: toggle "monolith" off in the link UI.
+            - name: MONOLITH_CUSTOM_OPTIONS
+              value: "-j -q"
             - name: NEXT_PUBLIC_DISABLE_REGISTRATION
               value: "true"
             - name: NEXT_PUBLIC_AUTHELIA_ENABLED
@@ -74,7 +82,7 @@ spec:
               mountPath: /data/data
           resources:
             limits:
-              memory: 8Gi
+              memory: 16Gi
             requests:
               memory: 2Gi
       volumes:

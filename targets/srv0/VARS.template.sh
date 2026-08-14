@@ -187,6 +187,9 @@ export FRESHRSS_PASSWORD="change_me" # openssl rand -base64 32
 export LINKWARDEN_NEXTAUTH_SECRET="change_me" # openssl rand -base64 32
 export LINKWARDEN_DB_PASSWORD="change_me" # openssl rand -hex 16
 export LINKWARDEN_MEILI_MASTER_KEY="change_me" # openssl rand -base64 32
+# Links archived in parallel per batch (each spawns Chromium + monolith, ~1-2Gi
+# each on big pages). Low = lower peak memory at the cost of bulk-import speed.
+export LINKWARDEN_ARCHIVE_TAKE_COUNT="1"
 
 # ====== Plik ======
 export PLIK_ADMIN_PASSWORD="change_me" # openssl rand -hex 16
