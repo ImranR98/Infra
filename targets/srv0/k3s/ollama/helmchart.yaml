@@ -23,17 +23,48 @@ spec:
       - name: dev-dri
         hostPath:
           path: /dev/dri
+      - name: ollama-models
+        hostPath:
+          path: /var/lib/ollama
+          type: DirectoryOrCreate
     volumeMounts:
       - name: dev-kfd
         mountPath: /dev/kfd
       - name: dev-dri
         mountPath: /dev/dri
+      - name: ollama-models
+        mountPath: /.ollama
     securityContext:
       privileged: true
     persistentVolume:
       enabled: false
     ollama:
-      mountPath: /.ollama
+      # Chart always renders its own ollama-data emptyDir volume at this path.
+      # Divert it to an unused path; the real model storage is the hostPath
+      # volume below mounted at /.ollama (per-node models, survives recreates).
+      mountPath: /.ollama-unused
+    initContainers:
+      - name: ollama-models-prep
+        image: fedora:44
+        # hostPath volumes do not get fsGroup ownership management, and
+        # DirectoryOrCreate leaves the dir root-owned with var_lib_t label.
+        # Fix ownership for the uid-1000 container and SELinux label so the
+        # container can write, on whichever node the pod is scheduled.
+        command:
+          - sh
+          - -c
+          - |
+            chown -R 1000:1000 /var/lib/ollama
+            chcon -R -t container_file_t /var/lib/ollama
+        securityContext:
+          privileged: true
+          runAsUser: 0
+          runAsGroup: 0
+          seLinuxOptions:
+            type: spc_t
+        volumeMounts:
+          - name: ollama-models
+            mountPath: /var/lib/ollama
     resources:
       requests:
         memory: 2Gi
