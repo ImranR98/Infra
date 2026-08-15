@@ -260,8 +260,3 @@ export MTLS_PREBOOT_CLIENT_KEY="$(cat <<'MTLS_CERT_EOF'
 -----END PRIVATE KEY-----
 MTLS_CERT_EOF
 )"
-
-# ====== Ollama LAN route ======
-# Secret path prefix for the LAN-only Ollama API route (no Host matching —
-# reachable on any cluster IP as https://<ip>/$OLLAMA_LAN_PATH).
-export OLLAMA_LAN_PATH="change_me" # openssl rand -hex 16

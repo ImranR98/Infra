@@ -34,39 +34,4 @@ spec:
           port: 80
   tls:
     secretName: openwebui-prod-tls
----
-# LAN-only route exposing the raw Ollama API behind a secret path prefix.
-# No Host matcher — reachable on any cluster IP: https://<ip>/$OLLAMA_LAN_PATH.
-# lan-whitelist restricts sources to private IPs; stripPrefix removes the
-# secret prefix so Ollama sees its normal paths (/api/chat, /api/tags, ...).
-apiVersion: traefik.io/v1alpha1
-kind: Middleware
-metadata:
-  name: ollama-lan-strip-prefix
-  namespace: apps
-spec:
-  stripPrefix:
-    prefixes:
-      - /$OLLAMA_LAN_PATH
----
-apiVersion: traefik.io/v1alpha1
-kind: IngressRoute
-metadata:
-  name: ollama-ingress-lan
-  namespace: apps
-spec:
-  entryPoints:
-    - websecure
-  routes:
-    - match: PathPrefix(`/$OLLAMA_LAN_PATH`)
-      kind: Rule
-      middlewares:
-        - name: lan-whitelist
-          namespace: base
-        - name: ollama-lan-strip-prefix
-          namespace: apps
-      services:
-        - name: ollama
-          port: 11434
-  tls: {}
 
