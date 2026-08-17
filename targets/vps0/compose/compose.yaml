@@ -124,7 +124,7 @@ services:
             - "traefik.http.routers.authelia.entryPoints=websecure"
             - "traefik.http.routers.authelia.tls.certresolver=le"
             - "traefik.http.routers.authelia.tls=true"
-            - "traefik.http.routers.authelia.middlewares=authelia@file,geoblock@file"
+            - "traefik.http.routers.authelia.middlewares=crowdsec-bouncer@file,authelia@file,geoblock@file"
         expose:
             - 9091
         restart: unless-stopped
@@ -161,6 +161,8 @@ services:
         depends_on:
             dockerproxy:
                 condition: service_started
+            crowdsec:
+                condition: service_started
         command:
             - "--api=true"
             - "--api.dashboard=true"
@@ -169,6 +171,7 @@ services:
             - "--log.level=INFO"
             - "--accesslog=true"
             - "--accesslog.filePath=/var/log/traefik/access.log"
+            - "--accesslog.format=json"
             - "--providers.docker=true"
             - "--providers.docker.exposedByDefault=false"
             - "--providers.file.filename=/etc/traefik/dynamic-configuration.yaml"
@@ -185,6 +188,8 @@ services:
             - "--certificatesresolvers.le.acme.tlsChallenge=true"
             - "--experimental.plugins.geoblock.modulename=github.com/PascalMinder/geoblock"
             - "--experimental.plugins.geoblock.version=v0.3.8"
+            - "--experimental.plugins.crowdsec-bouncer-traefik-plugin.modulename=github.com/maxlerebourg/crowdsec-bouncer-traefik-plugin"
+            - "--experimental.plugins.crowdsec-bouncer-traefik-plugin.version=v1.7.1"
             - "--providers.docker.endpoint=unix:///socket/docker.sock"
             - "--providers.docker.network=traefik"
         ports:
@@ -203,7 +208,7 @@ services:
             - "traefik.http.routers.traefik-dashboard.tls.certresolver=le"
             - "traefik.http.routers.traefik-dashboard.tls=true"
             - "traefik.http.routers.traefik-dashboard.service=api@internal"
-            - "traefik.http.routers.traefik-dashboard.middlewares=authelia@file,geoblock@file"
+            - "traefik.http.routers.traefik-dashboard.middlewares=crowdsec-bouncer@file,authelia@file,geoblock@file"
             - "traefik.http.routers.catchall-redirect.rule=HostRegexp(`.+`)"
             - "traefik.http.routers.catchall-redirect.entrypoints=web"
             - "traefik.http.routers.catchall-redirect.priority=1"
@@ -214,6 +219,32 @@ services:
         mem_limit: 2G
         networks:
             - traefik
+        logging: *logging
+
+    # CrowdSec - Intrusion Prevention (LAPI + agent + AppSec in one container)
+    crowdsec:
+        image: crowdsecurity/crowdsec:latest
+        container_name: crowdsec
+        restart: unless-stopped
+        mem_limit: 2G
+        networks:
+            - traefik
+        expose:
+            - 8080
+            - 7422
+        environment:
+            - COLLECTIONS=crowdsecurity/linux crowdsecurity/traefik crowdsecurity/appsec-virtual-patching crowdsecurity/appsec-generic-rules
+            - CUSTOM_HOSTNAME=crowdsec
+            - BOUNCER_KEY_TRAEFIK=$CROWDSEC_BOUNCER_KEY
+        volumes:
+            - $COMPOSE_STATE_DIR/crowdsec/config:/etc/crowdsec
+            - $COMPOSE_STATE_DIR/crowdsec/data:/var/lib/crowdsec/data
+            - $COMPOSE_STATE_DIR/traefik/logs:/var/log/traefik:ro
+            - $COMPOSE_STATE_DIR/crowdsec/acquis.yaml:/etc/crowdsec/acquis.yaml:ro
+            - $COMPOSE_STATE_DIR/crowdsec/profiles.yaml:/etc/crowdsec/profiles.yaml:ro
+            - $COMPOSE_STATE_DIR/crowdsec/notifications/http.yaml:/etc/crowdsec/notifications/http.yaml:ro
+            - $COMPOSE_STATE_DIR/crowdsec/postoverflows/s01-whitelist/internal.yaml:/etc/crowdsec/postoverflows/s01-whitelist/internal.yaml:ro
+            - $COMPOSE_STATE_DIR/crowdsec/postoverflows/s01-whitelist/plausible.yaml:/etc/crowdsec/postoverflows/s01-whitelist/plausible.yaml:ro
         logging: *logging
 
     # Plausible - Web Analytics
@@ -305,6 +336,7 @@ services:
             - "traefik.http.routers.plausible.entrypoints=websecure"
             - "traefik.http.routers.plausible.tls.certresolver=le"
             - "traefik.http.routers.plausible.tls=true"
+            - "traefik.http.routers.plausible.middlewares=crowdsec-bouncer@file"
             - "traefik.http.services.plausible.loadbalancer.server.port=8000"
         logging: *logging
 
@@ -322,6 +354,7 @@ services:
             - "traefik.http.routers.pixelntfy.entrypoints=websecure"
             - "traefik.http.routers.pixelntfy.tls.certresolver=le"
             - "traefik.http.routers.pixelntfy.tls=true"
+            - "traefik.http.routers.pixelntfy.middlewares=crowdsec-bouncer@file"
             - "traefik.http.services.pixelntfy.loadbalancer.server.port=80"
         environment:
             - NTFY_TOPIC=$PIXELNTFY_TOPIC
@@ -346,6 +379,7 @@ services:
             - "traefik.http.routers.isbn-lookup.entrypoints=websecure"
             - "traefik.http.routers.isbn-lookup.tls.certresolver=le"
             - "traefik.http.routers.isbn-lookup.tls=true"
+            - "traefik.http.routers.isbn-lookup.middlewares=crowdsec-bouncer@file"
             - "traefik.http.services.isbn-lookup.loadbalancer.server.port=80"
         environment:
             - PORT=80
@@ -372,7 +406,7 @@ services:
             - "traefik.http.routers.metube.entrypoints=websecure"
             - "traefik.http.routers.metube.tls.certresolver=le"
             - "traefik.http.routers.metube.tls=true"
-            - "traefik.http.routers.metube.middlewares=authelia@file"
+            - "traefik.http.routers.metube.middlewares=crowdsec-bouncer@file,authelia@file"
             - "traefik.http.services.metube.loadbalancer.server.port=8081"
         logging: *logging
 
@@ -388,6 +422,7 @@ services:
             - "traefik.http.routers.obtainium_apps.entrypoints=websecure"
             - "traefik.http.routers.obtainium_apps.tls.certresolver=le"
             - "traefik.http.routers.obtainium_apps.tls=true"
+            - "traefik.http.routers.obtainium_apps.middlewares=crowdsec-bouncer@file"
             - "traefik.http.services.obtainium_apps.loadbalancer.server.port=8080"
         networks:
             - traefik
@@ -407,7 +442,7 @@ services:
             - "traefik.http.routers.ikom.entrypoints=websecure"
             - "traefik.http.routers.ikom.tls.certresolver=le"
             - "traefik.http.routers.ikom.tls=true"
-            - "traefik.http.routers.ikom.middlewares=authelia@file"
+            - "traefik.http.routers.ikom.middlewares=crowdsec-bouncer@file,authelia@file"
             - "traefik.http.routers.ikom-redirect.rule=Host(`ikom.$BASE_SERVICES_DOMAIN`)"
             - "traefik.http.routers.ikom-redirect.entryPoints=websecure"
             - "traefik.http.routers.ikom-redirect.tls.certresolver=le"
@@ -437,6 +472,7 @@ services:
             - "traefik.http.routers.sb25.entrypoints=websecure"
             - "traefik.http.routers.sb25.tls.certresolver=le"
             - "traefik.http.routers.sb25.tls=true"
+            - "traefik.http.routers.sb25.middlewares=crowdsec-bouncer@file"
             - "traefik.http.routers.sb25-redirect.rule=Host(`sb25.$BASE_SERVICES_DOMAIN`)"
             - "traefik.http.routers.sb25-redirect.entryPoints=websecure"
             - "traefik.http.routers.sb25-redirect.tls.certresolver=le"
@@ -479,6 +515,7 @@ services:
             - "traefik.http.routers.cct26.entrypoints=websecure"
             - "traefik.http.routers.cct26.tls.certresolver=le"
             - "traefik.http.routers.cct26.tls=true"
+            - "traefik.http.routers.cct26.middlewares=crowdsec-bouncer@file"
             - "traefik.http.services.cct26.loadbalancer.server.port=3000"
         networks:
             - traefik
@@ -515,7 +552,7 @@ services:
             - "traefik.http.routers.owncast.entrypoints=websecure"
             - "traefik.http.routers.owncast.tls.certresolver=le"
             - "traefik.http.routers.owncast.tls=true"
-            - "traefik.http.routers.owncast.middlewares=owncast-auth,geoblock@file"
+            - "traefik.http.routers.owncast.middlewares=crowdsec-bouncer@file,owncast-auth,geoblock@file"
             - "traefik.http.middlewares.owncast-auth.forwardauth.address=http://owncast-auth:3000/"
             - "traefik.http.services.owncast.loadbalancer.server.port=8080"
             - "traefik.tcp.routers.owncast-rtmp.rule=HostSNI(`owncast.$CLOUD_SERVICES_DOMAIN`)"
@@ -587,6 +624,7 @@ services:
             - "traefik.http.routers.shlink.entrypoints=websecure"
             - "traefik.http.routers.shlink.tls.certresolver=le"
             - "traefik.http.routers.shlink.tls=true"
+            - "traefik.http.routers.shlink.middlewares=crowdsec-bouncer@file"
             - "traefik.http.services.shlink.loadbalancer.server.port=8080"
         logging: *logging
     shlink_db:
@@ -625,7 +663,7 @@ services:
             - "traefik.http.routers.shlink_web_client.entrypoints=websecure"
             - "traefik.http.routers.shlink_web_client.tls.certresolver=le"
             - "traefik.http.routers.shlink_web_client.tls=true"
-            - "traefik.http.routers.shlink_web_client.middlewares=authelia@file,geoblock@file"
+            - "traefik.http.routers.shlink_web_client.middlewares=crowdsec-bouncer@file,authelia@file,geoblock@file"
             - "traefik.http.services.shlink_web_client.loadbalancer.server.port=8080"
         logging: *logging
 
@@ -648,7 +686,7 @@ services:
             - "traefik.http.routers.uptime.entrypoints=websecure"
             - "traefik.http.routers.uptime.tls.certresolver=le"
             - "traefik.http.routers.uptime.tls=true"
-            - "traefik.http.routers.uptime.middlewares=authelia@file,geoblock@file"
+            - "traefik.http.routers.uptime.middlewares=crowdsec-bouncer@file,authelia@file,geoblock@file"
             - "traefik.http.services.uptime.loadbalancer.server.port=3001"
         networks:
             - traefik

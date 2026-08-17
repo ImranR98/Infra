@@ -69,6 +69,9 @@ CrowdSec provides real-time threat detection:
 
 When an IP is banned by CrowdSec, the bouncer middleware blocks it at the ingress layer before it reaches any application.
 
+- **srv0 (K3s)** — CrowdSec runs via the official Helm chart (agent + LAPI + AppSec as separate workloads) with log acquisition from the Traefik pods. Per-service postoverflow whitelists prevent false positives from SPA bursts and API clients. Overflow alerts are posted to ntfy.
+- **vps0 (Compose)** — CrowdSec runs as a single `crowdsecurity/crowdsec` container (LAPI + agent + AppSec inside one image). The agent reads Traefik's JSON access log from the shared logs volume; AppSec listens on `:7422` for virtual patching. The bouncer key is auto-registered at first boot from the `BOUNCER_KEY_TRAEFIK` env var (no manual `cscli bouncers add`). Whitelists cover the internal Docker network (`172.19.0.0/24`) and Plausible's SPA bursts; the bouncer middleware is first in every public router chain.
+
 ### Geoblock
 
 A Traefik middleware plugin (`geoblock`) restricts access by country of origin using a self-hosted MaxMind GeoLite2 database. It operates in allowlist mode — only requests from configured countries are permitted. This blocks a large percentage of automated attack traffic without leaking visitor IPs to a third-party API.

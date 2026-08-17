@@ -39,7 +39,7 @@ A desktop machine running a small Docker Compose stack (socket proxy, Watchtower
 A VPS running a Docker Compose stack of public-facing web services and the FRP server that provides NAT traversal for srv0.
 
 - **Orchestrator:** Docker Compose
-- **Services:** Traefik reverse proxy, FRP server (frps), Authelia SSO, Plausible analytics, Docker socket proxy (via `wollomatic/socket-proxy`), Watchtower auto-updater, Shlink URL shortener, Uptime Kuma, metube, ISBN lookup, PixelNtfy, Syncthing relay server, logtfy, Owncast live streaming
+- **Services:** Traefik reverse proxy, FRP server (frps), Authelia SSO, CrowdSec intrusion prevention (LAPI + agent + AppSec), Plausible analytics, Docker socket proxy (via `wollomatic/socket-proxy`), Watchtower auto-updater, Shlink URL shortener, Uptime Kuma, metube, ISBN lookup, PixelNtfy, Syncthing relay server, logtfy, Owncast live streaming
 - **Domains:** two zones — `$BASE_SERVICES_DOMAIN` (only the FRP tunnel, plausible, Obtainium, and the ikom/SB25 redirects) and `$CLOUD_SERVICES_DOMAIN` (everything else; e.g. `cloud.$BASE_SERVICES_DOMAIN`).
 
 ### rpi — Raspberry Pi 400 webcam RTSP

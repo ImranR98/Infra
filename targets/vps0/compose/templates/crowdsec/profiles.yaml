@@ -1,0 +1,10 @@
+name: default_ip_remediation
+debug: false
+filters:
+    - Alert.Remediation == true && Alert.GetScope() == "Ip"
+decisions:
+    - type: ban
+      duration: 672h
+notifications:
+    - http_default
+on_success: break

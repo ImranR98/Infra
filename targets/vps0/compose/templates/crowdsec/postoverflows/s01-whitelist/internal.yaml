@@ -1,0 +1,6 @@
+name: imranr/internal-docker-network
+description: "Whitelist for the internal Docker network"
+whitelist:
+  reason: "Internal monitors (Uptime Kuma, logtfy) and other stack containers probing through Traefik can cause false positives"
+  expression:
+    - evt.Meta.source_ip matches '^172\.19\.0\.'

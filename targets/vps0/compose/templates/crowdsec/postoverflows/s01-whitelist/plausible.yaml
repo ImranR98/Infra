@@ -1,0 +1,9 @@
+name: imranr/plausible
+description: "Whitelist for Plausible"
+whitelist:
+  reason: "Plausible is a SPA: the dashboard fetches the stats API in bursts, tripping crawl scenarios"
+  expression:
+    - evt.Meta.target_fqdn == 'plausible.$BASE_SERVICES_DOMAIN'
+    - evt.Overflow.Alert.GetScenario() in ['crowdsecurity/http-probing', 'crowdsecurity/http-crawl-non_statics']
+    - evt.Meta.http_verb == 'GET'
+    - evt.Meta.http_path matches '^/api/.+'

@@ -25,6 +25,22 @@ http:
           allowUnknownCountries: false
           unknownCountryApiResponse: "nil"
           $GEOBLOCK_CONFIG_SUBSET
+    crowdsec-bouncer:
+      plugin:
+        crowdsec-bouncer-traefik-plugin:
+          enabled: true
+          logLevel: INFO
+          crowdsecMode: stream
+          crowdsecLapiScheme: http
+          crowdsecLapiHost: crowdsec:8080
+          crowdsecLapiKey: $CROWDSEC_BOUNCER_KEY
+          crowdsecappsecenabled: true
+          crowdsecAppsecScheme: http
+          crowdsecAppsecHost: crowdsec:7422
+          crowdsecAppsecPath: "/"
+          forwardedheaderstrustedips: "127.0.0.1/32"
+          clientTrustedIPs:
+            - 172.19.0.0/24
   routers:
     http-to-frps:
       rule: "Host(`home.$BASE_SERVICES_DOMAIN`) || Host(`*.home.$BASE_SERVICES_DOMAIN`)"
