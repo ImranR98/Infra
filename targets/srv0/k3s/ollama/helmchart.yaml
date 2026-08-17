@@ -10,11 +10,11 @@ spec:
   targetNamespace: apps
   createNamespace: false
   failurePolicy: abort
-  version: 1.74.0
+  version: 1.75.0
   valuesContent: |-
     image:
       repository: ollama/ollama
-      tag: "0.32.13-rocm"
+      tag: "0.32.14-rocm"
     volumes:
       - name: dev-kfd
         hostPath:
@@ -45,7 +45,7 @@ spec:
       mountPath: /.ollama-unused
     initContainers:
       - name: ollama-models-prep
-        image: fedora:44
+        image: fedora:44 # PRESERVE_MAJOR
         # hostPath volumes do not get fsGroup ownership management, and
         # DirectoryOrCreate leaves the dir root-owned with var_lib_t label.
         # Fix ownership for the uid-1000 container and SELinux label so the
