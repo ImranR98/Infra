@@ -93,6 +93,16 @@ stringData:
         - evt.Overflow.Alert.GetScenario() in ['crowdsecurity/http-probing', 'crowdsecurity/http-crawl-non_statics']
         - evt.Meta.http_verb == 'GET'
         - evt.Meta.http_path matches '^/api/v1/.+'
+  fmd.whitelist.yaml: |
+    name: imranr/fmd
+    description: "Whitelist for FindMyDevice"
+    whitelist:
+      reason: "Phone clients with a stale device key get 401 from fmd, tripping brute-force scenarios and self-banning the IP"
+      expression:
+        - evt.Meta.target_fqdn == 'fmd.$SERVICES_DOMAIN'
+        - evt.Overflow.Alert.GetScenario() in ['LePresidente/http-generic-401-bf', 'LePresidente/http-generic-403-bf']
+        - evt.Meta.http_verb == 'POST'
+        - evt.Meta.http_path matches '^/api/v1/location'
 ---
 apiVersion: v1
 kind: Secret

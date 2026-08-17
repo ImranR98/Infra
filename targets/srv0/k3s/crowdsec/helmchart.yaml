@@ -121,6 +121,9 @@ spec:
         - name: crowdsec-lapi-configs
           mountPath: /etc/crowdsec/postoverflows/s01-whitelist/linkwarden.yaml
           subPath: linkwarden.whitelist.yaml
+        - name: crowdsec-lapi-configs
+          mountPath: /etc/crowdsec/postoverflows/s01-whitelist/fmd.yaml
+          subPath: fmd.whitelist.yaml
       persistentVolume:
         config:
           enabled: false
