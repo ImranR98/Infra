@@ -140,3 +140,18 @@ spec:
         namespace: base
       - name: authelia-header-gate
         namespace: base
+---
+# Static custom-card assets under /local/community: mark responses
+# uncacheable. HA's service worker caches /local files via its catch-all
+# StaleWhileRevalidate route (any 200 response, e.g. login-page HTML from
+# the pre-exemption era), which can poison card loading on some clients.
+# no-store keeps browser/WebView caches from re-caching bad responses.
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: local-no-store
+  namespace: base
+spec:
+  headers:
+    customResponseHeaders:
+      Cache-Control: "no-store"

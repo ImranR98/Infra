@@ -64,6 +64,30 @@ spec:
         # Load frontend themes from the themes folder
         frontend:
           themes: !include_dir_merge_named themes
+          # Advanced Camera Card (dashboard live view + timeline scrub);
+          # installed by the integration-update init container (zip layout:
+          # dist/). Served via /local, which is exempt from the session-
+          # dependent ingress middlewares (see ingress.yaml). The versioned
+          # path forces a cache miss on clients whose service worker holds
+          # stale/poisoned copies of the old path.
+          extra_module_url:
+            - /local/community/advanced-camera-card-2026/dist/advanced-camera-card.js
+
+        # Frigate dashboard (YAML mode): provisioned via the ha-dashboards
+        # ConfigMap, mounted at /config/dashboards. Uses the Advanced Camera
+        # Card above.
+        # NOTE: the chart deep-merges templateConfig into an existing
+        # configuration.yaml on the PVC (yq *d), so removed keys must be
+        # deleted from /config/configuration.yaml manually (or restored from
+        # a configuration.yaml.<timestamp> backup).
+        lovelace:
+          dashboards:
+            frigate-nvr:
+              mode: yaml
+              title: Frigate
+              icon: mdi:cctv
+              filename: /config/dashboards/frigate.yaml
+              show_in_sidebar: true
 
         automation: !include automations.yaml
         script: !include scripts.yaml
@@ -93,22 +117,52 @@ spec:
           - -ec
           - |
             set -e
-            COMP=/config/custom_components
-            REPO=blakeblackshear/frigate-hass-integration
-            mkdir -p "$COMP"
+            # Lowercase var names so the var-reference validator doesn't mistake
+            # them for envsubst placeholders.
+            comp=/config/custom_components
+            www=/config/www/community
+            repo=blakeblackshear/frigate-hass-integration
+            mkdir -p "$comp" "$www"
             # HACS is not used anymore - clean up any previous install
-            rm -rf "$COMP/hacs"
-            latest="$(wget -qO- https://api.github.com/repos/$REPO/releases/latest | sed -n 's/.*"tag_name": *"\([^"]*\)".*/\1/p' | head -1)" || true
+            rm -rf "$comp/hacs"
+            latest="$(wget -qO- https://api.github.com/repos/$repo/releases/latest | sed -n 's/.*"tag_name": *"\([^"]*\)".*/\1/p' | head -1)" || true
             [ -n "$latest" ] || latest="v5.15.4"
-            if [ "$(cat "$COMP/frigate/.installed-version" 2>/dev/null)" != "$latest" ]; then
+            if [ "$(cat "$comp/frigate/.installed-version" 2>/dev/null)" != "$latest" ]; then
               echo "installing frigate integration $latest"
               tmpdir=$(mktemp -d)
-              wget -qO- https://github.com/$REPO/archive/refs/tags/$latest.tar.gz | tar xz -C "$tmpdir"
-              rm -rf "$COMP/frigate"
-              cp -r "$tmpdir/frigate-hass-integration-${latest#v}/custom_components/frigate" "$COMP/"
+              wget -qO- https://github.com/$repo/archive/refs/tags/$latest.tar.gz | tar xz -C "$tmpdir"
+              rm -rf "$comp/frigate"
+              cp -r "$tmpdir/frigate-hass-integration-${latest#v}/custom_components/frigate" "$comp/"
               rm -rf "$tmpdir"
-              echo "$latest" > "$COMP/frigate/.installed-version"
+              echo "$latest" > "$comp/frigate/.installed-version"
             fi
+            # Advanced Camera Card (dashboard live view via go2rtc restream,
+            # timeline scrub + recordings gallery for the Frigate dashboard).
+            # No HACS: the card JS is downloaded directly and registered via
+            # configuration.yaml frontend.extra_module_url (see templateConfig).
+            # Versioned install dir: clients with a stale service-worker cache
+            # of the previous path get a clean miss (bump the suffix when the
+            # card version changes to bust those caches again).
+            card=dermotduffy/advanced-camera-card
+            card_dir="$www/advanced-camera-card-2026"
+            mkdir -p "$card_dir"
+            card_latest="$(wget -qO- https://api.github.com/repos/$card/releases/latest | sed -n 's/.*"tag_name": *"\([^"]*\)".*/\1/p' | head -1)" || true
+            [ -n "$card_latest" ] || card_latest="v7.27.4"
+            # Layout token guards against stale installs (e.g. pre-zip layout) with the same version
+            card_version="$card_latest+zip"
+            if [ "$(cat "$card_dir/.installed-version" 2>/dev/null)" != "$card_version" ]; then
+              echo "installing advanced-camera-card $card_version"
+              tmpdir=$(mktemp -d)
+              wget -qO- "https://github.com/$card/releases/download/$card_latest/advanced-camera-card.zip" -O "$tmpdir/card.zip"
+              rm -rf "$card_dir"
+              mkdir -p "$card_dir"
+              unzip -q -o "$tmpdir/card.zip" -d "$card_dir"
+              rm -rf "$tmpdir"
+              echo "$card_version" > "$card_dir/.installed-version"
+            fi
+            # Remove the legacy unversioned install path (kept temporarily for
+            # clients with stale cached frontends; no longer needed).
+            rm -rf "$www/advanced-camera-card"
         volumeMounts:
           - name: homeassistant-home-assistant-pvc
             mountPath: /config
@@ -125,6 +179,9 @@ spec:
         hostPath:
           path: /run/dbus/system_bus_socket
           type: Socket
+      - name: ha-dashboards
+        configMap:
+          name: ha-dashboards
     additionalMounts:
       - name: usb-serial
         mountPath: /dev/serial/by-id
@@ -133,6 +190,9 @@ spec:
         mountPath: /dev/ttyACM0
       - name: dbus
         mountPath: /run/dbus/system_bus_socket
+      - name: ha-dashboards
+        mountPath: /config/dashboards
+        readOnly: true
     resources:
       limits:
         memory: 2Gi

@@ -114,15 +114,36 @@ export FRIGATE_ADDITIONAL_CONFIG="go2rtc:
           detect:
             width: 640
             height: 480
-            fps: 15
+            # Frigate 0.17 defaults detect.enabled to FALSE - pin it ON in the
+            # config, otherwise every Frigate restart silently disables
+            # detection (and HA mirrors the off state onto switch.rpi_detect).
+            enabled: true
+            # Detection-only fps (motion + object detection). Does NOT affect
+            # the record-role input or the go2rtc livestream - those are
+            # separate pipelines.
+            fps: 5
+          motion:
+            # 1.0 disables the lightning recalibration: without it, a person
+            # filling the webcam frame (>80% change) is treated as "lightning"
+            # and motion detection recalibrates, swallowing the event
+            # (Frigate docs: doorbell camera scenario).
+            lightning_threshold: 1.0
           record:
             enabled: true
+            motion:
+              # Keep segments that contain motion even when no object is
+              # tracked (otherwise motion-only activity has no recording).
+              days: 14
             alerts:
               retain:
-                days: 7
+                days: 14
+                # Keep segments with actively tracked objects, not only
+                # motion (person standing still is still recorded).
+                mode: active_objects
             detections:
               retain:
-                days: 7
+                days: 14
+                mode: active_objects
           snapshots:
             enabled: true
         # -------- HOW TO ADD MORE CAMERAS (copy + uncomment a block) --------
