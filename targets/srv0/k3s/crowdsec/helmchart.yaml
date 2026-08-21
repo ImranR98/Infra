@@ -65,6 +65,36 @@ spec:
           podName: traefik-*
           program: traefik
           poll_without_inotify: true
+      extraVolumes:
+        - name: crowdsec-lapi-configs
+          secret:
+            secretName: crowdsec-lapi-configs
+            defaultMode: 0600
+      extraVolumeMounts:
+        - name: crowdsec-lapi-configs
+          mountPath: /etc/crowdsec/postoverflows/s01-whitelist/navidrome.yaml
+          subPath: navidrome.whitelist.yaml
+        - name: crowdsec-lapi-configs
+          mountPath: /etc/crowdsec/postoverflows/s01-whitelist/immich.yaml
+          subPath: immich.whitelist.yaml
+        - name: crowdsec-lapi-configs
+          mountPath: /etc/crowdsec/postoverflows/s01-whitelist/homeassistant.yaml
+          subPath: homeassistant.whitelist.yaml
+        - name: crowdsec-lapi-configs
+          mountPath: /etc/crowdsec/postoverflows/s01-whitelist/seerr.yaml
+          subPath: seerr.whitelist.yaml
+        - name: crowdsec-lapi-configs
+          mountPath: /etc/crowdsec/postoverflows/s01-whitelist/plik.yaml
+          subPath: plik.whitelist.yaml
+        - name: crowdsec-lapi-configs
+          mountPath: /etc/crowdsec/postoverflows/s01-whitelist/chibisafe.yaml
+          subPath: chibisafe.whitelist.yaml
+        - name: crowdsec-lapi-configs
+          mountPath: /etc/crowdsec/postoverflows/s01-whitelist/linkwarden.yaml
+          subPath: linkwarden.whitelist.yaml
+        - name: crowdsec-lapi-configs
+          mountPath: /etc/crowdsec/postoverflows/s01-whitelist/fmd.yaml
+          subPath: fmd.whitelist.yaml
       env:
         - name: COLLECTIONS
           value: "crowdsecurity/linux crowdsecurity/traefik"

@@ -42,13 +42,12 @@ stringData:
     name: imranr/immich
     description: "Whitelist for Immich"
     whitelist:
-      reason: "Browsing Immich can cause false positives"
+      reason: "Browsing Immich can cause false positives (missing thumbnails 404, token-expiry 401 bursts)"
       expression:
         - evt.Meta.target_fqdn == 'immich.$SERVICES_DOMAIN'
-        - evt.Overflow.Alert.GetScenario() in ['crowdsecurity/http-probing']
-        - evt.Meta.http_verb == 'GET'
-        - evt.Meta.http_status == '404'
-        - evt.Meta.http_path matches '/api/assets/.+'
+        - evt.Overflow.Alert.GetScenario() in ['crowdsecurity/http-probing', 'LePresidente/http-generic-401-bf', 'LePresidente/http-generic-403-bf']
+        - evt.Meta.http_path matches '/api/.*'
+        - evt.Meta.http_status in ['404', '401', '403']
   homeassistant.whitelist.yaml: |
     name: imranr/homeassistant
     description: "Whitelist for HomeAssistant"
