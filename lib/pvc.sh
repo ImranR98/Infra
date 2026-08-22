@@ -125,8 +125,10 @@ pvc_node_ready() {
 
 # pvc_ensure_backup_dest <namespace>
 # Ensures the shared RWX NFS PVC used as the backup destination exists and is
-# Bound in the given namespace. NFS is used (not hostPath) so backup pods can
-# write the same archive location regardless of which node they run on.
+# Bound in the given namespace. The PVC binds to the static PV
+# pvc-backup-dest-pv, which mounts the ROOT of the NFS backups share
+# ($PVC_BACKUP_DIR on the hostpath-main node) — archives are written directly
+# to their final human-named path, reachable from any node.
 pvc_ensure_backup_dest() {
     local ns="${1:?}"
     if ! kubectl get pvc pvc-backup-dest -n "$ns" >/dev/null 2>&1; then
@@ -152,7 +154,7 @@ PVC_EOF
         fi
         sleep 2
     done
-    echo "Error: pvc-backup-dest in $ns did not become Bound" >&2
+    echo "Error: pvc-backup-dest in $ns did not become Bound (is the pvc-backup-dest-pv static PV present?)" >&2
     return 1
 }
 
@@ -212,16 +214,18 @@ $tolerations
     - -c
     - |
       echo "$timestamp" > /data/__backup_timestamp.txt
-      if ! tar czf /backup/"$dest_file" -C /data $excl_flags --sparse --warning=no-file-changed --warning=no-file-removed --ignore-failed-read .; then
+      if ! tar czf "/backup/.$dest_file.tmp" -C /data $excl_flags --sparse --warning=no-file-changed --warning=no-file-removed --ignore-failed-read .; then
         echo "ERROR: tar archive creation failed" >&2
-        rm -f /data/__backup_timestamp.txt
+        rm -f "/backup/.$dest_file.tmp" /data/__backup_timestamp.txt
         exit 1
       fi
-      rm -f /data/__backup_timestamp.txt
-      if [ ! -s /backup/"$dest_file" ]; then
+      if [ ! -s "/backup/.$dest_file.tmp" ]; then
         echo "ERROR: backup archive is empty" >&2
+        rm -f "/backup/.$dest_file.tmp" /data/__backup_timestamp.txt
         exit 1
       fi
+      mv "/backup/.$dest_file.tmp" "/backup/$dest_file"
+      rm -f /data/__backup_timestamp.txt
     volumeMounts:
     - name: data
       mountPath: /data
@@ -284,14 +288,16 @@ spec:
     persistentVolumeClaim:
       claimName: $pvc
   - name: backup-src
-    hostPath:
-      path: $backup_dir
-      type: DirectoryOrCreate
+    persistentVolumeClaim:
+      claimName: pvc-backup-dest
 PODEOF
 }
 
 # pvc_backup_data <pvc> <ns> <backup-dir> <dest-file> <timestamp> [exclude]
 # Creates backup pod, waits for success, cleans up. Returns 0 on success.
+# <backup-dir> is accepted for signature compatibility but no longer used:
+# the archive is written directly to its final name via the shared
+# pvc-backup-dest volume.
 pvc_backup_data() {
     local pvc="${1:?}" ns="${2:?}" backup_dir="${3:?}" dest_file="${4:?}" timestamp="${5:?}" exclude="${6:-}"
     local pod_name node
@@ -327,19 +333,9 @@ pvc_backup_data() {
     fi
     kubectl delete pod "$pod_name" -n "$ns" --ignore-not-found 2>/dev/null || true
 
-    # csi-driver-nfs provisions each volume as a subdir (named after the PV)
-    # under the share. Move the archive up to the top-level backup dir to keep
-    # the conventional layout used by the restore flow.
-    # WARNING: the $backup_dir/<pv_name> subdir is the LIVE backend of the
-    # pvc-backup-dest volume — never delete it while the PVC exists, or every
-    # mount of the volume fails with ENOENT (backup pods hang in
-    # ContainerCreating and time out). Only archive FILES inside it may be
-    # moved/removed.
-    local pv_name
-    pv_name=$(kubectl get pvc pvc-backup-dest -n "$ns" -o jsonpath='{.spec.volumeName}' 2>/dev/null || true)
-    if [ -n "$pv_name" ] && [ -f "$backup_dir/$pv_name/$dest_file" ]; then
-        mv "$backup_dir/$pv_name/$dest_file" "$backup_dir/$dest_file"
-    fi
+    # The archive is written directly to its final name inside the shared
+    # pvc-backup-dest volume (the ROOT of the NFS backups share), so there is
+    # nothing to move after the pod succeeds.
     return 0
 }
 
@@ -403,6 +399,10 @@ pvc_backup_all() {
 pvc_restore_data() {
     local pvc="${1:?}" ns="${2:?}" backup_dir="${3:?}" src_file="${4:?}"
     local pod_name
+    if ! pvc_ensure_backup_dest "$ns"; then
+        echo "  ERROR: could not prepare backup source for $ns/$pvc" >&2
+        return 1
+    fi
     pod_name="restore-$(echo "$pvc" | tr '_' '-')"
     pvc_restore_pod_yaml "$pvc" "$ns" "$backup_dir" "$src_file" | kubectl apply -f -
     if ! kubectl wait --for=jsonpath='{.status.phase}'=Succeeded "pod/$pod_name" -n "$ns" --timeout=900s 2>/dev/null; then

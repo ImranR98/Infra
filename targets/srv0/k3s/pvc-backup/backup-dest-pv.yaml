@@ -1,0 +1,25 @@
+---
+# Static PV for the shared backup destination. Binds pvc-backup-dest
+# directly to the ROOT of the NFS backups share (nfs-server /exports/backups,
+# which is hostPath $PVC_BACKUP_DIR on the hostpath-main node). Backup pods
+# therefore write human-named archives straight into the final destination
+# from any node — no dynamically provisioned pvc-* subdirs to go missing.
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: pvc-backup-dest-pv
+spec:
+  capacity:
+    storage: 5Gi
+  accessModes:
+    - ReadWriteMany
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: nfs-backup
+  mountOptions:
+    - nfsvers=4.2
+  csi:
+    driver: nfs.csi.k8s.io
+    volumeHandle: backups-root
+    volumeAttributes:
+      server: nfs-server.base.svc.cluster.local
+      share: /backups

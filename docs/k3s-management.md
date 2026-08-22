@@ -130,18 +130,20 @@ A CronJob backs up labeled PVCs to the host filesystem. Restore is a separate In
 
 ### Backup
 
-The `pvc-backup` component in the `apps` group runs a nightly CronJob at 3AM. For each PVC labeled `auto-backup: "true"`, it:
-1. Creates a temporary pod that mounts the PVC and a hostPath backup destination
-2. Archives the PVC contents as a `.tar.gz` (with a `timestamp.txt` inside)
+The `pvc-backup` component in the `base` group runs a nightly CronJob at 3AM. For each PVC labeled `auto-backup: "true"`, it:
+1. Creates a temporary pod that mounts the PVC and the shared `pvc-backup-dest` NFS volume
+2. Archives the PVC contents as a `.tar.gz` (with a `timestamp.txt` inside), written to a temp name then renamed into place
 3. Deletes the temp pod
 
 Workloads are NOT scaled down — the backup captures live running state.
 
 Backups are stored at `$PVC_BACKUP_DIR/<pvc-name>.tar.gz` (at `$INFRA_ROOT/k3s_state_backups/`, gitignored). The filename is constant — each run overwrites the previous copy.
 
+The destination `pvc-backup-dest` PVC binds to the static PV `pvc-backup-dest-pv`, which mounts the ROOT of the NFS `backups` share (the nfs-server export backed by hostPath `$PVC_BACKUP_DIR` on the hostpath-main node). Archives are written directly to their final human-named location, reachable from any node — there are no dynamically provisioned `pvc-*` subdirectories to go missing. Restore pods mount the same volume as their archive source.
+
 Manual trigger (zero code duplication):
 ```bash
-kubectl create job backup-manual --from=cronjob/pvc-backup -n apps
+kubectl create job backup-manual --from=cronjob/pvc-backup -n base
 ```
 
 ### Restore

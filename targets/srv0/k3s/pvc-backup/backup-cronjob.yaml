@@ -15,6 +15,8 @@ spec:
         spec:
           serviceAccountName: pvc-backup
           restartPolicy: Never
+          nodeSelector:
+            hostpath-main: "true"
           securityContext:
             runAsUser: 0
           containers:
