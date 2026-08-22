@@ -111,7 +111,7 @@ spec:
         fsGroup: $MY_UID
       containers:
         - name: logtfy
-          image: imranrdev/logtfy:latest@sha256:0cd46f3740d35bc2d00906caf995c6782207454579f17b279902c56201f9ca28
+          image: imranrdev/logtfy:latest@sha256:c234a89fe4969806c28b972509c3575ff2595f77ba4b3f1def540a7a2b0b07bd
           volumeMounts:
             - name: journal
               mountPath: /var/log/journal
