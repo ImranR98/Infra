@@ -10,11 +10,11 @@ spec:
   targetNamespace: apps
   createNamespace: false
   failurePolicy: abort
-  version: 1.75.0
+  version: 1.77.0
   valuesContent: |-
     image:
       repository: ollama/ollama
-      tag: "0.32.14-rocm"
+      tag: "0.32.15-rocm"
     volumes:
       - name: dev-kfd
         hostPath:

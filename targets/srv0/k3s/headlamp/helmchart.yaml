@@ -10,7 +10,7 @@ spec:
   failurePolicy: abort
   targetNamespace: apps
   createNamespace: false
-  version: 0.44.0
+  version: 0.45.0
   valuesContent: |-
     config:
       inCluster: true

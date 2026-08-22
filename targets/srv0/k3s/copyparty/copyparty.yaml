@@ -32,7 +32,7 @@ spec:
               mountPath: /state
       containers:
         - name: copyparty
-          image: copyparty/ac:1.20.20
+          image: copyparty/ac:1.20.21
           ports:
             - containerPort: 3923
               name: http
