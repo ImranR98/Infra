@@ -81,3 +81,10 @@ print_copy_paste_block "$SERVER_TARGET" "MTLS_SERVER_KEY" "$OUTDIR/server.key"
 echo ""
 echo "Files also available at: $OUTDIR"
 echo "(will be cleaned up when this script exits)"
+
+if [ "$HAS_PREBOOT" = true ]; then
+    echo ""
+    echo "Reminder: the preboot client certificate is embedded in $CLIENT_TARGET's"
+    echo "initramfs. After updating VARS.$CLIENT_TARGET.sh, rebuild it with:"
+    echo "  ./infra.sh $CLIENT_TARGET compose install-preboot"
+fi
