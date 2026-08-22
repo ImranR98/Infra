@@ -123,6 +123,11 @@ export FRIGATE_ADDITIONAL_CONFIG="go2rtc:
             # separate pipelines.
             fps: 5
           motion:
+            # Low-light webcam noise fix: improve_contrast stretches the
+            # near-black sensor noise at night into full-range "changes",
+            # producing continuous false motion (hour-long recordings).
+            # Disabling it keeps noise below the motion threshold.
+            improve_contrast: false
             # 1.0 disables the lightning recalibration: without it, a person
             # filling the webcam frame (>80% change) is treated as "lightning"
             # and motion detection recalibrates, swallowing the event
