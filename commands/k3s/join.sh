@@ -9,6 +9,26 @@ SSH_USER="${2:?Usage: $0 <client-ip> <ssh-user> [agent|server]}"
 ROLE="${3:-agent}"
 case "$ROLE" in agent|server) ;; *) echo "Usage: $0 <client-ip> <ssh-user> [agent|server]" >&2; exit 1 ;; esac
 
+# The interactive prompts (GPU label, taint, Longhorn) need a TTY. Invocations
+# over ssh without -t (or with closed stdin) would otherwise have every `read`
+# hit EOF instantly and silently default to "n". Re-exec the whole join under
+# a pseudo-TTY (python3 pty.spawn, or `script` if available): prompts are
+# shown and answers typed on the (possibly piped) stdin are forwarded into it.
+if [ ! -t 0 ]; then
+    REJOIN_CMD="cd '$INFRA_ROOT' && INFRA_INTERACTIVE=true ./infra.sh '$TARGET' k3s join '$CLIENT_IP' '$SSH_USER' '$ROLE'"
+    if command -v script >/dev/null 2>&1; then
+        echo "[$(date +%T)] Non-interactive stdin; re-running under a pseudo-TTY for interactive prompts..."
+        exec script -qec "$REJOIN_CMD" /dev/null
+    elif command -v python3 >/dev/null 2>&1; then
+        echo "[$(date +%T)] Non-interactive stdin; re-running under a pseudo-TTY for interactive prompts..."
+        exec python3 -c 'import pty, sys; pty.spawn(["/bin/bash", "-c", sys.argv[1]])' "$REJOIN_CMD"
+    else
+        echo "Error: non-interactive stdin and no pty allocator (script/python3) available." >&2
+        echo "Run the join in a real terminal or with: ssh -t <server> ..." >&2
+        exit 1
+    fi
+fi
+
 echo "[$(date +%T)] Args: CLIENT_IP=$CLIENT_IP SSH_USER=$SSH_USER ROLE=$ROLE"
 
 if ! command -v ssh >/dev/null 2>&1; then
@@ -138,16 +158,6 @@ if [ -z "$NODE_NAME" ]; then
 fi
 echo ""
 echo "=== Node configuration for $NODE_NAME ==="
-
-# The prompts below require a TTY. On a non-interactive stdin every `read`
-# hits EOF instantly and silently defaults to "n" — which would leave the
-# node unlabeled/untaunted. Refuse instead of guessing.
-if [ ! -t 0 ]; then
-    echo "Error: node configuration prompts need an interactive TTY." >&2
-    echo "Re-run: ./infra.sh $TARGET k3s join <client-ip> <ssh-user> [agent|server]" >&2
-    echo "in a real terminal, or pipe answers (e.g. printf 'y\\ny\\nn\\n' | ...)." >&2
-    exit 1
-fi
 
 read -r -p "Does $NODE_NAME have an AMD GPU? [y/N] " response
 case "$response" in [yY]|[yY][eE][sS])
