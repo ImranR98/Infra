@@ -55,7 +55,8 @@ app's storage (Android: app info > Storage > Clear storage) and log in
 again - or uninstall/reinstall the app.
 
 Recordings are written over NFS to srv0's $SECONDARY_STORAGE_PATH/frigate
-(the pod prefers the has-amdgpu node, bigpc).
+(NFS kept deliberately so the pod can move nodes; it runs on srv0 with the
+OpenVINO detector on the Iris Xe iGPU).
 
 Maintenance notes:
 - If the rpi go2rtc password ever regenerates (password file deleted),

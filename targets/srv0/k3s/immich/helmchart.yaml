@@ -71,7 +71,7 @@ spec:
             main:
               image:
                 repository: ghcr.io/immich-app/immich-machine-learning
-                tag: v3.1.0-rocm
+                tag: v3.1.0-openvino
               securityContext:
                 privileged: true
                 allowPrivilegeEscalation: true
@@ -80,28 +80,11 @@ spec:
                   memory: 8Gi
                 requests:
                   memory: 128Mi
-      defaultPodOptions:
-        tolerations:
-          - key: scheduling-discouraged
-            operator: Equal
-            value: "true"
-            effect: PreferNoSchedule
-        affinity:
-          nodeAffinity:
-            preferredDuringSchedulingIgnoredDuringExecution:
-              - weight: 100
-                preference:
-                  matchExpressions:
-                    - key: has-amdgpu
-                      operator: In
-                      values:
-                        - "true"
+      defaultPodOptions: {}
+        # No node affinity/tolerations: bigpc's scheduling-discouraged taint
+        # keeps the pod on srv0; the descheduler evicts any drift. ML runs on
+        # srv0's Iris Xe iGPU via OpenVINO (see tag above).
       persistence:
-        kfd:
-          type: hostPath
-          hostPath: /dev/kfd
-          globalMounts:
-            - path: /dev/kfd
         dri:
           type: hostPath
           hostPath: /dev/dri

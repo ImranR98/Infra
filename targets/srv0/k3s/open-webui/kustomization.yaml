@@ -5,5 +5,4 @@ resources:
   - prereqs.yaml
   - ingress.yaml
   - network-policy.yaml
-  - helmchart.yaml
   - openwebui-helmchart.yaml

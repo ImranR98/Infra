@@ -14,17 +14,11 @@ spec:
   valuesContent: |-
     kind: CronJob
     schedule: "*/2 * * * *"
-    # Rebalances pods that drifted due to soft affinities / PreferNoSchedule
-    # taints being evaluated only at scheduling time:
-    #   - RemovePodsViolatingNodeTaints: evicts pods on bigpc that do NOT
-    #     tolerate its scheduling-discouraged taint (only if they fit
-    #     elsewhere, i.e. srv0). GPU pods tolerate it -> never touched.
-    #   - RemovePodsViolatingNodeAffinity: evicts pods (ollama/jellyfin/
-    #     immich) whose PREFERRED node (has-amdgpu=true) can now fit them;
-    #     while bigpc is unavailable there is no better node -> no eviction,
-    #     so no thrash loop.
-    # Hard-affinity pods (frigate, homeassistant, nfs-server) have no
-    # alternate fitting node -> never evicted.
+    # Rebalances pods that drifted due to soft constraints being evaluated
+    # only at scheduling time. bigpc left the cluster; both plugins are now
+    # inert backstops: RemovePodsViolatingNodeTaints guards any node that
+    # rejoins with a taint, RemovePodsViolatingNodeAffinity guards any future
+    # preferred-affinity workload. No pods currently match either rule.
     deschedulerPolicy:
       maxNoOfPodsToEvictPerNode: 2
       maxNoOfPodsToEvictPerNamespace: 3
@@ -36,11 +30,6 @@ spec:
               args:
                 nodeFit: true
                 minPodAge: 15m
-                # Jellyfin/ollama/immich use emptyDir/hostPath volumes; the
-                # default PodsWithLocalStorage protection would block them
-                # from ever being rebalanced. Safe to disable here: such pods
-                # either should move to bigpc (the goal) or are pinned by hard
-                # affinities (frigate, nfs-server) that NodeFit still enforces.
                 podProtections:
                   defaultDisabled:
                     - PodsWithLocalStorage

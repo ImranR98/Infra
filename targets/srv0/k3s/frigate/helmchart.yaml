@@ -19,9 +19,10 @@ spec:
       privileged: true
     image:
       repository: ghcr.io/blakeblackshear/frigate
-      # ROCm build: proper AMD GPU stack (vainfo works on the RX 9070/RDNA4).
-      # The standard image's bundled Mesa hangs probing RDNA4.
-      tag: 0.17.2-rocm
+      # Standard build: decode runs on srv0's Iris Xe iGPU via VAAPI. The
+      # ROCm build was only needed for bigpc's RX 9070 (RDNA4) — its bundled
+      # Mesa hangs probing that GPU.
+      tag: 0.17.2
     env:
       # {FRIGATE_*_PASSWORD} tokens in `config` are substituted by Frigate from these env vars
       FRIGATE_RTSP_PASSWORD: "$FRIGATE_RTSP_PASSWORD"
@@ -33,16 +34,26 @@ spec:
         user: frigate
         password: '{FRIGATE_MQTT_PASSWORD}'
       ffmpeg:
-        # VAAPI decode pinned to the discrete GPU (renderD129 = RX 9070; the iGPU
-        # is renderD128). Explicit device because the auto-selector probes devices
-        # in arbitrary order. -hwaccel_output_format nv12: decode on the GPU but
-        # deliver CPU frames, so the detect/record filter chains (fps, scale) work.
-        # The ROCm image could also drive an ONNX detector (auto-detected) later.
-        hwaccel_args: -hwaccel_flags allow_profile_mismatch -hwaccel vaapi -hwaccel_device /dev/dri/renderD129 -hwaccel_output_format nv12
+        # VAAPI decode on srv0's Iris Xe (renderD128). Explicit device because
+        # the auto-selector probes devices in arbitrary order. -hwaccel_output_format
+        # nv12: decode on the GPU but deliver CPU frames, so the detect/record
+        # filter chains (fps, scale) work. The standard image auto-detects
+        # OpenVINO on the Intel GPU for the detector and enrichments.
+        hwaccel_args: -hwaccel_flags allow_profile_mismatch -hwaccel vaapi -hwaccel_device /dev/dri/renderD128 -hwaccel_output_format nv12
         retry_interval: 5
       detectors:
-        cpu:
-          type: cpu
+        openvino:
+          type: openvino
+          device: GPU
+      # Bundled OpenVINO default model (SSDLite MobileNet v2, FP16 IR).
+      # device: GPU = the Iris Xe iGPU via OpenVINO.
+      model:
+        width: 300
+        height: 300
+        input_tensor: nhwc
+        input_pixel_format: bgr
+        path: /openvino-model/ssdlite_mobilenet_v2.xml
+        labelmap_path: /openvino-model/coco_91cl_bkgr.txt
       # Deployment-specific config (go2rtc streams, cameras) comes from
       # FRIGATE_ADDITIONAL_CONFIG in targets/srv0/VARS.template.sh
       $FRIGATE_ADDITIONAL_CONFIG
@@ -52,8 +63,9 @@ spec:
         existingClaim: frigate-config-pvc
       media:
         enabled: false
-    # NFS-backed media (recordings stay on srv0's $SECONDARY_STORAGE_PATH/frigate,
-    # exported by the nfs-server component) while Frigate runs on the GPU node
+    # NFS-backed media: recordings stay on srv0's $SECONDARY_STORAGE_PATH/frigate
+    # (exported by the nfs-server component). Kept on NFS deliberately so the
+    # pod can move nodes without moving data.
     extraVolumes:
       - name: frigate-media
         persistentVolumeClaim:
@@ -61,32 +73,14 @@ spec:
       - name: dri
         hostPath:
           path: /dev/dri
-      - name: kfd
-        hostPath:
-          path: /dev/kfd
     extraVolumeMounts:
       - name: frigate-media
         mountPath: /media/frigate
       - name: dri
         mountPath: /dev/dri
-      - name: kfd
-        mountPath: /dev/kfd
-    # Bigpc is a hard requirement: the ROCm image needs /dev/kfd and decode is
-    # pinned to the discrete GPU (renderD129), neither of which exists on srv0.
-    affinity:
-      nodeAffinity:
-        requiredDuringSchedulingIgnoredDuringExecution:
-          nodeSelectorTerms:
-            - matchExpressions:
-                - key: has-amdgpu
-                  operator: In
-                  values:
-                    - "true"
-    tolerations:
-      - key: scheduling-discouraged
-        operator: Equal
-        value: "true"
-        effect: PreferNoSchedule
+    # No node affinity/tolerations: bigpc's scheduling-discouraged taint keeps
+    # the pod on srv0; the descheduler evicts any drift. /dev/kfd + the ROCm
+    # build were bigpc (RX 9070) requirements and are gone with it.
     resources:
       limits:
         memory: 2Gi

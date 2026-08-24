@@ -20,7 +20,7 @@ apps:
   - mdscl
   - mosquitto
   - homeassistant
-  - ollama
+  - open-webui
   - nextcloud
   - freshrss
   - linkwarden

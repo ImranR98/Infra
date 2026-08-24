@@ -15,7 +15,9 @@ spec:
     ollama:
       enabled: false
     ollamaUrls:
-      - http://ollama.apps.svc.cluster.local:11434
+      # External Ollama on bigpc (compose), behind the bearer-token nginx gate.
+      # The per-connection API key comes from OLLAMA_API_CONFIGS below.
+      - http://192.168.8.226:11435
     persistence:
       enabled: true
       existingClaim: open-webui-data-pvc
@@ -56,6 +58,9 @@ spec:
         value: "groups"
       - name: WEBUI_URL
         value: "https://gpt.$SERVICES_DOMAIN"
+      # Bearer token for the external Ollama gate (index 0 of ollamaUrls).
+      - name: OLLAMA_API_CONFIGS
+        value: '{"0":{"key":"$OLLAMA_AUTH_TOKEN"}}'
       - name: ENABLE_LOGIN_FORM
         value: "false"
       - name: OAUTH_CODE_CHALLENGE_METHOD
