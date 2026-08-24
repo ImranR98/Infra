@@ -9,24 +9,13 @@ SSH_USER="${2:?Usage: $0 <client-ip> <ssh-user> [agent|server]}"
 ROLE="${3:-agent}"
 case "$ROLE" in agent|server) ;; *) echo "Usage: $0 <client-ip> <ssh-user> [agent|server]" >&2; exit 1 ;; esac
 
-# The interactive prompts (GPU label, taint, Longhorn) need a TTY. Invocations
-# over ssh without -t (or with closed stdin) would otherwise have every `read`
-# hit EOF instantly and silently default to "n". Re-exec the whole join under
-# a pseudo-TTY (python3 pty.spawn, or `script` if available): prompts are
-# shown and answers typed on the (possibly piped) stdin are forwarded into it.
+# The node-configuration questions (GPU label, taint, Longhorn) are read from
+# this terminal. A non-interactive invocation (e.g. ssh without -t) would make
+# every `read` hit EOF instantly and silently default to "n" — refuse instead.
 if [ ! -t 0 ]; then
-    REJOIN_CMD="cd '$INFRA_ROOT' && INFRA_INTERACTIVE=true ./infra.sh '$TARGET' k3s join '$CLIENT_IP' '$SSH_USER' '$ROLE'"
-    if command -v script >/dev/null 2>&1; then
-        echo "[$(date +%T)] Non-interactive stdin; re-running under a pseudo-TTY for interactive prompts..."
-        exec script -qec "$REJOIN_CMD" /dev/null
-    elif command -v python3 >/dev/null 2>&1; then
-        echo "[$(date +%T)] Non-interactive stdin; re-running under a pseudo-TTY for interactive prompts..."
-        exec python3 -c 'import pty, sys; pty.spawn(["/bin/bash", "-c", sys.argv[1]])' "$REJOIN_CMD"
-    else
-        echo "Error: non-interactive stdin and no pty allocator (script/python3) available." >&2
-        echo "Run the join in a real terminal or with: ssh -t <server> ..." >&2
-        exit 1
-    fi
+    echo "Error: the join prompts need an interactive terminal on the control plane." >&2
+    echo "Run this command in a terminal on the server, or with: ssh -t <server> ..." >&2
+    exit 1
 fi
 
 echo "[$(date +%T)] Args: CLIENT_IP=$CLIENT_IP SSH_USER=$SSH_USER ROLE=$ROLE"
@@ -157,7 +146,9 @@ if [ -z "$NODE_NAME" ]; then
     echo "[$(date +%T)] Warning: could not resolve node name from IP $CLIENT_IP, guessing $NODE_NAME"
 fi
 echo ""
-echo "=== Node configuration for $NODE_NAME ==="
+echo "=================================================================="
+echo " Answer the following questions to configure node: $NODE_NAME"
+echo "=================================================================="
 
 read -r -p "Does $NODE_NAME have an AMD GPU? [y/N] " response
 case "$response" in [yY]|[yY][eE][sS])
