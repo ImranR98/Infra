@@ -178,9 +178,15 @@ pvc_backup_pod_yaml() {
         done
     fi
     local node_selector=""
+    local tolerations=""
     if [ -n "$node" ]; then
         node_selector="  nodeSelector:
     kubernetes.io/hostname: $node"
+        # Tolerate the PreferNoSchedule taint used on desktop nodes (bigpc).
+        tolerations="  tolerations:
+    - key: scheduling-discouraged
+      operator: Exists
+      effect: PreferNoSchedule"
     fi
     cat <<PODEOF
 apiVersion: v1
@@ -199,6 +205,7 @@ spec:
       level: "s0"
   restartPolicy: Never
 $node_selector
+$tolerations
   containers:
   - name: backup
     image: debian:bookworm-slim

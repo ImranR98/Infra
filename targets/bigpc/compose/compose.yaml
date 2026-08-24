@@ -55,48 +55,6 @@ services:
             DOCKER_HOST: "unix:///socket/docker.sock"
         logging: *logging
 
-    ollama:
-        container_name: ollama
-        restart: unless-stopped
-        # ROCm build needed for the RX 9070. Floating `rocm` tag: watchtower
-        # auto-updates ollama while the tag itself can never resolve to a CPU
-        # build. No mem_limit — the ROCm runtime and loaded models size freely.
-        # Security: OLLAMA_HOST=127.0.0.1 binds loopback INSIDE this netns, so
-        # ollama is reachable from nowhere — not bigpc's localhost, not the LAN,
-        # not the docker bridge — except the ollama-gate container, which shares
-        # this netns. Port 11435 is published only so LAN clients can reach the
-        # gate (nginx listens on it inside this same netns).
-        image: ollama/ollama:rocm
-        privileged: true
-        ports:
-            - "11435:11435"
-        environment:
-            - OLLAMA_HOST=127.0.0.1:11434
-            # Store root must match the k8s-era layout (blobs/manifests directly
-            # under /var/lib/ollama, not /var/lib/ollama/models) so the existing
-            # models are picked up without re-downloading.
-            - OLLAMA_MODELS=/root/.ollama
-        volumes:
-            - /var/lib/ollama:/root/.ollama
-        logging: *logging
-
-    ollama-gate:
-        container_name: ollama-gate
-        restart: unless-stopped
-        image: nginx:1.27-alpine
-        mem_limit: 512M
-        # Shares ollama's network namespace: the bearer-token gate is the only
-        # thing that can reach ollama (via 127.0.0.1:11434 in the shared netns),
-        # and its :11435 listener is the only published entry point.
-        network_mode: "container:ollama"
-        volumes:
-            - $COMPOSE_STATE_DIR/ollama-gate/nginx.conf:/etc/nginx/conf.d/gate.conf:ro
-        depends_on:
-            - ollama
-        labels:
-            - "com.centurylinklabs.watchtower.enable=false"
-        logging: *logging
-
     syncthing:
         image: syncthing/syncthing
         container_name: syncthing

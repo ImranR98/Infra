@@ -14,11 +14,14 @@ spec:
   valuesContent: |-
     kind: CronJob
     schedule: "*/2 * * * *"
-    # Rebalances pods that drifted due to soft constraints being evaluated
-    # only at scheduling time. bigpc left the cluster; both plugins are now
-    # inert backstops: RemovePodsViolatingNodeTaints guards any node that
-    # rejoins with a taint, RemovePodsViolatingNodeAffinity guards any future
-    # preferred-affinity workload. No pods currently match either rule.
+    # Rebalances pods that drifted due to soft affinities / PreferNoSchedule
+    # taints being evaluated only at scheduling time:
+    #   - RemovePodsViolatingNodeTaints: evicts pods on bigpc that do NOT
+    #     tolerate its scheduling-discouraged taint (only if they fit
+    #     elsewhere, i.e. srv0). Ollama tolerates it -> never touched.
+    #   - RemovePodsViolatingNodeAffinity: evicts pods whose PREFERRED node
+    #     (has-amdgpu=true) can now fit them; while bigpc is unavailable
+    #     there is no better node -> no eviction, so no thrash loop.
     deschedulerPolicy:
       maxNoOfPodsToEvictPerNode: 2
       maxNoOfPodsToEvictPerNamespace: 3

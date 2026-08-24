@@ -139,6 +139,16 @@ fi
 echo ""
 echo "=== Node configuration for $NODE_NAME ==="
 
+# The prompts below require a TTY. On a non-interactive stdin every `read`
+# hits EOF instantly and silently defaults to "n" — which would leave the
+# node unlabeled/untaunted. Refuse instead of guessing.
+if [ ! -t 0 ]; then
+    echo "Error: node configuration prompts need an interactive TTY." >&2
+    echo "Re-run: ./infra.sh $TARGET k3s join <client-ip> <ssh-user> [agent|server]" >&2
+    echo "in a real terminal, or pipe answers (e.g. printf 'y\\ny\\nn\\n' | ...)." >&2
+    exit 1
+fi
+
 read -r -p "Does $NODE_NAME have an AMD GPU? [y/N] " response
 case "$response" in [yY]|[yY][eE][sS])
     kubectl label node "$NODE_NAME" has-amdgpu=true --overwrite
@@ -163,6 +173,11 @@ case "$response" in [yY]|[yY][eE][sS])
     echo "Longhorn replica count auto-incremented: $CURRENT_REPLICAS → $NEW_REPLICAS"
     ;;
 *)
+    # Without this label, Longhorn's create-default-disk setting creates a
+    # disk on every unlabeled node — preventing it is required to keep the
+    # node replica-free (volume attach still works, replicas are not placed).
+    kubectl label node "$NODE_NAME" node.longhorn.io/create-default-disk=false --overwrite
+    echo "Labeled $NODE_NAME with node.longhorn.io/create-default-disk=false."
     echo "Longhorn will attach existing volumes to $NODE_NAME but will not place replicas there."
     ;;
 esac

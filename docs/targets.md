@@ -22,16 +22,17 @@ The main homelab server. Runs a full K3s cluster with ~20 application workloads,
 
 - **Orchestrator:** K3s (control-plane node) + Docker Compose sidecar
 - **K3s workloads (base):** Namespaces, NFS server, NFS CSI driver, cert-manager, Traefik ingress, CrowdSec, Authelia SSO, ntfy notifications
-- **K3s workloads (apps):** Immich, Jellyfin, Navidrome, Home Assistant, Nextcloud, Open WebUI, FreshRSS, mosquitto, Syncthing, mdScl, OPodSync, D$CPLN, OpenCanary, FMD, logtfy, Frigate NVR (consumes the `rpi` webcam stream; runs on srv0 with the OpenVINO detector on the Iris Xe iGPU; recordings via the in-cluster NFS export `$SECONDARY_STORAGE_PATH/frigate` — kept on NFS deliberately so the pod can move nodes; wired to mosquitto MQTT and the Home Assistant integration, whose init container auto-installs and auto-updates the Frigate integration on every pod start — no HACS). Jellyfin, Immich ML and Frigate use srv0's Intel Iris Xe iGPU (VAAPI transcode/decode + OpenVINO inference); placement relies on taint-driven scheduling — bigpc carries a `scheduling-discouraged` taint and these pods tolerate nothing, so they land on srv0. Open WebUI reaches Ollama over the LAN through a bearer-token nginx gate on bigpc (port 11435).
+- **K3s workloads (apps):** Immich, Jellyfin, Navidrome, Home Assistant, Nextcloud, Ollama + Open WebUI, FreshRSS, mosquitto, Syncthing, mdScl, OPodSync, D$CPLN, OpenCanary, FMD, logtfy, Frigate NVR (consumes the `rpi` webcam stream; runs on srv0 with the OpenVINO detector on the Iris Xe iGPU; recordings via the in-cluster NFS export `$SECONDARY_STORAGE_PATH/frigate` — kept on NFS deliberately so the pod can move nodes; wired to mosquitto MQTT and the Home Assistant integration, whose init container auto-installs and auto-updates the Frigate integration on every pod start — no HACS). Jellyfin, Immich ML and Frigate use srv0's Intel Iris Xe iGPU (VAAPI transcode/decode + OpenVINO inference). Ollama runs on the `bigpc` agent node (RX 9070/ROCm); Open WebUI talks to it in-cluster — no LAN exposure, no auth.
 - **Compose:** FRPC sidecar (tunnels K3s services through the FRP server)
 - **Special:** LUKS-aware preboot FRPC for remote SSH unlock of encrypted root filesystem
 
-### bigpc — Desktop workstation (AMD GPU, Ollama host)
+### bigpc — Desktop workstation (AMD GPU, K3s agent)
 
-A desktop machine running a Docker Compose stack (socket proxy, Watchtower, Syncthing, Ollama). Its RX 9070 (ROCm) serves Ollama LLM inference to the cluster over the LAN: the raw Ollama API is bound to loopback inside a shared network namespace with a small nginx bearer-token gate (port 11435) as the only entry point — clients must present `OLLAMA_AUTH_TOKEN` from `secrets/VARS.bigpc.sh` / `secrets/VARS.srv0.sh`. bigpc is **not** a K3s node anymore; its `scheduling-discouraged` taint history is kept in `commands/k3s/join.sh` for future GPU nodes.
+A desktop machine running a small Docker Compose stack (socket proxy, Watchtower, Syncthing) plus a K3s agent whose only workload is Ollama (LLM inference on the RX 9070 via ROCm). Ollama runs exclusively in-cluster — no LAN exposure; Open WebUI reaches it over cluster networking (`ollama.apps.svc.cluster.local:11434`). The node carries the `has-amdgpu=true` label and the `scheduling-discouraged` PreferNoSchedule taint; it stores **no** Longhorn replicas (no default disk), but stays a Longhorn node so volumes can be attached on it if ever needed.
 
-- **Orchestrator:** Docker Compose
-- **Services:** dockerproxy_priv (read-only Docker socket proxy), Watchtower (with rollback), Syncthing (host network), Ollama (floating `rocm` tag, auto-updated by Watchtower, no mem_limit), ollama-gate (nginx bearer gate, shares ollama's network namespace)
+- **Orchestrator:** Docker Compose (sidecar) + K3s agent
+- **Compose services:** dockerproxy_priv (read-only Docker socket proxy), Watchtower (with rollback), Syncthing (host network)
+- **K3s workload:** Ollama (`ollama/ollama:0.32.15-rocm`, pinned + Renovate-managed; preferred `has-amdgpu` affinity; tolerates `scheduling-discouraged`)
 - **Special:** LUKS-aware preboot crypt-ssh — embeds an SSH server in the initramfs for direct LAN unlock of the encrypted root filesystem on port 8887 (no FRP tunnel)
 
 ### vps0 — Web-services VPS + FRP server

@@ -246,11 +246,6 @@ export NEXTCLOUD_DB_PASSWORD="change_me" # openssl rand -hex 16
 # ====== Copyparty ======
 export COPYPARTY_ADMIN_PASSWORD="changeme" # openssl rand -hex 16
 
-# ====== External Ollama (bigpc) ======
-# Bearer token for the LAN-facing Ollama API gate on bigpc (compose service
-# ollama-gate, port 11435). Shared with secrets/VARS.bigpc.sh — must match.
-export OLLAMA_AUTH_TOKEN="change_me" # openssl rand -hex 32
-
 # ====== FRP ======
 export PROXY_HOST="vps0.example.org"
 # Generate with: ./infra.sh srv0 compose generate-mtls-certs vps0

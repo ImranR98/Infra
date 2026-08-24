@@ -1,0 +1,94 @@
+---
+apiVersion: helm.cattle.io/v1
+kind: HelmChart
+metadata:
+  name: ollama
+  namespace: apps
+spec:
+  chart: ollama
+  repo: https://helm.otwld.com/
+  targetNamespace: apps
+  createNamespace: false
+  failurePolicy: abort
+  version: 1.77.0
+  valuesContent: |-
+    image:
+      repository: ollama/ollama
+      tag: "0.32.15-rocm"
+    volumes:
+      - name: dev-kfd
+        hostPath:
+          path: /dev/kfd
+          type: CharDevice
+      - name: dev-dri
+        hostPath:
+          path: /dev/dri
+      - name: ollama-models
+        hostPath:
+          path: /var/lib/ollama
+          type: DirectoryOrCreate
+    volumeMounts:
+      - name: dev-kfd
+        mountPath: /dev/kfd
+      - name: dev-dri
+        mountPath: /dev/dri
+      - name: ollama-models
+        mountPath: /.ollama
+    securityContext:
+      privileged: true
+    persistentVolume:
+      enabled: false
+    ollama:
+      # Chart always renders its own ollama-data emptyDir volume at this path.
+      # Divert it to an unused path; the real model storage is the hostPath
+      # volume below mounted at /.ollama (per-node models, survives recreates).
+      mountPath: /.ollama-unused
+    initContainers:
+      - name: ollama-models-prep
+        image: fedora:44 # PRESERVE_MAJOR
+        # hostPath volumes do not get fsGroup ownership management, and
+        # DirectoryOrCreate leaves the dir root-owned with var_lib_t label.
+        # Fix ownership for the uid-1000 container and SELinux label so the
+        # container can write, on whichever node the pod is scheduled.
+        command:
+          - sh
+          - -c
+          - |
+            chown -R 1000:1000 /var/lib/ollama
+            chcon -R -t container_file_t /var/lib/ollama
+        securityContext:
+          privileged: true
+          runAsUser: 0
+          runAsGroup: 0
+          seLinuxOptions:
+            type: spc_t
+        volumeMounts:
+          - name: ollama-models
+            mountPath: /var/lib/ollama
+    resources:
+      requests:
+        memory: 2Gi
+    podSecurityContext:
+      fsGroup: $MY_UID
+      runAsUser: $MY_UID
+      runAsGroup: $MY_UID
+    containerSecurityContext:
+      allowPrivilegeEscalation: false
+    affinity:
+      nodeAffinity:
+        preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            preference:
+              matchExpressions:
+                - key: has-amdgpu
+                  operator: In
+                  values:
+                    - "true"
+    tolerations:
+      - key: scheduling-discouraged
+        operator: Equal
+        value: "true"
+        effect: PreferNoSchedule
+    extraEnv:
+      - name: OLLAMA_MODELS
+        value: /.ollama
