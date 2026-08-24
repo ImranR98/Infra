@@ -140,10 +140,17 @@ echo "[$(date +%T)] Cluster ready"
 echo "Ready nodes:"
 kubectl get nodes
 
-NODE_NAME=$(kubectl get nodes -o jsonpath="{.items[?(@.status.addresses[?(@.address=='$CLIENT_IP')].address)].metadata.name}" 2>/dev/null)
+# Resolve the joined node's name from its IP. The old kubectl jsonpath with a
+# nested filter is invalid ("unterminated filter") — under `set -euo pipefail`
+# with stderr discarded it silently killed the script right before the
+# interactive prompts. jq is a documented prereq; fail loudly if unresolved.
+NODE_NAME=$(kubectl get nodes -o json 2>/dev/null | jq -r --arg ip "$CLIENT_IP" '
+    .items[] | select((.status.addresses // []) | any(.address == $ip)) | .metadata.name
+' 2>/dev/null | head -1) || true
 if [ -z "$NODE_NAME" ]; then
-    NODE_NAME=$(hostname)
-    echo "[$(date +%T)] Warning: could not resolve node name from IP $CLIENT_IP, guessing $NODE_NAME"
+    echo "[$(date +%T)] Error: could not find a node with IP $CLIENT_IP in the cluster." >&2
+    echo "The agent may not have registered yet — wait a moment and re-run, or check: kubectl get nodes" >&2
+    exit 1
 fi
 echo ""
 echo "=================================================================="
