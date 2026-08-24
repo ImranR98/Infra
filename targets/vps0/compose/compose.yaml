@@ -508,7 +508,7 @@ services:
             - LLM_API_KEY=$CCT26_LLM_API_KEY
             - NTFY_URL=$CCT26_NTFY_URL
             - NTFY_AUTH=$CCT26_NTFY_AUTH
-            - SCRAPE_INTERVAL_HOURS=48
+            - SCRAPE_INTERVAL_HOURS=168
         labels:
             - "traefik.enable=true"
             - "traefik.http.routers.cct26.rule=Host(`cct26.$CLOUD_SERVICES_DOMAIN`)"
