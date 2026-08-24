@@ -51,7 +51,6 @@ services:
         environment:
             WATCHTOWER_CLEANUP: "true"
             WATCHTOWER_POLL_INTERVAL: 7200
-            WATCHTOWER_ROLLBACK: "true"
             DOCKER_HOST: "unix:///socket/docker.sock"
         logging: *logging
 
