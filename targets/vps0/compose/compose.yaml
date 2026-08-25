@@ -521,6 +521,29 @@ services:
             - traefik
         logging: *logging
 
+    # Attention Game
+    attentiongame:
+        container_name: attentiongame
+        image: imranrdev/attentiongame
+        user: "$MY_UID:$MY_UID"
+        depends_on:
+            - traefik
+        volumes:
+            - $COMPOSE_STATE_DIR/attentiongame:/app/stories/private
+        labels:
+            - "traefik.enable=true"
+            - "traefik.http.routers.attentiongame.rule=Host(`attentiongame.$CLOUD_SERVICES_DOMAIN`)"
+            - "traefik.http.routers.attentiongame.entrypoints=websecure"
+            - "traefik.http.routers.attentiongame.tls.certresolver=le"
+            - "traefik.http.routers.attentiongame.tls=true"
+            - "traefik.http.routers.attentiongame.middlewares=crowdsec-bouncer@file"
+            - "traefik.http.services.attentiongame.loadbalancer.server.port=3000"
+        networks:
+            - traefik
+        restart: unless-stopped
+        mem_limit: 512M
+        logging: *logging
+
     # Owncast Auth - Token-based access control for Owncast viewer
     owncast-auth:
         image: python:3-alpine
