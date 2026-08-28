@@ -5,3 +5,4 @@ resources:
   - prereqs.yaml
   - ingress.yaml
   - qbittorrent.yaml
+  - network-policy.yaml

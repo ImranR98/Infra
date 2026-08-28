@@ -5,3 +5,4 @@ resources:
   - prereqs.yaml
   - linkwarden.yaml
   - ingress.yaml
+  - network-policy.yaml

@@ -1,0 +1,22 @@
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-radarr-ingress
+  namespace: apps
+spec:
+  podSelector:
+    matchLabels:
+      app: radarr
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: prowlarr
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/instance: seerr
+      ports:
+        - port: 7878
+  policyTypes:
+    - Ingress

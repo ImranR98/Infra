@@ -5,3 +5,4 @@ resources:
   - prereqs.yaml
   - ingress.yaml
   - radarr.yaml
+  - network-policy.yaml

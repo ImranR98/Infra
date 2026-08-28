@@ -1,0 +1,19 @@
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-flaresolverr-ingress
+  namespace: apps
+spec:
+  podSelector:
+    matchLabels:
+      app: flaresolverr
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: prowlarr
+      ports:
+        - port: 8191
+  policyTypes:
+    - Ingress

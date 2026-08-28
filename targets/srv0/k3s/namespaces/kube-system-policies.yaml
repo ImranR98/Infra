@@ -20,7 +20,7 @@ spec:
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: allow-coredns-udp
+  name: allow-coredns
   namespace: kube-system
 spec:
   podSelector:
@@ -29,6 +29,8 @@ spec:
   ingress:
     - ports:
         - protocol: UDP
+          port: 53
+        - protocol: TCP
           port: 53
   policyTypes:
     - Ingress

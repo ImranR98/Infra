@@ -2,37 +2,37 @@
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: allow-openwebui-redis-ingress
+  name: allow-linkwarden-meilisearch-ingress
   namespace: apps
 spec:
   podSelector:
     matchLabels:
-      app.kubernetes.io/component: open-webui-redis
+      app: linkwarden-meilisearch
   ingress:
     - from:
         - podSelector:
             matchLabels:
-              app.kubernetes.io/instance: open-webui
+              app: linkwarden
       ports:
-        - port: 6379
+        - port: 7700
   policyTypes:
     - Ingress
 ---
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: allow-openwebui-pipelines-ingress
+  name: allow-linkwarden-postgresql-ingress
   namespace: apps
 spec:
   podSelector:
     matchLabels:
-      app.kubernetes.io/component: pipelines
+      app: linkwarden-postgresql
   ingress:
     - from:
         - podSelector:
             matchLabels:
-              app.kubernetes.io/component: open-webui
+              app: linkwarden
       ports:
-        - port: 9099
+        - port: 5432
   policyTypes:
     - Ingress

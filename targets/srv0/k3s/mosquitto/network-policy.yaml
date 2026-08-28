@@ -17,5 +17,11 @@ spec:
         - port: 1883
         - port: 8883
         - port: 9001
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/instance: frigate
+      ports:
+        - port: 1883
   policyTypes:
     - Ingress
