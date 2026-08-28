@@ -10,7 +10,7 @@ spec:
   failurePolicy: abort
   targetNamespace: base
   createNamespace: false
-  version: 0.11.6
+  version: 0.11.20
   valuesContent: |-
     pod:
       kind: Deployment
