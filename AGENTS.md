@@ -101,12 +101,13 @@ current_target/compose_live_state/   # Rendered Compose state (gitignored, ephem
 
 ## Updates (Renovate)
 
-- `renovate.json` at repo root — three regex customManagers scan K3s YAML files only (`targets/.+/k3s/.*\.yaml$`) for Docker images and Helm charts.
+- `renovate.json` at repo root — four regex customManagers scan K3s YAML files only (`targets/.+/k3s/.*\.yaml$`) for Docker images, Helm charts, and K3s upgrade-plan versions.
 - **`--require-config=required`** — Renovate has no default behavior; only scans what `renovate.json` defines.
 - `_apply_updates.py` reads Renovate debug output via stdin and modifies source files directly (no PRs).
 - **`# PRESERVE_FULL`** comment — skip this line entirely during updates.
 - **`# PRESERVE_MAJOR`** comment — skip major version bumps for this line.
 - Traefik plugins are checked separately via GitHub Releases API (not via Renovate).
+- K3s binary upgrades: the `system-upgrade` component (system-upgrade-controller + `server-plan`/`agent-plan`). Plan versions are Renovate-managed; `prep.sh` always applies the latest SUC manifests from GitHub. Apply with `./infra.sh <target> k3s deploy system-upgrade apply` and watch `kubectl -n system-upgrade get plans,jobs`.
 - Post-update: `git diff` → `./infra.sh <target> validate`.
 
 ## Key environment variables (always available)

@@ -12,6 +12,7 @@ base:
   - pvc-backup
   - ntfy
   - descheduler
+  - system-upgrade
 apps:
   - immich
   - logtfy

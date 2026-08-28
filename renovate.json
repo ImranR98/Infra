@@ -27,6 +27,16 @@
       ],
       "datasourceTemplate": "helm",
       "versioningTemplate": "semver"
+    },
+    {
+      "customType": "regex",
+      "fileMatch": ["targets/.+/k3s/.*\\.yaml$"],
+      "matchStrings": [
+        "version:\\s*\"?v(?<currentValue>\\d+\\.\\d+\\.\\d+\\+k3s\\d+)\"?"
+      ],
+      "depNameTemplate": "k3s-io/k3s",
+      "datasourceTemplate": "github-releases",
+      "versioningTemplate": "regex:^v?(?<major>\\d+)\\.(?<minor>\\d+)\\.(?<patch>\\d+)\\+k3s(?<build>\\d+)$"
     }
   ],
   "packageRules": [

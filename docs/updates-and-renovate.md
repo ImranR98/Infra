@@ -30,11 +30,12 @@ renovate.json config
 
 ### Custom managers
 
-Three regex-based managers extract dependency information from K3s YAML files:
+Four regex-based managers extract dependency information from K3s YAML files:
 
 1. **Docker images** — matches `image: <name>:<version>` patterns
 2. **Helm chart repositories** — matches `repository:` / `tag:` pairs (used by HelmChart CRDs with inline Docker images)
 3. **Helm charts** — matches `chart:` / `repo:` / `version:` triples for full Helm chart dependencies
+4. **K3s upgrade plans** — matches `version: vX.Y.Z+k3sN` in `system-upgrade` plan YAMLs, sourced from `k3s-io/k3s` GitHub releases with custom regex versioning (RC tags excluded)
 
 All managers target K3s YAML files (`targets/.+/k3s/.*\.yaml$`).
 
@@ -93,5 +94,7 @@ After running `update`:
 2. Validate: `./infra.sh <target> validate`
 3. Test the deployment if possible
 4. Commit the changes
+
+For K3s plan version bumps, apply the updated plans with `./infra.sh <target> k3s deploy system-upgrade apply`, then watch the rollout with `kubectl -n system-upgrade get plans,jobs` and verify with `kubectl get nodes`. The system-upgrade-controller itself is not version-pinned: `prep.sh` applies the latest release manifests from GitHub on every deploy.
 
 The update command is designed to be run periodically as part of routine maintenance. It handles the mechanical work of finding and applying version bumps; the human reviews and validates.
