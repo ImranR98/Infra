@@ -14,6 +14,11 @@ spec:
   valuesContent: |-
     kind: CronJob
     schedule: "*/2 * * * *"
+    # A failed run (e.g. apiserver down during a k3s restart) retries up to
+    # backoffLimit times, leaving a trail of Error pods. The schedule is only
+    # 2 minutes, so the next run supersedes any failure — keep only the most
+    # recent failed job (its pods' logs) for debugging.
+    failedJobsHistoryLimit: 1
     # Rebalances pods that drifted due to soft affinities / PreferNoSchedule
     # taints being evaluated only at scheduling time:
     #   - RemovePodsViolatingNodeTaints: evicts pods on bigpc that do NOT
