@@ -180,7 +180,7 @@ spec:
               value: master
           volumeMounts:
             - name: data
-              mountPath: /data
+              mountPath: /bitnami/redis/data
           resources:
             limits:
               memory: 2Gi
