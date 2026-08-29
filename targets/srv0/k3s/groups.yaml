@@ -33,6 +33,5 @@ apps:
   - fmd
   - plik
   - syncthing
-  - copyparty
   - headlamp
   - frigate
