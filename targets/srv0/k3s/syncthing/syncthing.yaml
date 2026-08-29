@@ -54,14 +54,19 @@ spec:
             timeoutSeconds: 5
             failureThreshold: 3
           volumeMounts:
-            - name: host-maindir-parent
-              mountPath: /var/syncthing/hostmainparent
+            - name: host-maindir
+              mountPath: /var/syncthing/hostmainparent/Main
+            - name: host-devicesync
+              mountPath: /var/syncthing/hostmainparent/deviceSync
             - name: syncthing-config
               mountPath: /var/syncthing/config
       volumes:
-        - name: host-maindir-parent
+        - name: host-maindir
           persistentVolumeClaim:
-            claimName: hostpath-main-node-main-parent-pvc
+            claimName: hostpath-main-node-main-pvc
+        - name: host-devicesync
+          persistentVolumeClaim:
+            claimName: hostpath-main-node-devicesync-pvc
         - name: syncthing-config
           persistentVolumeClaim:
             claimName: syncthing-config-pvc
