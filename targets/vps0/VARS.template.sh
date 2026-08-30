@@ -46,6 +46,9 @@ export PIXELNTFY_TOPIC="change_me" # openssl rand -hex 16
 # ====== SB25 Birthday Page ======
 export SB25_AUTH_TOKEN="change_me" # openssl rand -hex 16
 
+# ====== Moving Sale ======
+export MOVING_SALE_ADMIN_PASSWORD="change_me" # openssl rand -hex 16
+
 # ====== CCT26 ======
 export CCT26_REDDIT_COOKIE="change_me"  # Reddit session cookie
 export CCT26_LLM_BASE_URL="change_me"   # LLM API base URL

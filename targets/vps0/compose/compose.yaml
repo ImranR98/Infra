@@ -544,6 +544,37 @@ services:
         mem_limit: 512M
         logging: *logging
 
+    # Moving Sale - Moving Sale 2027
+    moving-sale:
+        container_name: moving-sale
+        image: imranrdev/moving-sale-20
+        depends_on:
+            - traefik
+        labels:
+            - "traefik.enable=true"
+            - "traefik.http.routers.moving-sale.rule=Host(`sale.$CLOUD_SERVICES_DOMAIN`)"
+            - "traefik.http.routers.moving-sale.entrypoints=websecure"
+            - "traefik.http.routers.moving-sale.tls.certresolver=le"
+            - "traefik.http.routers.moving-sale.tls=true"
+            - "traefik.http.routers.moving-sale.middlewares=crowdsec-bouncer@file,authelia@file,geoblock@file"
+            - "traefik.http.services.moving-sale.loadbalancer.server.port=3000"
+            - "com.centurylinklabs.watchtower.enable=false"
+        environment:
+            - ADMIN_PASSWORD=$MOVING_SALE_ADMIN_PASSWORD
+            - CONTACT_EMAIL=$DOMAIN_OWNER_EMAIL
+            - NTFY_URL=https://ntfy.home.$BASE_SERVICES_DOMAIN/moving_sale_2027
+            - NTFY_AUTH=Bearer $NTFY_WRITE_ONLY_ACCOUNT_TOKEN
+            - PICKUP_TEXT=All prices negotiable. Pickup location flexible.
+            - PLAUSIBLE_SCRIPT=https://plausible.example.org/js/pa-J_AkWpSvrUf5kFGRb_4FR.js
+        volumes:
+            - $COMPOSE_STATE_DIR/moving-sale/data:/app/data
+            - $COMPOSE_STATE_DIR/moving-sale/uploads:/app/uploads
+        networks:
+            - traefik
+        restart: unless-stopped
+        mem_limit: 512M
+        logging: *logging
+
     # Owncast Auth - Token-based access control for Owncast viewer
     owncast-auth:
         image: python:3-alpine
