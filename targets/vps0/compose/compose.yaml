@@ -547,7 +547,7 @@ services:
     # Moving Sale - Moving Sale 2027
     moving-sale:
         container_name: moving-sale
-        image: imranrdev/moving-sale-20
+        image: imranrdev/moving-sale-2027
         depends_on:
             - traefik
         labels:
