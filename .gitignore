@@ -3,6 +3,9 @@
 /k3s_state_backups/
 /VARS.sh
 /VARS.*.sh
+/state/
+/vars/
+/temp
 /secrets/
 ~*
 **/__pycache__
