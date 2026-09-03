@@ -32,11 +32,9 @@ spec:
       allowPrivilegeEscalation: true
       readOnlyRootFilesystem: false
     defaultVolumes:
-      # emptyDir instead of the chart's hostPath /run/promtail: an emptyDir
-      # carries the pod's SELinux MCS label, so the non-privileged container
-      # can write its positions file on SELinux hosts.
       - name: run
-        emptyDir: {}
+        hostPath:
+          path: /run/promtail
       - name: pods
         hostPath:
           path: /var/log/pods
@@ -46,8 +44,3 @@ spec:
       - name: pods
         mountPath: /var/log/pods
         readOnly: true
-    resources:
-      requests:
-        memory: 128Mi
-      limits:
-        memory: 512Mi

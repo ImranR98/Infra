@@ -4,6 +4,19 @@ kind: Kustomization
 resources:
   - helmchart.yaml
   - mimir.yaml
+  - loki.yaml
+  - promtail.yaml
   - ingress.yaml
   - prereqs.yaml
   - network-policy.yaml
+configMapGenerator:
+  # Custom log-browsing dashboard, auto-imported by the Grafana sidecar via
+  # the grafana_dashboard: "1" label (stable name, no hash suffix).
+  - name: app-logs-dashboard
+    namespace: base
+    files:
+      - app-logs-dashboard.json
+    options:
+      disableNameSuffixHash: true
+      labels:
+        grafana_dashboard: "1"

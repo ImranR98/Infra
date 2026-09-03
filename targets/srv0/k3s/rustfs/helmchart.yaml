@@ -26,21 +26,12 @@ spec:
     config:
       rustfs:
         console_enable: "true"
-        scanner:
-          # Single-node, single-drive: slow preset keeps idle scanner CPU low
-          # (see docs/operations/scanner-runtime-controls.md upstream).
-          speed: "slow"
+        # INFO is per-operation span tracing (~350k lines/hr of noise);
+        # warn keeps real signal: errors, disk failures, healing events.
+        log_level: "warn"
     # No web exposure: console (9001) and S3 API (9000) stay cluster-internal.
     ingress:
       enabled: false
-    affinity:
-      podAntiAffinity:
-        enabled: false
-    resources:
-      limits:
-        memory: 2Gi
-      requests:
-        memory: 128Mi
     storageclass:
       name: longhorn
       dataStorageSize: 200Gi

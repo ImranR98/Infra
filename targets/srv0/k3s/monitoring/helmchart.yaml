@@ -19,8 +19,6 @@ spec:
     prometheus:
       prometheusSpec:
         replicas: 1
-        # Short local retention: Mimir is the long-term store (remoteWrite below).
-        retention: 7d
         resources:
           requests:
             memory: 128Mi
@@ -38,13 +36,6 @@ spec:
         remoteWrite:
           - url: http://mimir.base.svc.cluster.local:8080/api/v1/push
 
-    prometheusOperator:
-      resources:
-        requests:
-          memory: 128Mi
-        limits:
-          memory: 512Mi
-
     grafana:
       enabled: true
       adminPassword: "$GRAFANA_ADMIN_PASSWORD"
@@ -61,6 +52,11 @@ spec:
       grafana.ini:
         server:
           root_url: https://grafana.$SERVICES_DOMAIN
+        auth:
+          # OIDC-only UI: no local username/password form. Recovery if
+          # Authelia ever breaks: kubectl -n base exec deploy/... grafana-cli
+          # admin reset-admin-password.
+          disable_login_form: true
         auth.generic_oauth:
           enabled: true
           name: Authelia
@@ -84,19 +80,9 @@ spec:
           access: proxy
           isDefault: false
 
-    kube-state-metrics:
-      resources:
-        requests:
-          memory: 128Mi
-        limits:
-          memory: 512Mi
+    kube-state-metrics: {}
 
-    prometheus-node-exporter:
-      resources:
-        requests:
-          memory: 128Mi
-        limits:
-          memory: 512Mi
+    prometheus-node-exporter: {}
 
     # K3s runs etcd/controller-manager/scheduler/kube-proxy embedded without
     # scrapeable endpoints - their ServiceMonitors would just fail forever.

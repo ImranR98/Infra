@@ -30,7 +30,7 @@ data:
       require_certificate false
     listener 9001
       protocol websockets
-    log_type all
+    log_type error warning notice
 ---
 apiVersion: v1
 kind: Secret

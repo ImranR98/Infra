@@ -72,11 +72,9 @@ spec:
       limits_config:
         # 90 days of logs; compactor enforces this against the object store.
         retention_period: 2160h
-        # Keep the 7d default: the first tail of a pre-existing docker json
-        # log would otherwise ship months of history through Loki -> RustFS
-        # -> Longhorn and saturate the node's storage path (old batches are
-        # dropped with a fast 400 instead).
-        reject_old_samples: true
+        # NOTE: keep reject_old_samples at its default (true). Disabling it
+        # once shipped months of historical docker logs through Loki ->
+        # RustFS -> Longhorn and saturated the node's storage path.
     chunksCache:
       enabled: false
     resultsCache:
