@@ -286,3 +286,12 @@ export MTLS_PREBOOT_CLIENT_KEY="$(cat <<'MTLS_CERT_EOF'
 -----END PRIVATE KEY-----
 MTLS_CERT_EOF
 )"
+
+# ====== Observability ======
+export RUSTFS_ACCESS_KEY="change_me" # openssl rand -hex 16
+export RUSTFS_SECRET_KEY="change_me" # openssl rand -hex 32
+export GRAFANA_ADMIN_PASSWORD="change_me" # openssl rand -base64 32
+# Same convention as the other Authelia OIDC clients: the plaintext secret
+# Grafana presents as its OIDC client secret (the _HASHED form is mounted
+# into Authelia via authelia/prereqs.yaml).
+export AUTHELIA_GRAFANA_CLIENT_SECRET_HASHABLE="change_me" # docker run authelia/authelia:latest authelia crypto hash generate pbkdf2 --variant sha512 --random --random.length 72 --random.charset rfc3986

@@ -13,6 +13,9 @@ base:
   - ntfy
   - descheduler
   - system-upgrade
+  - rustfs
+  - monitoring
+  - logging
 apps:
   - immich
   - logtfy

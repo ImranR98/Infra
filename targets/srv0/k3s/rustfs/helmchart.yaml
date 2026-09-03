@@ -1,0 +1,47 @@
+---
+apiVersion: helm.cattle.io/v1
+kind: HelmChart
+metadata:
+  name: rustfs
+  namespace: base
+spec:
+  chart: rustfs
+  repo: https://charts.rustfs.com
+  failurePolicy: abort
+  targetNamespace: base
+  createNamespace: false
+  version: 1.0.0-rc.5
+  valuesContent: |-
+    fullnameOverride: rustfs
+    replicaCount: 1
+    mode:
+      standalone:
+        enabled: true
+      distributed:
+        enabled: false
+    secret:
+      rustfs:
+        access_key: "$RUSTFS_ACCESS_KEY"
+        secret_key: "$RUSTFS_SECRET_KEY"
+    config:
+      rustfs:
+        console_enable: "true"
+        scanner:
+          # Single-node, single-drive: slow preset keeps idle scanner CPU low
+          # (see docs/operations/scanner-runtime-controls.md upstream).
+          speed: "slow"
+    # No web exposure: console (9001) and S3 API (9000) stay cluster-internal.
+    ingress:
+      enabled: false
+    affinity:
+      podAntiAffinity:
+        enabled: false
+    resources:
+      limits:
+        memory: 2Gi
+      requests:
+        memory: 128Mi
+    storageclass:
+      name: longhorn
+      dataStorageSize: 200Gi
+      logStorageSize: 1Gi

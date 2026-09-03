@@ -1,0 +1,165 @@
+{
+  "uid": "app-logs",
+  "title": "Kubernetes Logs",
+  "schemaVersion": 39,
+  "version": 1,
+  "editable": true,
+  "refresh": "",
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "timezone": "utc",
+  "graphTooltip": 0,
+  "templating": {
+    "list": [
+      {
+        "type": "datasource",
+        "name": "logs",
+        "query": "loki",
+        "label": "Logs Data Source",
+        "refresh": 1,
+        "hide": 0,
+        "current": {}
+      },
+      {
+        "type": "query",
+        "name": "namespace",
+        "label": "namespace",
+        "datasource": {
+          "type": "loki",
+          "uid": "$logs"
+        },
+        "query": "label_values(namespace)",
+        "includeAll": true,
+        "allValue": ".+",
+        "multi": false,
+        "sort": 1,
+        "refresh": 2,
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        }
+      },
+      {
+        "type": "query",
+        "name": "deployment",
+        "label": "deployment",
+        "datasource": {
+          "type": "loki",
+          "uid": "$logs"
+        },
+        "query": "label_values({namespace=~\"$namespace\"}, deployment)",
+        "includeAll": true,
+        "allValue": ".+",
+        "multi": false,
+        "sort": 1,
+        "refresh": 2,
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        }
+      },
+      {
+        "type": "query",
+        "name": "pod",
+        "label": "pod",
+        "datasource": {
+          "type": "loki",
+          "uid": "$logs"
+        },
+        "query": "label_values({namespace=~\"$namespace\", deployment=~\"$deployment\"}, pod)",
+        "includeAll": true,
+        "allValue": ".+",
+        "multi": false,
+        "sort": 1,
+        "refresh": 2,
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        }
+      },
+      {
+        "type": "query",
+        "name": "container",
+        "label": "container",
+        "datasource": {
+          "type": "loki",
+          "uid": "$logs"
+        },
+        "query": "label_values({namespace=~\"$namespace\", pod=~\"$pod\"}, container)",
+        "includeAll": true,
+        "allValue": ".+",
+        "multi": false,
+        "sort": 1,
+        "refresh": 2,
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        }
+      },
+      {
+        "type": "textbox",
+        "name": "filter",
+        "label": "Line filter (regex)",
+        "hide": 0,
+        "current": {
+          "text": "",
+          "value": ""
+        }
+      }
+    ]
+  },
+  "panels": [
+    {
+      "type": "timeseries",
+      "title": "Log volume by app",
+      "datasource": {
+        "type": "loki",
+        "uid": "$logs"
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "targets": [
+        {
+          "expr": "sum by (app) (rate({namespace=~\"$namespace\", deployment=~\"$deployment\", pod=~\"$pod\", container=~\"$container\"}[5m]))",
+          "legendFormat": "{{app}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "type": "logs",
+      "title": "Logs",
+      "datasource": {
+        "type": "loki",
+        "uid": "$logs"
+      },
+      "gridPos": {
+        "h": 16,
+        "w": 24,
+        "x": 0,
+        "y": 5
+      },
+      "options": {
+        "showTime": true,
+        "enableLogDetails": true,
+        "showLabels": true,
+        "showCommonLabels": true,
+        "wrapLogMessage": false,
+        "sortOrder": "Descending",
+        "dedupStrategy": "none"
+      },
+      "targets": [
+        {
+          "expr": "{namespace=~\"$namespace\", deployment=~\"$deployment\", pod=~\"$pod\", container=~\"$container\"} |= \"$filter\"",
+          "refId": "A"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,110 @@
+---
+apiVersion: helm.cattle.io/v1
+kind: HelmChart
+metadata:
+  name: monitoring
+  namespace: base
+spec:
+  chart: kube-prometheus-stack
+  repo: https://prometheus-community.github.io/helm-charts
+  failurePolicy: abort
+  targetNamespace: base
+  createNamespace: false
+  version: 88.6.3
+  valuesContent: |-
+    # No receivers configured yet; enable later with an ntfy webhook.
+    alertmanager:
+      enabled: false
+
+    prometheus:
+      prometheusSpec:
+        replicas: 1
+        # Short local retention: Mimir is the long-term store (remoteWrite below).
+        retention: 7d
+        resources:
+          requests:
+            memory: 128Mi
+          limits:
+            memory: 2Gi
+        storageSpec:
+          volumeClaimTemplate:
+            spec:
+              storageClassName: longhorn
+              accessModes:
+                - ReadWriteOnce
+              resources:
+                requests:
+                  storage: 50Gi
+        remoteWrite:
+          - url: http://mimir.base.svc.cluster.local:8080/api/v1/push
+
+    prometheusOperator:
+      resources:
+        requests:
+          memory: 128Mi
+        limits:
+          memory: 512Mi
+
+    grafana:
+      enabled: true
+      adminPassword: "$GRAFANA_ADMIN_PASSWORD"
+      envFromSecret: grafana-oidc-secret
+      persistence:
+        enabled: true
+        size: 5Gi
+        storageClassName: longhorn
+      resources:
+        requests:
+          memory: 128Mi
+        limits:
+          memory: 2Gi
+      grafana.ini:
+        server:
+          root_url: https://grafana.$SERVICES_DOMAIN
+        auth.generic_oauth:
+          enabled: true
+          name: Authelia
+          client_id: grafana
+          scopes: openid profile email groups
+          auth_url: https://auth.$SERVICES_DOMAIN/api/oidc/authorization
+          token_url: https://auth.$SERVICES_DOMAIN/api/oidc/token
+          api_url: https://auth.$SERVICES_DOMAIN/api/oidc/userinfo
+          use_pkce: true
+          allow_sign_up: true
+          role_attribute_path: "contains(groups[*], 'admins') && 'Admin' || 'Viewer'"
+      additionalDataSources:
+        - name: Mimir
+          type: prometheus
+          url: http://mimir.base.svc.cluster.local:8080/prometheus
+          access: proxy
+          isDefault: false
+        - name: Loki
+          type: loki
+          url: http://loki.base.svc.cluster.local:3100
+          access: proxy
+          isDefault: false
+
+    kube-state-metrics:
+      resources:
+        requests:
+          memory: 128Mi
+        limits:
+          memory: 512Mi
+
+    prometheus-node-exporter:
+      resources:
+        requests:
+          memory: 128Mi
+        limits:
+          memory: 512Mi
+
+    # K3s runs etcd/controller-manager/scheduler/kube-proxy embedded without
+    # scrapeable endpoints - their ServiceMonitors would just fail forever.
+    kubeEtcd:
+      enabled: false
+    kubeControllerManager:
+      enabled: false
+    kubeScheduler:
+      enabled: false
+    kubeProxy:
+      enabled: false
