@@ -49,6 +49,7 @@ export SB25_AUTH_TOKEN="change_me" # openssl rand -hex 16
 # ====== Moving Sale ======
 export MOVING_SALE_ADMIN_PASSWORD="change_me" # openssl rand -hex 16
 export MOVING_SALE_PICKUP_TEXT="change_me" # Pickup info text shown on the sale page
+export PLAUSIBLE_SCRIPT_URL="change_me" # Plausible analytics script tag URL (e.g. https://plausible.example.org/js/pa-xxxx.js)
 
 # ====== CCT26 ======
 export CCT26_REDDIT_COOKIE="change_me"  # Reddit session cookie

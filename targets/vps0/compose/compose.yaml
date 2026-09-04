@@ -413,7 +413,7 @@ services:
     # Obtainium Apps
     obtainium_apps:
         container_name: obtainium_apps
-        image: imranrdev/apps.obtainium.example.org
+        image: imranrdev/apps.obtainium.$BASE_SERVICES_DOMAIN
         depends_on:
             - traefik
         labels:
@@ -534,7 +534,7 @@ services:
             - NTFY_URL=https://ntfy.home.$BASE_SERVICES_DOMAIN/moving_sale_2027
             - NTFY_AUTH=Bearer $NTFY_WRITE_ONLY_ACCOUNT_TOKEN
             - PICKUP_TEXT=$MOVING_SALE_PICKUP_TEXT
-            - PLAUSIBLE_SCRIPT=https://plausible.example.org/js/pa-J_AkWpSvrUf5kFGRb_4FR.js
+            - PLAUSIBLE_SCRIPT=$PLAUSIBLE_SCRIPT_URL
         volumes:
             - $COMPOSE_STATE_DIR/moving-sale/data:/app/data
             - $COMPOSE_STATE_DIR/moving-sale/uploads:/app/uploads
