@@ -115,7 +115,8 @@ VOLUMES")
 _validate_compose() {
     local target="$1" errors=0
 
-    for f in "$INFRA_ROOT/targets/$target/compose/compose.yaml"; do
+    local private_file="$INFRA_ROOT/targets/$target/compose/compose.private.yaml"
+    for f in "$INFRA_ROOT/targets/$target/compose/compose.yaml" $([ -f "$private_file" ] && echo "$private_file"); do
         [ -f "$f" ] || continue
         if [[ "$f" =~ \.(yaml|yml)$ ]]; then
             if ! yq eval '.' "$f" >/dev/null 2>&1; then
@@ -147,6 +148,7 @@ COMPOSE_STATE_DIR
 USER")
 
     local compose_files=("$INFRA_ROOT/targets/$target/compose/compose.yaml")
+    [ -f "$private_file" ] && compose_files+=("$private_file")
     for f in "$INFRA_ROOT/targets/$target/compose/templates"/*; do if [ -f "$f" ]; then compose_files+=("$f"); fi; done
     for f in "${compose_files[@]}"; do
         errors=$((errors + $(_count_ref_errors "$known_vars" "$f")))

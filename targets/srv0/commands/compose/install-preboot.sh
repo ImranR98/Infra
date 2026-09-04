@@ -22,7 +22,7 @@ if bash "$INFRA_ROOT/lib/check_root_luks.sh"; then
     echo ""
     echo "Preboot FRPC installed. The initramfs has been rebuilt."
     echo "On the next boot, FRPC will start before root is mounted,"
-    echo "tunneling SSH to the FRPS server on port 8887."
+    echo "tunneling SSH to the FRPS server on port $FRPS_PREBOOT_PORT."
 else
     echo "Root partition is not LUKS-encrypted. Skipping preboot setup."
     echo "If you add LUKS later, re-run this command."

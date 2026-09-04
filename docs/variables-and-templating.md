@@ -54,10 +54,12 @@ The final format is a space-separated list with `$` prefixes: `$VAR1 $VAR2 $VAR3
 
 ### compose.yaml rendering
 
-`render_compose_yaml()` in `lib/common.sh` renders the target's `compose.yaml` into `current_target/compose_live_state/compose.yaml`:
+`render_compose_yaml()` in `lib/compose.sh` renders the target's `compose.yaml` into `current_target/compose_live_state/compose.yaml`. If the optional gitignored `compose.private.yaml` exists, it is rendered the same way and merged over the main file with `docker compose -f ... config`:
 
 ```bash
-envsubst "$ENVSUBST_VARS" < compose.yaml > $COMPOSE_STATE_DIR/compose.yaml
+envsubst "$ENVSUBST_VARS" < compose.yaml > $COMPOSE_STATE_DIR/compose.main.yaml
+[ -f compose.private.yaml ] && envsubst "$ENVSUBST_VARS" < compose.private.yaml > $COMPOSE_STATE_DIR/compose.private.yaml
+docker compose -f $COMPOSE_STATE_DIR/compose.main.yaml -f $COMPOSE_STATE_DIR/compose.private.yaml config > $COMPOSE_STATE_DIR/compose.yaml
 ```
 
 ### Template directory rendering

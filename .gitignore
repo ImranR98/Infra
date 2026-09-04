@@ -7,6 +7,7 @@
 /vars/
 /temp
 /secrets/
+targets/*/compose/compose.private.yaml
 ~*
 **/__pycache__
 .venv/

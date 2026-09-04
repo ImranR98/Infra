@@ -40,11 +40,11 @@ The runtime state directory (`current_target/compose_live_state/`) is fully giti
 When LUKS is detected, the srv0-specific `compose install-preboot` command sets up an SSH server and FRP client in the initramfs. This enables remote LUKS passphrase entry:
 
 1. **dracut-crypt-ssh** embeds an SSH server in the initramfs that listens for connections before the root filesystem is available
-2. **frpc-preboot** embeds an FRP client in the initramfs that tunnels SSH (port 8887) through the FRP server
-3. On boot, the operator connects to the FRP server on port 8887, which tunnels to the initramfs SSH
+2. **frpc-preboot** embeds an FRP client in the initramfs that tunnels SSH (port `$FRPS_PREBOOT_PORT`) through the FRP server
+3. On boot, the operator connects to the FRP server on port `$FRPS_PREBOOT_PORT`, which tunnels to the initramfs SSH
 4. The operator provides the LUKS passphrase via SSH, the root unlocks, and boot continues
 
-`bigpc` instead runs `install-preboot` with only the crypt-ssh module: the initramfs SSH server listens directly on port 8887 over the LAN (no FRP tunnel).
+`bigpc` instead runs `install-preboot` with only the crypt-ssh module: the initramfs SSH server listens directly on port `$FRPS_PREBOOT_PORT` over the LAN (no FRP tunnel).
 
 This is critical for unattended reboots of an encrypted server without physical access.
 

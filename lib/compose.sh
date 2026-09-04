@@ -4,7 +4,14 @@
 render_compose_yaml() {
     ensure_envsubst_vars
     mkdir -p "$COMPOSE_STATE_DIR"
-    envsubst "$ENVSUBST_VARS" < "$INFRA_ROOT/targets/$TARGET/compose/compose.yaml" > "$COMPOSE_STATE_DIR/compose.yaml"
+    envsubst "$ENVSUBST_VARS" < "$INFRA_ROOT/targets/$TARGET/compose/compose.yaml" > "$COMPOSE_STATE_DIR/compose.main.yaml"
+    local private_file="$INFRA_ROOT/targets/$TARGET/compose/compose.private.yaml"
+    local files=(-f "$COMPOSE_STATE_DIR/compose.main.yaml")
+    if [ -f "$private_file" ]; then
+        envsubst "$ENVSUBST_VARS" < "$private_file" > "$COMPOSE_STATE_DIR/compose.private.yaml"
+        files+=(-f "$COMPOSE_STATE_DIR/compose.private.yaml")
+    fi
+    docker compose "${files[@]}" config > "$COMPOSE_STATE_DIR/compose.yaml"
 }
 
 configure_compose_templates() {
@@ -77,7 +84,8 @@ list_domains() {
     fi
 
     if [ -f "$INFRA_ROOT/targets/$target/compose/compose.yaml" ]; then
-        _extract_hosts "$INFRA_ROOT/targets/$target/compose/compose.yaml" | \
+        local private_file="$INFRA_ROOT/targets/$target/compose/compose.private.yaml"
+        _extract_hosts "$INFRA_ROOT/targets/$target/compose/compose.yaml" $([ -f "$private_file" ] && echo "$private_file") | \
             sed "${sed_args[@]}" | \
             sort -u
     fi

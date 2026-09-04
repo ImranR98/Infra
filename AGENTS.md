@@ -50,6 +50,7 @@ Seen as both `.sh` scripts (must be `chmod +x`) and `.py` (python3). Directory e
 targets/<target>/
   VARS.template.sh              # Required variables doc (committed to git)
   compose/compose.yaml          # Compose definition with $VARIABLE placeholders
+  compose/compose.private.yaml  # Optional gitignored overlay, merged over compose.yaml
   compose/templates/            # Config templates rendered at deploy time
   k3s/<component>/              # One dir per deployable K3s unit
     kustomization.yaml          # Required. Standard kustomize resources list.

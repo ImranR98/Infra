@@ -33,7 +33,7 @@ services:
           - $COMPOSE_STATE_DIR/frps/ca.crt:/etc/frp/ca.crt:ro
         ports:
             - "7000:7000"
-            - "8887:8887"
+            - "$FRPS_PREBOOT_PORT:$FRPS_PREBOOT_PORT"
             - "8888:8888"
             - "56881:56881"
             - "56881:56881/udp"
@@ -430,7 +430,7 @@ services:
         mem_limit: 512M
         logging: *logging
 
-    # IKOM - IKOM
+    # IKOM - Kitchen order manager
     ikom:
         container_name: ikom
         image: imranrdev/order-manager
@@ -458,37 +458,6 @@ services:
             - traefik
         restart: unless-stopped
         mem_limit: 2G
-        logging: *logging
-
-    # SB25 - private birthday page
-    sb25:
-        container_name: sb25
-        image: imranrdev/sb25
-        depends_on:
-            - traefik
-        labels:
-            - "traefik.enable=true"
-            - "traefik.http.routers.sb25.rule=Host(`sb25.$CLOUD_SERVICES_DOMAIN`)"
-            - "traefik.http.routers.sb25.entrypoints=websecure"
-            - "traefik.http.routers.sb25.tls.certresolver=le"
-            - "traefik.http.routers.sb25.tls=true"
-            - "traefik.http.routers.sb25.middlewares=crowdsec-bouncer@file"
-            - "traefik.http.routers.sb25-redirect.rule=Host(`sb25.$BASE_SERVICES_DOMAIN`)"
-            - "traefik.http.routers.sb25-redirect.entryPoints=websecure"
-            - "traefik.http.routers.sb25-redirect.tls.certresolver=le"
-            - "traefik.http.routers.sb25-redirect.tls=true"
-            - "traefik.http.routers.sb25-redirect.middlewares=sb25-redirect-rewrite"
-            - 'traefik.http.middlewares.sb25-redirect-rewrite.redirectregex.regex=^https://sb25\.$BASE_SERVICES_DOMAIN/(.*)'
-            - 'traefik.http.middlewares.sb25-redirect-rewrite.redirectregex.replacement=https://sb25.$CLOUD_SERVICES_DOMAIN/$${1}'
-            - 'traefik.http.middlewares.sb25-redirect-rewrite.redirectregex.permanent=true'
-            - "traefik.http.services.sb25.loadbalancer.server.port=3000"
-            - "com.centurylinklabs.watchtower.enable=false"
-        environment:
-            - AUTH_TOKEN=$SB25_AUTH_TOKEN
-        networks:
-            - traefik
-        restart: unless-stopped
-        mem_limit: 512M
         logging: *logging
 
     # CCT26 - Reddit + LLM tool
@@ -564,7 +533,7 @@ services:
             - CONTACT_EMAIL=$DOMAIN_OWNER_EMAIL
             - NTFY_URL=https://ntfy.home.$BASE_SERVICES_DOMAIN/moving_sale_2027
             - NTFY_AUTH=Bearer $NTFY_WRITE_ONLY_ACCOUNT_TOKEN
-            - PICKUP_TEXT=All prices negotiable. Pickup location flexible.
+            - PICKUP_TEXT=$MOVING_SALE_PICKUP_TEXT
             - PLAUSIBLE_SCRIPT=https://plausible.example.org/js/pa-J_AkWpSvrUf5kFGRb_4FR.js
         volumes:
             - $COMPOSE_STATE_DIR/moving-sale/data:/app/data

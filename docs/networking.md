@@ -20,7 +20,7 @@ Infra manages networking at multiple layers: WireGuard VPN for secure connectivi
                     │ apps   :8080     │
                     │        :8443     │
                     │   ports :7000    │
-                    │         :8887    │
+                    │         :preboot │
                     └─────────│────────┘
                               │ FRP tunnel
                     ┌─────────┴────────┐
@@ -124,7 +124,7 @@ TLS passthrough is used for srv0 traffic so that both targets don't need to coor
 | Port | Purpose |
 |------|---------|
 | 7000 | FRP control channel — frpc on srv0 connects here to establish and maintain the tunnel |
-| 8887 | Preboot SSH — forwarded through the tunnel to srv0's initramfs SSH server for remote LUKS passphrase entry |
+| `$FRPS_PREBOOT_PORT` | Preboot SSH — forwarded through the tunnel to srv0's initramfs SSH server for remote LUKS passphrase entry |
 | 8888 | Additional tunnel port (e.g., TCP service forwarding) |
 
 ### Authentication
@@ -145,19 +145,19 @@ When the home server's root disk is LUKS-encrypted, the initramfs needs network 
 
 1. **Checks if root is LUKS-encrypted** via `check_root_luks.sh` (uses `lsblk -s` to detect crypt devices)
 2. **Installs dracut-crypt-ssh** — embeds an SSH server in the initramfs that listens for connections
-3. **Installs preboot FRPC** — embeds a minimal FRP client in the initramfs that tunnels SSH (port 8887) to the FRP server *before* the root filesystem is mounted
+3. **Installs preboot FRPC** — embeds a minimal FRP client in the initramfs that tunnels SSH (port `$FRPS_PREBOOT_PORT`) to the FRP server *before* the root filesystem is mounted
 
 This allows the home server to boot unattended: the initramfs starts FRPC, tunnels SSH through the FRP server, and the operator can SSH in to provide the LUKS passphrase remotely.
 
-`bigpc` skips the FRPC step: its `install-preboot` variant installs only crypt-ssh with the dropbear port patched to 8887, so the initramfs SSH is reachable directly over the LAN (ethernet required — the wifi-net module is not installed).
+`bigpc` skips the FRPC step: its `install-preboot` variant installs only crypt-ssh with the dropbear port patched to `$FRPS_PREBOOT_PORT`, so the initramfs SSH is reachable directly over the LAN (ethernet required — the wifi-net module is not installed).
 
 ### How it works
 
 ```
 Boot → initramfs loads → preboot FRPC starts
   → FRPC connects to vps0:7000 (FRPS)
-  → vps0 exposes port 8887 → forwarded to srv0's SSH in initramfs
-  → Operator SSHs to vps0:8887 → reaches srv0's initramfs SSH
+  → vps0 exposes port $FRPS_PREBOOT_PORT → forwarded to srv0's SSH in initramfs
+  → Operator SSHs to vps0:$FRPS_PREBOOT_PORT → reaches srv0's initramfs SSH
   → Provides LUKS passphrase → root unlocks → boot continues
 ```
 

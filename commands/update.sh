@@ -62,7 +62,7 @@ echo "$_APPLY_OUT"
 
 echo ""
 echo "Checking Traefik plugins..."
-for f in "$INFRA_ROOT/targets/$TARGET/compose/compose.yaml" $(find "$INFRA_ROOT/targets/$TARGET/k3s" -name traefik.yaml 2>/dev/null); do
+for f in "$INFRA_ROOT/targets/$TARGET/compose/compose.yaml" "$INFRA_ROOT/targets/$TARGET/compose/compose.private.yaml" $(find "$INFRA_ROOT/targets/$TARGET/k3s" -name traefik.yaml 2>/dev/null); do
     [ -f "$f" ] || continue
     _plugin_tmp=$(mktemp)
     cp "$f" "$_plugin_tmp"

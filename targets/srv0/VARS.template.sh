@@ -89,6 +89,7 @@ export MOSQUITTO_CREDENTIALS="change_me" # tmpfile=$(mktemp) && mosquitto_passwd
 # Password of the rpi go2rtc stream: `docker logs go2rtc` on the Pi, or
 # current_target/compose_live_state/go2rtc/password. Update if the Pi password regenerates.
 export FRIGATE_RTSP_PASSWORD="change_me"
+export RPI_CAM_IP="change_me" # LAN IP of the rpi go2rtc webcam host
 export FRIGATE_MQTT_PASSWORD="change_me" # openssl rand -hex 16 (also add `frigate` user to MOSQUITTO_CREDENTIALS)
 export HA_MQTT_PASSWORD="change_me" # openssl rand -hex 16 (also add `homeassistant` user to MOSQUITTO_CREDENTIALS)
 # Deployment-specific Frigate config (go2rtc streams, cameras) appended to the
@@ -99,7 +100,7 @@ export HA_MQTT_PASSWORD="change_me" # openssl rand -hex 16 (also add `homeassist
 # GUI config-editor changes don't survive restarts - scrape them back into here.
 export FRIGATE_ADDITIONAL_CONFIG="go2rtc:
         streams:
-          rpi: rtsp://admin:{FRIGATE_RTSP_PASSWORD}@192.168.8.XX:8554/rpi#timeout=5
+          rpi: rtsp://admin:{FRIGATE_RTSP_PASSWORD}@$RPI_CAM_IP:8554/rpi#timeout=5
       cameras:
         # Default camera: rpi go2rtc webcam stream (targets/rpi)
         rpi:
@@ -248,6 +249,7 @@ export COPYPARTY_ADMIN_PASSWORD="changeme" # openssl rand -hex 16
 
 # ====== FRP ======
 export PROXY_HOST="vps0.example.org"
+export FRPS_PREBOOT_PORT="change_me" # Preboot SSH port; must match the FRP server's preboot port mapping
 # Generate with: ./infra.sh srv0 compose generate-mtls-certs vps0
 # Use the heredoc pattern below for multi-line PEM data:
 export MTLS_CA_CERT="$(cat <<'MTLS_CERT_EOF'

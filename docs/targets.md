@@ -33,7 +33,7 @@ A desktop machine running a small Docker Compose stack (socket proxy, Watchtower
 - **Orchestrator:** Docker Compose (sidecar) + K3s agent
 - **Compose services:** dockerproxy_priv (read-only Docker socket proxy), Watchtower (with rollback), Syncthing (host network)
 - **K3s workload:** Ollama (`ollama/ollama:0.32.15-rocm`, pinned + Renovate-managed; preferred `has-amdgpu` affinity; tolerates `scheduling-discouraged`)
-- **Special:** LUKS-aware preboot crypt-ssh — embeds an SSH server in the initramfs for direct LAN unlock of the encrypted root filesystem on port 8887 (no FRP tunnel)
+- **Special:** LUKS-aware preboot crypt-ssh — embeds an SSH server in the initramfs for direct LAN unlock of the encrypted root filesystem on port `$FRPS_PREBOOT_PORT` (no FRP tunnel)
 
 ### vps0 — Web-services VPS + FRP server
 

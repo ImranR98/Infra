@@ -6,10 +6,14 @@ Compose stacks are started via `docker compose up -d` and survive reboots throug
 
 A Compose target's source files live under `targets/<target>/compose/` and get rendered into `current_target/compose_live_state/` (gitignored). The pipeline:
 
-1. `render_compose_yaml()` — runs `envsubst` on `compose.yaml`, writes result to `$COMPOSE_STATE_DIR`
+1. `render_compose_yaml()` — runs `envsubst` on `compose.yaml` (and, when present, the gitignored `compose.private.yaml`), merges them with `docker compose -f ... config`, and writes the result to `$COMPOSE_STATE_DIR`
 2. `configure_compose_templates()` — walks `templates/`, renders each file, places result in `$COMPOSE_STATE_DIR`
 
 Both use `$ENVSUBST_VARS` as the allowlist of variables to expand (see [variables-and-templating.md](variables-and-templating.md)).
+
+### `compose.private.yaml` overlay
+
+`targets/<target>/compose/compose.private.yaml` is an optional, gitignored Compose file merged over `compose.yaml` before application. Use it for services or fields that must not be committed to git (private image names, personal details). It is rendered through the same envsubst pipeline, checked by `validate`, and its `Host()` labels appear in `list-domains`.
 
 ### `.secret` / `.plain` file conventions
 

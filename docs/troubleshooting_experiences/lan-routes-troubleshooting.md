@@ -55,7 +55,7 @@ Application pod (Jellyfin, Gokapi, etc.)
 ### 2.2 LAN traffic (Direct access)
 
 ```
-LAN client (192.168.0.x)
+LAN client (192.168.1.x)
     │  Connects directly to srv0:443
     ▼
 srv0 K3s Traefik
@@ -142,7 +142,7 @@ the node's IP, not some internal pod IP.
 Because of SNAT, Traefik sees *all* incoming connections as coming from
 `10.42.0.x` (the pod network), regardless of whether the original client is:
 
-- A LAN computer at `192.168.0.x`
+- A LAN computer at `192.168.1.x`
 - The FRP container at `127.0.0.1` (localhost)
 - A pod inside the cluster
 
@@ -277,11 +277,11 @@ Added ports `80` and `443` to the NetworkPolicy:
 The diagnostic process used several iptables commands to trace the packet flow:
 
 1. **`iptables -t nat -L PREROUTING -n -v`** showed that traffic to
-   `192.168.0.XX:443` was being DNATed (redirected) to the Traefik pod — 1438
+   `$SRV0_LAN_IP:443` was being DNATed (redirected) to the Traefik pod — 1438
    packets matched. This meant the port forwarding *was* working.
 
 2. **`iptables -L KUBE-ROUTER-FORWARD -n -v`** showed per-pod firewall chains.
-   Finding the Traefik pod's IP (`10.42.0.41`) revealed the specific chain that
+   Finding the Traefik pod's IP (a K3s cluster IP such as `10.42.x.x`) revealed the specific chain that
    filtered its traffic.
 
 3. **`kubectl get networkpolicy`** confirmed the policy only allowed ports 8000

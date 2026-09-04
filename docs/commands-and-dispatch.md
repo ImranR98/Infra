@@ -109,4 +109,4 @@ A target can override any global command by providing a script at the correspond
 - Source the global script and extend it
 - Add target-specific setup before/after calling the global script
 
-Example: `targets/srv0/commands/compose/install-preboot.sh` installs preboot FRPC + dracut-crypt-ssh in srv0's initramfs, tunneling SSH through the FRP server for remote LUKS unlock, while `targets/bigpc/commands/compose/install-preboot.sh` installs only crypt-ssh (dropbear listening on port 8887) for direct LAN unlock — setups that only make sense when the root disk is LUKS-encrypted.
+Example: `targets/srv0/commands/compose/install-preboot.sh` installs preboot FRPC + dracut-crypt-ssh in srv0's initramfs, tunneling SSH through the FRP server for remote LUKS unlock, while `targets/bigpc/commands/compose/install-preboot.sh` installs only crypt-ssh (dropbear listening on port `$FRPS_PREBOOT_PORT`) for direct LAN unlock — setups that only make sense when the root disk is LUKS-encrypted.
