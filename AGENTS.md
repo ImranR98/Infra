@@ -102,7 +102,9 @@ current_target/compose_live_state/   # Rendered Compose state (gitignored, ephem
 
 ## Updates (Renovate)
 
-- `renovate.json` at repo root — four regex customManagers scan K3s YAML files only (`targets/.+/k3s/.*\.yaml$`) for Docker images, Helm charts, and K3s upgrade-plan versions.
+- `renovate.json` at repo root — regex customManagers scan K3s YAML files (`targets/.+/k3s/.*\.yaml$`) for Docker images, Helm charts, and K3s upgrade-plan versions, plus Compose stacks (`targets/.+/compose/compose\.yaml$`) for pinned-version Docker images. `enabledManagers: ["regex"]` keeps built-in managers (e.g. docker-compose) from scanning anything else.
+- **Compose image ownership split** — pinned-version tags are Renovate-managed. Mutable pinned tags (`v?\d...` without full pin, e.g. `traefik:v3`, `postgres:16-alpine`, `uptime-kuma:2`) carry the `com.centurylinklabs.watchtower.enable=false` label so watchtower stops same-tag refresh-refreshing them; exact-version tags (`frps:v0.71.0`) need no label (watchtower only re-pulls the exact tag if re-pushed — effectively a no-op). Floating/untagged images (`latest`, `stable`, `alpine`, bare `imranrdev/*`) stay watchtower-managed and are invisible to Renovate. Untagged images in watchtower-excluded services (e.g. sb25) are fully manual — not scanned by either.
+- **Local-only images (no remote)** — untagged + watchtower-excluded → invisible to Renovate; if version-pinned, the registry lookup fails harmlessly (no updates proposed) and `# PRESERVE_FULL` on the line makes the opt-out explicit.
 - **`--require-config=required`** — Renovate has no default behavior; only scans what `renovate.json` defines.
 - `_apply_updates.py` reads Renovate debug output via stdin and modifies source files directly (no PRs).
 - **`# PRESERVE_FULL`** comment — skip this line entirely during updates.

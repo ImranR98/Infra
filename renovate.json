@@ -1,4 +1,5 @@
 {
+  "enabledManagers": ["regex"],
   "customManagers": [
     {
       "customType": "regex",
@@ -37,6 +38,16 @@
       "depNameTemplate": "k3s-io/k3s",
       "datasourceTemplate": "github-releases",
       "versioningTemplate": "regex:^v?(?<major>\\d+)\\.(?<minor>\\d+)\\.(?<patch>\\d+)\\+k3s(?<build>\\d+)$"
+    },
+    {
+      "customType": "regex",
+      "fileMatch": ["targets/.+/compose/compose\\.yaml$"],
+      "matchStrings": [
+        "image:\\s*(?<depName>[^\\s@:\"'$]+):(?<currentValue>v?\\d[^\\s@:\"'#]*)(?:@sha256:\\S+)?"
+      ],
+      "description": "Compose images with pinned version tags (floating tags stay watchtower-managed)",
+      "datasourceTemplate": "docker",
+      "versioningTemplate": "docker"
     }
   ],
   "packageRules": [

@@ -1,6 +1,6 @@
 # Updates and Renovate Integration
 
-Infra uses [Renovate](https://docs.renovatebot.com/) to automatically discover and apply dependency updates across all Docker images, Helm charts, and Traefik plugins referenced in the repository.
+Infra uses [Renovate](https://docs.renovatebot.com/) to automatically discover and apply dependency updates across Docker images, Helm charts, and Traefik plugins referenced in the repository.
 
 ## How it works
 
@@ -30,18 +30,31 @@ renovate.json config
 
 ### Custom managers
 
-Four regex-based managers extract dependency information from K3s YAML files:
+Five regex-based managers extract dependency information:
 
-1. **Docker images** — matches `image: <name>:<version>` patterns
+1. **K3s Docker images** — matches `image: <name>:<version>` patterns in K3s YAML
 2. **Helm chart repositories** — matches `repository:` / `tag:` pairs (used by HelmChart CRDs with inline Docker images)
 3. **Helm charts** — matches `chart:` / `repo:` / `version:` triples for full Helm chart dependencies
 4. **K3s upgrade plans** — matches `version: vX.Y.Z+k3sN` in `system-upgrade` plan YAMLs, sourced from `k3s-io/k3s` GitHub releases with custom regex versioning (RC tags excluded)
+5. **Compose pinned images** — matches `image: <name>:<version>` patterns in `targets/<target>/compose/compose.yaml`, but only for version-pinned tags (currentValue starting with a digit or `v`). Floating/untagged tags (`latest`, `stable`, `alpine`, bare `imranrdev/*`) are deliberately NOT matched.
 
-All managers target K3s YAML files (`targets/.+/k3s/.*\.yaml$`).
+Managers 1–4 target K3s YAML files (`targets/.+/k3s/.*\.yaml$`); manager 5 targets compose files (`targets/.+/compose/compose\.yaml$`). `enabledManagers: ["regex"]` ensures Renovate's built-in managers (notably docker-compose) never scan anything else.
+
+### Compose image ownership model
+
+Each compose image is owned by exactly one updater:
+
+| Image tag style | Updater | Notes |
+|-----------------|---------|-------|
+| Pinned, mutable (`v3`, `16-alpine`, `2` — no full pin) | **Renovate** | Service carries `com.centurylinklabs.watchtower.enable=false` so watchtower stops same-tag refreshes; Renovate is the single updater. Apply via `update` then `compose restart <service>`. |
+| Pinned, exact (`v0.71.0`, `0.2.5`) | **Renovate** | No label needed — watchtower only re-pulls the exact tag if re-pushed (effectively a no-op). |
+| Floating (`latest`, `stable`, `alpine`) or untagged (`imranrdev/*`) | **Watchtower** | Invisible to Renovate — no regex match, so the `pinDigests` rule can never convert them to digest pins and fight watchtower. |
+| Untagged inside a watchtower-excluded service (e.g. `sb25`) | **Manual** | Scanned by neither; bump the image line by hand. |
+| Local-only image (no remote) | **Manual** | Untagged + excluded = invisible to Renovate. If version-pinned, the registry lookup fails harmlessly (no updates proposed); add `# PRESERVE_FULL` to make the opt-out explicit. |
 
 ### Package rules
 
-Floating tags (`latest`, `stable`, `release`) are pinned to digests via `pinDigests: true`. This converts mutable tags into immutable content-addressable references.
+Floating tags (`latest`, `stable`, `release`) are pinned to digests via `pinDigests: true`. This converts mutable tags into immutable content-addressable references. Only applies to K3s YAML images — compose floating tags are never matched (they are watchtower's domain).
 
 ## The update command
 
