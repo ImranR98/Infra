@@ -37,7 +37,7 @@ else
 fi
 
 echo ""
-echo "1. Access https://qbittorrent.${SERVICES_DOMAIN:-home.example.org} (authenticate via Authelia)"
+echo "1. Access https://qbittorrent.${SERVICES_DOMAIN} (authenticate via Authelia)"
 echo "2. Log in with username: admin  password: adminadmin"
 echo "3. (Optional) Tools > Options > Downloads > Categories:"
 echo "     radarr  /data/downloads/radarr"

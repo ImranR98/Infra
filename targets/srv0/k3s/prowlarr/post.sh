@@ -3,7 +3,7 @@ set -euo pipefail
 
 echo "=== Prowlarr Manual Setup ==="
 echo ""
-echo "1. Access https://prowlarr.${SERVICES_DOMAIN:-home.example.org} (authenticate via Authelia)"
+echo "1. Access https://prowlarr.${SERVICES_DOMAIN} (authenticate via Authelia)"
 echo "2. Settings > General > Authentication: Forms, create admin account"
 echo "3. Settings > Apps > Add Radarr:"
 echo "     URL: http://radarr.apps.svc.cluster.local:7878"

@@ -3,7 +3,7 @@ set -euo pipefail
 
 echo "=== Radarr Manual Setup ==="
 echo ""
-echo "1. Access https://radarr.${SERVICES_DOMAIN:-home.example.org} (authenticate via Authelia)"
+echo "1. Access https://radarr.${SERVICES_DOMAIN} (authenticate via Authelia)"
 echo "2. Settings > General > Authentication: Forms, create admin account"
 echo "3. Settings > Media Management > Root Folders: /data/Movies"
 echo "4. Settings > Download Clients > Add (qBittorrent):"

@@ -3,7 +3,7 @@ set -euo pipefail
 
 echo "=== Seerr Manual Setup ==="
 echo ""
-echo "1. Access https://seerr.${SERVICES_DOMAIN:-home.example.org} (authenticate via Authelia)"
+echo "1. Access https://seerr.${SERVICES_DOMAIN} (authenticate via Authelia)"
 echo "2. Sign in with your Jellyfin account:"
 echo "     Host: http://jellyfin.apps.svc.cluster.local:8096"
 echo "3. Settings > Services > Add Jellyfin:"
