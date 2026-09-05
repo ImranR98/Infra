@@ -92,7 +92,7 @@
     {
       "description": "Pin floating tags to digests",
       "matchDatasources": ["docker"],
-      "matchCurrentValue": "^(latest|stable|release)$",
+      "matchCurrentValue": "/^(latest|stable|release|alpine)$/",
       "pinDigests": true
     },
     {
@@ -108,24 +108,15 @@
       "enabled": false
     },
     {
-      "description": "envsubst variable inside the image ref cannot be resolved",
-      "matchPackageNames": ["imranrdev/apps.obtainium.$BASE_SERVICES_DOMAIN"],
-      "enabled": false
-    },
-    {
       "description": "moving-sale is a frozen one-off site (untagged image, no digest pins)",
       "matchPackageNames": ["imranrdev/moving-sale-2027"],
       "enabled": false
     },
     {
-      "description": "immich postgres has an untrackable tag scheme (18-vectorchord0.5.3-...)",
-      "matchPackageNames": ["ghcr.io/immich-app/postgres"],
-      "enabled": false
-    },
-    {
-      "description": "Longhorn requires sequential minor upgrades",
+      "description": "Longhorn requires sequential minor upgrades — minors are proposed but never automerged (patches automerge; majors already blocked by the critical-infra rule)",
       "matchPackageNames": ["longhorn"],
-      "enabled": false
+      "matchUpdateTypes": ["minor"],
+      "automerge": false
     }
   ]
 }

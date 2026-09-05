@@ -43,7 +43,7 @@ services:
         container_name: watchtower
         restart: unless-stopped
         mem_limit: 512M
-        image: nickfedor/watchtower
+        image: nickfedor/watchtower:latest
         volumes:
             - dockerproxy_priv:/socket/:ro
         depends_on:
