@@ -111,6 +111,11 @@
       "enabled": false
     },
     {
+      "description": "immich postgres: same-shape tags only (major-vectorchordX.Y.Z-pgvectorA.B.C), locked to the current postgres major via the compatibility group so pg-major jumps stay manual",
+      "matchPackageNames": ["ghcr.io/immich-app/postgres"],
+      "versioning": "regex:^(?<compatibility>\\d+)-vectorchord(?<major>\\d+)\\.(?<minor>\\d+)\\.(?<patch>\\d+)-pgvector(?<pv_major>\\d+)\\.(?<pv_minor>\\d+)\\.(?<pv_patch>\\d+)$"
+    },
+    {
       "description": "Longhorn requires sequential minor upgrades — minors are proposed but never automerged (patches automerge; majors already blocked by the critical-infra rule)",
       "matchPackageNames": ["longhorn"],
       "matchUpdateTypes": ["minor"],
