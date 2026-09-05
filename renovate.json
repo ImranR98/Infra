@@ -1,10 +1,22 @@
 {
-  "enabledManagers": ["regex"],
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "baseBranches": ["master"],
+  "rangeStrategy": "replace",
+  "prHourlyLimit": 5,
+  "labels": ["deps"],
+  "digest": { "enabled": true },
+
+  "kubernetes": {
+    "managerFilePatterns": ["/^targets\\/.*\\.ya?ml$/"]
+  },
+
   "customManagers": [
     {
       "customType": "regex",
-      "fileMatch": ["targets/.+/k3s/.*\\.yaml$"],
+      "description": "Images inside HelmChart valuesContent blocks (repository/tag pairs and single-line image refs)",
+      "fileMatch": ["targets/.+/k3s/.*helmchart.*\\.ya?ml$"],
       "matchStrings": [
+        "repository:\\s*(?<depName>\\S+)\\s*\\n(?:[^\\n]*\\n){0,10}?\\s*tag:\\s*\"?(?<currentValue>[^\"\\s@#]+)(?:@sha256:\\S+)?\"?",
         "image:\\s*(?<depName>[^\\s@:\"']+):(?<currentValue>[^\\s@:\"'#]+)(?:@sha256:\\S+)?"
       ],
       "datasourceTemplate": "docker",
@@ -12,16 +24,8 @@
     },
     {
       "customType": "regex",
-      "fileMatch": ["targets/.+/k3s/.*\\.yaml$"],
-      "matchStrings": [
-        "repository:\\s*(?<depName>\\S+)\\s*\\n(?:[^\\n]*\\n){0,10}?\\s*tag:\\s*\"?(?<currentValue>[^\"\\s@#]+)(?:@sha256:\\S+)?\"?"
-      ],
-      "datasourceTemplate": "docker",
-      "versioningTemplate": "docker"
-    },
-    {
-      "customType": "regex",
-      "fileMatch": ["targets/.+/k3s/.*\\.yaml$"],
+      "description": "helm.cattle.io HelmChart CR chart versions (oci:// and classic repo forms)",
+      "fileMatch": ["targets/.+/k3s/.*\\.ya?ml$"],
       "matchStrings": [
         "chart:\\s*oci://(?<depName>\\S+)\\s*\\n(?:[^\\n]*\\n){0,5}?\\s*version:\\s*(?<currentValue>\\S+)",
         "chart:\\s*(?<depName>\\S+)\\s*\\n(?:[^\\n]*\\n){0,5}?\\s*repo:\\s*(?<registryUrl>\\S+)\\s*\\n(?:[^\\n]*\\n){0,10}?\\s*version:\\s*(?<currentValue>\\S+)"
@@ -31,7 +35,8 @@
     },
     {
       "customType": "regex",
-      "fileMatch": ["targets/.+/k3s/.*\\.yaml$"],
+      "description": "upgrade.cattle.io Plan CR k3s versions",
+      "fileMatch": ["targets/.+/k3s/.*\\.ya?ml$"],
       "matchStrings": [
         "version:\\s*\"?v(?<currentValue>\\d+\\.\\d+\\.\\d+\\+k3s\\d+)\"?"
       ],
@@ -41,21 +46,55 @@
     },
     {
       "customType": "regex",
-      "fileMatch": ["targets/.+/compose/compose\\.yaml$"],
+      "description": "Traefik plugin version pins in additionalArguments (k3s HelmChartConfig + compose)",
+      "fileMatch": ["targets/.+/k3s/.*\\.ya?ml$", "targets/.+/compose/compose\\.ya?ml$"],
       "matchStrings": [
-        "image:\\s*(?<depName>[^\\s@:\"'$]+):(?<currentValue>v?\\d[^\\s@:\"'#]*)(?:@sha256:\\S+)?"
+        "--experimental\\.plugins\\.[^\\s.\"=]+\\.modulename=github\\.com/(?<owner>[^/]+)/(?<repo>[^\\s\"']+)[^\\n]*\\n\\s*-\\s*\"--experimental\\.plugins\\.[^\\s.\"=]+\\.version=v?(?<currentValue>[^\\s\"']+)"
       ],
-      "description": "Compose images with pinned version tags (floating tags stay watchtower-managed)",
-      "datasourceTemplate": "docker",
-      "versioningTemplate": "docker"
+      "depNameTemplate": "{{owner}}/{{repo}}",
+      "datasourceTemplate": "github-releases",
+      "versioningTemplate": "semver"
     }
   ],
+
   "packageRules": [
     {
-      "description": "Pin floating tags (latest|stable|release) to digests",
+      "description": "Pin floating tags to digests",
       "matchDatasources": ["docker"],
       "matchCurrentValue": "^(latest|stable|release)$",
       "pinDigests": true
+    },
+    {
+      "description": "No major bumps for infra images that previously carried PRESERVE_MAJOR annotations",
+      "matchPackageNames": ["postgres", "clickhouse/clickhouse-server", "fedora"],
+      "matchUpdateTypes": ["major"],
+      "enabled": false
+    },
+    {
+      "description": "Compose-side syncthing on pc/bigpc is watchtower-owned",
+      "matchManagers": ["docker-compose"],
+      "matchPackageNames": ["syncthing/syncthing"],
+      "enabled": false
+    },
+    {
+      "description": "envsubst variable inside the image ref cannot be resolved",
+      "matchPackageNames": ["imranrdev/apps.obtainium.$BASE_SERVICES_DOMAIN"],
+      "enabled": false
+    },
+    {
+      "description": "moving-sale is a frozen one-off site (untagged image, no digest pins)",
+      "matchPackageNames": ["imranrdev/moving-sale-2027"],
+      "enabled": false
+    },
+    {
+      "description": "immich postgres has an untrackable tag scheme (18-vectorchord0.5.3-...)",
+      "matchPackageNames": ["ghcr.io/immich-app/postgres"],
+      "enabled": false
+    },
+    {
+      "description": "Longhorn requires sequential minor upgrades",
+      "matchPackageNames": ["longhorn"],
+      "enabled": false
     }
   ]
 }

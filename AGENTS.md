@@ -22,8 +22,8 @@ Each target dir: `VARS.template.sh` (committed; documents every required `export
 
 Notable per-target facts:
 - **srv0** — `base` group: namespaces, nfs-server, host-volumes, csi-driver-nfs, cert-manager, longhorn, geoip, traefik, crowdsec, authelia, pvc-backup, ntfy, descheduler, system-upgrade, rustfs, monitoring. `apps`: immich, logtfy, jellyfin, navidrome, mdscl, mosquitto, homeassistant, ollama, open-webui, nextcloud, freshrss, linkwarden, opodsync, dscpln, opencanary, flaresolverr, fmd, plik, syncthing, headlamp, frigate (see `k3s/groups.yaml`). Compose sidecar = frpc only. Ollama runs on the `bigpc` agent (RX 9070/ROCm); Open WebUI reaches it in-cluster only (no LAN exposure). Jellyfin/Immich ML/Frigate use srv0's Iris Xe iGPU; Frigate recordings stay on NFS deliberately so the pod can move nodes. Home Assistant integration auto-installs on every pod start (no HACS).
-- **bigpc** — K3s agent labelled `has-amdgpu=true`, tainted `scheduling-discouraged` (PreferNoSchedule), no Longhorn replicas (`create-default-disk=false`); Compose: dockerproxy_priv, watchtower, syncthing (host net).
-- **vps0** — Compose: frps, traefik, authelia + db, crowdsec, plausible (app/ClickHouse/Postgres/init), shlink + db + web UI, uptime-kuma, metube, isbn-lookup, pixelntfy, logtfy, strelaysrv, owncast (+ owncast-auth), ikom, cct26, moving-sale, obtainium, socket proxies, watchtower. Two domain zones: `$BASE_SERVICES_DOMAIN` (public) and `$CLOUD_SERVICES_DOMAIN` (Authelia-protected, e.g. `cloud.$BASE_SERVICES_DOMAIN`).
+- **bigpc** — K3s agent labelled `has-amdgpu=true`, tainted `scheduling-discouraged` (PreferNoSchedule), no Longhorn replicas (`create-default-disk=false`); Compose: dockerproxy_priv, watchtower (syncthing only), syncthing (host net).
+- **vps0** — Compose: frps, traefik, authelia + db, crowdsec, plausible (app/ClickHouse/Postgres/init), shlink + db + web UI, uptime-kuma, metube, isbn-lookup, pixelntfy, logtfy, strelaysrv, owncast (+ owncast-auth), ikom, cct26, moving-sale, obtainium, socket proxies. No watchtower — all vps0 images are Renovate-owned (floating tags digest-pinned). Two domain zones: `$BASE_SERVICES_DOMAIN` (public) and `$CLOUD_SERVICES_DOMAIN` (Authelia-protected, e.g. `cloud.$BASE_SERVICES_DOMAIN`).
 - **rpi** — single go2rtc container; stream password auto-generated on first start and persisted in `current_target/compose_live_state/go2rtc/password`; WebUI loopback-only.
 
 ## Essential commands
@@ -44,7 +44,6 @@ Notable per-target facts:
 ./infra.sh <target> k3s backup-pvc <name>|--all [-y]
 ./infra.sh <target> k3s restore-pvc <name>|--all [-y]
 ./infra.sh <target> k3s pvc-shell <pvc>               # Temp pod mounting a Longhorn PVC + hostPath, drop into shell
-./infra.sh <target> update [--dry-run]                # Renovate scan + apply + Traefik plugin checks
 ./infra.sh <target> wireguard <config-path>
 ```
 
@@ -119,7 +118,7 @@ Modes: `apply` (prep → build → apply → post), `delete` (delete.sh → Helm
 
 ## Networking
 
-- **Traefik on srv0** — dual entrypoints: `websecure:443` (LAN, no proxy protocol) and `websecure-proxy:8443` (PROXY protocol v2, trustedIPs `127.0.0.1/32` + pod/service CIDRs — Klipper SNAT makes all traffic appear from those). Public routes listen on both; LAN-only (`*.home.local`) routes only on `websecure`. Middlewares: `geoblock` (allowlist plugin, self-hosted MaxMind GeoLite2 via the `geoip` component's `geoip-service`), `crowdsec-bouncer` (stream mode + AppSec on `:7422`), `forwardauth-authelia` (+ `-basic`), `lan-whitelist` (RFC1918), `cluster-only` (10.42/16), `basicauth-cluster`, `local-no-store`. HTTP → HTTPS redirect. readTimeout=0 on both secure entrypoints (streaming). Plugins are pinned in `additionalArguments` (Renovate can't see them — `update` checks GitHub Releases).
+- **Traefik on srv0** — dual entrypoints: `websecure:443` (LAN, no proxy protocol) and `websecure-proxy:8443` (PROXY protocol v2, trustedIPs `127.0.0.1/32` + pod/service CIDRs — Klipper SNAT makes all traffic appear from those). Public routes listen on both; LAN-only (`*.home.local`) routes only on `websecure`. Middlewares: `geoblock` (allowlist plugin, self-hosted MaxMind GeoLite2 via the `geoip` component's `geoip-service`), `crowdsec-bouncer` (stream mode + AppSec on `:7422`), `forwardauth-authelia` (+ `-basic`), `lan-whitelist` (RFC1918), `cluster-only` (10.42/16), `basicauth-cluster`, `local-no-store`. HTTP → HTTPS redirect. readTimeout=0 on both secure entrypoints (streaming). Plugins are pinned in `additionalArguments` (regex-managed via `github-releases`).
 - **vps0 edge** — one Traefik routes by Host/SNI: vps0-local services via Docker labels (two zones, see Targets); `home.$SERVICES_DOMAIN` + wildcard goes through the file provider (`dynamic-configuration.yaml`) to `frps:8080` (HTTP) / `frps:8443` with `tls.passthrough` — vps0 never terminates srv0's TLS; cert-manager on srv0 owns the LE lifecycle. On srv0, cert-manager also runs a local chain (self-signed → `k3s-local-ca` → `ca-issuer`) for `*.home.local`/MQTT TLS; its `post.sh` waits for each chain step before proceeding (race-condition guard).
 - **FRP** — frps on vps0 (ports: 7000 control, `$FRPS_PREBOOT_PORT` preboot SSH, 8888 SSH; healthcheck on admin API :7500). frpc sidecar on srv0 (host network, `pgrep` healthcheck) proxies: ssh→8888, http→8080, https→8443 (local), qbittorrent peer 56881 tcp+udp. Mutual TLS with a per-pair CA (`generate-mtls-certs`); preboot frpc uses a separate client cert.
 - **WireGuard** (`wireguard` command) — installs tools, deploys `/etc/wireguard/wg0.conf` (chmod 600), rewrites `AllowedIPs` to `0.0.0.0/1, 128.0.0.0/1` (split-tunnel: less specific than LAN routes, so K3s subnets and LAN stay direct), adds PostUp/PreDown `/32` routes for the endpoint via the physical gateway (dead-loop fix), removes `Table=auto`, and installs a systemd drop-in (`Restart=on-failure`, `RestartSec=15`, `ExecStartPre` deletes stale wg0).
@@ -128,23 +127,24 @@ Modes: `apply` (prep → build → apply → post), `delete` (delete.sh → Helm
 ## Security
 
 - Secrets never touch git (`/secrets/`, `/VARS*.sh`, `compose.private.yaml` gitignored); `.secret` → chmod 600; Authelia SSO (forward-auth + basic-auth, 2FA); CrowdSec (srv0: Helm chart, agent/LAPI/AppSec + per-service postoverflow whitelists; vps0: single container, bouncer key auto-registered from `BOUNCER_KEY_TRAEFIK`); geoblock allowlist (CA/CN/CU); per-component NetworkPolicies plus baselines in the `namespaces` component (kube-system policy explicitly allows 80/443/8000/8443 to Traefik).
-- Docker socket via `wollomatic/socket-proxy`: `dockerproxy` (read-only, Traefik/monitoring), `dockerproxy_priv` (read-write, watchtower) — `cap_drop: ALL`, `read_only: true`, `mem_limit: 512M`, user `65534:$DOCKER_GID`.
+- Docker socket via `wollomatic/socket-proxy`: `dockerproxy` (read-only, Traefik/monitoring); `dockerproxy_priv` (read-write, watchtower) exists only on pc/bigpc — `cap_drop: ALL`, `read_only: true`, `mem_limit: 512M`, user `65534:$DOCKER_GID`.
 - Known tradeoff: K3s `HelmChart` `valuesContent` (incl. DB passwords, JWKS, OIDC secrets) is readable by anyone with `get` on `helmcharts.helm.cattle.io` — fine for single-user, audit before granting namespace access.
 - **SELinux (Fedora/secureblue nodes)** — Kubernetes assigns per-pod MCS categories; files carry their creator's categories forever. Pods sharing a hostPath tree (syncthing/mdscl/dscpln) and backup/restore pods must set **pod-level** `seLinuxOptions.level: s0` (container-level is ignored). `privileged: true` bypasses enforcement but new files are still labelled. Python/Node `io_uring` denials are audit spam with epoll fallback — fix with `PYTHON_IO_URING=0` / `UV_USE_IO_URING=0` rather than SELinux changes. `setroubleshootd` CPU pegged = denial backlog; fix the denials, don't mask.
 
 ## Updates (Renovate)
 
-`renovate.json` at root: `enabledManagers: ["regex"]` only, five custom managers — (1) K3s `image:` refs, (2) `repository:`/`tag:` pairs, (3) Helm charts (`oci://` or `chart:`+`repo:`+`version:`), (4) K3s plan versions (`github-releases` on `k3s-io/k3s`, custom versioning), (5) Compose `image:` refs **only when pinned** (`v?\d...`). `packageRules` pins floating `latest|stable|release` tags to digests (K3s YAML only — compose floating tags are watchtower's domain).
+Renovate runs as a scheduled **GitHub Actions** workflow (`.github/workflows/renovate.yml`, daily 03:00 UTC + `workflow_dispatch` for manual runs) via `renovatebot/github-action`, opening PRs directly on GitHub (`platform=github`). Nothing runs in-cluster and no repo-side tokens exist — the only secret is the GitHub repo secret `RENOVATE_TOKEN` (classic PAT with `repo` scope, or fine-grained: Contents RW + Pull requests RW + Metadata RO). Private-repo note: scheduled runs consume the GitHub Free plan's 2,000 private-repo Actions minutes/month (each run is minutes).
 
-`./infra.sh <target> update [--dry-run]` runs `renovate --platform=local --require-config=required` (debug JSON), pipes it to `_apply_updates.py --target=<t>` which edits source files in place (no PRs). Annotations: `# PRESERVE_FULL` (never touch this line), `# PRESERVE_MAJOR` (no major bumps). Then checks Traefik plugin versions against GitHub Releases.
+Review/apply flow (manual only, no automerge, platform-neutral git): fetch the PR branch (`git fetch origin pull/<n>/head:renovate/pr-<n>`, then `git checkout renovate/pr-<n>`), `./infra.sh <target> validate`, then merge locally and `git push origin master`. Merges never happen in the platform UI — origin stays the source of truth. Renovate rebases its open PRs and auto-closes them once the change lands on `master` (next run). The workflow itself is Renovate-managed (github-actions manager bumps `actions/checkout` and `renovatebot/github-action`).
+
+`renovate.json` at root (repository config): built-in **kubernetes** manager (`managerFilePatterns: /^targets\/.*\.ya?ml$/` — plain pod-spec images) and **docker-compose** manager (all compose images) plus four regex managers for formats nobody parses natively: (1) images inside HelmChart `valuesContent` blocks (fileMatch `*helmchart*.ya?ml$` — hence HelmChart files are named `*helmchart.yaml`), (2) HelmChart CR versions (`oci://` or `chart:`+`repo:`+`version:`), (3) K3s plan versions (`github-releases` on `k3s-io/k3s`, custom versioning), (4) Traefik plugin pins in `additionalArguments` (`github-releases`). Global options (token, repo) come from the action env, not the repo config. packageRules: pin floating `latest|stable|release` tags to digests; block majors for `postgres`, `clickhouse/clickhouse-server`, `fedora` (the old `# PRESERVE_MAJOR` semantics — Renovate can't read inline comments, so they're package-level rules); disable syncthing (compose; watchtower-owned on pc/bigpc), the obtainium envsubst image ref, the frozen moving-sale site image, immich's postgres image (untrackable tag scheme), and longhorn (sequential minor upgrades required). No other annotations — Renovate's default update decision applies everywhere.
 
 Compose image ownership:
-| Tag style | Updater |
+| Where | Updater |
 |---|---|
-| Pinned mutable (`v3`, `16-alpine`, `2`) | Renovate; service carries `com.centurylinklabs.watchtower.enable=false` |
-| Pinned exact (`v0.71.0`) | Renovate (watchtower re-pull is a no-op) |
-| Floating (`latest`, `stable`) or untagged | Watchtower (invisible to Renovate) |
-| Untagged in watchtower-excluded service | Manual |
+| srv0 (frpc), pc/bigpc compose | Renovate PRs; watchtower (pc/bigpc) auto-updates only compose syncthing |
+| vps0 compose (pinned or digest-pinned) | Renovate PRs (no watchtower on vps0) |
+| Floating/untagged k3s + compose images | Renovate digest-pin PRs (tag stays, digest refreshed) |
 
 Post-update: `git diff` → `./infra.sh <target> validate` → deploy.
 
@@ -167,8 +167,9 @@ Post-update: `git diff` → `./infra.sh <target> validate` → deploy.
 
 ```
 infra.sh                        # CLI entry point
+.github/workflows/renovate.yml  # Scheduled self-hosted Renovate (opens PRs on GitHub)
 commands/                       # Global command implementations
-commands/_internal/             # _apply_updates.py, _patch_node_ip.py
+commands/_internal/             # _patch_node_ip.py
 lib/                            # common.sh (index) → pkg/env/net/k3s/compose/validate/pvc/mtls-certs
 lib/plugins/authelia-header-gate/   # WASM plugin source + build
 secrets/                        # VARS.<target>.sh (gitignored)
