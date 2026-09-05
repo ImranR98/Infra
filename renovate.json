@@ -3,6 +3,7 @@
   "baseBranches": ["master"],
   "rangeStrategy": "replace",
   "prHourlyLimit": 20,
+  "branchConcurrentLimit": 20,
   "labels": ["deps"],
   "digest": { "enabled": true },
 
