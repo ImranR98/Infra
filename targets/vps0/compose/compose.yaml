@@ -68,7 +68,7 @@ services:
 
     # Authelia - 2FA Authentication
     authelia:
-        image: authelia/authelia
+        image: authelia/authelia:latest
         container_name: authelia
         user: "$MY_UID:$MY_UID"
         depends_on:
@@ -250,7 +250,7 @@ services:
             start_period: 1m
         logging: *logging
     plausible-init:
-        image: alpine
+        image: alpine:latest
         container_name: plausible-init
         restart: no
         cap_drop:
@@ -303,7 +303,7 @@ services:
     # PixelNtfy - Tracking Pixels
     pixelntfy:
         container_name: pixelntfy
-        image: imranrdev/pixel-ntfy
+        image: imranrdev/pixel-ntfy:latest
         restart: unless-stopped
         mem_limit: 512M
         depends_on:
@@ -328,7 +328,7 @@ services:
     # ISBN Lookup
     isbn-lookup:
         container_name: isbn-lookup
-        image: imranrdev/isbn-lookup
+        image: imranrdev/isbn-lookup:latest
         restart: unless-stopped
         mem_limit: 512M
         depends_on:
@@ -373,7 +373,7 @@ services:
     # Obtainium Apps
     obtainium_apps:
         container_name: obtainium_apps
-        image: imranrdev/apps.obtainium.$BASE_SERVICES_DOMAIN
+        image: imranrdev/apps.obtainium.imranr.dev:latest
         depends_on:
             - traefik
         labels:
@@ -393,7 +393,7 @@ services:
     # IKOM - Kitchen order manager
     ikom:
         container_name: ikom
-        image: imranrdev/order-manager
+        image: imranrdev/order-manager:latest
         depends_on:
             - traefik
         labels:
@@ -423,7 +423,7 @@ services:
     # CCT26 - Reddit + LLM tool
     cct26:
         container_name: cct26
-        image: imranrdev/cct26
+        image: imranrdev/cct26:latest
         restart: unless-stopped
         mem_limit: 2G
         depends_on:
@@ -453,7 +453,7 @@ services:
     # Attention Game
     attentiongame:
         container_name: attentiongame
-        image: imranrdev/attentiongame
+        image: imranrdev/attentiongame:latest
         user: "$MY_UID:$MY_UID"
         depends_on:
             - traefik
@@ -549,7 +549,7 @@ services:
 
     # Logtfy - Log Monitoring and ntfy Alerting
     logtfy:
-        image: imranrdev/logtfy
+        image: imranrdev/logtfy:latest
         container_name: logtfy
         hostname: $TARGET
         restart: unless-stopped
