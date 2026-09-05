@@ -5,6 +5,7 @@
   "prHourlyLimit": 20,
   "prConcurrentLimit": 20,
   "branchConcurrentLimit": 20,
+  "automerge": true,
   "labels": ["deps"],
   "digest": { "enabled": true },
 
@@ -74,7 +75,17 @@
     {
       "description": "One PR for all docker digest pins and refreshes (the noisy batch); version bumps stay separate",
       "matchUpdateTypes": ["pin", "digest"],
-      "groupName": "docker digests"
+      "groupName": "docker digests",
+      "automerge": false
+    },
+    {
+      "description": "Never automerge: base-namespace infrastructure (srv0 K3s base group), the public VPS edge (vps0 compose), and the srv0 frpc tunnel",
+      "matchFileNames": [
+        "targets/srv0/k3s/(namespaces|nfs-server|host-volumes|csi-driver-nfs|cert-manager|longhorn|geoip|traefik|crowdsec|authelia|pvc-backup|ntfy|descheduler|system-upgrade|rustfs|monitoring)/.*",
+        "targets/vps0/compose/compose\\.ya?ml$",
+        "targets/srv0/compose/compose\\.ya?ml$"
+      ],
+      "automerge": false
     },
     {
       "description": "Pin floating tags to digests",

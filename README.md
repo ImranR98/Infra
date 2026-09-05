@@ -4,15 +4,17 @@ The IaaC system for my homelab.
 
 ## Architecture
 
-<p align="center">
-  <img src="./architecture.svg" alt="Infra architecture overview" width="800"/>
-</p>
-
 - `vps0` is a cloud VPS that runs a Docker Compose stack and runs critical public-facing services, like [`apps.obtainium.imranr.dev`](https://apps.obtainium.imranr.dev/), for which downtime is unaccaptable.
 - `srv0` is a lightweight home server that runs a Kuberetes stack and runs personal services, like [Immich](https://immich.app/), for which occasional downtime is acceptable.
 - `bigpc` is a gaming PC that also serves as a Kubernetes worker node for GPU-accelerated workloads like [Ollama](https://ollama.com/).
 - `pc` is a laptop that runs [Syncthing](https://syncthing.net/) via Docker Compose, to sync files to `srv0`.
 
+<p align="center">
+  <img src="./architecture.svg" alt="Infra architecture overview" width="800"/>
+</p>
+
+- Services exposed to the internet through Traefik are protected by [Authelia SSO](https://www.authelia.com/), [Crowdsec](https://www.crowdsec.net/), and [geoblock](https://plugins.traefik.io/plugins/62d6ce04832ba9805374d62c/geo-block).
+- Everything is updated through [Renovate](https://www.mend.io/renovate/) (manually invoked on a regular basis).
 
 ## Project Goals
 
