@@ -2,4 +2,4 @@ module geoip-service
 
 go 1.24
 
-require github.com/oschwald/maxminddb-golang v1.13.1
+require github.com/oschwald/maxminddb-golang/v2 v2.5.0
