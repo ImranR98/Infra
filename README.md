@@ -1,22 +1,24 @@
 # Infra
 
-Infra is a single-repo, shell-driven infrastructure-as-code system for managing a homelab of Linux servers. It deploys and orchestrates Docker Compose stacks and K3s (lightweight Kubernetes) workloads across multiple machines — private servers, VPS instances, and remote agents — all from one CLI.
+The IaaC system for my homelab.
 
-*The docs assume familiarity with Docker Compose, K3s/kubectl/kustomize, and Traefik. They focus on how Infra wires these tools together and what's unique to this repo.*
+## Architecture
 
 <p align="center">
   <img src="./architecture.svg" alt="Infra architecture overview" width="800"/>
 </p>
 
-## What it does
+- `vps0` is a cloud VPS that runs a Docker Compose stack and runs critical public-facing services, like [`apps.obtainium.imranr.dev`](https://apps.obtainium.imranr.dev/), for which downtime is unaccaptable.
+- `srv0` is a lightweight home server that runs a Kuberetes stack and runs personal services, like [Immich](https://immich.app/), for which occasional downtime is acceptable.
+- `bigpc` is a gaming PC that also serves as a Kubernetes worker node for GPU-accelerated workloads like [Ollama](https://ollama.com/).
+- `pc` is a laptop that runs [Syncthing](https://syncthing.net/) via Docker Compose, to sync files to `srv0`.
 
-- **One CLI for everything.** `./infra.sh <target> <command>` is the entry point. Targets are named machines; commands do the work.
-- **Docker Compose management.** Render templates, spin up Compose stacks as systemd services, back up runtime state, swap individual services.
-- **K3s cluster management.** Bootstrap control-plane nodes, join remote agent nodes via SSH, deploy Kubernetes workloads through `kubectl kustomize` with a full component lifecycle (apply, delete, diff, render).
-- **Declarative configuration.** All infrastructure is defined as YAML/TOML/JSON templates with `$VARIABLE` placeholders. Per-target environment files provide secrets at runtime.
-- **Automated updates.** Renovate scans all Docker images, Helm charts, and Traefik plugins across the repo and applies version bumps to source files automatically.
-- **Networking built in.** WireGuard VPN with split-tunnel routing, FRP reverse proxy tunneling for NAT traversal, and preboot FRPC for LUKS-encrypted root SSH unlock.
-- **Security-focused.** Secrets live in `.secret` files with restricted permissions, LUKS-aware initramfs hooks, Authelia SSO with 2FA, CrowdSec intrusion prevention, and geoblock middleware.
+
+## Project Goals
+
+- **Infrastructure as Code**: Everything should be declarative and automated, using standard tooling wherever possible. Custom scripts should be minimal and only where necessary.
+- **Universal CLI**: `./infra.sh <target> <command>` is the entry point for everything.
+- **Security**: As the codebase is public and the system runs public-facing services containing highly personal data, security must be taken seriously.
 
 ## Quick start
 
@@ -37,14 +39,6 @@ cp targets/<target>/VARS.template.sh VARS.<target>.sh
 ./infra.sh <target> k3s group apps apply
 ```
 
-## Documentation
+## More
 
-All documentation lives in [AGENTS.md](AGENTS.md): architecture, targets, commands, templating, Compose/K3s conventions, networking, security, and the Renovate update workflow. See the [architecture diagram](architecture.svg).
-
-## Requirements
-
-- Linux (apt, dnf, or rpm-ostree-based distro)
-- Bash 4+
-- Docker + Docker Compose v2
-- kubectl (for K3s targets)
-- yq, envsubst, jq, curl, python3
+Detailed documentation lives in [AGENTS.md](AGENTS.md). Note that while LLMs are used in development, the LLM isn't the one putting its data on the line. [It is just a tool](https://www.normaltech.ai/p/ai-as-normal-technology) and is used like one.
