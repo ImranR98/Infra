@@ -80,12 +80,13 @@
       "automerge": false
     },
     {
-      "description": "Never automerge: base-namespace infrastructure (srv0 K3s base group), the public VPS edge (vps0 compose), and the srv0 frpc tunnel",
+      "description": "Never automerge major updates to critical infra (base-namespace srv0 K3s group, public VPS edge vps0, srv0 frpc tunnel); minor/patch automerge normally",
       "matchFileNames": [
         "targets/srv0/k3s/{namespaces,nfs-server,host-volumes,csi-driver-nfs,cert-manager,longhorn,geoip,traefik,crowdsec,authelia,pvc-backup,ntfy,descheduler,system-upgrade,rustfs,monitoring}/**",
         "targets/vps0/compose/**",
         "targets/srv0/compose/**"
       ],
+      "matchUpdateTypes": ["major"],
       "automerge": false
     },
     {
