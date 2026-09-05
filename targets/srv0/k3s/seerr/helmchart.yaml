@@ -9,7 +9,7 @@ spec:
   failurePolicy: abort
   targetNamespace: apps
   createNamespace: false
-  version: 3.9.0
+  version: 3.9.1
   valuesContent: |-
     fullnameOverride: seerr
     config:
