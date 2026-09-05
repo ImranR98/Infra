@@ -6,6 +6,7 @@
   "prConcurrentLimit": 20,
   "branchConcurrentLimit": 20,
   "automerge": true,
+  "ignoreTests": true,
   "labels": ["deps"],
   "digest": { "enabled": true },
 
