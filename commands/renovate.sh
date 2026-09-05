@@ -14,6 +14,9 @@ fi
 export RENOVATE_TOKEN="$RENOVATE_GITHUB_TOKEN"
 export RENOVATE_REPOSITORIES="ImranR98/Infra"
 export LOG_LEVEL="${LOG_LEVEL:-info}"
+# Renovate's auto-commits must not use the machine's personal git signing
+# setup (commit.gpgsign + gpg.format=ssh has no signingKey/agent available).
+export RENOVATE_GIT_NO_GPG_SIGN="true"
 
 # Attribute commits to the repo's configured git identity instead of Renovate's
 # default (a Mend-owned email that GitHub flags as unverified).
