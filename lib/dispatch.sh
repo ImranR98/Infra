@@ -9,13 +9,21 @@ _desc() {
 infra_dispatch() {
     local cmd_args=("$@")
 
-    case "${cmd_args[0]:-}" in
-        validate)  validate "$TARGET"; exit $? ;;
-        list-domains) list_domains "$TARGET"; exit $? ;;
-    esac
+    if [ -n "${TARGET:-}" ]; then
+        case "${cmd_args[0]:-}" in
+            validate)  validate "$TARGET"; exit $? ;;
+            list-domains) list_domains "$TARGET"; exit $? ;;
+        esac
+    fi
 
     local CMD_PATH="" CMD_RUNNER="bash" search_path="" found="" arg_idx=0
-    local search_dirs=("targets/$TARGET/commands" "commands")
+    local search_dirs=()
+    if [ -n "${TARGET:-}" ]; then
+        search_dirs=("targets/$TARGET/commands" "commands")
+    else
+        # Universal command (no target): top-level commands/ only
+        search_dirs=("commands")
+    fi
 
     while [ $arg_idx -lt ${#cmd_args[@]} ]; do
         local arg="${cmd_args[$arg_idx]}"; found=""
@@ -49,36 +57,43 @@ _infra_help() {
         echo ""
         _err=true
     fi
-    echo "Available commands:"
-    echo ""
-    echo "  validate            Check configs for errors"
-    echo "  list-domains        Show domains used by this target"
+    if [ -n "${TARGET:-}" ]; then
+        echo "Available commands (target: $TARGET):"
+        echo ""
+        echo "  validate            Check configs for errors"
+        echo "  list-domains        Show domains used by this target"
+    else
+        echo "Available universal commands (no target):"
+        echo ""
+    fi
     for f in "$INFRA_ROOT/commands"/*.sh; do
         [ -f "$f" ] || continue
         printf '  %-19s' "$(basename "${f%.*}")"
         _desc "$f"
     done
-    for f in "$INFRA_ROOT/targets/$TARGET"/commands/*.sh; do
-        [ -f "$f" ] || continue
-        printf '  %-19s' "$(basename "${f%.*}")"
-        _desc "$f"
-    done
-    for stack in compose k3s; do
-        [ -d "$INFRA_ROOT/targets/$TARGET/$stack" ] || continue
-        local has_cmds=false
-        for f in "$INFRA_ROOT/commands/$stack"/*.sh; do
+    if [ -n "${TARGET:-}" ]; then
+        for f in "$INFRA_ROOT/targets/$TARGET"/commands/*.sh; do
             [ -f "$f" ] || continue
-            [ "$has_cmds" = false ] && echo "" && has_cmds=true
-            printf '  %s %-15s' "$stack" "$(basename "${f%.*}")"
+            printf '  %-19s' "$(basename "${f%.*}")"
             _desc "$f"
         done
-        for f in "$INFRA_ROOT/targets/$TARGET"/commands/"$stack"/*.sh; do
-            [ -f "$f" ] || continue
-            [ "$has_cmds" = false ] && echo "" && has_cmds=true
-            printf '  %s %-15s' "$stack" "$(basename "${f%.*}")"
-            _desc "$f"
+        for stack in compose k3s; do
+            [ -d "$INFRA_ROOT/targets/$TARGET/$stack" ] || continue
+            local has_cmds=false
+            for f in "$INFRA_ROOT/commands/$stack"/*.sh; do
+                [ -f "$f" ] || continue
+                [ "$has_cmds" = false ] && echo "" && has_cmds=true
+                printf '  %s %-15s' "$stack" "$(basename "${f%.*}")"
+                _desc "$f"
+            done
+            for f in "$INFRA_ROOT/targets/$TARGET"/commands/"$stack"/*.sh; do
+                [ -f "$f" ] || continue
+                [ "$has_cmds" = false ] && echo "" && has_cmds=true
+                printf '  %s %-15s' "$stack" "$(basename "${f%.*}")"
+                _desc "$f"
+            done
         done
-    done
+    fi
     if $_err; then exit 1; fi
     exit 0
 }

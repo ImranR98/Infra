@@ -4,7 +4,7 @@ Infra is a shell-driven IaC repo for a multi-machine homelab. One CLI — `./inf
 
 ## Prerequisites
 
-Bash 4+, Docker Compose v2, kubectl (K3s targets), yq, envsubst, jq, curl, python3. Install: `./infra.sh <target> prereqs` (detects apt/dnf/rpm-ostree; Docker from official repos).
+Bash 4+, Docker Compose v2, kubectl (K3s targets), yq, envsubst, jq, curl, python3. Node.js/npm for `renovate` (npx). Install: `./infra.sh <target> prereqs` (detects apt/dnf/rpm-ostree; Docker from official repos).
 
 ## Targets
 
@@ -45,19 +45,22 @@ Notable per-target facts:
 ./infra.sh <target> k3s restore-pvc <name>|--all [-y]
 ./infra.sh <target> k3s pvc-shell <pvc>               # Temp pod mounting a Longhorn PVC + hostPath, drop into shell
 ./infra.sh <target> wireguard <config-path>
+./infra.sh renovate [--dry-run]                     # Universal: run Renovate — opens update PRs on GitHub
 ```
 
 srv0 only: `k3s test services` — browser-based integration tests for all exposed services (`targets/srv0/commands/k3s/test/`).
 
 ## Dispatch system
 
+Two modes, chosen by `infra.sh` from the first argument: a directory under `targets/` → **target mode** (everything below); otherwise a top-level entry in `commands/` (`.sh`/`.py`/dir) → **universal mode** (no target). Anything else → error listing both targets and universal commands.
+
 `infra_dispatch()` (`lib/dispatch.sh`) walks the argument list as directory levels. Per argument it checks, in order:
-1. `targets/<target>/commands/<path>/<arg>.sh|.py|/` — target override
-2. `commands/<path>/<arg>.sh|.py|/` — global default
+1. `targets/<target>/commands/<path>/<arg>.sh|.py|/` — target override (target mode only)
+2. `commands/<path>/<arg>.sh|.py|/` — global default (universal commands; also reachable under a target)
 
-`.sh` must be `chmod +x` (run via bash); `.py` runs via python3. The first script found is `exec`'d with the remaining args (it replaces the infra.sh process). `validate` and `list-domains` are built-ins handled inside dispatch.
+`.sh` must be `chmod +x` (run via bash); `.py` runs via python3. The first script found is `exec`'d with the remaining args (it replaces the infra.sh process). `validate` and `list-domains` are built-ins handled inside dispatch (target mode only).
 
-Startup sequence (`infra.sh`): sets `INFRA_ROOT`, `INFRA_INTERACTIVE`, state dirs; rejects unknown targets; if `hostname` ≠ target, warns (and prompts, when interactive); sources `lib/common.sh` (idempotent via `INFRA_LIB_LOADED`, pulls in pkg/env/net/k3s/compose/validate/pvc modules); resolves and sources the VARS file (skipped for `compose generate-mtls-certs`); sets `MY_UID` and `DOCKER_GID` for compose commands (except `backup-state`/`generate-mtls-certs`).
+Startup sequence (`infra.sh`): sets `INFRA_ROOT`, `INFRA_INTERACTIVE`, state dirs; detects target vs universal mode; target mode: if `hostname` ≠ target, warns (and prompts, when interactive); sources `lib/common.sh` (idempotent via `INFRA_LIB_LOADED`, pulls in pkg/env/net/k3s/compose/validate/pvc modules); resolves and sources the VARS file (skipped for `compose generate-mtls-certs`); sets `MY_UID` and `DOCKER_GID` for compose commands (except `backup-state`/`generate-mtls-certs`). Universal mode skips hostname check, target VARS, and compose setup entirely.
 
 ### Writing a new command
 
@@ -74,6 +77,7 @@ No DESC line → listed without description. Place at `commands/<name>.sh` or `c
 ## Variables & templating
 
 - **Two-layer vars**: `targets/<t>/VARS.template.sh` (committed, placeholders + generation comments) vs. actual secrets in `secrets/VARS.<t>.sh` (fallbacks in order: `secrets/VARS.sh`, root `VARS.<t>.sh`, root `VARS.sh`). All gitignored. `source_env` hard-fails if the real file is missing any template `export`.
+- **Universal VARS** — target-agnostic secrets live in `secrets/VARS.sh` (fallback: root `VARS.sh`), sourced on demand via `source_universal_env()` (lib/env.sh) by universal commands that need them. Not template-validated — each command checks for its own variables and fails with its own error (e.g. `renovate` requires `RENOVATE_GITHUB_TOKEN`).
 - **`ENVSUBST_VARS`** — allowlist passed to envsubst: every export in the real VARS file + built-ins (`MY_UID TARGET COMPOSE_STATE_DIR COMPOSE_STATE_BACKUP_DIR K3S_STATE_DIR PVC_BACKUP_DIR INFRA_ROOT DOCKER_GID PROXY_IP USER`) + derived `*_HASHED` vars. Only known vars are expanded; leftovers surface as validate errors.
 - **`*_HASHABLE` → `*_HASHED`** — auto-hashed with `openssl passwd -6` at source time (e.g. Authelia OIDC client secrets: plaintext in VARS, hash mounted into Authelia).
 - **Multi-line vars** (Authelia user DB, JWKS, frigate config, geoblock subset) — exported with literal indentation; whitespace is significant in the rendered YAML.
@@ -133,11 +137,11 @@ Modes: `apply` (prep → build → apply → post), `delete` (delete.sh → Helm
 
 ## Updates (Renovate)
 
-Renovate runs as a scheduled **GitHub Actions** workflow (`.github/workflows/renovate.yml`, daily 03:00 UTC + `workflow_dispatch` for manual runs) via `renovatebot/github-action`, opening PRs directly on GitHub (`platform=github`). Nothing runs in-cluster and no repo-side tokens exist — the only secret is the GitHub repo secret `RENOVATE_TOKEN` (classic PAT with `repo` scope, or fine-grained: Contents RW + Pull requests RW + Metadata RO). Private-repo note: scheduled runs consume the GitHub Free plan's 2,000 private-repo Actions minutes/month (each run is minutes).
+Renovate runs **manually on demand** (no scheduler, nothing in-cluster) via the universal command `./infra.sh renovate [--dry-run]` (`commands/renovate.sh`). It runs the `renovate` CLI (`npx`) self-hosted against `platform=github`, opening PRs directly on GitHub. The bot's PAT lives in the universal VARS file (`secrets/VARS.sh` → `RENOVATE_GITHUB_TOKEN`, classic `repo` scope or fine-grained: Contents RW + Pull requests RW + Metadata RO); the script fails with setup instructions if it's missing. Commit authorship is inferred from `git config user.name`/`user.email` (avoids Renovate's default Mend-owned email). Needs Node.js/npm on the machine it runs on. Extra flags pass through to Renovate (`--dry-run`, `--log-level`, ...).
 
-Review/apply flow (manual only, no automerge, platform-neutral git): fetch the PR branch (`git fetch origin pull/<n>/head:renovate/pr-<n>`, then `git checkout renovate/pr-<n>`), `./infra.sh <target> validate`, then merge locally and `git push origin master`. Merges never happen in the platform UI — origin stays the source of truth. Renovate rebases its open PRs and auto-closes them once the change lands on `master` (next run). The workflow itself is Renovate-managed (github-actions manager bumps `actions/checkout` and `renovatebot/github-action`).
+Review/apply flow (manual only, no automerge, platform-neutral git): fetch the PR branch (`git fetch origin pull/<n>/head:renovate/pr-<n>`, then `git checkout renovate/pr-<n>`), `./infra.sh <target> validate`, then merge locally and `git push origin master`. Merges never happen in the platform UI — origin stays the source of truth. Renovate rebases its open PRs and auto-closes them once the change lands on `master` (next run).
 
-`renovate.json` at root (repository config): built-in **kubernetes** manager (`managerFilePatterns: /^targets\/.*\.ya?ml$/` — plain pod-spec images) and **docker-compose** manager (all compose images) plus four regex managers for formats nobody parses natively: (1) images inside HelmChart `valuesContent` blocks (fileMatch `*helmchart*.ya?ml$` — hence HelmChart files are named `*helmchart.yaml`), (2) HelmChart CR versions (`oci://` or `chart:`+`repo:`+`version:`), (3) K3s plan versions (`github-releases` on `k3s-io/k3s`, custom versioning), (4) Traefik plugin pins in `additionalArguments` (`github-releases`). Global options (token, repo) come from the action env, not the repo config. packageRules: pin floating `latest|stable|release` tags to digests; block majors for `postgres`, `clickhouse/clickhouse-server`, `fedora` (the old `# PRESERVE_MAJOR` semantics — Renovate can't read inline comments, so they're package-level rules); disable syncthing (compose; watchtower-owned on pc/bigpc), the obtainium envsubst image ref, the frozen moving-sale site image, immich's postgres image (untrackable tag scheme), and longhorn (sequential minor upgrades required). No other annotations — Renovate's default update decision applies everywhere.
+`renovate.json` at root (repository config): built-in **kubernetes** manager (`managerFilePatterns: /^targets\/.*\.ya?ml$/` — plain pod-spec images) and **docker-compose** manager (all compose images) plus four regex managers for formats nobody parses natively: (1) images inside HelmChart `valuesContent` blocks (fileMatch `*helmchart*.ya?ml$` — hence HelmChart files are named `*helmchart.yaml`), (2) HelmChart CR versions (`oci://` or `chart:`+`repo:`+`version:`), (3) K3s plan versions (`github-releases` on `k3s-io/k3s`, custom versioning), (4) Traefik plugin pins in `additionalArguments` (`github-releases`). Global options (token, repo) are set by the runner script, not the repo config. packageRules: pin floating `latest|stable|release` tags to digests; block majors for `postgres`, `clickhouse/clickhouse-server`, `fedora` (the old `# PRESERVE_MAJOR` semantics — Renovate can't read inline comments, so they're package-level rules); disable syncthing (compose; watchtower-owned on pc/bigpc), the obtainium envsubst image ref, the frozen moving-sale site image, immich's postgres image (untrackable tag scheme), and longhorn (sequential minor upgrades required). No other annotations — Renovate's default update decision applies everywhere.
 
 Compose image ownership:
 | Where | Updater |
@@ -167,12 +171,12 @@ Post-update: `git diff` → `./infra.sh <target> validate` → deploy.
 
 ```
 infra.sh                        # CLI entry point
-.github/workflows/renovate.yml  # Scheduled self-hosted Renovate (opens PRs on GitHub)
 commands/                       # Global command implementations
+commands/renovate.sh            # Universal: run Renovate (opens PRs on GitHub)
 commands/_internal/             # _patch_node_ip.py
 lib/                            # common.sh (index) → pkg/env/net/k3s/compose/validate/pvc/mtls-certs
 lib/plugins/authelia-header-gate/   # WASM plugin source + build
-secrets/                        # VARS.<target>.sh (gitignored)
+secrets/                        # VARS.<target>.sh + VARS.sh (gitignored)
 targets/<target>/
   VARS.template.sh
   compose/compose.yaml          # $VARIABLE placeholders
