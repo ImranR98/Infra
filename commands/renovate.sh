@@ -16,8 +16,10 @@ export RENOVATE_REPOSITORIES="ImranR98/Infra"
 export LOG_LEVEL="${LOG_LEVEL:-info}"
 # Renovate's auto-commits must not use the machine's personal git signing
 # setup (commit.gpgsign + gpg.format=ssh has no signingKey/agent available).
-# Renovate manages GIT_CONFIG_COUNT itself, so an empty global config is used
-# instead of trying to override commit.gpgsign.
+# Renovate 44 has no signing-off option and filters child env to an allowlist,
+# so exposeAllEnv is required to pass GIT_CONFIG_GLOBAL (= empty global config,
+# no signing) through to its git subprocesses.
+export RENOVATE_EXPOSE_ALL_ENV="true"
 export GIT_CONFIG_GLOBAL="/dev/null"
 
 # Attribute commits to the repo's configured git identity instead of Renovate's
