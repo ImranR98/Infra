@@ -5,7 +5,7 @@ Infra is a single-repo, shell-driven infrastructure-as-code system for managing 
 *The docs assume familiarity with Docker Compose, K3s/kubectl/kustomize, and Traefik. They focus on how Infra wires these tools together and what's unique to this repo.*
 
 <p align="center">
-  <img src="./docs/architecture.svg" alt="Infra architecture overview" width="800"/>
+  <img src="./architecture.svg" alt="Infra architecture overview" width="800"/>
 </p>
 
 ## What it does
@@ -39,22 +39,7 @@ cp targets/<target>/VARS.template.sh VARS.<target>.sh
 
 ## Documentation
 
-Read these in order to develop your understanding of the repo:
-
-| # | File | Topic |
-|---|------|-------|
-| 1 | [docs/architecture.md](docs/architecture.md) | High-level architecture: how everything fits together |
-| 2 | [docs/targets.md](docs/targets.md) | Target machines and their configurations |
-| 3 | [docs/commands-and-dispatch.md](docs/commands-and-dispatch.md) | The CLI dispatch system and how commands work |
-| 4 | [docs/variables-and-templating.md](docs/variables-and-templating.md) | Variable files, envsubst, and template rendering |
-| 5 | [docs/updates-and-renovate.md](docs/updates-and-renovate.md) | Automated dependency update workflow |
-| 6 | [docs/compose-management.md](docs/compose-management.md) | Infra-specific Compose patterns (*) |
-| 7 | [docs/k3s-management.md](docs/k3s-management.md) | Infra-specific K3s patterns (*) |
-| 8 | [docs/networking.md](docs/networking.md) | WireGuard, FRP tunneling, and network architecture |
-| 9 | [docs/security.md](docs/security.md) | Secrets, LUKS, authentication, and hardening |
-| 10 | [docs/standard-vs-custom.md](docs/standard-vs-custom.md) | How Infra combines standard tools with custom glue |
-
-(*) Assumes Compose/K3s familiarity. Focuses on Infra conventions: `.secret`/`.plain`, hook scripts, `groups.yaml`, etc.
+All documentation lives in [AGENTS.md](AGENTS.md): architecture, targets, commands, templating, Compose/K3s conventions, networking, security, and the Renovate update workflow. See the [architecture diagram](architecture.svg).
 
 ## Requirements
 
