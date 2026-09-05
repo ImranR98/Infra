@@ -22,7 +22,7 @@ spec:
           restartPolicy: Never
           containers:
             - name: geoipupdate
-              image: maxmindinc/geoipupdate:latest
+              image: maxmindinc/geoipupdate:latest@sha256:51e70dd6f16cd3e4d845ac02d09940b10772a75b9d741427d235a78570923c1d
               env:
                 - name: GEOIPUPDATE_ACCOUNT_ID
                   valueFrom:
