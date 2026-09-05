@@ -1,5 +1,5 @@
 #!/bin/bash
-# DESC: Run Renovate against ImranR98/Infra — opens update PRs on GitHub (manual)
+# DESC: Run Renovate against ImranR98/Infra — opens update PRs on GitHub (manual). srv0 runs this automatically via the renovate CronJob; use this for on-demand runs.
 set -euo pipefail
 source "$INFRA_ROOT/lib/common.sh"
 source_universal_env
@@ -9,6 +9,13 @@ if [ -z "${RENOVATE_GITHUB_TOKEN:-}" ]; then
     echo "Add it to $INFRA_ROOT/secrets/VARS.sh (gitignored):" >&2
     echo "  export RENOVATE_GITHUB_TOKEN=\"<github-pat-with-repo-scope>\"" >&2
     exit 1
+fi
+
+# The gomod manager (WASM plugin) needs a Go toolchain when an update is
+# pending — install it with ./infra.sh <target> prereqs.
+if ! command -v go >/dev/null 2>&1; then
+    echo "Warning: 'go' not found — pending gomod updates will crash the run." >&2
+    echo "Install with: ./infra.sh <target> prereqs (or let the srv0 renovate CronJob handle it)." >&2
 fi
 
 export RENOVATE_TOKEN="$RENOVATE_GITHUB_TOKEN"

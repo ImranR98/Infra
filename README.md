@@ -15,7 +15,7 @@ The IaaC system for my homelab and other devices.
 </p>
 
 - Services exposed to the internet through Traefik are protected by [Authelia SSO](https://www.authelia.com/), [Crowdsec](https://www.crowdsec.net/), and [geoblock](https://plugins.traefik.io/plugins/62d6ce04832ba9805374d62c/geo-block).
-- Everything is updated through [Renovate](https://www.mend.io/renovate/) (manually invoked on a regular basis).
+- Everything is updated through [Renovate](https://www.mend.io/renovate/) (run daily on a schedule from `srv0`; review/merge the PRs it opens).
 
 ## Project Goals
 

@@ -1,5 +1,5 @@
 #!/bin/bash
-# DESC: Install system prerequisites (Docker, yq, envsubst, jq, python3)
+# DESC: Install system prerequisites (Docker, yq, envsubst, jq, python3, go)
 set -euo pipefail
 source "$INFRA_ROOT/lib/common.sh"
 
@@ -27,7 +27,7 @@ else
 fi
 
 ALL_OK=true
-for tool in yq envsubst jq curl python3; do
+for tool in yq envsubst jq curl python3 go; do
     if ! command -v "$tool" >/dev/null 2>&1; then
         printf "Installing %s..." "$tool"
         case "$tool" in
@@ -41,6 +41,14 @@ for tool in yq envsubst jq curl python3; do
                 case "$PKG_MGR" in
                     apt) pkg="python3" ;;
                     dnf|rpm-ostree) pkg="python3" ;;
+                esac
+                ;;
+            go)
+                # For local Renovate runs (gomod manager); the in-cluster
+                # renovate image ships its own Go toolchain.
+                case "$PKG_MGR" in
+                    apt) pkg="golang-go" ;;
+                    dnf|rpm-ostree) pkg="golang" ;;
                 esac
                 ;;
             *) pkg="$tool" ;;

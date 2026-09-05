@@ -1,0 +1,62 @@
+---
+# Renovate self-hosted runner: proposes updates as PRs on GitHub.
+# Runs the full renovate image (ships the Go toolchain, so the gomod manager
+# for the WASM plugin works here). The repo (synced to srv0 via syncthing)
+# is mounted read-only only to source the token from secrets/VARS.sh and to
+# infer the git author identity — Renovate itself clones from GitHub.
+# Automerge policy lives in renovate.json (repo config).
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: renovate
+  namespace: base
+spec:
+  schedule: "0 17 * * *"
+  timeZone: America/Toronto
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      template:
+        spec:
+          restartPolicy: Never
+          securityContext:
+            runAsUser: $MY_UID
+            runAsGroup: $MY_UID
+            # Pods sharing a hostPath tree need pod-level s0 (container-level is ignored).
+            seLinuxOptions:
+              level: s0
+          containers:
+            - name: renovate
+              image: renovate/renovate:44.65.5
+              resources:
+                limits:
+                  memory: 512Mi
+                requests:
+                  memory: 128Mi
+              command:
+                - bash
+                - -c
+                - |
+                  set -eu
+                  source /repo/secrets/VARS.sh
+                  export RENOVATE_TOKEN="$RENOVATE_GITHUB_TOKEN"
+                  export RENOVATE_REPOSITORIES="ImranR98/Infra"
+                  export LOG_LEVEL="info"
+                  # Attribute commits to the repo's configured git identity
+                  # (synced .git/config; matches local runs).
+                  if git -C /repo config user.name >/dev/null 2>&1 && git -C /repo config user.email >/dev/null 2>&1; then
+                    export RENOVATE_GIT_AUTHOR="$(git -C /repo config user.name) <$(git -C /repo config user.email)>"
+                  fi
+                  exec renovate
+              volumeMounts:
+                - name: infra-repo
+                  mountPath: /repo
+                  readOnly: true
+          volumes:
+            - name: infra-repo
+              hostPath:
+                path: "$MAIN_PARENT_DIR/Main/Infra"
+                type: Directory
