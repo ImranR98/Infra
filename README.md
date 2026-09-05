@@ -4,6 +4,10 @@ Infra is a single-repo, shell-driven infrastructure-as-code system for managing 
 
 *The docs assume familiarity with Docker Compose, K3s/kubectl/kustomize, and Traefik. They focus on how Infra wires these tools together and what's unique to this repo.*
 
+<p align="center">
+  <img src="./docs/architecture.svg" alt="Infra architecture overview" width="800"/>
+</p>
+
 ## What it does
 
 - **One CLI for everything.** `./infra.sh <target> <command>` is the entry point. Targets are named machines; commands do the work.
