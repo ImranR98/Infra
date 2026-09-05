@@ -4,10 +4,10 @@ The IaaC system for my homelab.
 
 ## Architecture
 
-- `vps0` is a cloud VPS that runs a Docker Compose stack and runs critical public-facing services, like [`apps.obtainium.imranr.dev`](https://apps.obtainium.imranr.dev/), for which downtime is unaccaptable.
-- `srv0` is a lightweight home server that runs a Kuberetes stack and runs personal services, like [Immich](https://immich.app/), for which occasional downtime is acceptable.
+- `vps0` is a cloud VPS that uses Docker Compose to run public-facing services like [`apps.obtainium.imranr.dev`](https://apps.obtainium.imranr.dev/).
+- `srv0` is a lightweight home server that uses Kuberetes (K3s) to run personal services like [Immich](https://immich.app/).
 - `bigpc` is a gaming PC that also serves as a Kubernetes worker node for GPU-accelerated workloads like [Ollama](https://ollama.com/).
-- `pc` is a laptop that runs [Syncthing](https://syncthing.net/) via Docker Compose, to sync files to `srv0`.
+- `pc` is a laptop that runs [Syncthing](https://syncthing.net/) (via Docker Compose) to sync files to `srv0`.
 
 <p align="center">
   <img src="./architecture.svg" alt="Infra architecture overview" width="800"/>
