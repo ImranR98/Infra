@@ -82,9 +82,9 @@
     {
       "description": "Never automerge: base-namespace infrastructure (srv0 K3s base group), the public VPS edge (vps0 compose), and the srv0 frpc tunnel",
       "matchFileNames": [
-        "targets/srv0/k3s/(namespaces|nfs-server|host-volumes|csi-driver-nfs|cert-manager|longhorn|geoip|traefik|crowdsec|authelia|pvc-backup|ntfy|descheduler|system-upgrade|rustfs|monitoring)/.*",
-        "targets/vps0/compose/compose\\.ya?ml$",
-        "targets/srv0/compose/compose\\.ya?ml$"
+        "targets/srv0/k3s/{namespaces,nfs-server,host-volumes,csi-driver-nfs,cert-manager,longhorn,geoip,traefik,crowdsec,authelia,pvc-backup,ntfy,descheduler,system-upgrade,rustfs,monitoring}/**",
+        "targets/vps0/compose/**",
+        "targets/srv0/compose/**"
       ],
       "automerge": false
     },
