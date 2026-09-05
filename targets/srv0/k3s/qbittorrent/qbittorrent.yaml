@@ -18,7 +18,7 @@ spec:
     spec:
       containers:
         - name: qbittorrent
-          image: lscr.io/linuxserver/qbittorrent:latest
+          image: lscr.io/linuxserver/qbittorrent:latest@sha256:a00b6a597a3832a1814cde0ef60abc55c94644f3f80902c3432f6af6de8d4a96
           lifecycle:
             postStart:
               exec:

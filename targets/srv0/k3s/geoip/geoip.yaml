@@ -26,7 +26,7 @@ spec:
         runAsNonRoot: true
       containers:
         - name: geoip
-          image: imranrdev/geoip-service:latest
+          image: imranrdev/geoip-service:latest@sha256:652a22d8a7a801f02ecbfdec7c61456656dff9ac86b18cc52644f377f5ca0f63
           imagePullPolicy: Always
           ports:
             - containerPort: 8080

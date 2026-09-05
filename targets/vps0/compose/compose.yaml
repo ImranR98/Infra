@@ -68,7 +68,7 @@ services:
 
     # Authelia - 2FA Authentication
     authelia:
-        image: authelia/authelia:latest
+        image: authelia/authelia:latest@sha256:936134132eaf01bfa2faf85055afbc1e0cc1cc5ca4547e9c06408fd0dd784646
         container_name: authelia
         user: "$MY_UID:$MY_UID"
         depends_on:
@@ -98,7 +98,7 @@ services:
         logging: *logging
 
     authelia-db:
-        image: redis:alpine
+        image: redis:alpine@sha256:becdda6c7f4b3fb42e42fd7f120bbf5c54c4caaaf16f26da24e4563d2c1f0576
         container_name: authelia-db
         user: "$MY_UID:$MY_UID"
         volumes:
@@ -183,7 +183,7 @@ services:
 
     # CrowdSec - Intrusion Prevention (LAPI + agent + AppSec in one container)
     crowdsec:
-        image: crowdsecurity/crowdsec:latest
+        image: crowdsecurity/crowdsec:latest@sha256:0f2523fa61ef507f15d953045cface490cc880670c62f2755ced17524107f71a
         container_name: crowdsec
         restart: unless-stopped
         mem_limit: 2G
@@ -250,7 +250,7 @@ services:
             start_period: 1m
         logging: *logging
     plausible-init:
-        image: alpine:latest
+        image: alpine:latest@sha256:28bd5fe8b56d1bd048e5babf5b10710ebe0bae67db86916198a6eec434943f8b
         container_name: plausible-init
         restart: no
         cap_drop:
@@ -303,7 +303,7 @@ services:
     # PixelNtfy - Tracking Pixels
     pixelntfy:
         container_name: pixelntfy
-        image: imranrdev/pixel-ntfy:latest
+        image: imranrdev/pixel-ntfy:latest@sha256:b6facde3707bbacae686ac7de2b41ca9190fe52a0f828aa8fe8be0505d9118e3
         restart: unless-stopped
         mem_limit: 512M
         depends_on:
@@ -328,7 +328,7 @@ services:
     # ISBN Lookup
     isbn-lookup:
         container_name: isbn-lookup
-        image: imranrdev/isbn-lookup:latest
+        image: imranrdev/isbn-lookup:latest@sha256:d3132424eeec7d432fead4adddd501f519d972110578bbc719a96c41d3097ba9
         restart: unless-stopped
         mem_limit: 512M
         depends_on:
@@ -350,7 +350,7 @@ services:
 
     # MeTube - YouTube Downloader
     metube:
-        image: ghcr.io/alexta69/metube:latest
+        image: ghcr.io/alexta69/metube:latest@sha256:397778fccf13d83adf9325fe813b260617a082d1772aff6d678c5b9256dd01fb
         container_name: metube
         volumes:
             - $COMPOSE_STATE_DIR/metube:/downloads
@@ -373,7 +373,7 @@ services:
     # Obtainium Apps
     obtainium_apps:
         container_name: obtainium_apps
-        image: imranrdev/apps.obtainium.imranr.dev:latest
+        image: imranrdev/apps.obtainium.imranr.dev:latest@sha256:1f8c769a7f05653434b5e5d7b9e5f5848d6dde9de2db50f6564dacee410f20cb
         depends_on:
             - traefik
         labels:
@@ -393,7 +393,7 @@ services:
     # IKOM - Kitchen order manager
     ikom:
         container_name: ikom
-        image: imranrdev/order-manager:latest
+        image: imranrdev/order-manager:latest@sha256:32b9961588be61da8775fe9dd8cb8446c9e9464b17df4ef0d2817d79c57f62f2
         depends_on:
             - traefik
         labels:
@@ -423,7 +423,7 @@ services:
     # CCT26 - Reddit + LLM tool
     cct26:
         container_name: cct26
-        image: imranrdev/cct26:latest
+        image: imranrdev/cct26:latest@sha256:a280a9651c9e43dd72e3df085c664be05ee8367d98e1b93e2d73947e484b65f1
         restart: unless-stopped
         mem_limit: 2G
         depends_on:
@@ -453,7 +453,7 @@ services:
     # Attention Game
     attentiongame:
         container_name: attentiongame
-        image: imranrdev/attentiongame:latest
+        image: imranrdev/attentiongame:latest@sha256:452f7e070aefdcf93339765ad40f04a3c755dd35365d399714519b82a2b2bd59
         user: "$MY_UID:$MY_UID"
         depends_on:
             - traefik
@@ -549,7 +549,7 @@ services:
 
     # Logtfy - Log Monitoring and ntfy Alerting
     logtfy:
-        image: imranrdev/logtfy:latest
+        image: imranrdev/logtfy:latest@sha256:c234a89fe4969806c28b972509c3575ff2595f77ba4b3f1def540a7a2b0b07bd
         container_name: logtfy
         hostname: $TARGET
         restart: unless-stopped
@@ -566,7 +566,7 @@ services:
 
     # strelaysrv - Syncthing Relay Server
     strelaysrv:
-        image: syncthing/relaysrv:latest
+        image: syncthing/relaysrv:latest@sha256:04659c950fe54e02420dd1c5c9a1b496bebe46b23b6af4aed712b64272d5dd6d
         container_name: strelaysrv
         restart: unless-stopped
         mem_limit: 2G
@@ -582,7 +582,7 @@ services:
 
     # Shlink - URL Shortener
     shlink:
-        image: shlinkio/shlink:stable
+        image: shlinkio/shlink:stable@sha256:77b8eb87bcb1a56bd0ecc590398d415545e5ba83414f28d37dc565a91c3c50b2
         container_name: shlink
         environment:
             - SHORT_DOMAIN_HOST=ln.$BASE_SERVICES_DOMAIN
@@ -626,7 +626,7 @@ services:
             - traefik
         logging: *logging
     shlink_web_client:
-        image: shlinkio/shlink-web-client:stable
+        image: shlinkio/shlink-web-client:stable@sha256:dc8bf3565a25bd0602ff11ee352920830ce457ab58a2b2c62f2ebb23e8c8b9ee
         container_name: shlink_web_client
         environment:
             - SHLINK_SERVER_URL=https://ln.$BASE_SERVICES_DOMAIN
