@@ -20,6 +20,25 @@ get_template_export_names() {
     grep -hEo '^export [A-Z_][A-Z_0-9]*' "$INFRA_ROOT/targets/$target/VARS.template.sh" 2>/dev/null | sed 's/^export //' | sort -u
 }
 
+# Universal VARS: target-agnostic secrets (secrets/VARS.sh, else root VARS.sh).
+# Not template-validated — commands that need a universal variable check for it
+# themselves and fail with their own error.
+resolve_universal_vars_file() {
+    if [ -f "$INFRA_ROOT/secrets/VARS.sh" ]; then
+        echo "$INFRA_ROOT/secrets/VARS.sh"
+    elif [ -f "$INFRA_ROOT/VARS.sh" ]; then
+        echo "$INFRA_ROOT/VARS.sh"
+    fi
+}
+
+source_universal_env() {
+    local vars_file; vars_file=$(resolve_universal_vars_file)
+    if [ -n "$vars_file" ]; then
+        # shellcheck disable=SC1090
+        source "$vars_file"
+    fi
+}
+
 source_env() {
     local target="${TARGET:-${1:-}}"
     if [ -z "$target" ]; then
