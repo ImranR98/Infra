@@ -1,6 +1,6 @@
 # Infra
 
-The IaaC system for my homelab.
+The IaaC system for my homelab and other devices.
 
 ## Architecture
 
@@ -8,6 +8,7 @@ The IaaC system for my homelab.
 - `srv0` is a lightweight home server that uses Kuberetes (K3s) to run personal services like [Immich](https://immich.app/).
 - `bigpc` is a gaming PC that also serves as a Kubernetes worker node for GPU-accelerated workloads like [Ollama](https://ollama.com/).
 - `pc` is a laptop that runs [Syncthing](https://syncthing.net/) (via Docker Compose) to sync files to `srv0`.
+- `rpi` is an SBC that streams a live camera feed to [Frigate](https://frigate.video/) on `srv0`.
 
 <p align="center">
   <img src="./architecture.svg" alt="Infra architecture overview" width="800"/>
