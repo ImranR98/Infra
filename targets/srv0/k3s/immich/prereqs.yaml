@@ -57,7 +57,7 @@ spec:
         fsGroup: $MY_UID
       containers:
         - name: postgresql
-          image: ghcr.io/immich-app/postgres:18-vectorchord0.5.3-pgvector0.8.1
+          image: ghcr.io/immich-app/postgres:18-vectorchord1.1.1-pgvector0.8.5
           securityContext:
             allowPrivilegeEscalation: false
           readinessProbe:
