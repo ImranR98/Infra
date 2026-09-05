@@ -40,6 +40,9 @@ cp targets/<target>/VARS.template.sh VARS.<target>.sh
 ./infra.sh <target> compose install
 ./infra.sh <target> k3s group base apply
 ./infra.sh <target> k3s group apps apply
+
+# Check for updates (opens Renovate PRs on GitHub; no target needed)
+./infra.sh renovate
 ```
 
 ## More
