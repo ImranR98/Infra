@@ -15,6 +15,7 @@ base:
   - system-upgrade
   - rustfs
   - monitoring
+  - renovate
 apps:
   - immich
   - logtfy
