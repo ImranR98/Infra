@@ -26,10 +26,19 @@
     },
     {
       "customType": "regex",
-      "description": "helm.cattle.io HelmChart CR chart versions (oci:// and classic repo forms)",
+      "description": "helm.cattle.io HelmChart CR chart versions (oci:// — via docker datasource; the helm datasource has no OCI support)",
       "fileMatch": ["targets/.+/k3s/.*\\.ya?ml$"],
       "matchStrings": [
-        "chart:\\s*oci://(?<depName>\\S+)\\s*\\n(?:[^\\n]*\\n){0,5}?\\s*version:\\s*(?<currentValue>\\S+)",
+        "chart:\\s*oci://(?<depName>\\S+)\\s*\\n(?:[^\\n]*\\n){0,5}?\\s*version:\\s*(?<currentValue>\\S+)"
+      ],
+      "datasourceTemplate": "docker",
+      "versioningTemplate": "semver"
+    },
+    {
+      "customType": "regex",
+      "description": "helm.cattle.io HelmChart CR chart versions (classic chart:+repo: form)",
+      "fileMatch": ["targets/.+/k3s/.*\\.ya?ml$"],
+      "matchStrings": [
         "chart:\\s*(?<depName>\\S+)\\s*\\n(?:[^\\n]*\\n){0,5}?\\s*repo:\\s*(?<registryUrl>\\S+)\\s*\\n(?:[^\\n]*\\n){0,10}?\\s*version:\\s*(?<currentValue>\\S+)"
       ],
       "datasourceTemplate": "helm",
