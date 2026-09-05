@@ -65,46 +65,6 @@ services:
         volumes:
             - /var/run/docker.sock:/var/run/docker.sock:ro
             - dockerproxy:/socket/
-        labels:
-            - "com.centurylinklabs.watchtower.enable=false"
-
-    # https://github.com/wollomatic/socket-proxy for Watchtower and other read-write needs
-    dockerproxy_priv:
-        <<: *socket-proxy
-        container_name: dockerproxy_priv
-        command:
-            - "-loglevel=info"
-            - '-allowGET=/v1\..{1,2}/(containers/.*|images/.*)'
-            - '-allowPOST=/v1\..{1,2}/(containers/.*|images/.*|networks/.*)'
-            - '-allowDELETE=/v1\..{1,2}/(containers/.*|images/.*)'
-            - "-allowHEAD=/_ping"
-            - "-shutdowngracetime=5"
-            - "-watchdoginterval=600"
-            - "-stoponwatchdog"
-            - "-proxysocketendpoint=/socket/docker.sock"
-            - "-proxysocketendpointfilemode=0600"
-            - "-allowhealthcheck"
-        volumes:
-            - /var/run/docker.sock:/var/run/docker.sock:ro
-            - dockerproxy_priv:/socket/
-        labels:
-            - "com.centurylinklabs.watchtower.enable=false"
-
-    # Watchtower - Container Updater
-    watchtower:
-        container_name: watchtower
-        restart: unless-stopped
-        mem_limit: 512M
-        image: nickfedor/watchtower
-        volumes:
-            - dockerproxy_priv:/socket/:ro
-        depends_on:
-            - dockerproxy_priv
-        environment:
-            WATCHTOWER_CLEANUP: "true"
-            WATCHTOWER_POLL_INTERVAL: 7200
-            DOCKER_HOST: "unix:///socket/docker.sock"
-        logging: *logging
 
     # Authelia - 2FA Authentication
     authelia:
@@ -249,7 +209,7 @@ services:
 
     # Plausible - Web Analytics
     plausible_db:
-        image: postgres:16-alpine # PRESERVE_MAJOR
+        image: postgres:16-alpine
         container_name: plausible_db
         user: "$MY_UID:$MY_UID"
         restart: unless-stopped
@@ -265,7 +225,7 @@ services:
             - traefik
         logging: *logging
     plausible_events_db:
-        image: clickhouse/clickhouse-server:24.12-alpine # PRESERVE_MAJOR
+        image: clickhouse/clickhouse-server:24.12-alpine
         restart: unless-stopped
         mem_limit: 8G
         container_name: plausible_events_db
@@ -527,7 +487,6 @@ services:
             - "traefik.http.routers.moving-sale.tls=true"
             - "traefik.http.routers.moving-sale.middlewares=crowdsec-bouncer@file,authelia@file,geoblock@file"
             - "traefik.http.services.moving-sale.loadbalancer.server.port=3000"
-            - "com.centurylinklabs.watchtower.enable=false"
         environment:
             - ADMIN_PASSWORD=$MOVING_SALE_ADMIN_PASSWORD
             - CONTACT_EMAIL=$DOMAIN_OWNER_EMAIL
@@ -651,7 +610,7 @@ services:
             - "traefik.http.services.shlink.loadbalancer.server.port=8080"
         logging: *logging
     shlink_db:
-        image: postgres:17-alpine # PRESERVE_MAJOR
+        image: postgres:17-alpine
         container_name: shlink_db
         restart: unless-stopped
         user: "$MY_UID:$MY_UID"
@@ -725,12 +684,6 @@ networks:
 
 volumes:
     dockerproxy:
-        driver: local
-        driver_opts:
-            type: tmpfs
-            device: tmpfs
-            o: size=1k,uid=65534,gid=0,mode=0700,noexec
-    dockerproxy_priv:
         driver: local
         driver_opts:
             type: tmpfs

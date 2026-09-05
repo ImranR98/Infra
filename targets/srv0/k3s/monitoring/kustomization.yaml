@@ -4,8 +4,8 @@ kind: Kustomization
 resources:
   - helmchart.yaml
   - mimir.yaml
-  - loki.yaml
-  - promtail.yaml
+  - loki-helmchart.yaml
+  - promtail-helmchart.yaml
   - ingress.yaml
   - prereqs.yaml
   - network-policy.yaml
