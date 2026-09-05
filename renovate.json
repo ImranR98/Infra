@@ -10,6 +10,8 @@
     "managerFilePatterns": ["/^targets\\/.*\\.ya?ml$/"]
   },
 
+  "gomod": { "enabled": false },
+
   "customManagers": [
     {
       "customType": "regex",
