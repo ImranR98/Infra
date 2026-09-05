@@ -75,7 +75,7 @@
   "packageRules": [
     {
       "description": "One PR for all docker digest pins and refreshes (the noisy batch); version bumps stay separate",
-      "matchUpdateTypes": ["pin", "digest"],
+      "matchUpdateTypes": ["pin", "pinDigest", "digest"],
       "groupName": "docker digests",
       "automerge": false
     },
