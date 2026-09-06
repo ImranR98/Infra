@@ -34,6 +34,11 @@ spec:
           image: rootgg/plik:1.4.2
           ports:
             - containerPort: 8080
+          securityContext:
+            runAsUser: $MY_UID
+            runAsGroup: $MY_UID
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false
           volumeMounts:
             - name: data
               mountPath: /data/files
@@ -54,7 +59,10 @@ spec:
             - name: PLIKD_DEFAULT_ADMIN_LOGIN
               value: "admin"
             - name: PLIKD_DEFAULT_ADMIN_PASSWORD
-              value: "$PLIK_ADMIN_PASSWORD"
+              valueFrom:
+                secretKeyRef:
+                  name: plik-config
+                  key: admin-password
           readinessProbe:
             httpGet:
               path: /

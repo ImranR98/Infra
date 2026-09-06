@@ -20,16 +20,19 @@ if [ -n "$TMP_PASS" ]; then
   PASSWORD="adminadmin"
 
   echo "Setting permanent password and preferences via API..."
-  kubectl -n apps exec deploy/qbittorrent -- sh -c "
+  # Credentials ride stdin (never argv — ps-visible on host), mirroring immich/post.sh.
+  { printf '%s\n' "$TMP_PASS"; printf '%s\n' "$PASSWORD"; } | kubectl -n apps exec -i deploy/qbittorrent -- sh -c '
     set -e
-    curl -s -c /tmp/qbt-cookies -X POST -d 'username=admin&password=$TMP_PASS' http://localhost:8080/api/v2/auth/login > /dev/null
+    IFS= read -r tmp_pass
+    IFS= read -r password
+    curl -s -c /tmp/qbt-cookies -X POST -d "username=admin&password=$tmp_pass" http://localhost:8080/api/v2/auth/login > /dev/null
 
     curl -s -b /tmp/qbt-cookies -X POST \
-      -d 'json={\"listen_port\":56881,\"upnp\":false,\"save_path\":\"/data/downloads\",\"temp_path\":\"/data/downloads/incomplete/\",\"temp_path_enabled\":true,\"web_ui_password\":\"$PASSWORD\"}' \
+      -d "json={\"listen_port\":56881,\"upnp\":false,\"save_path\":\"/data/downloads\",\"temp_path\":\"/data/downloads/incomplete/\",\"temp_path_enabled\":true,\"web_ui_password\":\"$password\"}" \
       http://localhost:8080/api/v2/app/setPreferences > /dev/null
 
     rm -f /tmp/qbt-cookies
-  "
+  '
 
   echo "Password set to: $PASSWORD"
 else

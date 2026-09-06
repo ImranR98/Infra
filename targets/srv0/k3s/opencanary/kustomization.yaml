@@ -4,3 +4,4 @@ kind: Kustomization
 resources:
   - prereqs.yaml
   - opencanary.yaml
+  - network-policy.yaml

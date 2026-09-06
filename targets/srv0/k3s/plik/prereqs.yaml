@@ -33,6 +33,9 @@ metadata:
   namespace: apps
 type: Opaque
 stringData:
+  # Separate key so the Deployment can pull the password via secretKeyRef
+  # instead of an inline env value (readable via `get deployments`).
+  admin-password: "$PLIK_ADMIN_PASSWORD"
   plikd.cfg: |
     Debug               = false
     LogLevel            = "INFO"
