@@ -43,9 +43,6 @@ export PLAUSIBLE_DB_PASSWORD="change_me" # openssl rand -hex 16
 # ====== PixelNtfy ======
 export PIXELNTFY_TOPIC="change_me" # openssl rand -hex 16
 
-# ====== SB25 Birthday Page ======
-export SB25_AUTH_TOKEN="change_me" # openssl rand -hex 16
-
 # ====== Moving Sale ======
 export MOVING_SALE_ADMIN_PASSWORD="change_me" # openssl rand -hex 16
 export MOVING_SALE_PICKUP_TEXT="change_me" # Pickup info text shown on the sale page
