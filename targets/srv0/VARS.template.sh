@@ -244,9 +244,6 @@ export NEXTCLOUD_ADMIN_USER="admin"
 export NEXTCLOUD_ADMIN_PASSWORD="change_me" # openssl rand -hex 16
 export NEXTCLOUD_DB_PASSWORD="change_me" # openssl rand -hex 16
 
-# ====== Copyparty ======
-export COPYPARTY_ADMIN_PASSWORD="changeme" # openssl rand -hex 16
-
 # ====== FRP ======
 export PROXY_HOST="vps0.example.org"
 # Generate with: ./infra.sh srv0 compose generate-mtls-certs vps0

@@ -25,6 +25,8 @@ spec:
     - match: Host(`seerr.$SERVICES_DOMAIN`)
       kind: Rule
       middlewares:
+        - name: geoblock
+          namespace: base
         - name: crowdsec-bouncer
           namespace: base
       services:

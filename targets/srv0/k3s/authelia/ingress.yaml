@@ -24,6 +24,9 @@ spec:
   routes:
     - match: Host(`auth.$SERVICES_DOMAIN`)
       kind: Rule
+      middlewares:
+        - name: crowdsec-bouncer
+          namespace: base
       services:
         - name: authelia
           port: 80
