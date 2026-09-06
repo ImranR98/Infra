@@ -20,30 +20,37 @@ The IaaC system for my homelab and other devices.
 ## Project Goals
 
 - **Infrastructure as Code**: Everything should be declarative and automated, using standard tooling wherever possible. Custom scripts should be minimal and only where necessary.
-- **Universal CLI**: `./infra.sh <target> <command>` is the entry point for everything.
+- **Universal CLI**: `task <target>:<command>` is the entry point for everything (dispatch via [Task](https://taskfile.dev); `task default` prints examples, `task --list-all` lists every command).
 - **Security**: As the codebase is public and the system runs public-facing services containing highly personal data, security must be taken seriously.
 
 ## Quick start
 
 ```bash
-# Install prerequisites (Docker, yq, envsubst, jq, python3)
-./infra.sh <target> prereqs
+# Install prerequisites (task, Docker, yq, envsubst, jq, python3, python3-dotenv, go)
+# (no task installed yet? `bash commands/prereqs.sh` works the same)
+task prereqs
 
-# Create your variables file from the template
-cp targets/<target>/VARS.template.sh VARS.<target>.sh
-# Edit VARS.<target>.sh with your secrets and settings
+# Create your variables file from the template (dotenv format)
+cp targets/<target>/VARS.template.env secrets/VARS.<target>.env
+# Edit secrets/VARS.<target>.env with your secrets and settings
 
 # Validate your configuration
-./infra.sh <target> validate
+task <target>:validate
 
 # Deploy
-./infra.sh <target> compose install
-./infra.sh <target> k3s group base apply
-./infra.sh <target> k3s group apps apply
+task <target>:compose:install
+task <target>:k3s:group:base:apply
+task <target>:k3s:group:apps:apply
 
 # Check for updates (opens Renovate PRs on GitHub; no target needed)
-./infra.sh renovate
+task renovate
 ```
+
+Commands that take arguments pass them after `--`, e.g. `task srv0:k3s:deploy -- traefik diff`.
+
+## Migrating from the old `./infra.sh` CLI
+
+`./infra.sh` (and the bash dispatcher behind it) was replaced by `task` + a Python VARS validator (`lib/vars_validator.py`), with environment loading folded into `lib/common.sh`, and the VARS files moved from bash exports (`VARS.*.sh`) to dotenv (`VARS.*.env`, converted on each machine by a one-time script that has since been deleted). Command mapping is 1:1 — `./infra.sh srv0 compose install` became `task srv0:compose:install`. See the "Rollback" section in AGENTS.md.
 
 ## More
 

@@ -18,7 +18,7 @@ _cleanup() {
 }
 trap _cleanup EXIT
 
-echo "NOTE: K3s requires a fixed IP on this network. If the IP changes, run: ./infra.sh <target> k3s update-node-ip"
+echo "NOTE: K3s requires a fixed IP on this network. If the IP changes, run: task <target>:k3s:update-node-ip"
 echo ""
 
 echo "=== Downloading K3s installer ==="

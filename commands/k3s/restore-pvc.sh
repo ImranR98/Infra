@@ -4,11 +4,6 @@ set -euo pipefail
 
 source "$INFRA_ROOT/lib/common.sh"
 
-# Allow CronJob pod to bypass source_env (vars already in environment).
-if [ -z "${PVC_BACKUP_DIR:-}" ]; then
-    source_env
-fi
-
 ALL_MODE=false
 if [ "${1:-}" = "--all" ]; then
     ALL_MODE=true

@@ -74,7 +74,7 @@ spec:
         path: /openvino-model/ssdlite_mobilenet_v2.xml
         labelmap_path: /openvino-model/coco_91cl_bkgr.txt
       # Deployment-specific config (go2rtc streams, cameras) comes from
-      # FRIGATE_ADDITIONAL_CONFIG in targets/srv0/VARS.template.sh
+      # FRIGATE_ADDITIONAL_CONFIG in targets/srv0/VARS.template.env
       $FRIGATE_ADDITIONAL_CONFIG
     persistence:
       config:

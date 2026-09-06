@@ -14,7 +14,6 @@ echo "Waiting for cert-manager-webhook CA injection..."
 retry 60 5 "kubectl get validatingwebhookconfiguration cert-manager-webhook -o jsonpath='{.webhooks[0].clientConfig.caBundle}' | grep -q ."
 
 echo "Applying issuers..."
-ensure_envsubst_vars
 retry 30 5 "envsubst \"\$ENVSUBST_VARS\" <\"\$COMP_DIR/issuers.yaml\" | kubectl apply -f -"
 retry 30 5 "kubectl get clusterissuer letsencrypt-staging >/dev/null"
 
