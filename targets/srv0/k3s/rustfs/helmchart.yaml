@@ -20,9 +20,7 @@ spec:
       distributed:
         enabled: false
     secret:
-      rustfs:
-        access_key: "$RUSTFS_ACCESS_KEY"
-        secret_key: "$RUSTFS_SECRET_KEY"
+      existingSecret: rustfs-secrets
     config:
       rustfs:
         console_enable: "true"

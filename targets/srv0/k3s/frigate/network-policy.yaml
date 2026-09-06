@@ -1,6 +1,7 @@
 ---
 # In-cluster consumers: Home Assistant's Frigate integration polls the API on
-# 5000. (The web UI comes through Traefik, covered by the baseline policy.)
+# 5000 and may proxy camera streams itself via go2rtc on 8554 (the browser's
+# default live view goes through Traefik instead, covered by the baseline).
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -17,5 +18,6 @@ spec:
               app.kubernetes.io/instance: homeassistant
       ports:
         - port: 5000
+        - port: 8554
   policyTypes:
     - Ingress

@@ -161,4 +161,5 @@ spec:
           enabled: true
           existingClaim: crowdsec-pvc
       secrets:
-        csLapiSecret: "$CROWDSEC_LAPI_SECRET"
+        externalSecret:
+          name: crowdsec-secrets

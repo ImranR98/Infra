@@ -111,4 +111,5 @@ metadata:
 type: Opaque
 stringData:
   bouncer-key: "$CROWDSEC_BOUNCER_KEY"
+  csLapiSecret: "$CROWDSEC_LAPI_SECRET"
 

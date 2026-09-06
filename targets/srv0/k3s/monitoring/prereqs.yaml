@@ -6,3 +6,13 @@ metadata:
 type: Opaque
 stringData:
   GF_AUTH_GENERIC_OAUTH_CLIENT_SECRET: "$AUTHELIA_GRAFANA_CLIENT_SECRET_HASHABLE"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: grafana-admin-secret
+  namespace: base
+type: Opaque
+stringData:
+  admin-user: admin
+  admin-password: "$GRAFANA_ADMIN_PASSWORD"
