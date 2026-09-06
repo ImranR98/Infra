@@ -649,6 +649,34 @@ services:
             - "traefik.http.services.shlink_web_client.loadbalancer.server.port=8080"
         logging: *logging
 
+    # Dozzle - Docker container health/log viewer (headlamp equivalent for the
+    # compose stack). Read-only: talks to the existing dockerproxy socket proxy
+    # (GET rules only), so no write access to the docker socket is exposed.
+    dozzle:
+        image: amir20/dozzle:10.9.2
+        container_name: dozzle
+        restart: unless-stopped
+        mem_limit: 512M
+        depends_on:
+            - dockerproxy
+        environment:
+            - DOCKER_HOST=unix:///socket/docker.sock
+            - DOZZLE_LEVEL=info
+            - DOZZLE_ENABLE_ACTIONS=false
+        volumes:
+            - dockerproxy:/socket/:ro
+        labels:
+            - "traefik.enable=true"
+            - "traefik.http.routers.dozzle.rule=Host(`docker.$CLOUD_SERVICES_DOMAIN`)"
+            - "traefik.http.routers.dozzle.entrypoints=websecure"
+            - "traefik.http.routers.dozzle.tls.certresolver=le"
+            - "traefik.http.routers.dozzle.tls=true"
+            - "traefik.http.routers.dozzle.middlewares=crowdsec-bouncer@file,authelia@file,geoblock@file"
+            - "traefik.http.services.dozzle.loadbalancer.server.port=8080"
+        networks:
+            - traefik
+        logging: *logging
+
     # Uptime Kuma - Service Uptime Monitoring
     uptime:
         image: louislam/uptime-kuma:2
