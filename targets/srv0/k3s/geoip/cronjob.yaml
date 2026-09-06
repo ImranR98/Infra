@@ -19,6 +19,12 @@ spec:
             runAsGroup: $MY_UID
             fsGroup: $MY_UID
             runAsNonRoot: true
+            # Shared with the geoip service pod via the geoip PVC: pods
+            # writing/reading the same volume must share MCS category s0
+            # (pod-level; container-level is ignored), otherwise files carry
+            # their creator's random category and readers get EACCES.
+            seLinuxOptions:
+              level: s0
           restartPolicy: Never
           containers:
             - name: geoipupdate
