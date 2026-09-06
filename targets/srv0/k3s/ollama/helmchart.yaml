@@ -16,26 +16,18 @@ spec:
       repository: ollama/ollama
       tag: "0.33.3-rocm"
     volumes:
-      - name: dev-kfd
-        hostPath:
-          path: /dev/kfd
-          type: CharDevice
-      - name: dev-dri
-        hostPath:
-          path: /dev/dri
       - name: ollama-models
         hostPath:
           path: /var/lib/ollama
           type: DirectoryOrCreate
     volumeMounts:
-      - name: dev-kfd
-        mountPath: /dev/kfd
-      - name: dev-dri
-        mountPath: /dev/dri
       - name: ollama-models
         mountPath: /.ollama
+    # GPU devices (kfd + dri) come from the CDI amd grant (see cdi-specs);
+    # spc_t covers SELinux, s0 keeps /var/lib/ollama labels stable across
+    # pod recreates. No privileged.
     securityContext:
-      privileged: true
+      allowPrivilegeEscalation: false
     persistentVolume:
       enabled: false
     ollama:
@@ -57,21 +49,27 @@ spec:
             chown -R 1000:1000 /var/lib/ollama
             chcon -R -t container_file_t /var/lib/ollama
         securityContext:
-          privileged: true
           runAsUser: 0
           runAsGroup: 0
           seLinuxOptions:
             type: spc_t
+            level: s0
         volumeMounts:
           - name: ollama-models
             mountPath: /var/lib/ollama
     resources:
       requests:
         memory: 2Gi
+        infra.local/devices-amd: "1"
+      limits:
+        infra.local/devices-amd: "1"
     podSecurityContext:
       fsGroup: $MY_UID
       runAsUser: $MY_UID
       runAsGroup: $MY_UID
+      seLinuxOptions:
+        type: spc_t
+        level: s0
     containerSecurityContext:
       allowPrivilegeEscalation: false
     affinity:
