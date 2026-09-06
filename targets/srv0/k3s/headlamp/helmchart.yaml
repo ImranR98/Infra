@@ -35,14 +35,11 @@ spec:
       unsafeUseServiceAccountToken: true
       oidc:
         secret:
-          create: true
+          create: false
           name: headlamp-oidc
-        clientID: headlamp
-        clientSecret: "$AUTHELIA_HEADLAMP_CLIENT_SECRET_HASHABLE"
-        issuerURL: "https://auth.$SERVICES_DOMAIN"
-        callbackURL: "https://k8s.$SERVICES_DOMAIN/oidc-callback"
-        scopes: "openid profile email groups"
-        usePKCE: true
+        externalSecret:
+          enabled: true
+          name: headlamp-oidc
       extraArgs:
         - "-log-level=debug"
     clusterRoleBinding:

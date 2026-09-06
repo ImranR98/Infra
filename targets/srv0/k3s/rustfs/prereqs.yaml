@@ -1,0 +1,10 @@
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: rustfs-secrets
+  namespace: base
+type: Opaque
+stringData:
+  RUSTFS_ACCESS_KEY: "$RUSTFS_ACCESS_KEY"
+  RUSTFS_SECRET_KEY: "$RUSTFS_SECRET_KEY"

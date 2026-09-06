@@ -38,7 +38,9 @@ spec:
 
     grafana:
       enabled: true
-      adminPassword: "$GRAFANA_ADMIN_PASSWORD"
+      admin:
+        existingSecret: grafana-admin-secret
+        passwordKey: admin-password
       envFromSecret: grafana-oidc-secret
       persistence:
         enabled: true

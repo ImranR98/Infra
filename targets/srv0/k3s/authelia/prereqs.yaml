@@ -237,3 +237,13 @@ stringData:
   oidc.headlamp.client-secret: "${AUTHELIA_HEADLAMP_CLIENT_SECRET_HASHED}"
   oidc.linkwarden.client-secret: "${AUTHELIA_LINKWARDEN_CLIENT_SECRET_HASHED}"
   oidc.grafana.client-secret: "${AUTHELIA_GRAFANA_CLIENT_SECRET_HASHED}"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: authelia-secrets
+  namespace: base
+type: Opaque
+stringData:
+  encryption-key: "$AUTHELIA_DB_ENCRYPTION_KEY"
+  oidc-hmac: "$AUTHELIA_OIDC_HMAC_SECRET"

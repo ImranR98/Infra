@@ -47,6 +47,13 @@ spec:
         - name: oidc-secrets
           secret:
             secretName: authelia-oidc-secrets
+    secret:
+      # External secrets referenced via secret_name: must be listed here so
+      # the chart mounts them at /secrets/<name>/<path>.
+      additionalSecrets:
+        authelia-redis: {}
+        authelia-postgresql: {}
+        authelia-secrets: {}
     configMap:
       server:
         timeouts:
@@ -68,7 +75,8 @@ spec:
           port: 6379
           username: ""
           password:
-            value: "$AUTHELIA_REDIS_PASSWORD"
+            secret_name: authelia-redis
+            path: redis-password
           database_index: 0
           maximum_active_connections: 8
           minimum_idle_connections: 0
@@ -87,7 +95,8 @@ spec:
 
       storage:
         encryption_key:
-          value: "$AUTHELIA_DB_ENCRYPTION_KEY"
+          secret_name: authelia-secrets
+          path: encryption-key
         local:
           enabled: false
         postgres:
@@ -96,7 +105,8 @@ spec:
           address: "tcp://authelia-postgresql.base.svc.cluster.local:5432"
           timeout: "5 seconds"
           password:
-            value: "$AUTHELIA_DB_PASSWORD"
+            secret_name: authelia-postgresql
+            path: password
           tls:
             enabled: false
       notifier:
@@ -109,12 +119,14 @@ spec:
         oidc:
           enabled: true
           hmac_secret:
-            value: '$AUTHELIA_OIDC_HMAC_SECRET'
+            secret_name: authelia-secrets
+            path: oidc-hmac
           jwks:
             - key:
-                # NOTE: Authelia chart v0.11.6 does not support path: for
-                # CryptographicKey objects — the PEM must be embedded as value:.
-                # OIDC client secrets below use path: (simple strings are supported).
+                # NOTE: the chart does not support external secrets for
+                # CryptographicKey objects (path:/secret_name: generate a
+                # RANDOM key instead — verified the hard way) — the PEM must
+                # stay embedded as value:.
                 value: |
                   $AUTHELIA_JWKS_KEY
           clients:

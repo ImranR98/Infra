@@ -1,0 +1,17 @@
+---
+# OIDC credentials for the Headlamp backend. Keys are env-style because the
+# chart's config.oidc.externalSecret mode uses envFrom (see helmchart.yaml) —
+# the client secret therefore never lands in the HelmChart CR.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: headlamp-oidc
+  namespace: apps
+type: Opaque
+stringData:
+  OIDC_CLIENT_ID: "headlamp"
+  OIDC_CLIENT_SECRET: "$AUTHELIA_HEADLAMP_CLIENT_SECRET_HASHABLE"
+  OIDC_ISSUER_URL: "https://auth.$SERVICES_DOMAIN"
+  OIDC_SCOPES: "openid profile email groups"
+  OIDC_CALLBACK_URL: "https://k8s.$SERVICES_DOMAIN/oidc-callback"
+  OIDC_USE_PKCE: "true"
