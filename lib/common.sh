@@ -25,6 +25,29 @@ _confirm() {
     [[ "$yn" =~ ^[Yy] ]]
 }
 
+# Run docker, transparently retrying with sudo/run0 when the user lacks access
+# to the docker socket (not in the docker group) — the user is prompted for
+# elevation instead of the command failing. Only permission-denied errors
+# trigger the retry; daemon-down and real CLI errors pass through unchanged.
+docker() {
+    local err_file rc
+    err_file=$(mktemp)
+    if command docker "$@" 2>"$err_file"; then
+        rm -f "$err_file"
+        return 0
+    else
+        rc=$?
+        if grep -qi "permission denied" "$err_file"; then
+            rm -f "$err_file"
+            "$(get_sudo_cmd)" docker "$@"
+            return $?
+        fi
+        cat "$err_file" >&2
+        rm -f "$err_file"
+        return "$rc"
+    fi
+}
+
 source "$_lib_dir/pkg.sh"
 source "$_lib_dir/env.sh"
 source "$_lib_dir/net.sh"

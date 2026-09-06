@@ -201,6 +201,7 @@ architecture.svg|.excalidraw        # Architecture diagram
 ## Rules
 
 - **Always apply changes through `./infra.sh`** — never raw `docker compose`/`kubectl` for mutations. Direct inspection (logs, get, describe, curl) is fine.
+- **Docker needs no manual sudo** — `lib/common.sh` defines a `docker()` wrapper that transparently retries with sudo/run0 when the docker socket is permission-denied (user not in the docker group on srv0/pc/bigpc), prompting for elevation instead of failing. Only daemon-permission errors trigger it; real CLI/daemon-down errors pass through.
 - Never edit files under `current_target/` (rendered output).
 - Never commit secrets (VARS files, `.cookies.json`, `compose.private.yaml` are gitignored).
 - New components must follow the sizing tiers and include NetworkPolicies.
