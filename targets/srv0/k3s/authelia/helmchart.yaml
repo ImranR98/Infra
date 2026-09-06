@@ -57,8 +57,6 @@ spec:
           enabled: false
         file:
           enabled: true
-          password:
-            algorithm: sha512
           path: /config/users/users-database.yaml
         password_reset:
           disable: true
@@ -251,4 +249,4 @@ spec:
       regulation:
         max_retries: 3
         find_time: 120
-        ban_time: 300
+        ban_time: 3600
