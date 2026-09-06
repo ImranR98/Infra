@@ -23,9 +23,6 @@ spec:
         enabled: false
 
     volumes:
-      - name: dri
-        hostPath:
-          path: /dev/dri
       - name: tv
         persistentVolumeClaim:
           claimName: jellyfin-tv-pvc
@@ -37,8 +34,6 @@ spec:
           claimName: arrstack-media-pvc
 
     volumeMounts:
-      - name: dri
-        mountPath: /dev/dri
       - name: tv
         mountPath: /media/TV
         readOnly: true
@@ -51,14 +46,17 @@ spec:
     resources:
       limits:
         memory: 2Gi
+        infra.local/devices-dri: "1"
       requests:
         memory: 128Mi
+        infra.local/devices-dri: "1"
     podSecurityContext:
       runAsUser: $MY_UID
       runAsGroup: $MY_UID
     securityContext:
-      privileged: true
-      allowPrivilegeEscalation: true
+      # /dev/dri/renderD128 is granted via CDI (see cdi-specs component) —
+      # container_t + uid 1000 works, no privileged needed (verified).
+      allowPrivilegeEscalation: false
     # No node affinity: bigpc's scheduling-discouraged taint (PreferNoSchedule)
     # keeps non-tolerating pods on srv0; the descheduler evicts any drift.
-    # VAAPI transcode runs on srv0's Iris Xe iGPU via the /dev/dri mount.
+    # VAAPI transcode runs on srv0's Iris Xe iGPU (renderD128 via CDI).

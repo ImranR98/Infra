@@ -76,6 +76,20 @@ K3SEOF
     fi
 }
 
+# Write the containerd CDI drop-in (config-v3.toml.d) so the cdi-specs
+# component can grant specific host devices to pods without privileged.
+# K3s's generated config.toml imports this dir; k3s restarts containerd when
+# it changes. Run before the k3s installer so the first start picks it up.
+write_containerd_cdi_dropin() {
+    mkdir -p /var/lib/rancher/k3s/agent/etc/containerd/config-v3.toml.d
+    cat > /var/lib/rancher/k3s/agent/etc/containerd/config-v3.toml.d/enable-cdi.toml <<'EOF'
+[plugins.'io.containerd.cri.v1.runtime']
+  enable_cdi = true
+  cdi_spec_dirs = ['/etc/cdi', '/var/run/cdi']
+EOF
+    echo "Containerd CDI drop-in written to /var/lib/rancher/k3s/agent/etc/containerd/config-v3.toml.d/enable-cdi.toml"
+}
+
 wait_for_crds() {
     local timeout_secs="${1:-300}"
     local max_tries=$(( timeout_secs / 15 ))

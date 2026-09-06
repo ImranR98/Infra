@@ -19,11 +19,22 @@ spec:
       # Pinned to the chart's appVersion (chart tracks latest HA release) so
       # Renovate can manage bumps; a floating "stable" would only get digest-pinned.
       tag: 2026.9.1
-    podSecurityContext: {}
+    podSecurityContext:
+      # spc_t (not privileged): SELinux blocks container_t from the host dbus
+      # socket (Bluetooth integration -> host bluez) and the ConBee II device.
+      # The device itself is granted via CDI (see cdi-specs component).
+      seLinuxOptions:
+        type: spc_t
     hostNetwork: true
     dnsPolicy: ClusterFirstWithHostNet
     securityContext:
-      privileged: true
+      allowPrivilegeEscalation: false
+      # habluetooth manages the host BT adapter via direct HCI sockets
+      # (needs NET_ADMIN/NET_RAW) in addition to the bluez dbus socket.
+      capabilities:
+        add:
+          - NET_ADMIN
+          - NET_RAW
     affinity:
       nodeAffinity:
         requiredDuringSchedulingIgnoredDuringExecution:
@@ -171,10 +182,6 @@ spec:
         hostPath:
           path: /dev/serial/by-id
           type: DirectoryOrCreate
-      - name: usb-tty
-        hostPath:
-          path: /dev/ttyACM0
-          type: CharDevice
       - name: dbus
         hostPath:
           path: /run/dbus/system_bus_socket
@@ -186,8 +193,6 @@ spec:
       - name: usb-serial
         mountPath: /dev/serial/by-id
         readOnly: true
-      - name: usb-tty
-        mountPath: /dev/ttyACM0
       - name: dbus
         mountPath: /run/dbus/system_bus_socket
       - name: ha-dashboards
@@ -196,5 +201,7 @@ spec:
     resources:
       limits:
         memory: 2Gi
+        infra.local/devices-conbee: "1"
       requests:
         memory: 128Mi
+        infra.local/devices-conbee: "1"

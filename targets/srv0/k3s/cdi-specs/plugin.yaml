@@ -1,0 +1,50 @@
+---
+# CDI device plugin: registers the devices from /etc/cdi/infra.devices.json
+# (see prereqs.yaml) with kubelet, so pods can request them as resources
+# (infra.local/devices-conbee, infra.local/devices-dri). Runs on every node;
+# nodes whose generated spec has no devices register nothing. The plugin is
+# privileged — required for the kubelet device-plugin socket dir — but it is
+# an internal base component with no ingress; the GRANTED pods stay
+# non-privileged. Image is digest-pinned by Renovate (floating :main tag).
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: cdi-device-plugin
+  namespace: base
+spec:
+  selector:
+    matchLabels:
+      app: cdi-device-plugin
+  template:
+    metadata:
+      labels:
+        app: cdi-device-plugin
+    spec:
+      containers:
+        - name: plugin
+          image: ghcr.io/olfillasodikno/generic-cdi-plugin:main
+          imagePullPolicy: Always
+          command:
+            - /generic-cdi-plugin
+            - /etc/cdi/infra.devices.json
+          securityContext:
+            privileged: true
+          resources:
+            limits:
+              memory: 256Mi
+            requests:
+              memory: 64Mi
+          volumeMounts:
+            - name: kubelet
+              mountPath: /var/lib/kubelet
+            - name: cdi
+              mountPath: /etc/cdi
+              readOnly: true
+      volumes:
+        - name: kubelet
+          hostPath:
+            path: /var/lib/kubelet
+        - name: cdi
+          hostPath:
+            path: /etc/cdi
+            type: DirectoryOrCreate
