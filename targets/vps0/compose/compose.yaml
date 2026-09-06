@@ -582,7 +582,7 @@ services:
 
     # Shlink - URL Shortener
     shlink:
-        image: shlinkio/shlink:stable@sha256:77b8eb87bcb1a56bd0ecc590398d415545e5ba83414f28d37dc565a91c3c50b2
+        image: shlinkio/shlink:stable@sha256:666cc24edf7290cca17019d2ef654c301695a646e2db82d4d116c3cd954d8232
         container_name: shlink
         environment:
             - SHORT_DOMAIN_HOST=ln.$BASE_SERVICES_DOMAIN
