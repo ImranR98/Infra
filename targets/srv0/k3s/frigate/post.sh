@@ -60,8 +60,8 @@ OpenVINO detector on the Iris Xe iGPU).
 
 Maintenance notes:
 - If the rpi go2rtc password ever regenerates (password file deleted),
-  update FRIGATE_RTSP_PASSWORD in secrets/VARS.srv0.sh and re-apply:
-  ./infra.sh srv0 k3s deploy frigate apply
+  update FRIGATE_RTSP_PASSWORD in secrets/VARS.srv0.env and re-apply:
+  task srv0:k3s:deploy -- frigate apply
 - The Frigate integration self-updates on every Home Assistant pod start
   (checks the latest GitHub release; marker at
   /config/custom_components/frigate/.installed-version).

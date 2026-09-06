@@ -26,9 +26,9 @@ _prep_backup() {
 _usage() {
     cat >&2 <<'EOF'
 Usage:
-  infra.sh <target> compose backup-state               Local backup (file in terminal, stream when piped)
-  infra.sh <target> compose backup-state -h            Show this help
-  infra.sh <target> compose backup-state <remote> <t>  Remote backup
+  task <target>:compose:backup-state                              Local backup (file in terminal, stream when piped)
+  task <target>:compose:backup-state -- -h                        Show this help
+  task <target>:compose:backup-state -- <remote> <t>              Remote backup
 
 Remote format:
   <remote>  [user@]host:path
@@ -66,10 +66,10 @@ if [ $# -ge 2 ]; then
 
     echo "Backing up $remote_target state from $remote_host..." >&2
     echo "  Output: $OUTPUT" >&2
-    echo "  SSH: ssh -T $remote_host \"cd $remote_path && INFRA_BACKUP_STREAM=true ./infra.sh $remote_target compose backup-state\"" >&2
+    echo "  SSH: ssh -T $remote_host \"cd $remote_path && INFRA_BACKUP_STREAM=true task '$remote_target':compose:backup-state\"" >&2
 
     tar_exit=0
-    (umask 0077; ssh -T "$remote_host" "cd '$remote_path' && INFRA_BACKUP_STREAM=true ./infra.sh '$remote_target' compose backup-state" > "$OUTPUT") || tar_exit=$?
+    (umask 0077; ssh -T "$remote_host" "cd '$remote_path' && INFRA_BACKUP_STREAM=true task '$remote_target':compose:backup-state" > "$OUTPUT") || tar_exit=$?
     if [ $tar_exit -ge 2 ]; then
         echo "Backup command failed on remote" >&2
         rm -f "$OUTPUT"

@@ -2,7 +2,6 @@
 # DESC: Render templates and start Compose stack
 set -euo pipefail
 source "$INFRA_ROOT/lib/common.sh"
-ensure_envsubst_vars
 
 render_compose_yaml
 

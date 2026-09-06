@@ -3,6 +3,8 @@
 /k3s_state_backups/
 /VARS.sh
 /VARS.*.sh
+/VARS.env
+/VARS.*.env
 /state/
 /vars/
 /temp
@@ -11,7 +13,6 @@ targets/*/compose/compose.private.yaml
 ~*
 **/__pycache__
 .venv/
-.cookies.json
 /cache/
 /.stfolder/
 /.stignore

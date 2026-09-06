@@ -1,0 +1,49 @@
+# Taskfile.yml for the vps0 target (public VPS: Traefik edge, FRP server, web apps).
+# Included by the root Taskfile as namespace "vps0" (task vps0:<task>).
+version: '3'
+
+tasks:
+  validate:
+    desc: Check configs for errors
+    cmds:
+      - TARGET=vps0 INFRA_ROOT={{.ROOT_DIR}} bash {{.ROOT_DIR}}/commands/validate.sh {{.CLI_ARGS}}
+
+  list-domains:
+    desc: Show domains used by this target
+    cmds:
+      - TARGET=vps0 INFRA_ROOT={{.ROOT_DIR}} bash {{.ROOT_DIR}}/commands/list-domains.sh {{.CLI_ARGS}}
+
+  compose:install:
+    desc: Render templates and start Compose stack
+    cmds:
+      - TARGET=vps0 INFRA_ROOT={{.ROOT_DIR}} bash {{.ROOT_DIR}}/commands/compose/install.sh {{.CLI_ARGS}}
+
+  compose:restart:
+    desc: Restart a specific Compose service (pass the service name after --)
+    cmds:
+      - TARGET=vps0 INFRA_ROOT={{.ROOT_DIR}} bash {{.ROOT_DIR}}/commands/compose/restart.sh {{.CLI_ARGS}}
+
+  compose:backup-state:
+    desc: Backup Compose runtime state (local file or remote via SSH; pass [remote target] after --)
+    cmds:
+      - TARGET=vps0 INFRA_ROOT={{.ROOT_DIR}} bash {{.ROOT_DIR}}/commands/compose/backup-state.sh {{.CLI_ARGS}}
+
+  compose:generate-mtls-certs:
+    desc: Generate mTLS certificates for a client↔server pair (pass the server target after --)
+    cmds:
+      - TARGET=vps0 INFRA_ROOT={{.ROOT_DIR}} bash {{.ROOT_DIR}}/commands/compose/generate-mtls-certs.sh {{.CLI_ARGS}}
+
+  prereqs:
+    desc: Install system prerequisites
+    cmds:
+      - TARGET=vps0 INFRA_ROOT={{.ROOT_DIR}} bash {{.ROOT_DIR}}/commands/prereqs.sh {{.CLI_ARGS}}
+
+  renovate:
+    desc: Run Renovate against ImranR98/Infra (needs RENOVATE_GITHUB_TOKEN in secrets/VARS.env)
+    cmds:
+      - TARGET=vps0 INFRA_ROOT={{.ROOT_DIR}} bash {{.ROOT_DIR}}/commands/renovate.sh {{.CLI_ARGS}}
+
+  wireguard:
+    desc: Install WireGuard and deploy a config file (pass the .conf path after --)
+    cmds:
+      - TARGET=vps0 INFRA_ROOT={{.ROOT_DIR}} bash {{.ROOT_DIR}}/commands/wireguard.sh {{.CLI_ARGS}}

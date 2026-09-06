@@ -1,0 +1,51 @@
+# Taskfile.yml — Infra CLI dispatch (replaces infra.sh + lib/dispatch.sh).
+# Target commands live in targets/<t>/Taskfile.yml, included below as namespaces.
+# Every task runs a command script with an inline TARGET=<t>; lib/common.sh
+# (sourced by every script) performs the environment/VARS bootstrap.
+version: '3'
+
+includes:
+  srv0: ./targets/srv0/Taskfile.yml
+  vps0: ./targets/vps0/Taskfile.yml
+  bigpc: ./targets/bigpc/Taskfile.yml
+  pc: ./targets/pc/Taskfile.yml
+  rpi: ./targets/rpi/Taskfile.yml
+
+tasks:
+  default:
+    desc: Show usage and list all available tasks
+    cmds:
+      - cmd: |
+          echo "Infra CLI — run 'task <target>:<command>' or 'task <universal-command>'"
+          echo ""
+          echo "Examples:"
+          echo "  task srv0:validate"
+          echo "  task srv0:compose:install"
+          echo "  task srv0:k3s:group:base:apply"
+          echo "  task srv0:k3s:deploy -- traefik diff"
+          echo "  task renovate"
+          echo ""
+          task --list-all
+
+  prereqs:
+    desc: Install system prerequisites (task, Docker, yq, envsubst, jq, python3, go, python3-dotenv, shellcheck)
+    cmds:
+      - INFRA_ROOT={{.ROOT_DIR}} bash {{.ROOT_DIR}}/commands/prereqs.sh {{.CLI_ARGS}}
+
+  renovate:
+    desc: Run Renovate against ImranR98/Infra — opens update PRs on GitHub (needs RENOVATE_GITHUB_TOKEN in secrets/VARS.env)
+    cmds:
+      - INFRA_ROOT={{.ROOT_DIR}} bash {{.ROOT_DIR}}/commands/renovate.sh {{.CLI_ARGS}}
+
+  wireguard:
+    desc: Install WireGuard and deploy a config file (pass the .conf path after --)
+    cmds:
+      - INFRA_ROOT={{.ROOT_DIR}} bash {{.ROOT_DIR}}/commands/wireguard.sh {{.CLI_ARGS}}
+
+  lint:
+    desc: Run ShellCheck on all shell scripts (must be installed)
+    cmds:
+      - cmd: |
+          set -e
+          mapfile -t scripts < <(find lib commands targets -name '*.sh' -not -path '*/plugins/*' | sort)
+          shellcheck "${scripts[@]}"

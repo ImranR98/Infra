@@ -1,0 +1,107 @@
+# Taskfile.yml for the srv0 target (K3s control-plane + frpc compose sidecar).
+# Included by the root Taskfile as namespace "srv0" (task srv0:<task>).
+version: '3'
+
+tasks:
+  validate:
+    desc: Check configs for errors
+    cmds:
+      - TARGET=srv0 INFRA_ROOT={{.ROOT_DIR}} bash {{.ROOT_DIR}}/commands/validate.sh {{.CLI_ARGS}}
+
+  list-domains:
+    desc: Show domains used by this target
+    cmds:
+      - TARGET=srv0 INFRA_ROOT={{.ROOT_DIR}} bash {{.ROOT_DIR}}/commands/list-domains.sh {{.CLI_ARGS}}
+
+  # ----- compose -----
+  compose:install:
+    desc: Render templates and start Compose stack
+    cmds:
+      - TARGET=srv0 INFRA_ROOT={{.ROOT_DIR}} bash {{.ROOT_DIR}}/commands/compose/install.sh {{.CLI_ARGS}}
+
+  compose:restart:
+    desc: Restart a specific Compose service (pass the service name after --)
+    cmds:
+      - TARGET=srv0 INFRA_ROOT={{.ROOT_DIR}} bash {{.ROOT_DIR}}/commands/compose/restart.sh {{.CLI_ARGS}}
+
+  compose:backup-state:
+    desc: Backup Compose runtime state (local file or remote via SSH; pass [remote target] after --)
+    cmds:
+      - TARGET=srv0 INFRA_ROOT={{.ROOT_DIR}} bash {{.ROOT_DIR}}/commands/compose/backup-state.sh {{.CLI_ARGS}}
+
+  compose:generate-mtls-certs:
+    desc: Generate mTLS certificates for a client↔server pair (pass the server target after --)
+    cmds:
+      - TARGET=srv0 INFRA_ROOT={{.ROOT_DIR}} bash {{.ROOT_DIR}}/commands/compose/generate-mtls-certs.sh {{.CLI_ARGS}}
+
+  compose:install-preboot:
+    desc: Install preboot FRPC for remote LUKS unlock via SSH
+    cmds:
+      - TARGET=srv0 INFRA_ROOT={{.ROOT_DIR}} bash {{.ROOT_DIR}}/targets/srv0/commands/compose/install-preboot.sh {{.CLI_ARGS}}
+
+  # ----- k3s -----
+  k3s:setup:
+    desc: Bootstrap a K3s control-plane node
+    cmds:
+      - TARGET=srv0 INFRA_ROOT={{.ROOT_DIR}} bash {{.ROOT_DIR}}/commands/k3s/setup.sh {{.CLI_ARGS}}
+
+  k3s:join:
+    desc: Join a remote node to the cluster via SSH (pass <ip> <user> [agent|server] after --; needs a tty)
+    cmds:
+      - TARGET=srv0 INFRA_ROOT={{.ROOT_DIR}} bash {{.ROOT_DIR}}/commands/k3s/join.sh {{.CLI_ARGS}}
+
+  k3s:deploy:
+    desc: Deploy, delete, diff, or render a single K3s component (pass <component> [mode] after --)
+    cmds:
+      - TARGET=srv0 INFRA_ROOT={{.ROOT_DIR}} bash {{.ROOT_DIR}}/commands/k3s/deploy.sh {{.CLI_ARGS}}
+
+  k3s:update-node-ip:
+    desc: Update K3s node IP after a network change (pass [--ip X] [--force] after --)
+    cmds:
+      - TARGET=srv0 INFRA_ROOT={{.ROOT_DIR}} bash {{.ROOT_DIR}}/commands/k3s/update-node-ip.sh {{.CLI_ARGS}}
+
+  k3s:backup-pvc:
+    desc: Back up PVCs — single by name, or mass via --all (auto-backup labeled)
+    cmds:
+      - TARGET=srv0 INFRA_ROOT={{.ROOT_DIR}} bash {{.ROOT_DIR}}/commands/k3s/backup-pvc.sh {{.CLI_ARGS}}
+
+  k3s:restore-pvc:
+    desc: Restore PVCs from backup archives — single by name, or mass via --all
+    cmds:
+      - TARGET=srv0 INFRA_ROOT={{.ROOT_DIR}} bash {{.ROOT_DIR}}/commands/k3s/restore-pvc.sh {{.CLI_ARGS}}
+
+  k3s:group:base:apply:
+    desc: Deploy the base K3s component group
+    cmds:
+      - TARGET=srv0 INFRA_ROOT={{.ROOT_DIR}} bash {{.ROOT_DIR}}/commands/k3s/group.sh base apply
+
+  k3s:group:base:delete:
+    desc: Delete the base K3s component group (refuses while Bound PVCs exist)
+    cmds:
+      - TARGET=srv0 INFRA_ROOT={{.ROOT_DIR}} bash {{.ROOT_DIR}}/commands/k3s/group.sh base delete
+
+  k3s:group:apps:apply:
+    desc: Deploy the apps K3s component group
+    cmds:
+      - TARGET=srv0 INFRA_ROOT={{.ROOT_DIR}} bash {{.ROOT_DIR}}/commands/k3s/group.sh apps apply
+
+  k3s:group:apps:delete:
+    desc: Delete the apps K3s component group
+    cmds:
+      - TARGET=srv0 INFRA_ROOT={{.ROOT_DIR}} bash {{.ROOT_DIR}}/commands/k3s/group.sh apps delete
+
+  # ----- universal aliases (run with TARGET set (target mode), like the old ./infra.sh srv0 <cmd>) -----
+  prereqs:
+    desc: Install system prerequisites
+    cmds:
+      - TARGET=srv0 INFRA_ROOT={{.ROOT_DIR}} bash {{.ROOT_DIR}}/commands/prereqs.sh {{.CLI_ARGS}}
+
+  renovate:
+    desc: Run Renovate against ImranR98/Infra (needs RENOVATE_GITHUB_TOKEN in secrets/VARS.env)
+    cmds:
+      - TARGET=srv0 INFRA_ROOT={{.ROOT_DIR}} bash {{.ROOT_DIR}}/commands/renovate.sh {{.CLI_ARGS}}
+
+  wireguard:
+    desc: Install WireGuard and deploy a config file (pass the .conf path after --)
+    cmds:
+      - TARGET=srv0 INFRA_ROOT={{.ROOT_DIR}} bash {{.ROOT_DIR}}/commands/wireguard.sh {{.CLI_ARGS}}

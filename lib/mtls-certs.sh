@@ -88,14 +88,12 @@ generate_client_cert() {
 }
 
 print_copy_paste_block() {
-    local target_label="$1"
-    local var_name="$2"
-    local file_path="$3"
+    # Emits a dotenv entry (KEY="...") for pasting into a VARS .env file.
+    # Escapes backslashes and double quotes; PEM blocks contain neither.
+    local var_name="$1"
+    local file_path="$2"
 
-    echo "# $target_label"
-    echo "export $var_name=\"\$(cat <<'MTLS_CERT_EOF'"
-    cat "$file_path"
-    echo "MTLS_CERT_EOF"
-    echo ")\""
-    echo ""
+    printf '%s="' "$var_name"
+    sed 's/\\/\\\\/g; s/"/\\"/g' "$file_path"
+    printf '"\n'
 }

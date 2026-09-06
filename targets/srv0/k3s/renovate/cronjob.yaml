@@ -2,7 +2,7 @@
 # Renovate self-hosted runner: proposes updates as PRs on GitHub.
 # Runs the full renovate image (ships the Go toolchain, so the gomod manager
 # for the WASM plugin works here). Only two files of the synced repo are
-# mounted (read-only): secrets/VARS.sh (the GitHub token) and .git/config
+# mounted (read-only): secrets/VARS.env (the GitHub token) and .git/config
 # (author identity) — Renovate itself clones from GitHub. Minimizes what a
 # compromised Renovate image can read.
 # Automerge policy lives in renovate.json (repo config).
@@ -42,7 +42,10 @@ spec:
                 - -c
                 - |
                   set -eu
-                  source /repo/secrets/VARS.sh
+                  # VARS.env is dotenv: set -a exports the simple KEY="value" lines.
+                  set -a
+                  . /repo/secrets/VARS.env
+                  set +a
                   export RENOVATE_TOKEN="$RENOVATE_GITHUB_TOKEN"
                   export RENOVATE_REPOSITORIES="ImranR98/Infra"
                   export LOG_LEVEL="info"
@@ -54,7 +57,7 @@ spec:
                   exec renovate
               volumeMounts:
                 - name: vars-file
-                  mountPath: /repo/secrets/VARS.sh
+                  mountPath: /repo/secrets/VARS.env
                   readOnly: true
                 - name: git-config
                   mountPath: /repo/.git/config
@@ -62,7 +65,7 @@ spec:
           volumes:
             - name: vars-file
               hostPath:
-                path: "$MAIN_PARENT_DIR/Main/Infra/secrets/VARS.sh"
+                path: "$MAIN_PARENT_DIR/Main/Infra/secrets/VARS.env"
                 type: File
             - name: git-config
               hostPath:

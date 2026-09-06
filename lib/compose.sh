@@ -2,7 +2,6 @@
 # lib/compose.sh — Docker Compose template rendering and domain listing
 
 render_compose_yaml() {
-    ensure_envsubst_vars
     mkdir -p "$COMPOSE_STATE_DIR"
     envsubst "$ENVSUBST_VARS" < "$INFRA_ROOT/targets/$TARGET/compose/compose.yaml" > "$COMPOSE_STATE_DIR/compose.main.yaml"
     local private_file="$INFRA_ROOT/targets/$TARGET/compose/compose.private.yaml"
@@ -19,7 +18,6 @@ render_compose_yaml() {
 
 configure_compose_templates() {
     local target="$1"
-    ensure_envsubst_vars
     if [ -n "${PROXY_HOST:-}" ]; then
         PROXY_IP="$(getent hosts "$PROXY_HOST" 2>/dev/null | awk '{print $1; exit}')"
         if [ -z "$PROXY_IP" ]; then

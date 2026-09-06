@@ -24,8 +24,6 @@ if [ ! -d "$COMPONENT_DIR" ]; then
 fi
 
 source "$INFRA_ROOT/lib/common.sh"
-source_env
-ensure_envsubst_vars
 
 _build_yaml() {
     # Stage files into a temp dir so we can envsubst BEFORE kustomize.

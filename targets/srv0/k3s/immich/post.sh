@@ -4,7 +4,6 @@
 set -euo pipefail
 
 source "$INFRA_ROOT/lib/common.sh"
-source_env
 
 echo "=== Checking Immich configuration ==="
 
