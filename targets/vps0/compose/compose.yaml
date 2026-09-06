@@ -373,7 +373,7 @@ services:
     # Obtainium Apps
     obtainium_apps:
         container_name: obtainium_apps
-        image: imranrdev/apps.obtainium.imranr.dev:latest@sha256:1f8c769a7f05653434b5e5d7b9e5f5848d6dde9de2db50f6564dacee410f20cb
+        image: imranrdev/apps.obtainium.imranr.dev:latest@sha256:6db3543fd34fd0f313046849ecbafb36ab8c889e5be4656ea3068c817429b472
         depends_on:
             - traefik
         labels:
