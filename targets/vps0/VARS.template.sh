@@ -74,7 +74,6 @@ export OWNCAST_ACCESS_TOKEN="change_me"    # openssl rand -hex 32
 export CROWDSEC_BOUNCER_KEY="change_me" # openssl rand -hex 32
 
 # ====== FRP ======
-export FRPS_PREBOOT_PORT="change_me" # Preboot SSH port; must match the FRP client's preboot remotePort
 # Generate with: ./infra.sh srv0 compose generate-mtls-certs vps0
 # Use the heredoc pattern below for multi-line PEM data:
 export MTLS_CA_CERT="$(cat <<'MTLS_CERT_EOF'

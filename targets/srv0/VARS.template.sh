@@ -249,7 +249,6 @@ export COPYPARTY_ADMIN_PASSWORD="changeme" # openssl rand -hex 16
 
 # ====== FRP ======
 export PROXY_HOST="vps0.example.org"
-export FRPS_PREBOOT_PORT="change_me" # Preboot SSH port; must match the FRP server's preboot port mapping
 # Generate with: ./infra.sh srv0 compose generate-mtls-certs vps0
 # Use the heredoc pattern below for multi-line PEM data:
 export MTLS_CA_CERT="$(cat <<'MTLS_CERT_EOF'

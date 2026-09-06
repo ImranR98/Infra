@@ -5,7 +5,7 @@ source "$INFRA_ROOT/lib/common.sh"
 
 echo "=== Check if root partition is LUKS-encrypted ==="
 if bash "$INFRA_ROOT/lib/check_root_luks.sh"; then
-    PREBOOT_PORT="${FRPS_PREBOOT_PORT:-8887}"
+    PREBOOT_PORT="8887"
     echo "LUKS detected. Installing crypt-ssh remote unlock (port $PREBOOT_PORT)..."
 
     TMPDIR="$(mktemp -d)"
