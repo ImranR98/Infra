@@ -46,6 +46,7 @@ spec:
               volumeMounts:
                 - name: infra-repo
                   mountPath: "$INFRA_ROOT"
+                  readOnly: true
                 - name: backup-dir
                   mountPath: "$PVC_BACKUP_DIR"
           volumes:

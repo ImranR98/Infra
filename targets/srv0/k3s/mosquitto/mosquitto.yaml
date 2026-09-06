@@ -23,6 +23,8 @@ spec:
           image: eclipse-mosquitto:2.0.22-openssl
           securityContext:
             allowPrivilegeEscalation: false
+            runAsUser: 1883
+            runAsGroup: 1883
           ports:
             - containerPort: 1883
             - containerPort: 8883

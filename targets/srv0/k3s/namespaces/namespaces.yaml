@@ -1,10 +1,10 @@
 ---
 # PSA labels. enforce stays `privileged` — legitimate holdouts remain:
-# nfs-server (kernel NFS), HA hostNetwork, syncthing hostNetwork, mosquitto
-# hostPorts, opencanary hostPorts, and the CDI device-plugin. `audit:
-# restricted` surfaces every remaining violation in metrics/logs so the
-# distance to a real policy is measurable; `warn: privileged` is a no-op kept
-# for visibility that enforcement is relaxed here.
+# nfs-server (kernel NFS), syncthing hostNetwork, mosquitto hostPorts,
+# opencanary hostPorts. `audit: restricted` surfaces every remaining
+# violation in metrics/logs so the distance to a real policy is measurable;
+# `warn: privileged` is a no-op kept for visibility that enforcement is
+# relaxed here.
 apiVersion: v1
 kind: Namespace
 metadata:

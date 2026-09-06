@@ -28,8 +28,8 @@ spec:
       seLinuxOptions:
         type: spc_t
         level: s0
-    hostNetwork: true
-    dnsPolicy: ClusterFirstWithHostNet
+    # No hostNetwork: LAN auto-discovery (mDNS/HomeKit/Cast) is not used.
+    # NET_ADMIN/NET_RAW then apply to the pod netns only, not the host stack.
     securityContext:
       allowPrivilegeEscalation: false
       # habluetooth manages the host BT adapter via direct HCI sockets

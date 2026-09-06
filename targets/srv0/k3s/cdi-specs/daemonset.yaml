@@ -1,9 +1,11 @@
 ---
 # Generates + installs the CDI specs (see prereqs.yaml) into /etc/cdi on every
-# node. spc_t label lets the pod write the hostPath dir under SELinux; no
-# privileged needed. Runs cluster-wide (no nodeSelector): the per-node spec is
-# generated from that node's own /dev, so grants exist only where the
-# hardware does.
+# node. spc_t label lets the init container write the hostPath dir under
+# SELinux; no privileged needed. Least-privilege: only the short-lived init
+# container has /dev read + /etc/cdi write access — the long-running hold
+# container mounts nothing, so a compromised installer pod cannot rewrite the
+# spec (device-grant poisoning). Replug healing = rolling restart:
+#   kubectl -n base rollout restart ds/cdi-specs
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
@@ -37,23 +39,13 @@ spec:
               mountPath: /dev
               readOnly: true
       containers:
-        # Keep the pod alive and regenerate the spec every 5 minutes (device
-        # replug healing). A rolling restart after editing the generator
-        # re-runs the init container immediately.
+        # Keep the pod alive (DaemonSet) but hold nothing: no mounts, no
+        # write access. Regeneration happens only in the init container.
         - name: hold
           image: busybox:1.38
           command:
-            - sh
-            - -c
-            - sh /spec/generate-spec.sh
-          volumeMounts:
-            - name: spec
-              mountPath: /spec
-            - name: cdi
-              mountPath: /etc/cdi
-            - name: dev
-              mountPath: /dev
-              readOnly: true
+            - sleep
+            - infinity
       volumes:
         - name: spec
           configMap:

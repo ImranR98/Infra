@@ -19,17 +19,19 @@ spec:
     nodeSelector:
       hostpath-main: "true"
     # Device access via CDI (infra.local/devices-dri, see cdi-specs) — no
-    # privileged. spc_t covers SELinux on the NFS media PVC + /dev/dri; s0
-    # keeps config-PVC files category-free for the pvc-backup pods.
+    # privileged. container_t + s0 (verified): SELinux allows the NFS media
+    # PVC + config PVC writes and the /dev/dri grant; s0 keeps config-PVC
+    # files category-free for the pvc-backup pods.
     securityContext:
       seLinuxOptions:
-        type: spc_t
         level: s0
       allowPrivilegeEscalation: false
       capabilities:
         add:
           # intel GPU stats polling (PMU) — CAP_PERFMON is enough, no root
-          # equivalent needed.
+          # equivalent needed. NOTE: under container_t SELinux still denies
+          # perf_event_open, so the dashboard GPU-stats graph stays empty;
+          # accepted in exchange for the tighter domain.
           - PERFMON
     image:
       repository: ghcr.io/blakeblackshear/frigate
