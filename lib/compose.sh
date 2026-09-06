@@ -11,7 +11,10 @@ render_compose_yaml() {
         envsubst "$ENVSUBST_VARS" < "$private_file" > "$COMPOSE_STATE_DIR/compose.private.yaml"
         files+=(-f "$COMPOSE_STATE_DIR/compose.private.yaml")
     fi
-    docker compose "${files[@]}" config > "$COMPOSE_STATE_DIR/compose.yaml"
+    # -p "$TARGET": docker compose config bakes the project name into the
+    # rendered file; without it the state-dir name (compose_live_state) becomes
+    # the project, breaking network naming (X_default) for the later -p run.
+    docker compose -p "$TARGET" "${files[@]}" config > "$COMPOSE_STATE_DIR/compose.yaml"
 }
 
 configure_compose_templates() {
