@@ -4,7 +4,14 @@
 _mtls_certs_temp_dir() {
     local d="/tmp/mtls-certs-$$"
     mkdir -p "$d"
+    chmod 700 "$d" 2>/dev/null || true
     echo "$d"
+}
+
+# Key material must never be world/group-readable while openssl writes it.
+_lockdown_keys() {
+    local outdir="$1"
+    chmod 600 "$outdir"/*.key 2>/dev/null || true
 }
 
 generate_mtls_ca() {
@@ -15,6 +22,7 @@ generate_mtls_ca() {
         -out "$outdir/ca.crt" \
         -days 3650 -nodes \
         -subj "$subj" 2>/dev/null
+    _lockdown_keys "$outdir"
 }
 
 generate_server_cert() {
@@ -58,6 +66,7 @@ EOF
         -CA "$ca_cert" -CAkey "$ca_key" -CAcreateserial \
         -out "$outdir/server.crt" -days 1825 \
         -extfile "$ssl_cnf" -extensions req_ext 2>/dev/null
+    _lockdown_keys "$outdir"
     rm -f "$outdir/server.csr" "$ssl_cnf"
 }
 
@@ -74,6 +83,7 @@ generate_client_cert() {
     openssl x509 -req -in "$outdir/$name.csr" \
         -CA "$ca_cert" -CAkey "$ca_key" -CAcreateserial \
         -out "$outdir/$name.crt" -days 1825 2>/dev/null
+    _lockdown_keys "$outdir"
     rm -f "$outdir/$name.csr"
 }
 

@@ -9,6 +9,16 @@ SSH_USER="${2:?Usage: $0 <client-ip> <ssh-user> [agent|server]}"
 ROLE="${3:-agent}"
 case "$ROLE" in agent|server) ;; *) echo "Usage: $0 <client-ip> <ssh-user> [agent|server]" >&2; exit 1 ;; esac
 
+# Reject anything that could be parsed as an ssh/rsync option or host spec.
+if ! printf '%s' "$CLIENT_IP" | grep -qE '^([0-9]{1,3}\.){3}[0-9]{1,3}$'; then
+    echo "Error: CLIENT_IP must be an IPv4 address (got '$CLIENT_IP')" >&2
+    exit 1
+fi
+if [ -z "$SSH_USER" ] || [[ "$SSH_USER" =~ [^a-zA-Z0-9_-] ]] || [ "${SSH_USER:0:1}" = "-" ]; then
+    echo "Error: SSH_USER contains invalid characters (got '$SSH_USER')" >&2
+    exit 1
+fi
+
 # The node-configuration questions (GPU label, taint, Longhorn) are read from
 # this terminal. A non-interactive invocation (e.g. ssh without -t) would make
 # every `read` hit EOF instantly and silently default to "n" — refuse instead.
@@ -64,8 +74,7 @@ cat > "$installer" << 'ENDSCRIPT'
 #!/bin/bash
 set -euo pipefail
 SERVER_URL="${1:?}"
-TOKEN="${2:?}"
-ROLE="${3:-agent}"
+ROLE="${2:-agent}"
 
 INFRA_ROOT="$(cd "$(dirname "$0")" && pwd)"
 source "$INFRA_ROOT/lib/common.sh"
@@ -83,6 +92,17 @@ if [ "$(id -u)" != 0 ]; then
 fi
 echo "[$(date +%T)] Client: running as root"
 
+# Token was rsynced to /tmp/k3s-join-token (0600) — consume it and pass it via
+# K3S_TOKEN env so it never lands in argv/ps. k3s install.sh persists exported
+# K3S_* vars into its own 0600 env file for the systemd unit.
+TOKEN="$(cat /tmp/k3s-join-token 2>/dev/null || true)"
+rm -f /tmp/k3s-join-token
+if [ -z "$TOKEN" ]; then
+    echo "Error: join token missing at /tmp/k3s-join-token" >&2
+    exit 1
+fi
+export K3S_TOKEN="$TOKEN"
+
 echo "=== Downloading K3s installer ==="
 echo "[$(date +%T)] Client: downloading K3s installer..."
 download_k3s_installer
@@ -97,12 +117,12 @@ if [ "$ROLE" = "server" ]; then
     echo "[$(date +%T)] Client: writing server config..."
     write_k3s_config server "$NODE_IP" /etc/rancher/k3s/config.yaml.d/10-server-join.yaml false
     echo "[$(date +%T)] Client: running k3s server installer..."
-    "$K3S_SCRIPT" server --server "$SERVER_URL" --token "$TOKEN"
+    "$K3S_SCRIPT" server --server "$SERVER_URL"
 else
     echo "[$(date +%T)] Client: writing agent config..."
     write_k3s_config agent "$NODE_IP" /etc/rancher/k3s/config.yaml.d/50-agent.yaml false
     echo "[$(date +%T)] Client: running k3s agent installer..."
-    "$K3S_SCRIPT" agent --server "$SERVER_URL" --token "$TOKEN"
+    "$K3S_SCRIPT" agent --server "$SERVER_URL"
 fi
 echo "[$(date +%T)] Client: K3s $ROLE installer completed"
 rm -f "$K3S_SCRIPT"
@@ -123,13 +143,21 @@ echo "[$(date +%T)] Installer synced"
 rsync -az "$INFRA_ROOT/lib/" "${SSH_USER}@${CLIENT_IP}:/tmp/lib/"
 echo "[$(date +%T)] Lib files synced"
 
+echo "[$(date +%T)] Syncing join token to client (0600)..."
+TOKEN_FILE=$(mktemp /tmp/k3s-join-token.XXXXXX)
+trap 'rm -f "$installer" "$TOKEN_FILE"' EXIT
+chmod 600 "$TOKEN_FILE"
+printf '%s' "$TOKEN" > "$TOKEN_FILE"
+rsync -az --chmod=600 "$TOKEN_FILE" "${SSH_USER}@${CLIENT_IP}:/tmp/k3s-join-token"
+echo "[$(date +%T)] Token synced"
+
 echo "[$(date +%T)] Executing installer on client..."
 ssh -t "${SSH_USER}@${CLIENT_IP}" \
-    "INFRA_INTERACTIVE=true bash /tmp/agent-install.sh '${SERVER_URL}' '${TOKEN}' '${ROLE}'"
+    "INFRA_INTERACTIVE=true bash /tmp/agent-install.sh '${SERVER_URL}' '${ROLE}'"
 echo "[$(date +%T)] Installer completed on client"
 
 echo "Cleaning up client..."
-ssh "${SSH_USER}@${CLIENT_IP}" "rm -rf /tmp/lib /tmp/agent-install.sh" 2>/dev/null || true
+ssh "${SSH_USER}@${CLIENT_IP}" "rm -rf /tmp/lib /tmp/agent-install.sh /tmp/k3s-join-token" 2>/dev/null || true
 echo "[$(date +%T)] Client cleanup done"
 
 echo ""
