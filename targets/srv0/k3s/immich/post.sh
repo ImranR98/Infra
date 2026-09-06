@@ -29,10 +29,12 @@ PWD=$(openssl rand -hex 12)
 
 TOKEN=""
 _try_login() {
-    TOKEN=$(kubectl exec -n apps deploy/immich-server -- \
+    # Password rides stdin (-d @-), never argv (ps-visible on host + in pod).
+    TOKEN=$(printf '{"email":"%s","password":"%s"}' "$DOMAIN_OWNER_EMAIL" "$1" | \
+        kubectl exec -i -n apps deploy/immich-server -- \
         curl -sk -X POST http://localhost:2283/api/auth/login \
           -H "Content-Type: application/json" \
-          -d "{\"email\":\"$DOMAIN_OWNER_EMAIL\",\"password\":\"$1\"}" 2>/dev/null | \
+          -d @- 2>/dev/null | \
         python3 -c "import json,sys; print(json.load(sys.stdin).get('accessToken',''))" 2>/dev/null || echo "")
     [ -n "$TOKEN" ]
 }
@@ -50,10 +52,11 @@ sleep 2
 if ! _try_login "$PWD"; then
     # Attempt 2: admin doesn't exist or password reset failed, create one
     echo "Login failed. Creating admin user..."
-    kubectl exec -n apps deploy/immich-server -- \
+    printf '{"email":"%s","name":"Admin","password":"%s"}' "$DOMAIN_OWNER_EMAIL" "$PWD" | \
+        kubectl exec -i -n apps deploy/immich-server -- \
         curl -sk -X POST "http://localhost:2283/api/auth/admin-sign-up" \
           -H "Content-Type: application/json" \
-          -d "{\"email\":\"$DOMAIN_OWNER_EMAIL\",\"name\":\"Admin\",\"password\":\"$PWD\"}" 2>/dev/null
+          -d @- 2>/dev/null
     sleep 2
     if ! _try_login "$PWD"; then
         echo "Error: could not create or authenticate as admin" >&2
@@ -61,9 +64,11 @@ if ! _try_login "$PWD"; then
     fi
 fi
 
-CLIENT_ID=$(kubectl exec -n apps deploy/immich-server -- \
-    curl -sk "http://localhost:2283/api/system-config" \
-      -H "Authorization: Bearer $TOKEN" 2>/dev/null | \
+# Authenticated exec calls below pass the bearer token over stdin into a
+# remote shell var (IFS= read -r tok), keeping it out of kubectl/curl argv.
+CLIENT_ID=$(printf '%s\n' "$TOKEN" | kubectl exec -i -n apps deploy/immich-server -- \
+    sh -c 'IFS= read -r tok; curl -sk "http://localhost:2283/api/system-config" \
+        -H "Authorization: Bearer $tok" 2>/dev/null' | \
     python3 -c "import json,sys; print(json.load(sys.stdin)['oauth']['clientId'])" 2>/dev/null || echo "")
 
 if [ -n "$CLIENT_ID" ] && [ "$CLIENT_ID" != "null" ]; then
@@ -74,11 +79,13 @@ fi
 echo "OAuth not yet configured. Seeding configuration..."
 
 # GET current config, patch, PUT back
-CONFIG_JSON=$(kubectl exec -n apps deploy/immich-server -- \
-    curl -sk "http://localhost:2283/api/system-config" \
-      -H "Authorization: Bearer $TOKEN" 2>/dev/null)
+CONFIG_JSON=$(printf '%s\n' "$TOKEN" | kubectl exec -i -n apps deploy/immich-server -- \
+    sh -c 'IFS= read -r tok; curl -sk "http://localhost:2283/api/system-config" \
+        -H "Authorization: Bearer $tok" 2>/dev/null')
 
-UPDATED_JSON=$(echo "$CONFIG_JSON" | python3 -c "
+# Client secret comes via env (not argv) into the python below.
+UPDATED_JSON=$(AUTHELIA_IMMICH_CLIENT_SECRET="$AUTHELIA_IMMICH_CLIENT_SECRET_HASHABLE" \
+    python3 -c "
 import json, sys, os
 
 c = json.load(sys.stdin)
@@ -86,7 +93,7 @@ c = json.load(sys.stdin)
 c['oauth']['enabled'] = True
 c['oauth']['issuerUrl'] = 'https://auth.$SERVICES_DOMAIN'
 c['oauth']['clientId'] = 'immich'
-c['oauth']['clientSecret'] = '$AUTHELIA_IMMICH_CLIENT_SECRET_HASHABLE'
+c['oauth']['clientSecret'] = os.environ['AUTHELIA_IMMICH_CLIENT_SECRET']
 c['oauth']['buttonText'] = 'Login with Authelia'
 c['oauth']['autoRegister'] = True
 c['oauth']['autoLaunch'] = True
@@ -96,13 +103,13 @@ c['passwordLogin']['enabled'] = False
 c['library']['watch']['enabled'] = True
 
 sys.stdout.write(json.dumps(c))
-")
+" <<< "$CONFIG_JSON")
 
-echo "$UPDATED_JSON" | kubectl exec -i -n apps deploy/immich-server -- \
-    curl -sk -X PUT "http://localhost:2283/api/system-config" \
-      -H "Authorization: Bearer $TOKEN" \
-      -H "Content-Type: application/json" \
-      -d @- 2>/dev/null | python3 -c "
+{ printf '%s\n' "$TOKEN"; printf '%s\n' "$UPDATED_JSON"; } | kubectl exec -i -n apps deploy/immich-server -- \
+    sh -c 'IFS= read -r tok; curl -sk -X PUT "http://localhost:2283/api/system-config" \
+        -H "Authorization: Bearer $tok" \
+        -H "Content-Type: application/json" \
+        -d @- 2>/dev/null' | python3 -c "
 import json, sys
 c = json.load(sys.stdin)
 o = c['oauth']
