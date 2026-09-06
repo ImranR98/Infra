@@ -2,13 +2,15 @@
 set -e
 
 # Generate and persist the RTSP/API password on first start.
-# Prints it to the logs so it can be recovered without reading the file.
+# (One-time notice only — the value itself stays out of the logs.)
 if [ ! -s /config/password ]; then
     python3 -c 'import secrets; print(secrets.token_hex(16))' > /config/password
+    echo "go2rtc: generated password in /config/password" >&2
 fi
-# Keep the persisted copy readable by the host user (container runs as root)
-chmod 644 /config/password
-echo "go2rtc: password -> $(cat /config/password)" >&2
+# Not world-readable; re-owned to the host user (uid of the bind-mount root,
+# container runs as root) so it can be read on the host without docker exec.
+chmod 600 /config/password
+chown "$(stat -c %u /config 2>/dev/null || echo 0)" /config/password 2>/dev/null || true
 
 # Substitute the placeholder with the persisted password (hex chars only, sed-safe).
 sed -i "s/{{GO2RTC_PASSWORD}}/$(cat /config/password)/g" /config/go2rtc.yaml

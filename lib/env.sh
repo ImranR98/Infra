@@ -61,6 +61,21 @@ source_env() {
 
     source "$vars_file"
 
+    # Reject leftover template placeholder values. VARS templates document
+    # exports with change_me/abc/<...> placeholders; validate doesn't source
+    # VARS, so this is the enforcement point before any render/deploy.
+    local var value trimmed
+    while IFS= read -r var; do
+        value="${!var:-}"
+        trimmed="$(printf '%s' "$value" | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')"
+        case "$trimmed" in
+            change_me|changeme|abc|REPLACE_ME|"<"*">")
+                echo "Error: $vars_file exports $var with placeholder value '$(printf '%s' "$trimmed" | head -c 40)' — replace it with a real value" >&2
+                exit 1
+                ;;
+        esac
+    done < <(get_template_export_names "$target")
+
     # Auto-hash any variable ending in _HASHABLE → _HASHED
     while IFS= read -r line; do
         var="${line%%=*}"
