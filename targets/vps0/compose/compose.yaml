@@ -54,7 +54,7 @@ services:
         container_name: dockerproxy
         command:
             - "-loglevel=info"
-            - '-allowGET=(/v1\..{1,2})?/(version|containers/.*|events.*)'
+            - '-allowGET=(/v1\..{1,2})?/(version|info|containers/.*|events.*)'
             - "-allowHEAD=/_ping"
             - "-shutdowngracetime=5"
             - "-watchdoginterval=600"
