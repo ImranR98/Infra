@@ -1,0 +1,17 @@
+---
+# Bootstrap this machine as the K3s control plane (cluster-init).
+# Run via `task srv0:k3s:provision` ON the node being provisioned.
+- name: Bootstrap the K3s control-plane node
+  hosts: localhost
+  connection: local
+  gather_facts: true
+  become: true
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  vars:
+    k3s_role: server
+    k3s_cluster_init: true
+  roles:
+    - k3s_prepare
+    - k3s_install
+    - k3s_configure

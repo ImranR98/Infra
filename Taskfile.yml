@@ -28,7 +28,7 @@ tasks:
           task --list-all
 
   prereqs:
-    desc: Install system prerequisites (task, Docker, yq, envsubst, jq, python3, go, python3-dotenv, shellcheck)
+    desc: Install system prerequisites via Ansible (packages, task, Docker, collections, lint tools)
     cmds:
       - INFRA_ROOT={{.ROOT_DIR}} bash {{.ROOT_DIR}}/commands/prereqs.sh {{.CLI_ARGS}}
 

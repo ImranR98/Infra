@@ -1,0 +1,92 @@
+---
+- name: Install wireguard-tools
+  ansible.builtin.package:
+    name: wireguard-tools
+    state: present
+
+- name: Create the WireGuard config directory
+  ansible.builtin.file:
+    path: /etc/wireguard
+    state: directory
+    mode: "0700"
+
+- name: Deploy the WireGuard config
+  ansible.builtin.copy:
+    src: "{{ wireguard_conf_src }}"
+    dest: "{{ wireguard_conf_dest }}"
+    mode: "0600"
+
+# Split-/1 AllowedIPs are less specific than local routes, protecting K3s/LAN.
+- name: Pin AllowedIPs to split-/1 routes
+  ansible.builtin.replace:
+    path: "{{ wireguard_conf_dest }}"
+    regexp: '^AllowedIPs\s*=.*'
+    replace: "AllowedIPs = {{ wireguard_allowed_ips }}"
+
+- name: Read the WireGuard endpoint IP
+  ansible.builtin.shell: |
+    set -o pipefail
+    grep -oP '^Endpoint\s*=\s*\K[\d.]+' "{{ wireguard_conf_dest }}" || true
+  register: wireguard_endpoint
+  changed_when: false
+  failed_when: false
+
+- name: Read the physical default gateway
+  ansible.builtin.shell: |
+    set -o pipefail
+    ip route show default 2>/dev/null | awk '{print $3; exit}'
+  register: wireguard_gateway
+  changed_when: false
+  failed_when: false
+
+# The endpoint inside /1 would make handshakes loop into wg0; PostUp/PreDown
+# /32 routes force them via the physical gateway instead.
+- name: Add the endpoint PostUp route
+  ansible.builtin.lineinfile:
+    path: "{{ wireguard_conf_dest }}"
+    regexp: '^PostUp = ip route add .*'
+    line: "PostUp = ip route add {{ wireguard_endpoint.stdout }}/32 via {{ wireguard_gateway.stdout }}"
+    insertafter: '^\[Interface\]'
+  when: wireguard_endpoint.stdout | length > 0 and wireguard_gateway.stdout | length > 0
+
+- name: Add the endpoint PreDown route
+  ansible.builtin.lineinfile:
+    path: "{{ wireguard_conf_dest }}"
+    regexp: '^PreDown = ip route delete .*'
+    line: "PreDown = ip route delete {{ wireguard_endpoint.stdout }}/32 via {{ wireguard_gateway.stdout }} || true"
+    insertafter: '^\[Interface\]'
+  when: wireguard_endpoint.stdout | length > 0 and wireguard_gateway.stdout | length > 0
+
+- name: Drop Table=auto (main-table routes coexist with K3s)
+  ansible.builtin.lineinfile:
+    path: "{{ wireguard_conf_dest }}"
+    regexp: '^Table\s*='
+    state: absent
+  when: wireguard_endpoint.stdout | length > 0 and wireguard_gateway.stdout | length > 0
+
+# Restart resilience with a stale-interface guard — handles suspend/resume.
+- name: Create the wg-quick service drop-in directory
+  ansible.builtin.file:
+    path: /etc/systemd/system/wg-quick@wg0.service.d
+    state: directory
+    mode: "0755"
+
+- name: Deploy the wg-quick restart drop-in
+  ansible.builtin.copy:
+    dest: /etc/systemd/system/wg-quick@wg0.service.d/restart.conf
+    content: |
+      [Service]
+      Restart=on-failure
+      RestartSec=15
+      ExecStartPre=-ip link delete wg0 2>/dev/null
+    mode: "0644"
+
+- name: Reload systemd
+  ansible.builtin.systemd:
+    daemon_reload: true
+
+- name: Enable and restart the WireGuard interface
+  ansible.builtin.systemd:
+    name: "{{ wireguard_service }}"
+    enabled: true
+    state: restarted

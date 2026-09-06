@@ -43,7 +43,7 @@ _confirm() {
     [[ "$yn" =~ ^[Yy] ]]
 }
 
-# Run docker, transparently retrying with sudo/run0 when the user lacks access
+# Run docker, transparently retrying with sudo when the user lacks access
 # to the docker socket (not in the docker group) — the user is prompted for
 # elevation instead of the command failing. Only permission-denied errors
 # trigger the retry; daemon-down and real CLI errors pass through unchanged.

@@ -1,0 +1,12 @@
+selinux: {{ k3s_selinux | bool | lower }}
+write-kubeconfig-mode: "{{ k3s_write_kubeconfig_mode }}"
+{% if k3s_cluster_init | bool %}
+cluster-init: true
+{% endif %}
+flannel-backend: {{ k3s_flannel_backend }}
+node-ip: {{ k3s_prepare_resolved_node_ip }}
+flannel-iface-regex: "{{ k3s_flannel_iface_regex }}"
+node-label:
+{% for label in k3s_server_node_labels %}
+  - "{{ label }}"
+{% endfor %}

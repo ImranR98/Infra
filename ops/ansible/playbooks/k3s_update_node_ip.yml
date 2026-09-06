@@ -1,0 +1,19 @@
+---
+# Update the K3s node IP after a network change. Runs the retained bash
+# implementation (ops/ansible/files/update-node-ip.sh) on this machine — the
+# etcd member/peer-URL updates and the Type=notify no-block restart dance are
+# deliberately kept as-is (see AGENTS.md).
+# Run via `task srv0:k3s:update-node-ip -- [--ip X] [--force]` ON the node.
+- name: Update the K3s node IP
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  become: true
+  environment:
+    INFRA_ROOT: "{{ infra_root | default(playbook_dir ~ '/../..') }}"
+    TARGET: "{{ target_name | default('') }}"
+    INFRA_INTERACTIVE: "false"
+  tasks:
+    - name: Run the node IP update script
+      ansible.builtin.script: "files/update-node-ip.sh {{ k3s_update_node_ip_args | default('') }}"
+      changed_when: true

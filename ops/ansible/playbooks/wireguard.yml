@@ -1,0 +1,12 @@
+---
+# Install wireguard-tools and deploy a wg0 config (split-/1 AllowedIPs,
+# endpoint /32 dead-loop fixes, restart drop-in). Run via
+# `task wireguard -- <config-path>` — the wrapper passes the absolute config
+# path as wireguard_conf_src.
+- name: Install WireGuard and deploy the wg0 configuration
+  hosts: localhost
+  connection: local
+  gather_facts: true
+  become: true
+  roles:
+    - wireguard

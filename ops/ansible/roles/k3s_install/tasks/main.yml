@@ -1,0 +1,85 @@
+---
+- name: Check whether K3s is already installed
+  ansible.builtin.stat:
+    path: /usr/local/bin/k3s
+  register: k3s_install_binary
+
+- name: Install K3s
+  when: (not k3s_install_binary.stat.exists) or (k3s_force_reinstall | bool)
+  block:
+    - name: Download the K3s installer
+      ansible.builtin.get_url:
+        url: "{{ k3s_installer_url }}"
+        dest: /tmp/k3s-install.sh
+        mode: "0755"
+
+    - name: Download the reference installer for the checksum cross-check
+      ansible.builtin.get_url:
+        url: "{{ k3s_installer_hash_source_url }}"
+        dest: /tmp/k3s-install.sh.expected
+        mode: "0644"
+      when: k3s_installer_sha256 | default('') | length == 0
+
+    - name: Verify the K3s installer checksum (dual-source cross-check)
+      ansible.builtin.shell: |
+        set -o pipefail
+        expected=$(sha256sum /tmp/k3s-install.sh.expected | cut -d' ' -f1)
+        actual=$(sha256sum /tmp/k3s-install.sh | cut -d' ' -f1)
+        if [ "$expected" != "$actual" ]; then
+          echo "Error: K3s install script checksum mismatch." >&2
+          echo "  Expected: $expected" >&2
+          echo "  Got:      $actual" >&2
+          exit 1
+        fi
+      changed_when: false
+      when: k3s_installer_sha256 | default('') | length == 0
+
+    - name: Verify the K3s installer checksum (pinned)
+      ansible.builtin.shell: |
+        set -o pipefail
+        actual=$(sha256sum /tmp/k3s-install.sh | cut -d' ' -f1)
+        if [ "{{ k3s_installer_sha256 }}" != "$actual" ]; then
+          echo "Error: K3s install script checksum mismatch." >&2
+          echo "  Expected: {{ k3s_installer_sha256 }}" >&2
+          echo "  Got:      $actual" >&2
+          exit 1
+        fi
+      changed_when: false
+      when: k3s_installer_sha256 | default('') | length > 0
+
+    - name: Run the K3s installer
+      ansible.builtin.command: "{{ k3s_install_installer_args }}"
+      vars:
+        k3s_install_installer_args: >-
+          {{ ['/tmp/k3s-install.sh']
+             + (['server', '--server', k3s_server_url] if k3s_role == 'server' and k3s_server_url | default('') | length > 0 else [])
+             + (['agent', '--server', k3s_server_url] if k3s_role == 'agent' else [])
+             | join(' ') }}
+      environment: "{{ {'K3S_TOKEN': k3s_token} if k3s_token | default('') | length > 0 else {} }}"
+      no_log: true
+      changed_when: true
+
+  always:
+    - name: Remove installer artifacts
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /tmp/k3s-install.sh
+        - /tmp/k3s-install.sh.expected
+      changed_when: false
+
+- name: Ensure the K3s service is enabled and started
+  ansible.builtin.systemd:
+    name: "{{ 'k3s' if k3s_role == 'server' else 'k3s-agent' }}"
+    enabled: true
+    state: started
+
+- name: Wait for the cluster API
+  ansible.builtin.command: kubectl get nodes
+  register: k3s_install_cluster_ready
+  until: k3s_install_cluster_ready.rc == 0
+  retries: "{{ (k3s_wait_timeout_secs | int) // 5 }}"
+  delay: 5
+  changed_when: false
+  when: k3s_role == 'server'
