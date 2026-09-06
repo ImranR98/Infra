@@ -20,8 +20,10 @@ spec:
             resources:
               limits:
                 memory: 8Gi
+                infra.local/devices-dri: "1"
               requests:
                 memory: 128Mi
+                infra.local/devices-dri: "1"
             env:
               DB_HOSTNAME: "immich-postgresql"
               DB_USERNAME: "postgres"
@@ -33,10 +35,21 @@ spec:
                     key: password
 
     defaultPodOptions:
+      # Pin everything to srv0: the library PVC is RWO and VAAPI/OpenVINO
+      # need the Iris Xe there. Without this, a RollingUpdate pod can land on
+      # bigpc (PreferNoSchedule only discourages) and deadlock on the PVC.
+      nodeSelector:
+        hostpath-main: "true"
       securityContext:
         runAsUser: $MY_UID
         runAsGroup: $MY_UID
         fsGroup: $MY_UID
+        # spc_t: SELinux access for the /dev/dri CDI grant + the external
+        # hostPath library ($MEDIA_DIR_PATH). s0: keeps library-PVC files
+        # category-free so server/ML and the pvc-backup pods can share them.
+        seLinuxOptions:
+          type: spc_t
+          level: s0
 
     server:
       controllers:
@@ -47,16 +60,10 @@ spec:
                 repository: ghcr.io/immich-app/immich-server
                 tag: v3.1.0
               securityContext:
-                privileged: true
-                allowPrivilegeEscalation: true
+                allowPrivilegeEscalation: false
               env:
                 HWACCEL_VAAPI_ENABLED: "true"
       persistence:
-        dri:
-          type: hostPath
-          hostPath: /dev/dri
-          globalMounts:
-            - path: /dev/dri
         external:
           type: hostPath
           hostPath: $MEDIA_DIR_PATH
@@ -73,23 +80,24 @@ spec:
                 repository: ghcr.io/immich-app/immich-machine-learning
                 tag: v3.1.0-openvino
               securityContext:
-                privileged: true
-                allowPrivilegeEscalation: true
+                allowPrivilegeEscalation: false
               resources:
                 limits:
                   memory: 8Gi
+                  infra.local/devices-dri: "1"
                 requests:
                   memory: 128Mi
-      defaultPodOptions: {}
+                  infra.local/devices-dri: "1"
+      defaultPodOptions:
+        nodeSelector:
+          hostpath-main: "true"
+        securityContext:
+          seLinuxOptions:
+            type: spc_t
+            level: s0
         # No node affinity/tolerations: bigpc's scheduling-discouraged taint
         # keeps the pod on srv0; the descheduler evicts any drift. ML runs on
         # srv0's Iris Xe iGPU via OpenVINO (see tag above).
-      persistence:
-        dri:
-          type: hostPath
-          hostPath: /dev/dri
-          globalMounts:
-            - path: /dev/dri
 
     immich:
       persistence:

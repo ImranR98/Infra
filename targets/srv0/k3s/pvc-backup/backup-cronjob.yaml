@@ -19,11 +19,17 @@ spec:
             hostpath-main: "true"
           securityContext:
             runAsUser: 0
+            # spc_t + s0 (not privileged): spc_t covers the repo/backup-dir
+            # hostPath writes under SELinux; s0 keeps file labels stable
+            # across runs (shared-tree pods use pod-level s0 per AGENTS.md).
+            seLinuxOptions:
+              type: spc_t
+              level: s0
           containers:
             - name: backup
               image: bitnami/kubectl:latest@sha256:b29d8c1665b70817259ceecaea16ab27aab6368b48daf485d19436c809067492
               securityContext:
-                privileged: true
+                allowPrivilegeEscalation: false
               env:
                 - name: INFRA_ROOT
                   value: "$INFRA_ROOT"
@@ -64,20 +70,16 @@ kind: ClusterRole
 metadata:
   name: pvc-backup
 rules:
+  # Cluster-wide reads only: PVC discovery (auto-backup labels), PV info,
+  # node names (volume placement), Longhorn volumes.
   - apiGroups: [""]
     resources: ["persistentvolumeclaims"]
-    verbs: ["get", "list", "create", "delete"]
+    verbs: ["get", "list"]
   - apiGroups: [""]
     resources: ["persistentvolumes"]
     verbs: ["get", "list"]
   - apiGroups: [""]
     resources: ["nodes"]
-    verbs: ["get"]
-  - apiGroups: [""]
-    resources: ["pods"]
-    verbs: ["create", "get", "delete", "list", "watch"]
-  - apiGroups: [""]
-    resources: ["pods/log"]
     verbs: ["get"]
   - apiGroups: ["longhorn.io"]
     resources: ["volumes"]
@@ -90,6 +92,69 @@ metadata:
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
+  name: pvc-backup
+subjects:
+  - kind: ServiceAccount
+    name: pvc-backup
+    namespace: base
+---
+# Pod + PVC mutations are namespace-scoped: backup/restore temp pods and the
+# pvc-backup-dest PVC only ever live in the namespaces that hold auto-backup
+# PVCs (base + apps).
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: pvc-backup
+  namespace: base
+rules:
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["create", "get", "delete", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["pods/log"]
+    verbs: ["get"]
+  - apiGroups: [""]
+    resources: ["persistentvolumeclaims"]
+    verbs: ["get", "list", "create", "delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: pvc-backup
+  namespace: base
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: pvc-backup
+subjects:
+  - kind: ServiceAccount
+    name: pvc-backup
+    namespace: base
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: pvc-backup
+  namespace: apps
+rules:
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["create", "get", "delete", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["pods/log"]
+    verbs: ["get"]
+  - apiGroups: [""]
+    resources: ["persistentvolumeclaims"]
+    verbs: ["get", "list", "create", "delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: pvc-backup
+  namespace: apps
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
   name: pvc-backup
 subjects:
   - kind: ServiceAccount

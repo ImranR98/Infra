@@ -53,6 +53,10 @@ spec:
     podSecurityContext:
       runAsUser: $MY_UID
       runAsGroup: $MY_UID
+      # level s0: keeps PVC files category-free so the pvc-backup temp pods
+      # (also s0) can read the config volume (see syncthing for precedent).
+      seLinuxOptions:
+        level: s0
     securityContext:
       # /dev/dri/renderD128 is granted via CDI (see cdi-specs component) —
       # container_t + uid 1000 works, no privileged needed (verified).

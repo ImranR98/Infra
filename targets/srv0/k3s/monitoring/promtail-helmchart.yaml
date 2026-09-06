@@ -25,11 +25,13 @@ spec:
             target_label: deployment
     # Kubernetes pod logs only (no docker-side scraping; the Compose sidecar
     # is out of scope for the logging stack).
-    # SELinux host: unconfined is required to read /var/log/pods (hostPath)
-    # on both nodes (same approach as frigate).
+    # SELinux host: spc_t (not privileged) is enough to read /var/log/pods
+    # (hostPath, container_log_t) and write positions to /run/promtail.
+    podSecurityContext:
+      seLinuxOptions:
+        type: spc_t
     containerSecurityContext:
-      privileged: true
-      allowPrivilegeEscalation: true
+      allowPrivilegeEscalation: false
       readOnlyRootFilesystem: false
     defaultVolumes:
       - name: run

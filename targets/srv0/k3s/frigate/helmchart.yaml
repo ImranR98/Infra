@@ -13,10 +13,24 @@ spec:
   version: 7.8.0
   valuesContent: |-
     strategyType: Recreate
-    # SELinux-enforcing host: privileged needed for hostPath media volume + /dev/dri
-    # (same precedent as jellyfin; also recommended by Frigate docs)
+    # Pin to srv0: config PVC is RWO, media is NFS from srv0, and VAAPI/
+    # OpenVINO need the Iris Xe. PreferNoSchedule on bigpc is not enough —
+    # the scheduler can still place the pod there (seen during rollout).
+    nodeSelector:
+      hostpath-main: "true"
+    # Device access via CDI (infra.local/devices-dri, see cdi-specs) — no
+    # privileged. spc_t covers SELinux on the NFS media PVC + /dev/dri; s0
+    # keeps config-PVC files category-free for the pvc-backup pods.
     securityContext:
-      privileged: true
+      seLinuxOptions:
+        type: spc_t
+        level: s0
+      allowPrivilegeEscalation: false
+      capabilities:
+        add:
+          # intel GPU stats polling (PMU) — CAP_PERFMON is enough, no root
+          # equivalent needed.
+          - PERFMON
     image:
       repository: ghcr.io/blakeblackshear/frigate
       # Standard build: decode runs on srv0's Iris Xe iGPU via VAAPI. The
@@ -24,7 +38,10 @@ spec:
       # Mesa hangs probing that GPU.
       tag: 0.17.2
     env:
-      # {FRIGATE_*_PASSWORD} tokens in `config` are substituted by Frigate from these env vars
+      # {FRIGATE_*_PASSWORD} tokens in `config` are substituted by Frigate from
+      # these env vars. NOTE: this chart's `env` key only supports plain
+      # string values — secretKeyRef cannot be used here (falls under the
+      # documented HelmChart valuesContent tradeoff).
       FRIGATE_RTSP_PASSWORD: "$FRIGATE_RTSP_PASSWORD"
       FRIGATE_MQTT_PASSWORD: "$FRIGATE_MQTT_PASSWORD"
     config: |-
@@ -70,19 +87,16 @@ spec:
       - name: frigate-media
         persistentVolumeClaim:
           claimName: frigate-media-pvc
-      - name: dri
-        hostPath:
-          path: /dev/dri
     extraVolumeMounts:
       - name: frigate-media
         mountPath: /media/frigate
-      - name: dri
-        mountPath: /dev/dri
     # No node affinity/tolerations: bigpc's scheduling-discouraged taint keeps
     # the pod on srv0; the descheduler evicts any drift. /dev/kfd + the ROCm
     # build were bigpc (RX 9070) requirements and are gone with it.
     resources:
       limits:
         memory: 2Gi
+        infra.local/devices-dri: "1"
       requests:
         memory: 128Mi
+        infra.local/devices-dri: "1"

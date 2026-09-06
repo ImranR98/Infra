@@ -267,7 +267,17 @@ spec:
   - name: restore
     image: alpine:3.21
     securityContext:
-      privileged: true
+      # Not privileged: deleting root-owned files inside the PVC needs
+      # CAP_DAC_OVERRIDE/CAP_FOWNER (the pod runs as $MY_UID); spc_t covers
+      # SELinux labels left by older pods.
+      allowPrivilegeEscalation: false
+      capabilities:
+        add:
+          - DAC_OVERRIDE
+          - FOWNER
+      seLinuxOptions:
+        type: spc_t
+        level: s0
     command:
     - sh
     - -c
