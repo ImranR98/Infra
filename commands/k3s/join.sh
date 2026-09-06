@@ -113,6 +113,11 @@ NODE_IP=$(get_node_ip) || NODE_IP=""
 echo "[$(date +%T)] Client: node IP = ${NODE_IP:-detected-auto}"
 mkdir -p /etc/rancher/k3s/config.yaml.d
 
+# Containerd CDI drop-in: enables CDI so the cdi-specs component's device
+# grants work on this node too. Written before the installer so the first
+# start picks it up.
+write_containerd_cdi_dropin
+
 if [ "$ROLE" = "server" ]; then
     echo "[$(date +%T)] Client: writing server config..."
     write_k3s_config server "$NODE_IP" /etc/rancher/k3s/config.yaml.d/10-server-join.yaml false

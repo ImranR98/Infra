@@ -1,0 +1,70 @@
+---
+# Generates + installs the CDI specs (see prereqs.yaml) into /etc/cdi on every
+# node. spc_t label lets the pod write the hostPath dir under SELinux; no
+# privileged needed. Runs cluster-wide (no nodeSelector): the per-node spec is
+# generated from that node's own /dev, so grants exist only where the
+# hardware does.
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: cdi-specs
+  namespace: base
+spec:
+  selector:
+    matchLabels:
+      app: cdi-specs
+  template:
+    metadata:
+      labels:
+        app: cdi-specs
+    spec:
+      securityContext:
+        seLinuxOptions:
+          type: spc_t
+      initContainers:
+        - name: generate
+          image: busybox:1.38
+          command:
+            - sh
+            - -c
+            - sh /spec/generate-spec.sh --once
+          volumeMounts:
+            - name: spec
+              mountPath: /spec
+            - name: cdi
+              mountPath: /etc/cdi
+            - name: dev
+              mountPath: /dev
+              readOnly: true
+      containers:
+        # Keep the pod alive and regenerate the spec every 5 minutes (device
+        # replug healing). A rolling restart after editing the generator
+        # re-runs the init container immediately.
+        - name: hold
+          image: busybox:1.38
+          command:
+            - sh
+            - -c
+            - sh /spec/generate-spec.sh
+          volumeMounts:
+            - name: spec
+              mountPath: /spec
+            - name: cdi
+              mountPath: /etc/cdi
+            - name: dev
+              mountPath: /dev
+              readOnly: true
+      volumes:
+        - name: spec
+          configMap:
+            name: cdi-specs
+        - name: cdi
+          hostPath:
+            path: /etc/cdi
+            type: DirectoryOrCreate
+        # Host /dev view (read-only): the generator scans it for the device
+        # nodes to grant. stat() only — spc_t covers SELinux.
+        - name: dev
+          hostPath:
+            path: /dev
+            type: Directory

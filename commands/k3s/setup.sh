@@ -31,6 +31,10 @@ mkdir -p /etc/rancher/k3s/config.yaml.d
 write_k3s_config server "$NODE_IP" /etc/rancher/k3s/config.yaml.d/10-server.yaml true
 echo "K3s config drop-in written to /etc/rancher/k3s/config.yaml.d/10-server.yaml"
 
+# Containerd CDI drop-in: enables CDI so the cdi-specs component can grant
+# specific host devices (ConBee II, /dev/dri) to pods without privileged.
+write_containerd_cdi_dropin
+
 echo ""
 echo "=== Installing K3s server ==="
 "$K3S_SCRIPT"

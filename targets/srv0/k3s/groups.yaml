@@ -16,6 +16,7 @@ base:
   - rustfs
   - monitoring
   - renovate
+  - cdi-specs
 apps:
   - immich
   - logtfy
