@@ -24,6 +24,11 @@ spec:
         runAsUser: $MY_UID
         runAsGroup: $MY_UID
         runAsNonRoot: true
+        # Shared with the geoipupdate pod via the geoip PVC: both must use MCS
+        # category s0 (pod-level; container-level is ignored) or DB files
+        # written by one pod are unreadable by the other (EACCES on startup).
+        seLinuxOptions:
+          level: s0
       containers:
         - name: geoip
           image: imranrdev/geoip-service:latest@sha256:652a22d8a7a801f02ecbfdec7c61456656dff9ac86b18cc52644f377f5ca0f63
