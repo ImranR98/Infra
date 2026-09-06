@@ -4,4 +4,5 @@ kind: Kustomization
 resources:
   - prereqs.yaml
   - ingress.yaml
+  - network-policy.yaml
   - helmchart.yaml

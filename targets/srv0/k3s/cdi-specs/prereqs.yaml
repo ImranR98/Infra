@@ -17,8 +17,8 @@ data:
   generate-spec.sh: |
     #!/bin/sh
     # Generates /etc/cdi/infra.devices.json from this node's actual devices.
-    # Invoked: `--once` (init) or no args (hold container, regenerates every 5m
-    # so a replug that changes device numbering heals itself).
+    # Invoked with `--once` by the cdi-specs init container. Re-run via a
+    # DaemonSet rolling restart after hardware changes (replug etc.).
     set -e
 
     OUT=/etc/cdi/infra.devices.json

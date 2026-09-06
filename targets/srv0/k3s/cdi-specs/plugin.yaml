@@ -38,15 +38,20 @@ spec:
             requests:
               memory: 64Mi
           volumeMounts:
-            - name: kubelet
-              mountPath: /var/lib/kubelet
+            - name: device-plugins
+              mountPath: /var/lib/kubelet/device-plugins
+            - name: pod-resources
+              mountPath: /var/lib/kubelet/pod-resources
             - name: cdi
               mountPath: /etc/cdi
               readOnly: true
       volumes:
-        - name: kubelet
+        - name: device-plugins
           hostPath:
-            path: /var/lib/kubelet
+            path: /var/lib/kubelet/device-plugins
+        - name: pod-resources
+          hostPath:
+            path: /var/lib/kubelet/pod-resources
         - name: cdi
           hostPath:
             path: /etc/cdi

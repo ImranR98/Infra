@@ -1,0 +1,21 @@
+---
+# In-cluster consumers: Home Assistant's Frigate integration polls the API on
+# 5000. (The web UI comes through Traefik, covered by the baseline policy.)
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-frigate-ingress
+  namespace: apps
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: frigate
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/instance: homeassistant
+      ports:
+        - port: 5000
+  policyTypes:
+    - Ingress

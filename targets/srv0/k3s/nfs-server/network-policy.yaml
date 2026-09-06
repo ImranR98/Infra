@@ -1,4 +1,8 @@
 ---
+# NFS clients are exclusively the csi-nfs-node plugin (hostNetwork: true —
+# mounts originate from node IPs) and its kernel mounts. All shares use
+# nfsvers=4.2 (see storageclass.yaml + PV mountOptions), so only TCP 2049
+# is ever needed (no rpcbind/mountd). Pods cannot mount NFS directly.
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -10,11 +14,11 @@ spec:
       app: nfs-server
   ingress:
     - from:
-        - namespaceSelector:
-            matchLabels:
-              kubernetes.io/metadata.name: kube-system
-          podSelector:
-            matchLabels:
-              app: csi-nfs-node
+        # hostNetwork CSI node plugin — traffic arrives from node IPs
+        - ipBlock:
+            cidr: 192.168.8.0/24
+      ports:
+        - protocol: TCP
+          port: 2049
   policyTypes:
     - Ingress

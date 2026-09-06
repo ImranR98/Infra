@@ -67,8 +67,9 @@ spec:
       fsGroup: $MY_UID
       runAsUser: $MY_UID
       runAsGroup: $MY_UID
+      # container_t + s0 (verified): the CDI amd grant (kfd+dri) and the
+      # container_file_t-labelled /var/lib/ollama are both container_t-accessible.
       seLinuxOptions:
-        type: spc_t
         level: s0
     containerSecurityContext:
       allowPrivilegeEscalation: false

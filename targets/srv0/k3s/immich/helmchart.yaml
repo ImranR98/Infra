@@ -44,11 +44,11 @@ spec:
         runAsUser: $MY_UID
         runAsGroup: $MY_UID
         fsGroup: $MY_UID
-        # spc_t: SELinux access for the /dev/dri CDI grant + the external
-        # hostPath library ($MEDIA_DIR_PATH). s0: keeps library-PVC files
-        # category-free so server/ML and the pvc-backup pods can share them.
+        # container_t + s0 (verified): SELinux allows container_t the
+        # /dev/dri CDI grant, the external hostPath library read, and the
+        # library PVC; s0 keeps files category-free so server/ML and the
+        # pvc-backup pods can share them.
         seLinuxOptions:
-          type: spc_t
           level: s0
 
     server:
@@ -93,7 +93,6 @@ spec:
           hostpath-main: "true"
         securityContext:
           seLinuxOptions:
-            type: spc_t
             level: s0
         # No node affinity/tolerations: bigpc's scheduling-discouraged taint
         # keeps the pod on srv0; the descheduler evicts any drift. ML runs on
