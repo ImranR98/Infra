@@ -31,11 +31,6 @@
             "enabled": true
         },
         {
-            "module": "watchtower_updates",
-            "ntfyTopic": "logtfy",
-            "enabled": true
-        },
-        {
             "module": "generic_logs",
             "moduleInstances": [
                 {
