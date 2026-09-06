@@ -1,0 +1,110 @@
+---
+- name: Refresh package metadata (apt)
+  ansible.builtin.apt:
+    update_cache: true
+  when: ansible_pkg_mgr == 'apt'
+
+- name: Refresh package metadata (dnf)
+  ansible.builtin.command: dnf check-update -q
+  changed_when: false
+  failed_when: false
+  when: ansible_pkg_mgr in ['dnf', 'dnf5']
+
+- name: Install prerequisite packages
+  ansible.builtin.package:
+    name: "{{ prereqs_apt_packages if ansible_pkg_mgr == 'apt' else prereqs_dnf_packages }}"
+    state: present
+
+- name: Check for the task binary
+  ansible.builtin.stat:
+    path: /usr/local/bin/task
+  register: prereqs_task_bin
+
+- name: Download the task release
+  ansible.builtin.get_url:
+    url: "{{ prereqs_task_url }}"
+    dest: /tmp/task.tar.gz
+    mode: "0644"
+  vars:
+    prereqs_task_arch: "{{ 'arm64' if ansible_architecture == 'aarch64' else 'amd64' }}"
+    prereqs_task_url: >-
+      https://github.com/go-task/task/releases/download/v{{ prereqs_task_version }}/task_linux_{{ prereqs_task_arch }}.tar.gz
+  when: not prereqs_task_bin.stat.exists
+
+- name: Extract the task release
+  ansible.builtin.unarchive:
+    src: /tmp/task.tar.gz
+    dest: /tmp
+    remote_src: true
+  when: not prereqs_task_bin.stat.exists
+
+- name: Install the task binary
+  ansible.builtin.copy:
+    src: /tmp/task
+    dest: /usr/local/bin/task
+    mode: "0755"
+    remote_src: true
+  when: not prereqs_task_bin.stat.exists
+
+- name: Clean up task downloads
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - /tmp/task.tar.gz
+    - /tmp/task
+  changed_when: false
+
+- name: Check for Docker and Compose
+  ansible.builtin.shell: |
+    set -o pipefail
+    command -v docker >/dev/null 2>&1 && docker compose version >/dev/null 2>&1
+  register: prereqs_docker_check
+  changed_when: false
+  failed_when: false
+
+- name: Install Docker (official bootstrap)
+  ansible.builtin.shell: |
+    set -o pipefail
+    curl -fsSL --connect-timeout 30 --max-time 300 https://get.docker.com | sh
+  when: prereqs_docker_check.rc != 0
+  changed_when: true
+
+- name: Enable and start Docker
+  ansible.builtin.systemd:
+    name: docker
+    enabled: true
+    state: started
+
+- name: Install Ansible collections
+  ansible.builtin.command: ansible-galaxy collection install -r "{{ playbook_dir }}/../requirements.yml"
+  become: false
+  register: prereqs_galaxy
+  changed_when: "'nothing to do' not in prereqs_galaxy.stdout"
+
+- name: Verify prerequisites
+  ansible.builtin.shell: |
+    set -o pipefail
+    missing=0
+    for tool in task docker yq envsubst jq curl python3 go openssl shellcheck ansible-lint yamllint ansible-playbook; do
+      if command -v "$tool" >/dev/null 2>&1; then
+        echo "  [OK] $tool"
+      else
+        echo "  [MISSING] $tool"
+        missing=1
+      fi
+    done
+    if docker compose version >/dev/null 2>&1; then
+      echo "  [OK] docker compose"
+    else
+      echo "  [MISSING] docker compose"
+      missing=1
+    fi
+    if python3 -c 'import dotenv' 2>/dev/null; then
+      echo "  [OK] python3-dotenv"
+    else
+      echo "  [MISSING] python3-dotenv"
+      missing=1
+    fi
+    exit $missing
+  changed_when: false

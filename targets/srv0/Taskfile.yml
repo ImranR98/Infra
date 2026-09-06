@@ -40,15 +40,15 @@ tasks:
       - TARGET=srv0 INFRA_ROOT={{.ROOT_DIR}} bash {{.ROOT_DIR}}/targets/srv0/commands/compose/install-preboot.sh {{.CLI_ARGS}}
 
   # ----- k3s -----
-  k3s:setup:
-    desc: Bootstrap a K3s control-plane node
+  k3s:provision:
+    desc: Bootstrap the K3s control plane (no args; run on the node) or join a node (pass <ip> <user> [agent|server] + flags after --; run on the control plane)
     cmds:
-      - TARGET=srv0 INFRA_ROOT={{.ROOT_DIR}} bash {{.ROOT_DIR}}/commands/k3s/setup.sh {{.CLI_ARGS}}
+      - TARGET=srv0 INFRA_ROOT={{.ROOT_DIR}} bash {{.ROOT_DIR}}/commands/k3s/provision.sh {{.CLI_ARGS}}
 
-  k3s:join:
-    desc: Join a remote node to the cluster via SSH (pass <ip> <user> [agent|server] after --; needs a tty)
+  k3s:validate:
+    desc: Lint and syntax-check the Ansible provisioning playbooks (no hosts touched)
     cmds:
-      - TARGET=srv0 INFRA_ROOT={{.ROOT_DIR}} bash {{.ROOT_DIR}}/commands/k3s/join.sh {{.CLI_ARGS}}
+      - TARGET=srv0 INFRA_ROOT={{.ROOT_DIR}} bash {{.ROOT_DIR}}/commands/k3s/validate.sh {{.CLI_ARGS}}
 
   k3s:deploy:
     desc: Deploy, delete, diff, or render a single K3s component (pass <component> [mode] after --)
@@ -56,7 +56,7 @@ tasks:
       - TARGET=srv0 INFRA_ROOT={{.ROOT_DIR}} bash {{.ROOT_DIR}}/commands/k3s/deploy.sh {{.CLI_ARGS}}
 
   k3s:update-node-ip:
-    desc: Update K3s node IP after a network change (pass [--ip X] [--force] after --)
+    desc: Update K3s node IP after a network change (pass [--ip X] [--force] after --; run on the node)
     cmds:
       - TARGET=srv0 INFRA_ROOT={{.ROOT_DIR}} bash {{.ROOT_DIR}}/commands/k3s/update-node-ip.sh {{.CLI_ARGS}}
 

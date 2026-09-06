@@ -26,7 +26,7 @@ The IaaC system for my homelab and other devices.
 ## Quick start
 
 ```bash
-# Install prerequisites (task, Docker, yq, envsubst, jq, python3, python3-dotenv, go)
+# Install prerequisites (task, Docker, yq, envsubst, jq, python3, python3-dotenv, go, ansible-core) — an Ansible playbook
 # (no task installed yet? `bash commands/prereqs.sh` works the same)
 task prereqs
 
@@ -48,9 +48,49 @@ task renovate
 
 Commands that take arguments pass them after `--`, e.g. `task srv0:k3s:deploy -- traefik diff`.
 
+## K3s node provisioning (Ansible)
+
+Node provisioning is declarative Ansible ([`ops/ansible/`](ops/ansible/)) driven by one task. There is **no inventory file anywhere**: the wrapper builds a throwaway inventory in `/tmp` from CLI arguments, so any node can become the control plane and any node can join in any role at runtime. Cluster policy defaults (SELinux, `write-kubeconfig-mode: "0640"`, `flannel-backend: wireguard-native`, sysctls, firewall ports, node labels) live in the roles' `defaults/main.yml`.
+
+Prerequisites on the control host only (not on the nodes being provisioned): `task prereqs` — itself an Ansible playbook, it bootstraps ansible-core via the package manager first — installs the required collections (`ansible.posix`, `community.general`) and the validation tools (`ansible-lint`, `yamllint`). Manual alternative:
+
+```bash
+dnf install ansible-core
+ansible-galaxy collection install -r ops/ansible/requirements.yml
+```
+
+Bootstrap a control plane — run **on** the node (it downloads the official `get.k3s.io` installer, verifies its SHA256 against GitHub's `main` install.sh — fail-closed, overridable with `k3s_installer_sha256` — writes config drop-ins, firewall, sysctls, kubectl group, labels):
+
+```bash
+task srv0:k3s:provision
+```
+
+Join a worker (run **on** the control plane; the token is read locally and passed to the installer via environment only — never argv, disk, or logs):
+
+```bash
+task srv0:k3s:provision -- 192.168.1.50 myuser agent --amdgpu auto --longhorn
+# or join another server: ... server
+# AMD GPU: --amdgpu auto (lspci-detected) | yes | no
+# other flags: --scheduling-discouraged, --longhorn, --check, --diff, -e key=value
+```
+
+Update a node IP after a network change (run **on** the node; retained bash implementation behind an Ansible wrapper):
+
+```bash
+task srv0:k3s:update-node-ip -- --ip 192.168.1.51
+```
+
+Validate the provisioning playbooks without touching any hosts:
+
+```bash
+task srv0:k3s:validate    # syntax-check + yamllint + ansible-lint
+```
+
+Dry-run on a test VM (Multipass): `multipass launch -n testnode fedora`, SSH in, copy the repo, run `task prereqs`, then `task srv0:k3s:provision -- --check --diff` before the real run. Re-running `provision` on an installed node is a no-op (it never re-runs the installer, so it can't fight system-upgrade-controller's version ownership).
+
 ## Migrating from the old `./infra.sh` CLI
 
-`./infra.sh` (and the bash dispatcher behind it) was replaced by `task` + a Python VARS validator (`lib/vars_validator.py`), with environment loading folded into `lib/common.sh`, and the VARS files moved from bash exports (`VARS.*.sh`) to dotenv (`VARS.*.env`, converted on each machine by a one-time script that has since been deleted). Command mapping is 1:1 — `./infra.sh srv0 compose install` became `task srv0:compose:install`. See the "Rollback" section in AGENTS.md.
+`./infra.sh` (and the bash dispatcher behind it) was replaced by `task` + a Python VARS validator (`lib/vars_validator.py`), with environment loading folded into `lib/common.sh`, and the VARS files moved from bash exports (`VARS.*.sh`) to dotenv (`VARS.*.env`, converted on each machine by a one-time script that has since been deleted). Command mapping is 1:1 — `./infra.sh srv0 compose install` became `task srv0:compose:install`. The old bash K3s provisioning (`k3s:setup` / `k3s:join`) was later replaced by the single Ansible task `k3s:provision` described above.
 
 ## More
 

@@ -1,3 +1,4 @@
+# shellcheck shell=bash
 # lib/pvc.sh — shared PVC backup/restore utilities
 # Sourced by lib/common.sh. All functions take explicit parameters.
 

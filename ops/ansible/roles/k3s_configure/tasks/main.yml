@@ -1,0 +1,89 @@
+---
+- name: Resolve the configuration branch
+  ansible.builtin.set_fact:
+    k3s_configure_joined: "{{ k3s_role != 'server' or (k3s_joined | default(false) | bool) }}"
+
+- name: Read the current Longhorn default-disk label
+  ansible.builtin.shell: |
+    set -o pipefail
+    kubectl get node {{ k3s_node_name }} -o json | jq -r '.metadata.labels["node.longhorn.io/create-default-disk"] // ""'
+  register: k3s_configure_longhorn_label
+  changed_when: false
+  failed_when: false
+
+- name: Label the node for Longhorn storage (server bootstrap)
+  ansible.builtin.command: kubectl label node {{ k3s_node_name }} node.longhorn.io/create-default-disk=true --overwrite
+  changed_when: true
+  when: not (k3s_configure_joined | bool) and k3s_configure_longhorn_label.stdout != 'true'
+
+- name: Label the node for Home Assistant hardware (server bootstrap)
+  ansible.builtin.command: kubectl label node {{ k3s_node_name }} has-homeassistant-hardware=true --overwrite
+  changed_when: false
+  when: not (k3s_configure_joined | bool)
+
+- name: Ensure Longhorn replica placement is enabled
+  ansible.builtin.command: kubectl label node {{ k3s_node_name }} node.longhorn.io/create-default-disk=true --overwrite
+  register: k3s_configure_longhorn_enabled
+  changed_when: true
+  when: k3s_configure_joined | bool and k3s_longhorn_replicas | bool and k3s_configure_longhorn_label.stdout != 'true'
+
+- name: Ensure Longhorn replica placement is disabled
+  ansible.builtin.command: kubectl label node {{ k3s_node_name }} node.longhorn.io/create-default-disk=false --overwrite
+  changed_when: true
+  when: k3s_configure_joined | bool and not (k3s_longhorn_replicas | bool) and k3s_configure_longhorn_label.stdout != 'false'
+
+- name: Increment the Longhorn replica count for a newly enabled node
+  ansible.builtin.shell: |
+    current=$(kubectl -n longhorn-system get setting.longhorn.io default-replica-count -o jsonpath='{.value}' 2>/dev/null || echo 0)
+    kubectl -n longhorn-system patch setting.longhorn.io default-replica-count --type=merge -p "{\"value\":\"$((current + 1))\"}"
+  changed_when: true
+  when: k3s_configure_joined | bool and k3s_longhorn_replicas | bool and k3s_configure_longhorn_enabled.changed
+
+- name: Detect an AMD GPU
+  ansible.builtin.shell: |
+    set -o pipefail
+    lspci -n 2>/dev/null | grep -E '0300: 1002:' >/dev/null
+  register: k3s_configure_amdgpu_detect
+  changed_when: false
+  failed_when: false
+  when: k3s_configure_joined | bool and k3s_amdgpu_mode == 'auto'
+
+- name: Resolve AMD GPU placement decision
+  ansible.builtin.set_fact:
+    k3s_configure_amdgpu_enabled: >-
+      {{ k3s_amdgpu_mode == 'yes'
+         or (k3s_amdgpu_mode == 'auto' and (k3s_configure_amdgpu_detect.rc | default(1)) == 0) }}
+  when: k3s_configure_joined | bool
+
+- name: Read the current AMD GPU label
+  ansible.builtin.shell: |
+    set -o pipefail
+    kubectl get node {{ k3s_node_name }} -o json | jq -r '.metadata.labels["has-amdgpu"] // ""'
+  register: k3s_configure_amdgpu_label
+  changed_when: false
+  when: k3s_configure_joined | bool
+
+- name: Label the node for AMD GPU workloads
+  ansible.builtin.command: kubectl label node {{ k3s_node_name }} has-amdgpu=true --overwrite
+  changed_when: true
+  when:
+    - k3s_configure_joined | bool
+    - k3s_configure_amdgpu_enabled | default(false) | bool
+    - k3s_configure_amdgpu_label.stdout != 'true'
+
+- name: Read the current taints
+  ansible.builtin.shell: |
+    set -o pipefail
+    kubectl get node {{ k3s_node_name }} -o json | jq -r '(.spec.taints // []) | map(.key) | join(" ")'
+  register: k3s_configure_taints
+  changed_when: false
+  when: k3s_configure_joined | bool
+
+- name: Apply the scheduling-discouraged taint
+  ansible.builtin.command: >-
+    kubectl taint node {{ k3s_node_name }} scheduling-discouraged=true:PreferNoSchedule --overwrite
+  changed_when: true
+  when:
+    - k3s_configure_joined | bool
+    - k3s_scheduling_discouraged | bool
+    - "'scheduling-discouraged' not in k3s_configure_taints.stdout"

@@ -1,0 +1,66 @@
+---
+# Join a node to the cluster. The inventory is built at runtime by
+# commands/k3s/provision.sh: `server` is the control plane this playbook runs
+# on (connection=local), `node` is the machine being joined (ssh).
+# Run via `task srv0:k3s:provision -- <ip> <user> [agent|server]` ON the
+# control plane. The token is read from the control plane and passed to the
+# installer via environment only — never written to disk or logs.
+
+- name: Collect join information from the control plane
+  hosts: server
+  connection: local
+  gather_facts: true
+  become: true
+  tasks:
+    - name: Read the K3s server token
+      ansible.builtin.slurp:
+        src: /var/lib/rancher/k3s/server/token
+      register: k3s_join_token_raw
+      no_log: true
+
+    - name: Expose join facts
+      ansible.builtin.set_fact:
+        k3s_token: "{{ k3s_join_token_raw.content | b64decode | trim }}"
+        k3s_server_url: "https://{{ ansible_default_ipv4.address }}:6443"
+      no_log: true
+
+- name: Provision the joining node
+  hosts: node
+  gather_facts: true
+  become: true
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  vars:
+    k3s_token: "{{ hostvars['server'].k3s_token }}"
+    k3s_server_url: "{{ hostvars['server'].k3s_server_url }}"
+  roles:
+    - k3s_prepare
+    - k3s_install
+
+- name: Wait for the node to register and configure it
+  hosts: server
+  connection: local
+  gather_facts: false
+  become: true
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  tasks:
+    - name: Wait for the joining node to appear and become Ready
+      ansible.builtin.shell: |
+        set -o pipefail
+        name=$(kubectl get nodes -o json | jq -r --arg ip "{{ k3s_join_ip }}" \
+          '.items[] | select((.status.addresses // []) | any(.address == $ip)) | .metadata.name' | awk 'NR==1')
+        [ -n "$name" ] || exit 1
+        kubectl get node "$name" -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}' | grep True >/dev/null
+        echo "$name"
+      register: k3s_join_node_wait
+      until: k3s_join_node_wait.rc == 0
+      retries: 30
+      delay: 5
+      changed_when: false
+
+    - name: Configure the joined node
+      ansible.builtin.include_role:
+        name: k3s_configure
+      vars:
+        k3s_node_name: "{{ k3s_join_node_wait.stdout_lines | last }}"

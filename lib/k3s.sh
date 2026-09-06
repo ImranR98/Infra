@@ -1,38 +1,6 @@
 #!/bin/bash
-# lib/k3s.sh — K3s installation, config, and cluster management
-
-download_k3s_installer() {
-    K3S_SCRIPT="$(mktemp /tmp/k3s-install.XXXXXX)"
-    curl -fsSL --connect-timeout 30 --max-time 120 --retry 3 https://get.k3s.io -o "$K3S_SCRIPT"
-
-    EXPECTED_K3S_SCRIPT_SHA256=$(curl -fsSL --connect-timeout 10 --max-time 30 https://github.com/k3s-io/k3s/raw/main/install.sh 2>/dev/null | sha256sum | cut -d' ' -f1)
-    DOWNLOADED_SHA256=$(sha256sum "$K3S_SCRIPT" | cut -d' ' -f1)
-    if [ -z "$EXPECTED_K3S_SCRIPT_SHA256" ]; then
-        echo "Error: could not verify K3s install script (GitHub unreachable)." >&2
-        exit 1
-    elif [ "$EXPECTED_K3S_SCRIPT_SHA256" != "$DOWNLOADED_SHA256" ]; then
-        echo "Error: K3s install script checksum mismatch." >&2
-        echo "  Expected: $EXPECTED_K3S_SCRIPT_SHA256" >&2
-        echo "  Got:      $DOWNLOADED_SHA256" >&2
-        rm -f "$K3S_SCRIPT"
-        exit 1
-    fi
-    chmod +x "$K3S_SCRIPT"
-}
-
-configure_k3s_sysctl() {
-    local conf="/etc/sysctl.d/90-k3s.conf"
-    if [ ! -f "$conf" ]; then
-        cat > "$conf" <<SYSEOF
-# K3s node tuning — automatically configured by Infra
-fs.inotify.max_user_watches = 6000000
-fs.inotify.max_user_instances = 512
-user.max_user_namespaces = 28633
-SYSEOF
-    fi
-    sysctl --system >/dev/null 2>&1 || sysctl -p "$conf" >/dev/null 2>&1 || true
-    echo "Kernel parameters configured ($conf)."
-}
+# lib/k3s.sh — K3s cluster helpers. Node provisioning (installer, config,
+# sysctl, firewall, joins) moved to Ansible: ops/ansible/roles/ + playbooks/.
 
 wait_for_k3s_cluster() {
     local timeout_secs="${1:-150}"
@@ -47,47 +15,6 @@ wait_for_k3s_cluster() {
     done
     echo "Error: Could not connect to Kubernetes cluster after ${timeout_secs} seconds." >&2
     return 1
-}
-
-write_k3s_config() {
-    local role="${1:-server}"
-    local node_ip="${2:-}"
-    local config_file="$3"
-    local cluster_init="${4:-false}"
-
-    if [ "$role" = "server" ]; then
-        cat > "$config_file" <<K3SEOF
-selinux: true
-write-kubeconfig-mode: "0640"
-$([ "$cluster_init" = true ] && echo 'cluster-init: true')
-flannel-backend: wireguard-native
-node-ip: $node_ip
-flannel-iface-regex: "^(eth|ens|enp|eno|enx|wlan|wlp|wlo|bond|ib)"
-node-label:
-  - "hostpath-main=true"
-  - "hostpath-extra-storage=true"
-  - "external-exposed=true"
-K3SEOF
-    else
-        cat > "$config_file" <<K3SEOF
-selinux: true
-node-ip: $node_ip
-K3SEOF
-    fi
-}
-
-# Write the containerd CDI drop-in (config-v3.toml.d) so the cdi-specs
-# component can grant specific host devices to pods without privileged.
-# K3s's generated config.toml imports this dir; k3s restarts containerd when
-# it changes. Run before the k3s installer so the first start picks it up.
-write_containerd_cdi_dropin() {
-    mkdir -p /var/lib/rancher/k3s/agent/etc/containerd/config-v3.toml.d
-    cat > /var/lib/rancher/k3s/agent/etc/containerd/config-v3.toml.d/enable-cdi.toml <<'EOF'
-[plugins.'io.containerd.cri.v1.runtime']
-  enable_cdi = true
-  cdi_spec_dirs = ['/etc/cdi', '/var/run/cdi']
-EOF
-    echo "Containerd CDI drop-in written to /var/lib/rancher/k3s/agent/etc/containerd/config-v3.toml.d/enable-cdi.toml"
 }
 
 wait_for_crds() {

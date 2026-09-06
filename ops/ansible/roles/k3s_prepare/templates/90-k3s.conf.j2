@@ -1,0 +1,4 @@
+# K3s node tuning — automatically configured by Infra
+{% for setting in k3s_sysctl_settings | dict2items %}
+{{ setting.key }} = {{ setting.value }}
+{% endfor %}
