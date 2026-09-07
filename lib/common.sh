@@ -1,7 +1,7 @@
 #!/bin/bash
 # lib/common.sh — shared helpers for the remaining bash commands (k3s helm/pvc/
 # preboot/renovate). The compose pipeline and config validation are Ansible
-# playbooks now (ops/ansible/); VARS live in ansible-vault YAML
+# playbooks now (ops/ansible/); VARS live in plain gitignored YAML
 # (secrets/VARS.<t>.yml).
 [[ "${INFRA_LIB_LOADED:-}" = true ]] && return 0
 INFRA_LIB_LOADED=true

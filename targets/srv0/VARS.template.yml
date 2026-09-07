@@ -4,10 +4,9 @@
 #   - secrets/values.srv0.yaml  — Helm values for the k3s umbrella chart
 #     (YAML; every key below maps 1:1, multi-line values are 'indentation as
 #     data' at base column 0 like the old dotenv format).
-#   - secrets/VARS.srv0.yml     — ansible-vault encrypted YAML consumed by the
-#     compose sidecar (frpc); copy this template, replace placeholders, then
-#     `ansible-vault encrypt` (decrypted automatically via the vault password
-#     file; see AGENTS.md).
+#   - secrets/VARS.srv0.yml     — plain YAML consumed by the compose sidecar
+#     (frpc); copy this template to secrets/, replace placeholders, done —
+#     no encryption, the file is gitignored (see AGENTS.md).
 # Placeholders (change_me / changeme / abc / REPLACE_ME / <...>) are rejected
 # on deploy. Multi-line values are literal block scalars (|); bare $ and #
 # inside scalars are literal; there are NO ${NAME} references (values are
