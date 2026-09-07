@@ -1,7 +1,9 @@
 ---
 # Join a node to the cluster. Run ON the control plane (this playbook's
 # localhost must be the server): the token is read from the control plane and
-# passed to the installer via environment only — never written to disk or logs.
+# passed to the joining node as an inventory variable (no_log on both ends;
+# the collection stores it in the node's root-only k3s service env file — the
+# standard k3s agent pattern).
 # Usage: ansible-playbook ops/ansible/playbooks/k3s_join.yml \
 #          -e node_ip=192.168.1.50 -e node_user=myuser \
 #          [-e k3s_role=agent|server] [-e k3s_amdgpu_mode=auto|yes|no]
@@ -31,7 +33,7 @@
     - name: Expose join facts
       ansible.builtin.set_fact:
         k3s_token: "{{ k3s_join_token_raw.content | b64decode | trim }}"
-        k3s_server_url: "https://{{ ansible_default_ipv4.address }}:6443"
+        k3s_server_ip: "{{ ansible_default_ipv4.address }}"
       no_log: true
 
     - name: Register the joining node in the play inventory
@@ -44,14 +46,29 @@
   hosts: node
   gather_facts: true
   become: true
-  environment:
-    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
   vars:
     k3s_token: "{{ hostvars['localhost'].k3s_token }}"
-    k3s_server_url: "{{ hostvars['localhost'].k3s_server_url }}"
+    api_endpoint: "{{ hostvars['localhost'].k3s_server_ip }}"
+    k3s_version: stable
+    # Single-host inventory: the collection's group lookups degenerate to
+    # 'ungrouped' (length 1, HA paths skipped).
+    server_group: ungrouped
   roles:
-    - k3s_prepare
-    - k3s_install
+    - k3s_node_extra
+    - role: k3s.orchestration.k3s_agent
+      when: k3s_role | default('agent') == 'agent'
+      vars:
+        extra_agent_args: "--node-ip {{ node_ip }}"
+    - role: k3s.orchestration.k3s_server
+      when: k3s_role | default('agent') == 'server'
+      vars:
+        server_config_yaml: |
+          selinux: true
+          write-kubeconfig-mode: "0640"
+          flannel-backend: wireguard-native
+          flannel-iface-regex: "^(eth|ens|enp|eno|enx|wlan|wlp|wlo|bond|ib)"
+          node-ip: {{ node_ip }}
+          server: https://{{ api_endpoint }}:6443
 
 - name: Wait for the node to register and configure it
   hosts: localhost

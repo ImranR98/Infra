@@ -14,14 +14,11 @@
       ansible.builtin.stat:
         path: "{{ item }}"
       loop:
-        - "{{ target_dir }}/VARS.template.env"
+        - "{{ target_dir }}/VARS.template.yml"
         - "{{ target_dir }}/compose/compose.yaml"
         - "{{ target_dir }}/k3s"
         - "{{ infra_root }}/secrets/values.{{ inventory_hostname }}.yaml"
-        - "{{ infra_root }}/secrets/VARS.{{ inventory_hostname }}.env"
-        - "{{ infra_root }}/secrets/VARS.env"
-        - "{{ infra_root }}/VARS.{{ inventory_hostname }}.env"
-        - "{{ infra_root }}/VARS.env"
+        - "{{ infra_root }}/secrets/VARS.{{ inventory_hostname }}.yml"
       register: _stats
 
     - name: Set availability facts
@@ -30,20 +27,46 @@
         _compose_yaml: "{{ _stats.results[1].stat.exists }}"
         _k3s_chart: "{{ _stats.results[2].stat.exists }}"
         _secret_values: "{{ _stats.results[3].stat.exists }}"
-        _vars_file: "{{ _stats.results[4:8] | map(attribute='stat.exists') | select | list | length > 0 }}"
+        _vars_file: "{{ _stats.results[4].stat.exists }}"
 
   tasks:
-    - name: Run VARS validator
-      ansible.builtin.command:
-        cmd: python3 {{ infra_root }}/lib/vars_validator.py {{ inventory_hostname }}
-      changed_when: false
+    - name: Include VARS template (key list)
+      ansible.builtin.include_vars:
+        file: "{{ target_dir }}/VARS.template.yml"
+        name: template_vars
       when: _vars_file
 
-    - name: Include resolved VARS
+    - name: Include vaulted VARS (dict)
       ansible.builtin.include_vars:
-        file: "{{ infra_root }}/current_target/vars.yml"
-      failed_when: false
+        file: "{{ infra_root }}/secrets/VARS.{{ inventory_hostname }}.yml"
+        name: secret_vars
       when: _vars_file
+
+    - name: VARS completeness
+      ansible.builtin.assert:
+        that: secret_vars.keys() | difference(template_vars.keys()) | length == 0
+        fail_msg: >-
+          secrets/VARS.{{ inventory_hostname }}.yml is missing required
+          variables: {{ secret_vars.keys() | difference(template_vars.keys()) }}
+      when: _vars_file
+
+    - name: VARS placeholders
+      ansible.builtin.assert:
+        that: "not (_v is string and (_v | trim in _placeholders or _v is regex('^<.*>$')))"
+        fail_msg: "secrets/VARS.{{ inventory_hostname }}.yml: '{{ item }}' has a placeholder value"
+      loop: "{{ secret_vars.keys() | list }}"
+      when: _vars_file
+      vars:
+        _v: "{{ secret_vars[item] }}"
+        _placeholders: ["change_me", "changeme", "abc", "REPLACE_ME"]
+
+    - name: Compose check env
+      ansible.builtin.set_fact:
+        _compose_check_env: >-
+          {{ dict(secret_vars | default({}) | dict2items | map(attribute='key') | zip(secret_vars | default({}) | dict2items | map(attribute='value') | map('string')))
+             | combine({'MY_UID': (1000 if ansible_user_id == 'root' else (ansible_user_uid | default(1000))) | string,
+                        'COMPOSE_STATE_DIR': infra_root ~ '/current_target/compose_live_state',
+                        'TARGET': inventory_hostname}) }}
 
     - name: Compose YAML syntax
       ansible.builtin.shell: |
@@ -67,10 +90,7 @@
         files="-f {{ target_dir }}/compose/compose.yaml"
         [ -f "{{ target_dir }}/compose/compose.private.yaml" ] && files="$files -f {{ target_dir }}/compose/compose.private.yaml"
         docker compose $files config --dry-run >/dev/null && echo "OK: docker compose config"
-      environment:
-        MY_UID: "{{ 1000 if ansible_user_id == 'root' else (ansible_user_uid | default(1000)) }}"
-        COMPOSE_STATE_DIR: "{{ infra_root }}/current_target/compose_live_state"
-        TARGET: "{{ inventory_hostname }}"
+      environment: "{{ _compose_check_env }}"
       changed_when: false
       failed_when: false
       when: _compose_yaml

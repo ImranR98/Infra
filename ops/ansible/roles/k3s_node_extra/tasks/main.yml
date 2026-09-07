@@ -1,38 +1,13 @@
 ---
-- name: Detect node IP from the default route
-  ansible.builtin.shell: |
-    set -o pipefail
-    iface=$(ip -4 route show default 2>/dev/null | awk '{print $5; exit}')
-    [ -n "$iface" ] || exit 1
-    ip -4 addr show "$iface" | grep -oP 'inet \K[\d.]+'
-  register: k3s_prepare_detected_node_ip
-  changed_when: false
-  failed_when: false
-  when: k3s_node_ip | default('') | length == 0
-
-- name: Resolve node IP
-  ansible.builtin.set_fact:
-    k3s_prepare_resolved_node_ip: >-
-      {{ k3s_node_ip if k3s_node_ip | default('') | length > 0
-         else (k3s_prepare_detected_node_ip.stdout_lines | first | default('')) }}
-
-- name: Select config drop-in file
-  ansible.builtin.set_fact:
-    k3s_prepare_config_file: >-
-      {{ '10-server.yaml' if (k3s_role == 'server' and (k3s_cluster_init | bool))
-         else ('10-server-join.yaml' if k3s_role == 'server' else '50-agent.yaml') }}
-
-- name: Create the K3s config drop-in directory
-  ansible.builtin.file:
-    path: /etc/rancher/k3s/config.yaml.d
-    state: directory
-    mode: "0755"
-
-- name: Write the K3s config drop-in
+- name: Configure K3s sysctl settings
   ansible.builtin.template:
-    src: "{{ 'server.yaml.j2' if k3s_role == 'server' else 'agent.yaml.j2' }}"
-    dest: "/etc/rancher/k3s/config.yaml.d/{{ k3s_prepare_config_file }}"
+    src: 90-k3s.conf.j2
+    dest: "{{ k3s_sysctl_conf }}"
     mode: "0644"
+
+- name: Reload sysctl settings
+  ansible.builtin.command: sysctl --system
+  changed_when: false
 
 - name: Create the containerd config drop-in directory
   ansible.builtin.file:
@@ -49,25 +24,15 @@
         cdi_spec_dirs = ['/etc/cdi', '/var/run/cdi']
     mode: "0644"
 
-- name: Configure K3s sysctl settings
-  ansible.builtin.template:
-    src: 90-k3s.conf.j2
-    dest: "{{ k3s_sysctl_conf }}"
-    mode: "0644"
-
-- name: Reload sysctl settings
-  ansible.builtin.command: sysctl --system
-  changed_when: false
-
 - name: Detect firewalld
   ansible.builtin.stat:
     path: /usr/bin/firewall-cmd
-  register: k3s_prepare_firewall_cmd
+  register: k3s_extra_firewall_cmd
 
 - name: Detect ufw
   ansible.builtin.stat:
     path: /usr/sbin/ufw
-  register: k3s_prepare_ufw
+  register: k3s_extra_ufw
 
 - name: Open K3s ports (firewalld)
   ansible.posix.firewalld:
@@ -76,7 +41,7 @@
     immediate: true
     state: enabled
   loop: "{{ k3s_firewalld_ports }}"
-  when: k3s_prepare_firewall_cmd.stat.exists
+  when: k3s_extra_firewall_cmd.stat.exists
 
 - name: Trust pod and service CIDRs (firewalld)
   ansible.posix.firewalld:
@@ -86,7 +51,7 @@
     immediate: true
     state: enabled
   loop: "{{ k3s_firewalld_trusted_sources }}"
-  when: k3s_prepare_firewall_cmd.stat.exists
+  when: k3s_extra_firewall_cmd.stat.exists
 
 - name: Open K3s ports (ufw)
   community.general.ufw:
@@ -94,7 +59,7 @@
     port: "{{ item.port }}"
     proto: "{{ item.proto }}"
   loop: "{{ k3s_ufw_rules | selectattr('port', 'defined') }}"
-  when: k3s_prepare_ufw.stat.exists
+  when: k3s_extra_ufw.stat.exists
 
 - name: Trust pod and service CIDRs (ufw)
   community.general.ufw:
@@ -102,7 +67,7 @@
     from_ip: "{{ item.from_ip }}"
     direction: "{{ item.direction }}"
   loop: "{{ k3s_ufw_rules | selectattr('from_ip', 'defined') }}"
-  when: k3s_prepare_ufw.stat.exists
+  when: k3s_extra_ufw.stat.exists
 
 - name: Install pciutils for AMD GPU auto-detection
   ansible.builtin.package:

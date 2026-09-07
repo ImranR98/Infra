@@ -44,7 +44,7 @@
     - name: Secret values present (apply only)
       ansible.builtin.assert:
         that: secret_values_stat.stat.exists
-        fail_msg: "{{ secret_values }} not found. Create it from targets/srv0/VARS.template.env"
+        fail_msg: "{{ secret_values }} not found. Create it from targets/srv0/VARS.template.yml"
       when: helm_state_eff != 'absent'
 
     - name: Reject placeholder values (apply only)

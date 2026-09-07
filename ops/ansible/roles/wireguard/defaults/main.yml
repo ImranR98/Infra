@@ -1,6 +1,0 @@
----
-# wireguard_conf_src (required) is the local path to the wg0 config file —
-# passed by commands/wireguard.sh as an absolute path.
-wireguard_conf_dest: /etc/wireguard/wg0.conf
-wireguard_service: wg-quick@wg0
-wireguard_allowed_ips: 0.0.0.0/1, 128.0.0.0/1

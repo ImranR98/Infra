@@ -1,0 +1,107 @@
+# ====== VARS template for vps0 ======
+# Copy to secrets/VARS.vps0.yml, replace every placeholder with a real value,
+# then encrypt it with ansible-vault (the playbooks decrypt it automatically
+# via the vault password file; see AGENTS.md).
+# YAML map of KEY: value. Multi-line values are literal block scalars (|) —
+# indentation is data and splices are verbatim: match the documented nesting
+# exactly. Bare $ and # inside scalars are literal; there are NO ${NAME}
+# references (values are final — no expansion step).
+# Validation runs in the compose role on every deploy; placeholders
+# (change_me / changeme / abc / REPLACE_ME / <...>) are rejected.
+
+# ====== Domain ======
+# Base domain: services that stay on the original domain (public apps, FRP tunnel).
+BASE_SERVICES_DOMAIN: "staging.example.org"
+# Cloud tier domain: Authelia-protected services live here. Independent variable —
+# set it explicitly (typically cloud.<your-base-domain>).
+CLOUD_SERVICES_DOMAIN: "cloud.staging.example.org"
+DOMAIN_OWNER_EMAIL: "contact@example.org"
+
+# ====== Logtfy ======
+NTFY_WRITE_ONLY_ACCOUNT_TOKEN: "change_me" # "tk_$(openssl rand -hex 16)"
+NTFY_FALLBACK_TOPIC: "change_me" # openssl rand -hex 16
+
+# ====== Geoblock (Traefik middleware) ======
+# Spliced into dynamic-configuration.yaml with indent(10) — write the value
+# with plain 2-space YAML nesting; the template adds the 10-space base.
+GEOBLOCK_CONFIG_SUBSET: |
+  blackListMode: false
+  countries:
+    - CA
+    - CN
+    - CU
+
+# ====== Authelia ======
+# Use `docker run -it authelia/authelia:latest authelia crypto hash generate argon2` to generate the password hash
+# Indentation matters: spliced verbatim at column 0 of users_database.yml —
+# standard 2-space YAML nesting.
+AUTHELIA_USERS_DATABASE: |
+  users:
+    admin:
+      disabled: false
+      displayname: "Admin"
+      password: "$argon2id$v=19$m=65536,t=3,p=abc"
+      email: contact@example.org
+      groups:
+        - admins
+AUTHELIA_DB_ENCRYPTION_KEY: "change_me" # openssl rand -hex 128
+AUTHELIA_SESSION_SECRET: "change_me" # openssl rand -hex 128
+AUTHELIA_JWT_SECRET: "change_me" # openssl rand -hex 128
+
+# ====== Plausible Analytics ======
+PLAUSIBLE_SECRET_KEY: "change_me" # openssl rand -base64 48
+PLAUSIBLE_TOTP_VAULT_KEY: "change_me" # openssl rand -base64 32
+PLAUSIBLE_DB_PASSWORD: "change_me" # openssl rand -hex 16
+
+# ====== PixelNtfy ======
+PIXELNTFY_TOPIC: "change_me" # openssl rand -hex 16
+
+# ====== Moving Sale ======
+MOVING_SALE_ADMIN_PASSWORD: "change_me" # openssl rand -hex 16
+MOVING_SALE_PICKUP_TEXT: "change_me" # Pickup info text shown on the sale page
+MOVING_SALE_PLAUSIBLE_SCRIPT_URL: "change_me" # Plausible analytics script tag URL (e.g. https://plausible.example.org/js/pa-xxxx.js)
+
+# ====== CCT26 ======
+CCT26_REDDIT_COOKIE: "change_me" # Reddit session cookie
+CCT26_LLM_BASE_URL: "change_me" # LLM API base URL
+CCT26_LLM_MODEL: "change_me" # LLM model name
+CCT26_LLM_API_KEY: "change_me" # openssl rand -hex 32
+CCT26_NTFY_URL: "change_me" # ntfy topic URL for notifications
+CCT26_NTFY_AUTH: "change_me" # Authorization header value, e.g. "Bearer <ntfy token>"
+
+# ====== strelaysrv Relay Server ======
+STRELAYSRV_PROVIDED_BY: "contact@example.org"
+
+# ====== Shlink URL Shortener ======
+SHLINK_DB_PASSWORD: "change_me" # openssl rand -hex 32
+SHLINK_API_KEY: "change_me" # openssl rand -hex 32
+GEOLITE_LICENSE_KEY: "" # (optional, see Shlink docs)
+
+# ====== Owncast ======
+OWNCAST_ACCESS_TOKEN: "change_me" # openssl rand -hex 32
+
+# ====== Crowdsec ======
+CROWDSEC_BOUNCER_KEY: "change_me" # openssl rand -hex 32
+
+# ====== FRP ======
+# Generate the per-pair mTLS CA + certs with openssl (once per pair, on either
+# machine; paste the PEM blocks into the matching keys below):
+#   # CA
+#   openssl req -x509 -newkey rsa:4096 -keyout ca.key -out ca.crt -days 3650 -nodes -subj "/CN=infra-mtls-ca"
+#   # server (vps0)
+#   openssl genrsa -out server.key 2048
+#   openssl req -new -key server.key -out server.csr -subj "/CN=vps0"
+#   openssl x509 -req -in server.csr -CA ca.crt -CAkey ca.key -CAcreateserial -out server.crt -days 1825
+# Multi-line PEM data: literal block scalars.
+MTLS_CA_CERT: |
+  -----BEGIN CERTIFICATE-----
+  <CA-certificate-pem-block>
+  -----END CERTIFICATE-----
+MTLS_SERVER_CERT: |
+  -----BEGIN CERTIFICATE-----
+  <server-certificate-pem-block>
+  -----END CERTIFICATE-----
+MTLS_SERVER_KEY: |
+  -----BEGIN PRIVATE KEY-----
+  <server-private-key-pem-block>
+  -----END PRIVATE KEY-----

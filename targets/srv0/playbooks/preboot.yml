@@ -22,7 +22,7 @@
       ansible.builtin.stat:
         path: "{{ item }}"
       loop:
-        - "{{ infra_root }}/targets/srv0/VARS.template.env"
+        - "{{ infra_root }}/targets/srv0/VARS.template.yml"
         - "{{ infra_root }}/targets/srv0/compose/compose.private.yaml"
       register: _compose_inputs
 
@@ -30,11 +30,6 @@
       ansible.builtin.set_fact:
         compose_has_vars_template: "{{ _compose_inputs.results[0].stat.exists }}"
         compose_private_exists: "{{ _compose_inputs.results[1].stat.exists }}"
-
-    - name: Validate VARS
-      ansible.builtin.command: python3 {{ infra_root }}/lib/vars_validator.py srv0
-      changed_when: false
-      when: compose_has_vars_template
 
     - name: Render frpc compose templates
       ansible.builtin.include_role:

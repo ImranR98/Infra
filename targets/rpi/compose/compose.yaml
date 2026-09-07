@@ -4,6 +4,34 @@ x-logging: &logging
         max-file: 5
 
 services:
+    # One-shot bootstrap: generates the RTSP/API password once and persists it
+    # (password file + go2rtc.env). go2rtc itself runs the official image
+    # untouched and reads the password via its native ${GO2RTC_PASSWORD}
+    # config substitution.
+    go2rtc-init:
+        image: alpine:3.21
+        container_name: go2rtc-init
+        restart: "no"
+        volumes:
+            - $COMPOSE_STATE_DIR/go2rtc:/config
+        entrypoint:
+            - sh
+            - -c
+            - |
+                set -e
+                if [ ! -s /config/password ]; then
+                    od -An -N16 -tx1 /dev/urandom | tr -d ' \n' > /config/password
+                    echo "go2rtc: generated password in /config/password" >&2
+                fi
+                if [ ! -s /config/go2rtc.env ]; then
+                    printf 'GO2RTC_PASSWORD=%s\n' "$(cat /config/password)" > /config/go2rtc.env
+                fi
+                chmod 600 /config/password /config/go2rtc.env
+                # Re-owned to the host user (uid of the bind-mount root) so the
+                # password can be read on the host without docker exec.
+                chown "$(stat -c %u /config 2>/dev/null || echo 0)" /config/password /config/go2rtc.env 2>/dev/null || true
+        logging: *logging
+
     # go2rtc - RTSP/WebRTC media server for the USB webcam
     # Host /dev/video0 (webcam) is remapped to /dev/video2 in the container.
     # The webcam's UVC metadata node (/dev/video1) is deliberately not mapped.
@@ -14,6 +42,9 @@ services:
         image: alexxit/go2rtc:1.9.14
         container_name: go2rtc
         restart: unless-stopped
+        depends_on:
+            go2rtc-init:
+                condition: service_completed_successfully
         mem_limit: 512M
         cpus: "1.0"
         read_only: true
@@ -23,7 +54,10 @@ services:
             - /dev/video0:/dev/video2
         volumes:
             - $COMPOSE_STATE_DIR/go2rtc:/config
-        command: ["sh", "/config/entrypoint.sh"]
+        command: ["-config", "/config/go2rtc.yaml"]
+        env_file:
+            - path: $COMPOSE_STATE_DIR/go2rtc/go2rtc.env
+              required: false
         ports:
             - "8554:8554"
             - "127.0.0.1:1984:1984"

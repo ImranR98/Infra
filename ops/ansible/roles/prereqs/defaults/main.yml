@@ -11,7 +11,6 @@ prereqs_apt_packages:
   - python3
   - golang-go
   - openssl
-  - python3-dotenv
   - shellcheck
   - ansible-lint
   - yamllint
@@ -23,7 +22,6 @@ prereqs_dnf_packages:
   - python3
   - golang
   - openssl
-  - python3-dotenv
   - shellcheck
   - ansible-lint
   - yamllint

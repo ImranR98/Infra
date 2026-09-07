@@ -13,7 +13,7 @@
       ansible.builtin.stat:
         path: "{{ item }}"
       loop:
-        - "{{ infra_root }}/targets/{{ inventory_hostname }}/VARS.template.env"
+        - "{{ infra_root }}/targets/{{ inventory_hostname }}/VARS.template.yml"
         - "{{ infra_root }}/targets/{{ inventory_hostname }}/compose/compose.private.yaml"
       register: _optional
 
@@ -21,11 +21,6 @@
       ansible.builtin.set_fact:
         compose_has_vars_template: "{{ _optional.results[0].stat.exists }}"
         compose_private_exists: "{{ _optional.results[1].stat.exists }}"
-
-    - name: Validate VARS
-      ansible.builtin.command: python3 {{ infra_root }}/lib/vars_validator.py {{ inventory_hostname }}
-      changed_when: false
-      when: compose_has_vars_template
 
     - name: Compose render + environment
       ansible.builtin.include_role:

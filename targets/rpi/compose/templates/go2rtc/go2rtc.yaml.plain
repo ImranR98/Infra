@@ -1,12 +1,12 @@
 api:
     username: admin
-    password: "{{GO2RTC_PASSWORD}}"
+    password: "${GO2RTC_PASSWORD}"
     local_auth: true
 
 rtsp:
     listen: ":8554"
     username: admin
-    password: "{{GO2RTC_PASSWORD}}"
+    password: "${GO2RTC_PASSWORD}"
 
 ffmpeg:
     # Pipe ffmpeg output to go2rtc via stdout (MPEG-TS) instead of RTSP ingest:
@@ -21,6 +21,5 @@ streams:
     # encoder (h264_v4l2m2m via bcm2835-codec) was dropped: it wedges at the driver
     # level under client churn/load (ffmpeg freezes, no recovery without reboot).
     # Software encoding costs ~1 core of the Pi 400 but is fully reliable.
-    # The entrypoint watchdog restarts the source if it ever stalls.
     rpi:
         - ffmpeg:device?video=/dev/video2&input_format=mjpeg&video_size=1280x960&framerate=15#video=h264
