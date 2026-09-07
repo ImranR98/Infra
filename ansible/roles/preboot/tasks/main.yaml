@@ -1,9 +1,9 @@
 ---
 # Preboot LUKS unlock (dracut-remote-luks-unlock). Two variants:
-#   frpc      (srv0): initramfs frpc tunnels SSH via FRPS :8887 (mTLS certs from
-#                     the compose render — the srv0 playbook renders first)
-#   crypt-ssh (bigpc): dropbear SSH directly on the LAN, patched to
-#                     preboot_port (ethernet only)
+#   frpc      initramfs frpc tunnels SSH via FRPS (mTLS certs from the compose
+#             render — render the compose templates first)
+#   crypt-ssh dropbear SSH directly on the LAN, patched to preboot_port
+#             (ethernet only)
 - name: Check whether the root partition is LUKS-encrypted
   ansible.builtin.shell: |
     root_src=$(findmnt -n -o SOURCE /sysroot 2>/dev/null | sed 's/\[.*//')
@@ -31,7 +31,7 @@
         dest: "{{ preboot_work_dir | default('/tmp/dracut-remote-luks-unlock') }}"
         depth: 1
 
-    - name: "crypt-ssh: listen on preboot_port (bigpc direct LAN)"
+    - name: "crypt-ssh: listen on preboot_port (direct LAN)"
       ansible.builtin.replace:
         path: "{{ preboot_work_dir | default('/tmp/dracut-remote-luks-unlock') }}/modules/99crypt-ssh/crypt-ssh.conf"
         regexp: '^dropbear_port="22"'

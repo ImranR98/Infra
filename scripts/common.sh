@@ -1,8 +1,6 @@
 #!/bin/bash
-# scripts/common.sh — shared helpers for the remaining bash commands (k3s helm/pvc/
-# preboot/renovate). The compose pipeline and config validation are Ansible
-# playbooks now (ansible/); VARS live in plain gitignored YAML
-# (secrets/VARS.<t>.yaml).
+# scripts/common.sh — env bootstrap + shared helpers (retry/_confirm/
+# get_sudo_cmd/get_node_ip/wait_for_k3s_cluster) for the retained bash scripts.
 [[ "${INFRA_LIB_LOADED:-}" = true ]] && return 0
 INFRA_LIB_LOADED=true
 

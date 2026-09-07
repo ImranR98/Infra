@@ -162,17 +162,16 @@ PVC_EOF
     return 1
 }
 
-# pvc_backup_pod_yaml <pvc-name> <namespace> <backup-dir> <dest-file> <timestamp> [exclude-patterns] [node]
-# Prints the backup pod YAML to stdout. Caller pipes to kubectl apply.
+# pvc_backup_pod_yaml <pvc-name> <namespace> <dest-file> <timestamp> [exclude-patterns] [node]
+# Prints the backup pod YAML to stdout (archive written to the shared
+# pvc-backup-dest NFS PVC at /backup). Caller pipes to kubectl apply.
 # exclude-patterns: optional space-separated tar --exclude patterns (e.g. "index-*.db")
 # node: optional node name; the pod is scheduled there (RWO volumes must be
 # mounted where they're currently attached — scheduling elsewhere would force
 # a cross-node Longhorn migration that can hang while the workload holds it).
-# <backup-dir> is accepted for signature compatibility but no longer used:
-# the archive is written to the shared pvc-backup-dest NFS PVC at /backup.
 pvc_backup_pod_yaml() {
-    local pvc="${1:?}" ns="${2:?}" backup_dir="${3:?}" dest_file="${4:?}" timestamp="${5:?}"
-    local exclude="${6:-}" node="${7:-}"
+    local pvc="${1:?}" ns="${2:?}" dest_file="${3:?}" timestamp="${4:?}"
+    local exclude="${5:-}" node="${6:-}"
     local pod_name
     pod_name="backup-$(echo "$pvc" | tr '_' '-')"
     local excl_flags=""
@@ -186,7 +185,7 @@ pvc_backup_pod_yaml() {
     if [ -n "$node" ]; then
         node_selector="  nodeSelector:
     kubernetes.io/hostname: $node"
-        # Tolerate the PreferNoSchedule taint used on desktop nodes (bigpc).
+        # Tolerate the PreferNoSchedule taint used on desktop nodes.
         tolerations="  tolerations:
     - key: scheduling-discouraged
       operator: Exists
@@ -245,10 +244,10 @@ $tolerations
 PODEOF
 }
 
-# pvc_restore_pod_yaml <pvc-name> <namespace> <backup-dir> <src-file>
+# pvc_restore_pod_yaml <pvc-name> <namespace> <src-file>
 # Prints the restore pod YAML to stdout. Caller pipes to kubectl apply.
 pvc_restore_pod_yaml() {
-    local pvc="${1:?}" ns="${2:?}" backup_dir="${3:?}" src_file="${4:?}"
+    local pvc="${1:?}" ns="${2:?}" src_file="${3:?}"
     local pod_name
     pod_name="restore-$(echo "$pvc" | tr '_' '-')"
     cat <<PODEOF
@@ -307,13 +306,10 @@ spec:
 PODEOF
 }
 
-# pvc_backup_data <pvc> <ns> <backup-dir> <dest-file> <timestamp> [exclude]
+# pvc_backup_data <pvc> <ns> <dest-file> <timestamp> [exclude]
 # Creates backup pod, waits for success, cleans up. Returns 0 on success.
-# <backup-dir> is accepted for signature compatibility but no longer used:
-# the archive is written directly to its final name via the shared
-# pvc-backup-dest volume.
 pvc_backup_data() {
-    local pvc="${1:?}" ns="${2:?}" backup_dir="${3:?}" dest_file="${4:?}" timestamp="${5:?}" exclude="${6:-}"
+    local pvc="${1:?}" ns="${2:?}" dest_file="${3:?}" timestamp="${4:?}" exclude="${5:-}"
     local pod_name node
     pod_name="backup-$(echo "$pvc" | tr '_' '-')"
 
@@ -335,7 +331,7 @@ pvc_backup_data() {
         return 1
     fi
 
-    pvc_backup_pod_yaml "$pvc" "$ns" "$backup_dir" "$dest_file" "$timestamp" "$exclude" "$node" | kubectl apply -f -
+    pvc_backup_pod_yaml "$pvc" "$ns" "$dest_file" "$timestamp" "$exclude" "$node" | kubectl apply -f -
     if ! kubectl wait --for=jsonpath='{.status.phase}'=Succeeded "pod/$pod_name" -n "$ns" --timeout=900s 2>/dev/null; then
         echo "  ERROR: backup pod failed for $ns/$pvc" >&2
         echo "  --- pod status ---" >&2
@@ -392,7 +388,7 @@ pvc_backup_all() {
 
         exclude=$(kubectl get pvc "$name" -n "$ns" -o jsonpath='{.metadata.annotations.backup\.infra/exclude}' 2>/dev/null || echo "")
 
-        if pvc_backup_data "$name" "$ns" "$backup_dir" "${name}.tar.gz" "$timestamp" "$exclude"; then
+        if pvc_backup_data "$name" "$ns" "${name}.tar.gz" "$timestamp" "$exclude"; then
             echo "  Done: $name"
         else
             failed=$((failed + 1))
@@ -407,18 +403,18 @@ pvc_backup_all() {
     echo "=== Backup complete ($total PVCs) ==="
 }
 
-# pvc_restore_data <pvc> <ns> <backup-dir> <src-file>
+# pvc_restore_data <pvc> <ns> <src-file>
 # Creates restore pod, waits for success, cleans up. Returns 0 on success.
 # Caller must ensure PVC is Bound before calling.
 pvc_restore_data() {
-    local pvc="${1:?}" ns="${2:?}" backup_dir="${3:?}" src_file="${4:?}"
+    local pvc="${1:?}" ns="${2:?}" src_file="${3:?}"
     local pod_name
     if ! pvc_ensure_backup_dest "$ns"; then
         echo "  ERROR: could not prepare backup source for $ns/$pvc" >&2
         return 1
     fi
     pod_name="restore-$(echo "$pvc" | tr '_' '-')"
-    pvc_restore_pod_yaml "$pvc" "$ns" "$backup_dir" "$src_file" | kubectl apply -f -
+    pvc_restore_pod_yaml "$pvc" "$ns" "$src_file" | kubectl apply -f -
     if ! kubectl wait --for=jsonpath='{.status.phase}'=Succeeded "pod/$pod_name" -n "$ns" --timeout=900s 2>/dev/null; then
         echo "  ERROR: restore pod failed for $ns/$pvc" >&2
         kubectl delete pod "$pod_name" -n "$ns" --ignore-not-found 2>/dev/null || true
@@ -485,7 +481,7 @@ pvc_restore_all() {
         timestamp=$(tar xzf "$backup_file" __backup_timestamp.txt -O 2>/dev/null || echo "unknown")
         echo "  Restoring from backup taken at: $timestamp"
 
-        if pvc_restore_data "$name" "$ns" "$backup_dir" "${name}.tar.gz"; then
+        if pvc_restore_data "$name" "$ns" "${name}.tar.gz"; then
             echo "  Done: $name"
         else
             failed=$((failed + 1))
@@ -556,7 +552,7 @@ pvc_backup_one() {
 
     exclude=$(kubectl get pvc "$pvc_name" -n "$pvc_ns" -o jsonpath='{.metadata.annotations.backup\.infra/exclude}' 2>/dev/null || echo "")
 
-    pvc_backup_data "$pvc_name" "$pvc_ns" "$PVC_BACKUP_DIR" "${pvc_name}.tar.gz" "$timestamp" "$exclude" \
+    pvc_backup_data "$pvc_name" "$pvc_ns" "${pvc_name}.tar.gz" "$timestamp" "$exclude" \
         || { echo "Backup failed." >&2; exit 1; }
 
     echo ""
@@ -615,7 +611,7 @@ pvc_restore_one() {
     echo ""
     echo "Restoring from backup taken at: $timestamp"
 
-    pvc_restore_data "$pvc_name" "$pvc_ns" "$PVC_BACKUP_DIR" "${pvc_name}.tar.gz" \
+    pvc_restore_data "$pvc_name" "$pvc_ns" "${pvc_name}.tar.gz" \
         || { echo "Restore failed." >&2; exit 1; }
 
     echo ""

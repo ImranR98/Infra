@@ -84,10 +84,6 @@ Validate the provisioning playbooks without touching any hosts: `ansible-playboo
 
 Dry-run on a test VM (Multipass): `multipass launch -n testnode fedora`, SSH in, copy the repo, run the prereqs playbook, then `ansible-playbook ansible/playbooks/k3s_server.yaml --check --diff` before the real run. Re-running it on an installed node is a no-op (the collection only re-runs the installer when the installed version is older than `k3s_version` (`stable`), so it can't fight system-upgrade-controller's version ownership).
 
-## Migrating from the old `./infra.sh` CLI
-
-`./infra.sh` (and the bash dispatcher behind it) was replaced by `task` + a Python VARS validator, then by plain `ansible-playbook` as the single CLI. Compose VARS are now plain gitignored YAML (`secrets/VARS.<t>.yaml`, one-time dotenv→YAML migration documented in AGENTS.md); the old bash K3s provisioning (`k3s:setup` / `k3s:join`) was replaced by the Ansible playbooks described above. See `git log` for the intermediate Task-based layout.
-
 ## More
 
 Detailed documentation lives in [AGENTS.md](AGENTS.md). Note that while LLMs are used in development, the LLM isn't the one putting its data on the line. [It is just a tool](https://www.normaltech.ai/p/ai-as-normal-technology) and is used like one.

@@ -80,9 +80,8 @@ spec:
   storageClassName: longhorn
 ---
 ---
-# Declarative first-boot qBittorrent config (replaces the old API-seeding Job).
-# The initContainer copies it into the PVC only when no config exists yet, so
-# later UI changes keep persisting. The WebUI password is adminadmin by design
+# Declarative first-boot qBittorrent config: the initContainer copies it into
+# the PVC only when no config exists yet, so later UI changes keep persisting. The WebUI password is adminadmin by design
 # (the UI sits behind forwardauth-authelia + geoblock + crowdsec).
 apiVersion: v1
 kind: ConfigMap

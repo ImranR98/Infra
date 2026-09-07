@@ -1,7 +1,6 @@
 ---
 # Compose role: render templates (jinja2), stage the environment for
 # docker-compose native interpolation, create host dirs, and run `docker compose`.
-# Replaces the old bash compose render pipeline.
 
 - name: Target derived from the machine hostname
   ansible.builtin.assert:

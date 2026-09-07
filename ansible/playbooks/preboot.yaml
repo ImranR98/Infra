@@ -1,10 +1,11 @@
 ---
-# Install the preboot initramfs LUKS-unlock module. The variant is derived
-# from the machine hostname (srv0: frpc — initramfs frpc tunnels SSH via
-# FRPS :8887 with mTLS certs rendered from the compose templates first;
-# bigpc: crypt-ssh — dropbear SSH directly on the LAN).
-# Usage: ansible-playbook ansible/playbooks/preboot.yaml   (run ON the node)
-# Re-run after rotating the preboot mTLS certs (srv0).
+# Install the preboot initramfs LUKS-unlock module.
+# Variants: frpc — initramfs frpc tunnels SSH via FRPS (the frpc compose
+# templates are rendered first for the mTLS certs); crypt-ssh — dropbear SSH
+# directly on the LAN, patched to preboot_port.
+# Usage: ansible-playbook ansible/playbooks/preboot.yaml \
+#          -e preboot_module=frpc|crypt-ssh   (run ON the node)
+# Re-run the frpc variant after rotating the preboot mTLS certs.
 - name: Install preboot LUKS unlock (initramfs)
   hosts: localhost
   gather_facts: true
@@ -15,16 +16,12 @@
     preboot_user: "{{ ansible_env.SUDO_USER | default(ansible_user_id) }}"
 
   tasks:
-    - name: Preboot variant known
+    - name: Preboot variant given
       ansible.builtin.assert:
-        that: target in ['srv0', 'bigpc']
+        that: preboot_module | default('') in ['frpc', 'crypt-ssh']
         fail_msg: >-
-          No preboot variant for host '{{ target }}' — preboot targets srv0
-          (frpc) or bigpc (crypt-ssh) only.
-
-    - name: Derive the preboot module from the hostname
-      ansible.builtin.set_fact:
-        preboot_module: "{{ {'srv0': 'frpc', 'bigpc': 'crypt-ssh'}[target] }}"
+          preboot_module required: -e preboot_module=frpc (tunnel via FRPS)
+          or -e preboot_module=crypt-ssh (direct-LAN dropbear).
 
     - name: Stat frpc compose inputs
       ansible.builtin.stat:
@@ -59,5 +56,5 @@
       ansible.builtin.debug:
         msg: >-
           Preboot {{ preboot_module }} installed — on the next boot, LUKS
-          unlock runs before root is mounted (frpc: via FRPS :8887,
-          crypt-ssh: direct LAN :{{ preboot_port | default('8887') }}).
+          unlock runs before root is mounted (frpc: via FRPS, crypt-ssh:
+          direct LAN :{{ preboot_port | default('8887') }}).

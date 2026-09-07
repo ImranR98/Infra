@@ -3,7 +3,7 @@
 # Vendored from https://github.com/rancher/system-upgrade-controller/releases/latest (crd.yaml + system-upgrade-controller.yaml).
 # Bump procedure: re-download both files and replace this template; the controller
 # image (rancher/system-upgrade-controller) is Renovate-managed via the kubernetes
-# manager. Previously applied by system-upgrade/prep.sh (deleted).
+# manager.
 ---
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition

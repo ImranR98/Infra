@@ -1,7 +1,7 @@
 {{- if .Values.apps.enabled }}
-# Seeding hook, previously a host-side post.sh script run by deploy.sh.
-# Helm re-runs this Job on every install/upgrade (post-install,post-upgrade).
-# It runs in-cluster via kubectl with scoped RBAC (see role below).
+# Seeding hook: Helm re-runs this Job on every install/upgrade
+# (post-install,post-upgrade). It runs in-cluster via kubectl with scoped
+# RBAC (see role below).
 
 ---
 apiVersion: v1
@@ -40,8 +40,8 @@ subjects:
     name: helm-hooks
     namespace: apps
 ---
-# Immich OAuth/password seeding (formerly immich/post.sh). Idempotent: skips
-# when OAuth is already configured. Runs in-cluster with scoped RBAC.
+# Immich OAuth/password seeding. Idempotent: skips when OAuth is already
+# configured. Runs in-cluster with scoped RBAC.
 apiVersion: batch/v1
 kind: Job
 metadata:
