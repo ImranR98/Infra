@@ -10,7 +10,7 @@
   vars:
     infra_root: "{{ playbook_dir }}/../../.."
     chart_dir: "{{ infra_root }}/targets/srv0/k3s"
-    secret_values: "{{ infra_root }}/secrets/values.srv0.yaml"
+    secret_values: "{{ infra_root }}/secrets/VARS.srv0.yml"
 
   tasks:
     - name: Scope must be base or apps

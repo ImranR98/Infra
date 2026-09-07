@@ -70,16 +70,16 @@ New compose/validation logic belongs in `ops/ansible/` (generic: role + playbook
 
 ## Variables & templating
 
-- **Two formats**: k3s (srv0) uses **Helm values** — committed defaults `targets/srv0/k3s/values.yaml` (gates + `MY_UID`) and gitignored secrets/config `secrets/values.srv0.yaml` (generated from `secrets/VARS.srv0.yml` during the migration; edit it directly now). Compose targets use **plain YAML VARS** (`targets/<t>/VARS.template.yml` documents keys + generation commands; real values in the gitignored `secrets/VARS.<t>.yml`). srv0/vps0 have both (k3s chart + compose sidecar); bigpc/pc/rpi are builtin-var-only.
+- **One VARS file per target**: `secrets/VARS.<t>.yml` — plain YAML (gitignored; no encryption), loaded by the compose role via `include_vars` and — for srv0 — passed to Helm as the umbrella chart's values file (`helm_apply` uses `-f values.yaml -f secrets/VARS.srv0.yml`; the committed `values.yaml` only holds the release gates + `MY_UID`). `targets/<t>/VARS.template.yml` documents every key + generation command. srv0/vps0 have VARS files (srv0's feeds both compose + k3s); bigpc/pc/rpi are builtin-var-only.
 - **Compose VARS pipeline**: `secrets/VARS.<t>.yml` (plain YAML map) is loaded by the compose role via `include_vars` — once flat (keys become jinja template variables) and once as `secret_vars` (the dict for **docker-compose native interpolation**, stringified into `compose_env`). No expansion step: values are final. Completeness is asserted against the template keys and placeholder values (`change_me`/`changeme`/`abc`/`REPLACE_ME`/`<...>`) are rejected — assert messages print key names only. `docker compose` interpolates `$VAR`/`${VAR}` in `compose.yaml`/`compose.private.yaml` natively — no envsubst, no merged render file; `-f` merge is native compose.
 - **No encryption** — the VARS files are plain YAML at rest (gitignored under `secrets/`); there is no ansible-vault and no `.vault_pass`. One-time migration from the old dotenv VARS (run per target): generate the resolved YAML with the old validator (`python3 lib/vars_validator.py <t>` at the commit before this change — check the old git commit out first if it is gone), then `grep -v '^_vars_keys:' current_target/vars.yml > secrets/VARS.<t>.yml` (the old `vars.yml` is resolved, expanded, stringified — lossless) — or simply hand-write `secrets/VARS.<t>.yml` from `VARS.template.yml`. `${NAME}` references no longer expand: write literal values (the template documents them).
 - **Format** — YAML map `KEY: value`. Multi-line values are literal block scalars (`|`) — indentation is data and splices are verbatim (the vps0 geoblock subset is the one `indent(10, true)`-spliced exception). A bare `$` and `#` are literal — write `$argon2id$...` unescaped. Inline comments (` # ...`) work after single-line values.
 - **Universal VARS** — target-agnostic secrets live in `secrets/VARS.env` (fallback: root `VARS.env`), dotenv format. Loaded on demand by the commands that need them (`renovate` requires `RENOVATE_GITHUB_TOKEN`; the in-cluster renovate CronJob does `set -a; . /repo/secrets/VARS.env`). Not template-validated — each command checks its own variables.
 - **Validation** — VARS asserts in the compose role + `validate.yml` print variable names only (**values never reach argv, stdout, or stderr**). `validate.yml` additionally checks YAML syntax, the rendered helm chart (missing values surface as `<no value>` render failures), `docker compose config`, and placeholder patterns in `secrets/values.<target>.yaml`.
-- **Multi-line vars** (Authelia user DB, JWKS, frigate config, geoblock subset, mTLS PEMs): in `secrets/values.srv0.yaml` they are YAML block scalars at base column 0 spliced via `{{ .Values.X | indent "N" }}`; in the VARS YAML they are block scalars that jinja2 splices verbatim (or via an explicit `indent` filter).
+- **Multi-line vars** (Authelia user DB, JWKS, frigate config, geoblock subset, mTLS PEMs): in the VARS YAML they are block scalars that jinja2 splices verbatim and Helm splices via `{{ .Values.X | indent "N" }}` (the vps0 geoblock subset is the one `indent(10, true)`-spliced compose exception).
 - **Structural `$VARIABLE` placeholders** — a bare `$VAR` line at mapping indent in a compose file is invalid YAML before interpolation; `validate` detects this and downgrades the syntax error to a warning.
 - **mTLS certs** — generated with documented copy-paste `openssl` commands in the FRP sections of both `VARS.template.yml` files (per-pair CA, server/client certs, preboot client cert); PEMs live as multi-line VARS values.
-- **`*_HASHED` (k3s authelia)** — precomputed hashes stored directly in `secrets/values.srv0.yaml` (`openssl passwd -6` or `authelia crypto hash generate pbkdf2`; the generation commands are in `VARS.template.yml`). The old `*_HASHABLE` auto-hash at load time is gone.
+- **`*_HASHED` (k3s authelia)** — precomputed hashes stored in the same VARS file next to their `*_HASHABLE` plaintexts (`openssl passwd -6` or `authelia crypto hash generate pbkdf2`; the generation commands are in `VARS.template.yml`). The old auto-hash at load time is gone.
 - `PROXY_IP` is resolved from `PROXY_HOST` by the compose role (`getent hosts`) at render time.
 
 ### Compose pipeline (Ansible)
@@ -92,10 +92,10 @@ New compose/validation logic belongs in `ops/ansible/` (generic: role + playbook
 ## K3s conventions
 
 Components live in the srv0 umbrella chart (`targets/srv0/k3s/`, the chart root itself):
-- `templates/base/` + `templates/apps/` — one file per former component, native Helm templates (`{{ .Values.X }}` refs; secrets/config come from `secrets/values.srv0.yaml`), gated by `{{ if .Values.base.enabled }}` / `{{ if .Values.apps.enabled }}`. Filenames keep the old conventions (secrets/configmaps inside `prereqs` sections, Traefik `IngressRoute`s, `NetworkPolicy`s).
+- `templates/base/` + `templates/apps/` — one file per former component, native Helm templates (`{{ .Values.X }}` refs; secrets/config come from `secrets/VARS.srv0.yml`), gated by `{{ if .Values.base.enabled }}` / `{{ if .Values.apps.enabled }}`. Filenames keep the old conventions (secrets/configmaps inside `prereqs` sections, Traefik `IngressRoute`s, `NetworkPolicy`s).
 - `templates/hooks.yaml` — one seeding Job (`immich-seed`) as a Helm `post-install,post-upgrade` hook with `helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded`; RBAC via the `helm-hooks` ServiceAccount/Role. The old `prep.sh`/`post.sh`/`delete.sh` host-side hooks are gone (waits are handled by helm-controller + Job backoff). qBittorrent seeding is declarative now (first-boot `qBittorrent.conf` ConfigMap + copy-once initContainer in `apps/qbittorrent.yaml`); the GeoLite2 DB is seeded by the geoip Deployment's `geoipupdate` initContainer (weekly CronJob keeps it current).
 
-**Apply pipeline** — `targets/srv0/playbooks/helm_apply.yml` runs `helm upgrade --install` with `-f values.yaml -f secrets/values.srv0.yaml`. Two releases: `srv0-base` (scope base, `--set apps.enabled=false`) and `srv0-apps` (inverse); `base.enabled`/`apps.enabled` gate both the templates and the seeded Jobs. Preflights (apply only): the secret values file must exist and contain no placeholders, and the rendered chart must contain no `<no value>` (helm silently renders missing keys); `helm_state=absent` uninstalls instead. The chart contains: (a) all repo-owned components as Helm templates (secrets, configmaps, ingresses, PVCs, cronjobs, the traefik Middlewares/HelmChartConfig + WASM plugin ConfigMap via `.Files.Get`), (b) the 19 upstream-app **HelmChart CRs** — helm-controller still owns the app releases exactly as before (avoids release-name-derived resource naming), (c) vendored system-upgrade-controller manifests + Plans, (d) the immich seeding hook as a `post-install,post-upgrade` Job with scoped RBAC under the `helm-hooks` ServiceAccount.
+**Apply pipeline** — `targets/srv0/playbooks/helm_apply.yml` runs `helm upgrade --install` with `-f values.yaml -f secrets/VARS.srv0.yml` (the same VARS file the compose sidecar uses). Two releases: `srv0-base` (scope base, `--set apps.enabled=false`) and `srv0-apps` (inverse); `base.enabled`/`apps.enabled` gate both the templates and the seeded Jobs. Preflights (apply only): the secret values file must exist and contain no placeholders, and the rendered chart must contain no `<no value>` (helm silently renders missing keys); `helm_state=absent` uninstalls instead. The chart contains: (a) all repo-owned components as Helm templates (secrets, configmaps, ingresses, PVCs, cronjobs, the traefik Middlewares/HelmChartConfig + WASM plugin ConfigMap via `.Files.Get`), (b) the 19 upstream-app **HelmChart CRs** — helm-controller still owns the app releases exactly as before (avoids release-name-derived resource naming), (c) vendored system-upgrade-controller manifests + Plans, (d) the immich seeding hook as a `post-install,post-upgrade` Job with scoped RBAC under the `helm-hooks` ServiceAccount.
 
 Ops: `helm list/history/rollback`, `helm get values`, `helm template`, `helm diff upgrade` (helm-diff plugin) replace the old per-component modes; delete = `helm uninstall srv0-apps` then `srv0-base` (Helm retains PVCs).
 
@@ -148,13 +148,13 @@ helm history srv0-base -n base            # revision log
 helm rollback srv0-base <rev> -n base     # instant rollback to an earlier revision
 helm get values srv0-base -n base         # effective values
 helm status srv0-base -n base
-helm template srv0-base targets/srv0/k3s -n base -f values.yaml -f ../../secrets/values.srv0.yaml --set apps.enabled=false   # dry render
+helm template srv0-base targets/srv0/k3s -n base -f values.yaml -f ../../secrets/VARS.srv0.yml --set apps.enabled=false   # dry render
 helm diff upgrade srv0-base targets/srv0/k3s --set apps.enabled=false       # preview (helm-diff plugin)
 helm uninstall srv0-apps -n apps          # delete a release; PVCs are retained by Helm default
 ```
 
 **Pitfalls learned the hard way:**
-- `helm lint`/`helm template` need the values files (`-f values.yaml -f secrets/values.srv0.yaml`) — without them, `.Values.X` is nil and lint fails with 'invalid value; expected string'. Missing keys render as `<no value>` — the validate playbook and helm_apply's preflight catch that.
+- `helm lint`/`helm template` need the values files (`-f values.yaml -f secrets/VARS.srv0.yml`) — without them, `.Values.X` is nil and lint fails with 'invalid value; expected string'. Missing keys render as `<no value>` — the validate playbook and helm_apply's preflight catch that.
 - `.Files.Get` paths need the `files/` prefix (see above).
 - Literal `{{` in templates is interpreted by helm — the homeassistant CR's embedded Go templates are escaped as `{{ "{{" }}`.
 - Subchart resource names derive from `{{ .Release.Name }}` — that's why the app charts stay HelmChart CRs (helm-controller-managed) instead of umbrella dependencies.
@@ -261,7 +261,7 @@ ops/ansible/                    # Ansible: inventory.yml (connection=local) + an
                                 #   k3s_node_extra|configure, prereqs)
 commands/renovate.sh            # Universal: run Renovate (opens PRs on GitHub) — invoked by renovate.yml
 lib/                            # common.sh (env bootstrap + helpers for retained scripts)
-secrets/                        # VARS.<target>.yml (plain YAML, gitignored), VARS.env, values.srv0.yaml
+secrets/                        # VARS.<target>.yml (plain YAML, gitignored), VARS.env
 targets/<target>/
   VARS.template.yml             # Documents every required variable + generation commands
   compose/compose.yaml          # $VARIABLE placeholders (docker-compose native interpolation)
@@ -271,7 +271,7 @@ targets/<target>/
                                 #   traefik HelmChartConfig, k3s plan versions): templates/ (repo-owned
                                 #   components + HelmChart CRs + hook Jobs), files/ (WASM plugin),
                                 #   plugins/ (WASM plugin source), values.yaml (committed defaults;
-                                #   secrets in secrets/values.srv0.yaml)
+                                #   secrets in secrets/VARS.srv0.yml)
   playbooks/                    # Target-specific ops, host hardcoded: helm_apply, pvc_backup|restore,
                                 #   update_node_ip, preboot (srv0: + compose sidecar playbooks via ops/)
   commands/                     # Retained bash payloads (backup-pvc.sh, restore-pvc.sh, pvc.sh,

@@ -59,10 +59,10 @@
 # values never reach argv, stdout, or stderr.
 - name: VARS completeness
   ansible.builtin.assert:
-    that: secret_vars.keys() | difference(template_vars.keys()) | length == 0
+    that: template_vars.keys() | difference(secret_vars.keys()) | length == 0
     fail_msg: >-
       secrets/VARS.{{ inventory_hostname }}.yml is missing required
-      variables: {{ secret_vars.keys() | difference(template_vars.keys()) }}
+      variables: {{ template_vars.keys() | difference(secret_vars.keys()) }}
   when: compose_has_vars_template | default(false)
 
 - name: VARS placeholders
