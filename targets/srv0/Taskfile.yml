@@ -51,9 +51,9 @@ tasks:
       - TARGET=srv0 INFRA_ROOT={{.ROOT_DIR}} bash {{.ROOT_DIR}}/commands/k3s/validate.sh {{.CLI_ARGS}}
 
   k3s:deploy:
-    desc: Deploy, delete, diff, or render a single K3s component (pass <component> [mode] after --)
+    desc: Deploy the umbrella chart for a scope (pass "base" or "apps" + extra helm args after --)
     cmds:
-      - TARGET=srv0 INFRA_ROOT={{.ROOT_DIR}} bash {{.ROOT_DIR}}/commands/k3s/deploy.sh {{.CLI_ARGS}}
+      - TARGET=srv0 INFRA_ROOT={{.ROOT_DIR}} bash {{.ROOT_DIR}}/commands/k3s/helm.sh srv0-{{.CLI_ARGS}}
 
   k3s:update-node-ip:
     desc: Update K3s node IP after a network change (pass [--ip X] [--force] after --; run on the node)
@@ -73,22 +73,22 @@ tasks:
   k3s:group:base:apply:
     desc: Deploy the base K3s component group
     cmds:
-      - TARGET=srv0 INFRA_ROOT={{.ROOT_DIR}} bash {{.ROOT_DIR}}/commands/k3s/group.sh base apply
+      - TARGET=srv0 INFRA_ROOT={{.ROOT_DIR}} bash {{.ROOT_DIR}}/commands/k3s/helm.sh srv0-base base
 
   k3s:group:base:delete:
-    desc: Delete the base K3s component group (refuses while Bound PVCs exist)
+    desc: Delete the base K3s component group (helm uninstall; PVCs are retained by Helm default)
     cmds:
-      - TARGET=srv0 INFRA_ROOT={{.ROOT_DIR}} bash {{.ROOT_DIR}}/commands/k3s/group.sh base delete
+      - helm uninstall srv0-base -n base
 
   k3s:group:apps:apply:
     desc: Deploy the apps K3s component group
     cmds:
-      - TARGET=srv0 INFRA_ROOT={{.ROOT_DIR}} bash {{.ROOT_DIR}}/commands/k3s/group.sh apps apply
+      - TARGET=srv0 INFRA_ROOT={{.ROOT_DIR}} bash {{.ROOT_DIR}}/commands/k3s/helm.sh srv0-apps apps
 
   k3s:group:apps:delete:
     desc: Delete the apps K3s component group
     cmds:
-      - TARGET=srv0 INFRA_ROOT={{.ROOT_DIR}} bash {{.ROOT_DIR}}/commands/k3s/group.sh apps delete
+      - helm uninstall srv0-apps -n apps
 
   # ----- universal aliases (run with TARGET set (target mode), like the old ./infra.sh srv0 <cmd>) -----
   prereqs:

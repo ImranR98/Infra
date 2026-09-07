@@ -1,5 +1,5 @@
 #!/bin/bash
-# lib/validate.sh — YAML/kustomize/docker-compose validation.
+# lib/validate.sh — YAML/helm-chart/docker-compose validation.
 # Note: YAML $VARIABLE references are intentionally NOT cross-checked against
 # the template here anymore (they were removed as noise-prone); unknown refs
 # surface at render time via envsubst leftovers, and VARS content itself is
@@ -22,8 +22,8 @@ validate() {
     local target="${1:-$TARGET}"
     local k3s_ok=true compose_ok=true
 
-    if [ -d "$INFRA_ROOT/targets/$target/k3s" ]; then
-        _validate_k3s "$target" || k3s_ok=false
+    if [ "$target" = "srv0" ] && [ -d "$INFRA_ROOT/charts/srv0" ]; then
+        _validate_helm || k3s_ok=false
     fi
     if [ -f "$INFRA_ROOT/targets/$target/compose/compose.yaml" ]; then
         _validate_compose "$target" || compose_ok=false
@@ -34,28 +34,30 @@ validate() {
     echo "Compose: $( $compose_ok && echo "OK" || echo "issues found" )"
 }
 
-_validate_k3s() {
-    local target="$1" comp_dir="$INFRA_ROOT/targets/$target/k3s" errors=0
-
-    for comp_dir in "$comp_dir"/*/; do
-        local comp; comp=$(basename "$comp_dir")
-        local kfile="$comp_dir/kustomization.yaml"
-
-        [ -f "$kfile" ] || { echo "Error: $comp missing kustomization.yaml"; errors=$((errors + 1)); continue; }
-
-        if command -v kubectl >/dev/null 2>&1; then
-            local k_err; k_err=$(kubectl kustomize "$comp_dir" 2>&1 1>/dev/null) || {
-                if echo "$k_err" | grep -q "could not find expected ':'" && _has_structural_vars "$comp_dir"; then
-                    echo "Warning: $comp kustomize skipped (structural \$VARIABLE placeholder)"
-                else
-                    echo "Error: $comp kustomize build failed"; errors=$((errors + 1))
-                fi
-            }
-        fi
-    done
-
+_validate_helm() {
+    local errors=0 chart="$INFRA_ROOT/charts/srv0"
+    if command -v helm >/dev/null 2>&1; then
+        local staged="$K3S_STATE_DIR/chart-validate"
+        rm -rf "$staged"
+        mkdir -p "$(dirname "$staged")"
+        cp -r "$chart" "$staged"
+        # envsubst the templates exactly like commands/k3s/helm.sh does
+        while IFS= read -r -d '' f; do
+            envsubst "$ENVSUBST_VARS" < "$f" > "$f.tmp" && mv "$f.tmp" "$f"
+        done < <(find "$staged/templates" -type f \( -name '*.yaml' -o -name '*.yml' \) -print0)
+        helm lint "$staged" >/dev/null 2>&1 || { echo "Error: helm lint failed"; errors=$((errors + 1)); }
+        for scope in base apps; do
+            if [ "$scope" = "base" ]; then other=apps; else other=base; fi
+            if ! helm template "srv0-$scope" "$staged" -n "$scope" --set "$other.enabled=false" >/dev/null 2>&1; then
+                echo "Error: helm template (scope $scope) failed"; errors=$((errors + 1))
+            fi
+        done
+        rm -rf "$staged"
+    else
+        echo "Warning: helm not installed — skipping chart validation"
+    fi
     echo ""
-    echo "K3s validation: $errors errors"
+    echo "K3s (helm chart) validation: $errors errors"
     return $(( errors > 0 ? 1 : 0 ))
 }
 

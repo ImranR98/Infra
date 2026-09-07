@@ -1,8 +1,0 @@
-apiVersion: v1
-kind: Secret
-metadata:
-  name: cluster-auth-users
-  namespace: base
-type: Opaque
-stringData:
-  users: "$LOCALHOST_AUTH_USER:$LOCALHOST_AUTH_PASSWORD_HASH"

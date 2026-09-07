@@ -3,6 +3,7 @@
 # tasks stay declarative and idempotent (package presence is checked by the
 # module, not by `command -v` loops).
 prereqs_task_version: 3.53.1
+prereqs_helm_version: 3.17.3
 
 prereqs_apt_packages:
   - yq

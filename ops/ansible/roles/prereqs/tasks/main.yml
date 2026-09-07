@@ -55,6 +55,46 @@
     - /tmp/task
   changed_when: false
 
+- name: Check for the helm binary
+  ansible.builtin.stat:
+    path: /usr/local/bin/helm
+  register: prereqs_helm_bin
+
+- name: Download the helm release
+  ansible.builtin.get_url:
+    url: "https://get.helm.sh/helm-v{{ prereqs_helm_version }}-linux-{{ prereqs_helm_arch }}.tar.gz"
+    dest: /tmp/helm.tar.gz
+    mode: "0644"
+  vars:
+    prereqs_helm_arch: "{{ 'arm64' if ansible_architecture == 'aarch64' else 'amd64' }}"
+  when: not prereqs_helm_bin.stat.exists
+
+- name: Extract the helm release
+  ansible.builtin.unarchive:
+    src: /tmp/helm.tar.gz
+    dest: /tmp
+    remote_src: true
+  when: not prereqs_helm_bin.stat.exists
+
+- name: Install the helm binary
+  ansible.builtin.copy:
+    src: "/tmp/linux-{{ prereqs_helm_arch_2 }}/helm"
+    dest: /usr/local/bin/helm
+    mode: "0755"
+    remote_src: true
+  vars:
+    prereqs_helm_arch_2: "{{ 'arm64' if ansible_architecture == 'aarch64' else 'amd64' }}"
+  when: not prereqs_helm_bin.stat.exists
+
+- name: Clean up helm downloads
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - /tmp/helm.tar.gz
+    - /tmp/linux-{{ 'arm64' if ansible_architecture == 'aarch64' else 'amd64' }}
+  changed_when: false
+
 - name: Check for Docker and Compose
   ansible.builtin.shell: |
     set -o pipefail
@@ -86,7 +126,7 @@
   ansible.builtin.shell: |
     set -o pipefail
     missing=0
-    for tool in task docker yq envsubst jq curl python3 go openssl shellcheck ansible-lint yamllint ansible-playbook; do
+    for tool in task helm docker yq envsubst jq curl python3 go openssl shellcheck ansible-lint yamllint ansible-playbook; do
       if command -v "$tool" >/dev/null 2>&1; then
         echo "  [OK] $tool"
       else

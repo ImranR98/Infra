@@ -1,0 +1,335 @@
+{{- if .Values.apps.enabled }}
+---
+apiVersion: helm.cattle.io/v1
+kind: HelmChart
+metadata:
+  name: immich
+  namespace: apps
+spec:
+  chart: oci://ghcr.io/immich-app/immich-charts/immich
+  failurePolicy: abort
+  targetNamespace: apps
+  createNamespace: false
+  version: 0.13.1
+  valuesContent: |-
+    controllers:
+      main:
+        containers:
+          main:
+            securityContext:
+              allowPrivilegeEscalation: false
+            resources:
+              limits:
+                memory: 8Gi
+                infra.local/devices-dri: "1"
+              requests:
+                memory: 128Mi
+                infra.local/devices-dri: "1"
+            env:
+              DB_HOSTNAME: "immich-postgresql"
+              DB_USERNAME: "postgres"
+              DB_DATABASE_NAME: "immich"
+              DB_PASSWORD:
+                valueFrom:
+                  secretKeyRef:
+                    name: immich-db-credentials
+                    key: password
+
+    defaultPodOptions:
+      # Pin everything to srv0: the library PVC is RWO and VAAPI/OpenVINO
+      # need the Iris Xe there. Without this, a RollingUpdate pod can land on
+      # bigpc (PreferNoSchedule only discourages) and deadlock on the PVC.
+      nodeSelector:
+        hostpath-main: "true"
+      securityContext:
+        runAsUser: $MY_UID
+        runAsGroup: $MY_UID
+        fsGroup: $MY_UID
+        # container_t + s0 (verified): SELinux allows container_t the
+        # /dev/dri CDI grant, the external hostPath library read, and the
+        # library PVC; s0 keeps files category-free so server/ML and the
+        # pvc-backup pods can share them.
+        seLinuxOptions:
+          level: s0
+
+    server:
+      controllers:
+        main:
+          containers:
+            main:
+              image:
+                repository: ghcr.io/immich-app/immich-server
+                tag: v3.1.0
+              securityContext:
+                allowPrivilegeEscalation: false
+              env:
+                HWACCEL_VAAPI_ENABLED: "true"
+      persistence:
+        external:
+          type: hostPath
+          hostPath: $MEDIA_DIR_PATH
+          globalMounts:
+            - path: /external
+              readOnly: true
+
+    machine-learning:
+      controllers:
+        main:
+          containers:
+            main:
+              image:
+                repository: ghcr.io/immich-app/immich-machine-learning
+                tag: v3.1.0-openvino
+              securityContext:
+                allowPrivilegeEscalation: false
+              resources:
+                limits:
+                  memory: 8Gi
+                  infra.local/devices-dri: "1"
+                requests:
+                  memory: 128Mi
+                  infra.local/devices-dri: "1"
+      defaultPodOptions:
+        nodeSelector:
+          hostpath-main: "true"
+        securityContext:
+          seLinuxOptions:
+            level: s0
+        # No node affinity/tolerations: bigpc's scheduling-discouraged taint
+        # keeps the pod on srv0; the descheduler evicts any drift. ML runs on
+        # srv0's Iris Xe iGPU via OpenVINO (see tag above).
+
+    immich:
+      persistence:
+        library:
+          existingClaim: immich-library-pvc
+
+    valkey:
+      controllers:
+        main:
+          containers:
+            main:
+              image:
+                repository: docker.io/valkey/valkey
+                tag: "9.1"
+      enabled: true
+---
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: immich-prod-tls
+  namespace: apps
+spec:
+  secretName: immich-prod-tls
+  issuerRef:
+    name: letsencrypt-prod
+    kind: ClusterIssuer
+  dnsNames:
+    - immich.$SERVICES_DOMAIN
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: immich-ingress
+  namespace: apps
+spec:
+  entryPoints:
+    - websecure
+    - websecure-proxy
+  routes:
+    - match: Host(`immich.$SERVICES_DOMAIN`)
+      kind: Rule
+      middlewares:
+        - name: geoblock
+          namespace: base
+        - name: crowdsec-bouncer
+          namespace: base
+        - name: authelia-with-optional-header-gate
+          namespace: base
+      services:
+        - name: immich-server
+          port: 2283
+  tls:
+    secretName: immich-prod-tls
+---
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-immich-db-ingress
+  namespace: apps
+spec:
+  podSelector:
+    matchLabels:
+      app: immich-postgresql
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/instance: immich
+      ports:
+        - port: 5432
+  policyTypes:
+    - Ingress
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-immich-valkey-ingress
+  namespace: apps
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: valkey
+      app.kubernetes.io/instance: immich
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/instance: immich
+      ports:
+        - port: 6379
+  policyTypes:
+    - Ingress
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-immich-ml-ingress
+  namespace: apps
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: machine-learning
+      app.kubernetes.io/instance: immich
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/instance: immich
+      ports:
+        - port: 3003
+  policyTypes:
+    - Ingress
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: immich-db-pvc
+  namespace: apps
+  labels:
+    auto-backup: "true"
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+  storageClassName: longhorn
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: immich-library-pvc
+  namespace: apps
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 50Gi
+  storageClassName: longhorn
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: immich-db-credentials
+  namespace: apps
+type: Opaque
+stringData:
+  password: "$IMMICH_DB_PASSWORD"
+---
+# PostgreSQL with VectorChord extension for Immich smart search
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: immich-postgresql
+  namespace: apps
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: immich-postgresql
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: immich-postgresql
+    spec:
+      securityContext:
+        fsGroup: $MY_UID
+      containers:
+        - name: postgresql
+          image: ghcr.io/immich-app/postgres:18-vectorchord1.1.1-pgvector0.8.5
+          securityContext:
+            allowPrivilegeEscalation: false
+          readinessProbe:
+            exec:
+              command:
+                - pg_isready
+                - -U
+                - postgres
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+            initialDelaySeconds: 15
+          env:
+            - name: POSTGRES_USER
+              value: postgres
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: immich-db-credentials
+                  key: password
+            - name: POSTGRES_DB
+              value: immich
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+            - name: POSTGRES_INITDB_ARGS
+              value: --data-checksums
+          ports:
+            - containerPort: 5432
+          resources:
+            limits:
+              memory: 2Gi
+            requests:
+              memory: 128Mi
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+            - name: dshm
+              mountPath: /dev/shm
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: immich-db-pvc
+        - name: dshm
+          emptyDir:
+            medium: Memory
+            sizeLimit: 5Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: immich-postgresql
+  namespace: apps
+spec:
+  selector:
+    app: immich-postgresql
+  ports:
+    - protocol: TCP
+      port: 5432
+      targetPort: 5432
+{{- end }}

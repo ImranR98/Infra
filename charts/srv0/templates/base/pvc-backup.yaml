@@ -1,0 +1,191 @@
+{{- if .Values.base.enabled }}
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: pvc-backup
+  namespace: base
+spec:
+  schedule: "0 3 * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          serviceAccountName: pvc-backup
+          restartPolicy: Never
+          nodeSelector:
+            hostpath-main: "true"
+          securityContext:
+            runAsUser: 0
+            # spc_t + s0 (not privileged): spc_t covers the repo/backup-dir
+            # hostPath writes under SELinux; s0 keeps file labels stable
+            # across runs (shared-tree pods use pod-level s0 per AGENTS.md).
+            seLinuxOptions:
+              type: spc_t
+              level: s0
+          containers:
+            - name: backup
+              image: bitnami/kubectl:latest@sha256:b29d8c1665b70817259ceecaea16ab27aab6368b48daf485d19436c809067492
+              securityContext:
+                allowPrivilegeEscalation: false
+              env:
+                - name: INFRA_ROOT
+                  value: "$INFRA_ROOT"
+                - name: MY_UID
+                  value: "$MY_UID"
+                - name: PVC_BACKUP_DIR
+                  value: "$PVC_BACKUP_DIR"
+              command:
+                - bash
+                - -c
+                - |
+                  set -eu
+                  bash "$INFRA_ROOT/commands/k3s/backup-pvc.sh" --all -y
+              volumeMounts:
+                - name: infra-repo
+                  mountPath: "$INFRA_ROOT"
+                  readOnly: true
+                - name: backup-dir
+                  mountPath: "$PVC_BACKUP_DIR"
+          volumes:
+            - name: infra-repo
+              hostPath:
+                path: "$INFRA_ROOT"
+                type: Directory
+            - name: backup-dir
+              hostPath:
+                path: "$PVC_BACKUP_DIR"
+                type: DirectoryOrCreate
+      backoffLimit: 2
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: pvc-backup
+  namespace: base
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: pvc-backup
+rules:
+  # Cluster-wide reads only: PVC discovery (auto-backup labels), PV info,
+  # node names (volume placement), Longhorn volumes.
+  - apiGroups: [""]
+    resources: ["persistentvolumeclaims"]
+    verbs: ["get", "list"]
+  - apiGroups: [""]
+    resources: ["persistentvolumes"]
+    verbs: ["get", "list"]
+  - apiGroups: [""]
+    resources: ["nodes"]
+    verbs: ["get"]
+  - apiGroups: ["longhorn.io"]
+    resources: ["volumes"]
+    verbs: ["get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: pvc-backup
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: pvc-backup
+subjects:
+  - kind: ServiceAccount
+    name: pvc-backup
+    namespace: base
+---
+# Pod + PVC mutations are namespace-scoped: backup/restore temp pods and the
+# pvc-backup-dest PVC only ever live in the namespaces that hold auto-backup
+# PVCs (base + apps).
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: pvc-backup
+  namespace: base
+rules:
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["create", "get", "delete", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["pods/log"]
+    verbs: ["get"]
+  - apiGroups: [""]
+    resources: ["persistentvolumeclaims"]
+    verbs: ["get", "list", "create", "delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: pvc-backup
+  namespace: base
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: pvc-backup
+subjects:
+  - kind: ServiceAccount
+    name: pvc-backup
+    namespace: base
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: pvc-backup
+  namespace: apps
+rules:
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["create", "get", "delete", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["pods/log"]
+    verbs: ["get"]
+  - apiGroups: [""]
+    resources: ["persistentvolumeclaims"]
+    verbs: ["get", "list", "create", "delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: pvc-backup
+  namespace: apps
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: pvc-backup
+subjects:
+  - kind: ServiceAccount
+    name: pvc-backup
+    namespace: base
+---
+---
+# Static PV for the shared backup destination. Binds pvc-backup-dest
+# directly to the ROOT of the NFS backups share (nfs-server /exports/backups,
+# which is hostPath $PVC_BACKUP_DIR on the hostpath-main node). Backup pods
+# therefore write human-named archives straight into the final destination
+# from any node — no dynamically provisioned pvc-* subdirs to go missing.
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: pvc-backup-dest-pv
+spec:
+  capacity:
+    storage: 5Gi
+  accessModes:
+    - ReadWriteMany
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: nfs-backup
+  mountOptions:
+    - nfsvers=4.2
+  csi:
+    driver: nfs.csi.k8s.io
+    volumeHandle: backups-root
+    volumeAttributes:
+      server: nfs-server.base.svc.cluster.local
+      share: /backups
+{{- end }}
