@@ -20,36 +20,38 @@ The IaaC system for my homelab and other devices.
 ## Project Goals
 
 - **Infrastructure as Code**: Everything should be declarative and automated, using standard tooling wherever possible. Custom scripts should be minimal and only where necessary.
-- **Single CLI**: `infra` (a thin wrapper over `ansible-playbook`) is the entry point — no inventory anywhere, and the target is **always explicit**: target-selecting ops take it as `infra <target> <op>` (compose/validate/helm/pvc), machine-local ops run on the machine you are on and take no target; a few retained payload scripts run directly on their target (PVC backup/restore, node-IP update).
-- **Security**: As the codebase is public and the system runs public-facing services containing highly personal data, security must be taken seriously.
+- **Single CLI**: `infra` (a thin wrapper over `ansible-playbook`) is the entry point used for all deployment, update, and management tasks.
+- **Security**: As the codebase is public and the system runs public-facing services containing highly personal data, security must be taken seriously. To that end:
+  - **[Authelia](https://www.authelia.com/) SSO** guards every service that needs it.
+  - **[CrowdSec](https://www.crowdsec.net/) automated threat response** guards all public services.
+  - **Geoblocking** is used for services that do not need to be globally accessible.
+  - **mTLS** (as opposed to symmetric token-based encryption) is used to protect the FRP tunnel between `srv0` and `vps0` (this prevents certain kinds of MITM attacks).
+  - **Restrictive network policies** are used in the `srv0` Kubernetes stack to ensure that pod-to-pod communication is only allowed where necessary.
+  - **The Principle of Least Privilege** is applied to containers, with elevated privileges and root runtime user only allowed where necessary. Access to host devices is granted via [CDI](https://docs.docker.com/build/building/cdi/) rather than `privileged: true`.
+  - **WireGuard** is used to encrypt node-to-node communication over the K3s overlay network.
+  - **Regular update checking** is done via [Renovate](https://www.mend.io/renovate/) (updates are applied manually to avoid unplanned changes).
 
 ## Quick start
 
 ```bash
-# Optional one-time: make `infra` available from anywhere
-ln -s ~/Main/Infra/infra ~/bin/infra
-
-# Install prerequisites (Docker, yq, jq, python3, go, ansible-core, helm) — an Ansible playbook
-# (if ansible-playbook itself is missing, bootstrap it first: sudo dnf|apt install ansible-core)
-infra prereqs
+# Install prerequisites (Docker, yq, jq, python3, go, ansible-core, helm)
+./infra prereqs
 
 # Create your variables file from the template (plain YAML, gitignored under secrets/ — no encryption)
 cp targets/<target>/VARS.template.yaml secrets/VARS.<target>.yaml   # then fill in real values
 
 # Validate your configuration (the target is explicit; <target> is e.g. srv0)
-infra <target> validate
+./infra <target> validate
 
 # Deploy compose / k3s — compose ops must run ON the target machine;
 # helm ops target the machine whose k3s chart you mean
-infra <target> compose-install
-infra <target> helm base
-infra <target> helm apps
+./infra <target> compose-install
+./infra <target> helm base
+./infra <target> helm apps
 
 # Check for updates (opens Renovate PRs on GitHub) — machine-local
-infra renovate
+./infra renovate
 ```
-
-Extra args ride after the op (`infra vps0 validate -e ...`; `--check` dry-runs everything). Raw `ansible-playbook` works the same from the repo root (the root `ansible.cfg` is auto-discovered there); target-selecting playbooks require `-e target=<t>`, machine-local ones take none.
 
 ## More
 

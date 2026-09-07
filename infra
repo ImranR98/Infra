@@ -19,6 +19,32 @@ _die() {
     exit 1
 }
 
+# Every op needs ansible-playbook; prereqs bootstraps it, everything else
+# just points at prereqs.
+_ensure_ansible() {
+    if ! command -v ansible-playbook >/dev/null 2>&1; then
+        echo "infra: ansible-playbook not found — run 'infra prereqs' to bootstrap it" >&2
+        exit 1
+    fi
+}
+
+# Install ansible-core via the package manager when missing (the one op that
+# must work without ansible).
+_bootstrap_ansible() {
+    command -v ansible-playbook >/dev/null 2>&1 && return 0
+    local su=()
+    [ "$(id -u)" -eq 0 ] || su=(sudo)
+    if command -v dnf >/dev/null 2>&1; then
+        "${su[@]}" dnf install -y ansible-core
+    elif command -v apt-get >/dev/null 2>&1; then
+        "${su[@]}" apt-get update -y
+        "${su[@]}" apt-get install -y ansible-core
+    else
+        _die "neither dnf nor apt-get found — install ansible-core manually, then re-run"
+    fi
+    command -v ansible-playbook >/dev/null 2>&1 || _die "ansible-core installed but ansible-playbook not on PATH — log out/in or restart the shell"
+}
+
 # Become'd playbooks (docker tasks, package installs) need root; add -K unless
 # sudo is already passwordless or the caller passed it.
 _sudo_needed() {
@@ -35,6 +61,7 @@ _sudo_needed() {
 _root_run() {
     local pb="$1"
     shift
+    _ensure_ansible
     if _sudo_needed "$@"; then
         set -- -K "$@"
     fi
@@ -42,6 +69,7 @@ _root_run() {
 }
 
 _run() {
+    _ensure_ansible
     exec ansible-playbook "$@"
 }
 
@@ -107,6 +135,7 @@ EOF
 case "${1:-}" in
     prereqs)
         shift
+        _bootstrap_ansible
         _root_run ansible/playbooks/prereqs.yaml "$@"
         exit
         ;;
