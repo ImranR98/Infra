@@ -1,0 +1,50 @@
+---
+# compose_restart.yaml — re-render templates and restart one Compose service.
+# Usage: ansible-playbook ansible/playbooks/compose_restart.yaml \
+#          -l <target> -e compose_service=<svc>
+- name: Restart compose service
+  hosts: all
+  gather_facts: true
+
+  vars:
+    infra_root: "{{ playbook_dir }}/../.."
+
+  tasks:
+    - name: Service name required
+      ansible.builtin.assert:
+        that: compose_service | default('') | length > 0
+        fail_msg: "No service specified. Usage: ansible-playbook compose_restart.yaml -l <target> -e compose_service=<svc>"
+
+    - name: Detect optional files
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      loop:
+        - "{{ infra_root }}/targets/{{ inventory_hostname }}/VARS.template.yaml"
+        - "{{ infra_root }}/targets/{{ inventory_hostname }}/compose/compose.private.yaml"
+      register: _optional
+
+    - name: Set availability facts
+      ansible.builtin.set_fact:
+        compose_has_vars_template: "{{ _optional.results[0].stat.exists }}"
+        compose_private_exists: "{{ _optional.results[1].stat.exists }}"
+
+    - name: Compose render + environment
+      ansible.builtin.include_role:
+        name: compose
+      vars:
+        compose_infra_root: "{{ infra_root }}"
+
+    - name: Stop service
+      ansible.builtin.command:
+        cmd: docker compose -p {{ inventory_hostname }} {{ compose_files | join(' ') }} down "{{ compose_service }}"
+      environment: "{{ compose_env }}"
+      failed_when: false
+      changed_when: true
+      become: true  # docker socket is sudo-only on the nodes (see AGENTS.md)
+
+    - name: Start service
+      ansible.builtin.command:
+        cmd: docker compose -p {{ inventory_hostname }} {{ compose_files | join(' ') }} up -d "{{ compose_service }}"
+      environment: "{{ compose_env }}"
+      changed_when: true
+      become: true

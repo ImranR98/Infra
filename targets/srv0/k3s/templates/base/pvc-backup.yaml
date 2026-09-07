@@ -43,7 +43,7 @@ spec:
                 - -c
                 - |
                   set -eu
-                  bash "{{ .Values.INFRA_ROOT }}/targets/srv0/commands/backup-pvc.sh" --all -y
+                  bash "{{ .Values.INFRA_ROOT }}/targets/srv0/pvc.sh" backup --all -y
               volumeMounts:
                 - name: infra-repo
                   mountPath: "{{ .Values.INFRA_ROOT }}"

@@ -1,0 +1,12 @@
+---
+# Install system prerequisites: packages, Docker (official bootstrap), and the
+# Ansible collections/roles.
+# Usage: ansible-playbook ansible/playbooks/prereqs.yaml  (run on the machine
+# to prepare; bootstraps ansible-core via the package manager first when missing).
+- name: Install system prerequisites
+  hosts: localhost
+  connection: local
+  gather_facts: true
+  become: true
+  roles:
+    - prereqs
