@@ -1,11 +1,11 @@
 # values.yaml — committed defaults: release-scope gates + machine-independent
 # built-ins. All secrets and target-specific config live in the gitignored
-# secrets/VARS.srv0.yml (passed as a later -f, so it wins on conflicts).
+# secrets/VARS.srv0.yaml (passed as a later -f, so it wins on conflicts).
 base:
   enabled: true
 apps:
   enabled: true
 
-# Non-root pod UID used across templates (computed by lib/common.sh in the old
+# Non-root pod UID used across templates (computed by scripts/common.sh in the old
 # envsubst pipeline; 1000 is the repo-wide convention).
 MY_UID: 1000

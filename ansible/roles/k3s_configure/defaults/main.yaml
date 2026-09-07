@@ -1,0 +1,13 @@
+---
+# Post-install node configuration, applied from the control plane via kubectl.
+# k3s_node_name is the cluster node name to configure (defaults to the local
+# hostname for server bootstrap; k3s_join.yaml overrides it with the name
+# resolved from the joining node's IP). k3s_joined marks nodes provisioned via
+# the join path — they get the flag-driven treatment (like the old join
+# prompts) even when joining as a server role.
+k3s_node_name: "{{ ansible_hostname }}"
+k3s_role: server
+k3s_joined: false
+k3s_amdgpu_mode: auto
+k3s_scheduling_discouraged: false
+k3s_longhorn_replicas: false

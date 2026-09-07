@@ -1,0 +1,20 @@
+---
+# Run Renovate against ImranR98/Infra — opens update PRs on GitHub.
+# Needs RENOVATE_GITHUB_TOKEN in secrets/VARS.env (gitignored); node/npm and go
+# for gomod updates (see scripts/renovate.sh). srv0 runs Renovate
+# automatically via the renovate CronJob; use this for on-demand runs.
+# Usage: ansible-playbook ansible/playbooks/renovate.yaml [-e renovate_args="--dry-run"]
+- name: Run Renovate
+  hosts: localhost
+  connection: local
+  gather_facts: false
+
+  vars:
+    infra_root: "{{ playbook_dir }}/../.."
+
+  tasks:
+    - name: Run the Renovate runner script
+      ansible.builtin.command: bash {{ infra_root }}/scripts/renovate.sh {{ renovate_args | default('') }}
+      environment:
+        INFRA_ROOT: "{{ infra_root }}"
+      changed_when: true

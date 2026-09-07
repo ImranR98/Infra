@@ -17,3 +17,5 @@ targets/*/compose/compose.private.yaml
 /.stfolder/
 /.stignore
 /.backup-state-Infra_Compose_State.json
+# Syncthing temp files
+**/.syncthing*
