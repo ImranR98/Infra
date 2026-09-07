@@ -129,6 +129,11 @@
         - item.state == 'file'
         - item.path.endswith('.plain')
 
+- name: Check for traefik templates
+  ansible.builtin.stat:
+    path: "{{ target_dir }}/compose/templates/traefik"
+  register: _traefik_templates
+
 - name: Seed traefik acme.json (first run only)
   ansible.builtin.copy:
     content: "{}"
@@ -137,6 +142,7 @@
     owner: "{{ MY_UID }}"
     group: "{{ MY_UID }}"
     force: false
+  when: _traefik_templates.stat.exists
 
 - name: Compose file list
   ansible.builtin.set_fact:
