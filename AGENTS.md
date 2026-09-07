@@ -4,7 +4,7 @@ Infra is an Ansible-driven IaC repo for a multi-machine homelab. Ansible is the 
 
 ## Prerequisites
 
-Bash 4+, Python 3, Docker Compose v2, kubectl (K3s targets), helm (srv0), yq, jq, curl, openssl, python3. Ansible core + the `ansible.posix`/`community.general` collections + the `githubixx.ansible_role_wireguard` role (all in `ansible/requirements.yaml`). Node.js/npm and `go` for local `renovate` runs (npx + gomod manager). Dev-only: `shellcheck`, `ansible-lint`, `yamllint`. Install everything: `ansible-playbook ansible/playbooks/prereqs.yaml` on the machine to prepare — if ansible-core itself is missing, bootstrap it first (`sudo dnf|apt install ansible-core`), then re-run; the playbook installs packages, the pinned helm binary, the official Docker bootstrap, and the collections/roles declaratively.
+Bash 4+, Python 3, Docker Compose v2, kubectl (K3s targets), helm (srv0), yq, jq, curl, openssl, python3. Ansible core + the `ansible.posix`/`community.general` collections + the `githubixx.ansible_role_wireguard` role (all in `ansible/requirements.yaml`). Node.js/npm and `go` for local `renovate` runs (npx + gomod manager). Dev-only: `shellcheck`, `ansible-lint`, `yamllint`. Install everything: `infra prereqs` on the machine to prepare (bootstraps ansible-core via the package manager first if ansible-playbook is missing); the playbook installs packages, the pinned helm binary, the official Docker bootstrap, and the collections/roles declaratively.
 
 ## Targets
 
