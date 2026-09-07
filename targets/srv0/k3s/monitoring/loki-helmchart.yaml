@@ -11,6 +11,12 @@ spec:
   targetNamespace: base
   createNamespace: false
   version: 7.3.0
+  # S3 keys live in base/loki-values via loki-values-secret.yaml (merged as a
+  # later values file) so this CR stays free of plaintext secrets.
+  valuesSecrets:
+    - name: loki-values
+      keys:
+        - values.yaml
   valuesContent: |-
     deploymentMode: SingleBinary
     singleBinary:
@@ -60,8 +66,6 @@ spec:
         s3:
           endpoint: rustfs-svc.base.svc.cluster.local:9000
           region: us-east-1
-          accessKeyId: "$RUSTFS_ACCESS_KEY"
-          secretAccessKey: "$RUSTFS_SECRET_KEY"
           s3ForcePathStyle: true
           insecure: true
       compactor:

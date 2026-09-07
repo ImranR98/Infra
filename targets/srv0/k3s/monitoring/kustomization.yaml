@@ -5,6 +5,7 @@ resources:
   - helmchart.yaml
   - mimir.yaml
   - loki-helmchart.yaml
+  - loki-values-secret.yaml
   - promtail-helmchart.yaml
   - ingress.yaml
   - prereqs.yaml
