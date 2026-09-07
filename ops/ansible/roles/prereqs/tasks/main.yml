@@ -15,46 +15,6 @@
     name: "{{ prereqs_apt_packages if ansible_pkg_mgr == 'apt' else prereqs_dnf_packages }}"
     state: present
 
-- name: Check for the task binary
-  ansible.builtin.stat:
-    path: /usr/local/bin/task
-  register: prereqs_task_bin
-
-- name: Download the task release
-  ansible.builtin.get_url:
-    url: "{{ prereqs_task_url }}"
-    dest: /tmp/task.tar.gz
-    mode: "0644"
-  vars:
-    prereqs_task_arch: "{{ 'arm64' if ansible_architecture == 'aarch64' else 'amd64' }}"
-    prereqs_task_url: >-
-      https://github.com/go-task/task/releases/download/v{{ prereqs_task_version }}/task_linux_{{ prereqs_task_arch }}.tar.gz
-  when: not prereqs_task_bin.stat.exists
-
-- name: Extract the task release
-  ansible.builtin.unarchive:
-    src: /tmp/task.tar.gz
-    dest: /tmp
-    remote_src: true
-  when: not prereqs_task_bin.stat.exists
-
-- name: Install the task binary
-  ansible.builtin.copy:
-    src: /tmp/task
-    dest: /usr/local/bin/task
-    mode: "0755"
-    remote_src: true
-  when: not prereqs_task_bin.stat.exists
-
-- name: Clean up task downloads
-  ansible.builtin.file:
-    path: "{{ item }}"
-    state: absent
-  loop:
-    - /tmp/task.tar.gz
-    - /tmp/task
-  changed_when: false
-
 - name: Check for the helm binary
   ansible.builtin.stat:
     path: /usr/local/bin/helm
@@ -126,7 +86,7 @@
   ansible.builtin.shell: |
     set -o pipefail
     missing=0
-    for tool in task helm docker yq envsubst jq curl python3 go openssl shellcheck ansible-lint yamllint ansible-playbook; do
+    for tool in helm docker yq jq curl python3 go openssl shellcheck ansible-lint yamllint ansible-playbook; do
       if command -v "$tool" >/dev/null 2>&1; then
         echo "  [OK] $tool"
       else

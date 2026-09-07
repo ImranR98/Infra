@@ -1,8 +1,8 @@
 ---
 # Cluster policy defaults for K3s node preparation. These are deliberately
-# identical to the values the previous bash provisioning (commands/k3s/setup.sh
+# identical to the values the previous bash provisioning (setup.sh era)
 # and join.sh) hardcoded. Nothing host-specific lives here — per-run values
-# (role, IP, user, node options) come from `task srv0:k3s:provision` arguments.
+# (role, IP, user, node options) come from extra vars on k3s_server.yml / k3s_join.yml.
 
 k3s_role: agent
 

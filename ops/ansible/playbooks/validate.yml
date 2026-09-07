@@ -1,12 +1,12 @@
 ---
 # validate.yml — config validation for one target (yq, compose config, helm).
-# Usage: ansible-playbook validate.yml -i ops/ansible/inventory.yml -l <target>
+# Usage: ansible-playbook ops/ansible/playbooks/validate.yml -l <target>
 - name: Validate configs
   hosts: all
   gather_facts: true
 
   vars:
-    infra_root: "{{ lookup('env', 'INFRA_ROOT') }}"
+    infra_root: "{{ playbook_dir }}/../../.."
     target_dir: "{{ infra_root }}/targets/{{ inventory_hostname }}"
 
   pre_tasks:
@@ -14,10 +14,10 @@
       ansible.builtin.stat:
         path: "{{ item }}"
       loop:
-        - "{{ infra_root }}/targets/{{ inventory_hostname }}/VARS.template.env"
+        - "{{ target_dir }}/VARS.template.env"
         - "{{ target_dir }}/compose/compose.yaml"
-        - "{{ infra_root }}/targets/{{ inventory_hostname }}/k3s"
-        - "{{ infra_root }}/secrets/values.srv0.yaml"
+        - "{{ target_dir }}/k3s"
+        - "{{ infra_root }}/secrets/values.{{ inventory_hostname }}.yaml"
         - "{{ infra_root }}/secrets/VARS.{{ inventory_hostname }}.env"
         - "{{ infra_root }}/secrets/VARS.env"
         - "{{ infra_root }}/VARS.{{ inventory_hostname }}.env"
@@ -75,24 +75,24 @@
       failed_when: false
       when: _compose_yaml
 
-    - name: Helm lint (srv0 chart)
+    - name: Helm lint (per-target k3s chart)
       ansible.builtin.shell: |
         errs=0
-        helm lint "{{ infra_root }}/targets/srv0/k3s" -f "{{ infra_root }}/targets/srv0/k3s/values.yaml" \
-          {% if _secret_values %}-f "{{ infra_root }}/secrets/values.srv0.yaml"{% endif %} >/dev/null 2>&1 \
+        helm lint "{{ target_dir }}/k3s" -f "{{ target_dir }}/k3s/values.yaml" \
+          {% if _secret_values %}-f "{{ infra_root }}/secrets/values.{{ inventory_hostname }}.yaml"{% endif %} >/dev/null 2>&1 \
           || { echo "ERROR: helm lint failed"; errs=1; }
         exit $errs
       changed_when: false
       when: _k3s_chart
 
-    - name: Helm template (srv0 chart, both scopes)
+    - name: Helm template (per-target k3s chart, both scopes)
       ansible.builtin.shell: |
         errs=0
         for scope in base apps; do
           if [ "$scope" = base ]; then other=apps; else other=base; fi
-          out=$(helm template "srv0-$scope" "{{ infra_root }}/targets/srv0/k3s" -n "$scope" \
-            -f "{{ infra_root }}/targets/srv0/k3s/values.yaml" \
-            {% if _secret_values %}-f "{{ infra_root }}/secrets/values.srv0.yaml"{% endif %} \
+          out=$(helm template "{{ inventory_hostname }}-$scope" "{{ target_dir }}/k3s" -n "$scope" \
+            -f "{{ target_dir }}/k3s/values.yaml" \
+            {% if _secret_values %}-f "{{ infra_root }}/secrets/values.{{ inventory_hostname }}.yaml"{% endif %} \
             --set "$other.enabled=false" 2>&1) || { echo "ERROR: helm template ($scope) failed"; errs=1; continue; }
           if echo "$out" | grep -q '<no value>'; then
             echo "ERROR: helm template ($scope) rendered missing values (<no value>)"; errs=1
@@ -102,11 +102,11 @@
       changed_when: false
       when: _k3s_chart
 
-    - name: Placeholder check (srv0 helm secret values)
+    - name: Placeholder check (helm secret values)
       ansible.builtin.shell: |
-        if grep -qE 'change_me|changeme|REPLACE_ME|^[^#]*"[^"]*<[^>]*>[^"]*"' "{{ infra_root }}/secrets/values.srv0.yaml"; then
-          echo "ERROR: secrets/values.srv0.yaml contains placeholder values"; exit 1
+        if grep -qE 'change_me|changeme|REPLACE_ME|^[^#]*"[^"]*<[^>]*>[^"]*"' "{{ infra_root }}/secrets/values.{{ inventory_hostname }}.yaml"; then
+          echo "ERROR: secrets/values.{{ inventory_hostname }}.yaml contains placeholder values"; exit 1
         fi
-        echo "OK: secrets/values.srv0.yaml"
+        echo "OK: secrets/values.{{ inventory_hostname }}.yaml"
       changed_when: false
       when: _k3s_chart and _secret_values

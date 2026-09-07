@@ -1,0 +1,28 @@
+---
+# Install the preboot crypt-ssh initramfs module for remote LUKS unlock (bigpc):
+# dropbear SSH on the LAN, patched to preboot_port (ethernet only).
+# Usage: ansible-playbook targets/bigpc/playbooks/preboot.yml
+- name: Preboot crypt-ssh (bigpc)
+  hosts: bigpc
+  gather_facts: true
+
+  vars:
+    infra_root: "{{ playbook_dir }}/../../.."
+    preboot_user: "{{ ansible_env.SUDO_USER | default(ansible_user_id) }}"
+
+  tasks:
+    - name: Must run on bigpc
+      ansible.builtin.assert:
+        that: ansible_hostname == inventory_hostname
+        fail_msg: "Running on '{{ ansible_hostname }}' but this playbook targets {{ inventory_hostname }} — run it on that machine."
+
+    - name: Install the crypt-ssh preboot initramfs module
+      ansible.builtin.include_role:
+        name: preboot
+      vars:
+        preboot_module: crypt-ssh
+        preboot_infra_root: "{{ infra_root }}"
+
+    - name: Reminder
+      ansible.builtin.debug:
+        msg: "Preboot crypt-ssh installed — on the next boot an SSH server starts before root is mounted on :8887 (direct LAN)."

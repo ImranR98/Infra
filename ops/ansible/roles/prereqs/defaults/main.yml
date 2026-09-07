@@ -2,7 +2,6 @@
 # Package lists per distribution. Installed via the `package` module, so the
 # tasks stay declarative and idempotent (package presence is checked by the
 # module, not by `command -v` loops).
-prereqs_task_version: 3.53.1
 prereqs_helm_version: 3.17.3
 
 prereqs_apt_packages:
@@ -12,7 +11,6 @@ prereqs_apt_packages:
   - python3
   - golang-go
   - openssl
-  - gettext-base
   - python3-dotenv
   - shellcheck
   - ansible-lint
@@ -25,7 +23,6 @@ prereqs_dnf_packages:
   - python3
   - golang
   - openssl
-  - gettext
   - python3-dotenv
   - shellcheck
   - ansible-lint

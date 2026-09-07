@@ -1,18 +1,23 @@
 ---
 # Compose role: render templates (jinja2), stage the environment for
 # docker-compose native interpolation, create host dirs, and run `docker compose`.
-# Replaces commands/compose/install.sh + restart.sh + lib/compose.sh.
+# Replaces the old bash compose render pipeline.
 
 - name: Hostname matches selected target
   ansible.builtin.assert:
     that: ansible_hostname == inventory_hostname
     fail_msg: "Refusing: running on host '{{ ansible_hostname }}' but target is '{{ inventory_hostname }}'"
 
+- name: compose_infra_root required
+  ansible.builtin.assert:
+    that: compose_infra_root | default('') | length > 0
+    fail_msg: "compose_infra_root not set — include this role from a playbook that passes it"
+
 - name: Set local facts
   ansible.builtin.set_fact:
-    infra_root: "{{ (compose_infra_root | default('')) or lookup('env', 'INFRA_ROOT') }}"
-    compose_state_dir: "{{ (compose_infra_root | default('')) or lookup('env', 'INFRA_ROOT') }}/current_target/compose_live_state"
-    target_dir: "{{ (compose_infra_root | default('')) or lookup('env', 'INFRA_ROOT') }}/targets/{{ inventory_hostname }}"
+    infra_root: "{{ compose_infra_root }}"
+    compose_state_dir: "{{ compose_infra_root }}/current_target/compose_live_state"
+    target_dir: "{{ compose_infra_root }}/targets/{{ inventory_hostname }}"
 
 - name: Resolve docker group id
   ansible.builtin.shell: "getent group docker | cut -d: -f3"

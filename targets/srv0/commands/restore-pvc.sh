@@ -3,6 +3,8 @@
 set -euo pipefail
 
 source "$INFRA_ROOT/lib/common.sh"
+# pvc.sh is target-specific (srv0 k3s cluster) — sourced directly, not via common.sh.
+source "$INFRA_ROOT/targets/srv0/commands/pvc.sh"
 
 ALL_MODE=false
 if [ "${1:-}" = "--all" ]; then

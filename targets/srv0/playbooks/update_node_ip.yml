@@ -1,0 +1,31 @@
+---
+# Update the K3s node IP on srv0 after a network change. Runs the retained bash
+# implementation (targets/srv0/commands/update-node-ip.sh) — the etcd
+# member/peer-URL updates and the Type=notify no-block restart dance are
+# deliberately kept as-is (see AGENTS.md).
+# Usage: ansible-playbook targets/srv0/playbooks/update_node_ip.yml \
+#          [-e update_node_ip=192.168.1.51] [-e update_node_ip_force=true]
+- name: Update the K3s node IP
+  hosts: srv0
+  gather_facts: true
+
+  vars:
+    infra_root: "{{ playbook_dir }}/../../.."
+
+  tasks:
+    - name: Must run on srv0
+      ansible.builtin.assert:
+        that: ansible_hostname == inventory_hostname
+        fail_msg: "Running on '{{ ansible_hostname }}' but this playbook targets {{ inventory_hostname }} — run it on that machine."
+
+    - name: Run the node IP update script
+      ansible.builtin.command:
+        cmd: >-
+          bash {{ infra_root }}/targets/srv0/commands/update-node-ip.sh
+          {{ ('--ip ' ~ update_node_ip) if update_node_ip | default('') | length > 0 else '' }}
+          {{ '--force' if update_node_ip_force | default(false) | bool else '' }}
+      environment:
+        TARGET: srv0
+        INFRA_ROOT: "{{ infra_root }}"
+        INFRA_INTERACTIVE: "false"
+      changed_when: true
