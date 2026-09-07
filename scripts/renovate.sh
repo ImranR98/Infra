@@ -24,7 +24,7 @@ if [ -z "${RENOVATE_GITHUB_TOKEN:-}" ]; then
 fi
 
 # The gomod manager (WASM plugin) needs a Go toolchain when an update is
-# pending — install it with: task <target>:prereqs
+# pending — install it with ansible-playbook ansible/playbooks/prereqs.yaml.
 if ! command -v go >/dev/null 2>&1; then
     echo "Warning: 'go' not found — pending gomod updates will crash the run." >&2
     echo "Install with: ansible-playbook ansible/playbooks/prereqs.yaml (or let the in-cluster renovate CronJob handle it)." >&2

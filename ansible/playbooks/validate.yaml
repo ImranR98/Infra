@@ -31,35 +31,18 @@
         _vars_file: "{{ _stats.results[3].stat.exists }}"
 
   tasks:
-    - name: Include VARS template (key list)
-      ansible.builtin.include_vars:
-        file: "{{ target_dir }}/VARS.template.yaml"
-        name: template_vars
+    - name: Load and validate VARS (template + secrets)
+      ansible.builtin.include_tasks:
+        file: "{{ playbook_dir }}/../roles/compose/tasks/vars.yaml"
+      vars:
+        secrets_vars_file: "{{ infra_root }}/secrets/VARS.{{ target }}.yaml"
       when: _vars_tpl and _vars_file
 
-    - name: Include VARS (dict)
+    - name: Include VARS (dict; no template for this target)
       ansible.builtin.include_vars:
         file: "{{ infra_root }}/secrets/VARS.{{ target }}.yaml"
         name: secret_vars
-      when: _vars_file
-
-    - name: VARS completeness
-      ansible.builtin.assert:
-        that: template_vars.keys() | difference(secret_vars.keys()) | length == 0
-        fail_msg: >-
-          secrets/VARS.{{ target }}.yaml is missing required
-          variables: {{ template_vars.keys() | difference(secret_vars.keys()) }}
-      when: _vars_tpl and _vars_file
-
-    - name: VARS placeholders
-      ansible.builtin.assert:
-        that: "not (_v is string and (_v | trim in _placeholders or _v is regex('^<.*>$')))"
-        fail_msg: "secrets/VARS.{{ target }}.yaml: '{{ item }}' has a placeholder value"
-      loop: "{{ secret_vars.keys() | list }}"
-      when: _vars_tpl and _vars_file
-      vars:
-        _v: "{{ secret_vars[item] }}"
-        _placeholders: ["change_me", "changeme", "abc", "REPLACE_ME"]
+      when: _vars_file and not _vars_tpl
 
     - name: Compose check env
       ansible.builtin.set_fact:

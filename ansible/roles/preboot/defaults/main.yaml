@@ -3,3 +3,4 @@
 preboot_module: frpc     # frpc (initramfs frpc tunnel via FRPS) or crypt-ssh (direct-LAN dropbear)
 preboot_infra_root: ""   # repo root, passed by the calling playbook
 preboot_port: "8887"     # crypt-ssh variant: initramfs SSH listen port (direct LAN)
+preboot_work_dir: /tmp/dracut-remote-luks-unlock

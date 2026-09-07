@@ -23,21 +23,6 @@
           preboot_module required: -e preboot_module=frpc (tunnel via FRPS)
           or -e preboot_module=crypt-ssh (direct-LAN dropbear).
 
-    - name: Stat frpc compose inputs
-      ansible.builtin.stat:
-        path: "{{ item }}"
-      loop:
-        - "{{ infra_root }}/targets/{{ target }}/VARS.template.yaml"
-        - "{{ infra_root }}/targets/{{ target }}/compose/compose.private.yaml"
-      register: _compose_inputs
-      when: preboot_module == 'frpc'
-
-    - name: Set compose availability facts
-      ansible.builtin.set_fact:
-        compose_has_vars_template: "{{ _compose_inputs.results[0].stat.exists }}"
-        compose_private_exists: "{{ _compose_inputs.results[1].stat.exists }}"
-      when: preboot_module == 'frpc'
-
     - name: Render the frpc compose templates (mTLS certs for the initramfs)
       ansible.builtin.include_role:
         name: compose
@@ -57,4 +42,4 @@
         msg: >-
           Preboot {{ preboot_module }} installed — on the next boot, LUKS
           unlock runs before root is mounted (frpc: via FRPS, crypt-ssh:
-          direct LAN :{{ preboot_port | default('8887') }}).
+          direct LAN dropbear SSH).

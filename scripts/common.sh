@@ -1,6 +1,6 @@
 #!/bin/bash
-# scripts/common.sh — env bootstrap + shared helpers (retry/_confirm/
-# get_sudo_cmd/get_node_ip/wait_for_k3s_cluster) for the retained bash scripts.
+# scripts/common.sh — env bootstrap + shared helpers (_confirm/get_sudo_cmd/
+# get_node_ip/wait_for_k3s_cluster) for the retained bash scripts.
 [[ "${INFRA_LIB_LOADED:-}" = true ]] && return 0
 INFRA_LIB_LOADED=true
 
@@ -14,26 +14,11 @@ if [ -z "${INFRA_ROOT:-}" ]; then
 fi
 export INFRA_ROOT
 [ -n "${COMPOSE_STATE_DIR:-}" ] || export COMPOSE_STATE_DIR="$INFRA_ROOT/current_target/compose_live_state"
-[ -n "${COMPOSE_STATE_BACKUP_DIR:-}" ] || export COMPOSE_STATE_BACKUP_DIR="$INFRA_ROOT/compose_state_backups"
-[ -n "${K3S_STATE_DIR:-}" ] || export K3S_STATE_DIR="$INFRA_ROOT/current_target/k3s_live_state"
 [ -n "${PVC_BACKUP_DIR:-}" ] || export PVC_BACKUP_DIR="$INFRA_ROOT/k3s_state_backups"
 if [ -z "${INFRA_INTERACTIVE:-}" ]; then
     if [ -t 0 ]; then export INFRA_INTERACTIVE=true; else export INFRA_INTERACTIVE=false; fi
 fi
 export TARGET="${TARGET:-}"
-
-# Retry a shell command string with configurable tries and delay
-# args: tries delay command-string
-retry() {
-    local tries="${1:-30}"
-    local delay="${2:-5}"
-    shift 2
-    for ((_=0; _<tries; _++)); do
-        eval "$@" 2>/dev/null && return 0
-        sleep "$delay"
-    done
-    return 1
-}
 
 _confirm() {
     local prompt="${1:-Proceed?}" yn

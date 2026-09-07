@@ -16,19 +16,6 @@
         that: compose_service | default('') | length > 0
         fail_msg: "No service specified. Usage: ansible-playbook compose_restart.yaml -e compose_service=<svc>"
 
-    - name: Detect optional files
-      ansible.builtin.stat:
-        path: "{{ item }}"
-      loop:
-        - "{{ infra_root }}/targets/{{ target }}/VARS.template.yaml"
-        - "{{ infra_root }}/targets/{{ target }}/compose/compose.private.yaml"
-      register: _optional
-
-    - name: Set availability facts
-      ansible.builtin.set_fact:
-        compose_has_vars_template: "{{ _optional.results[0].stat.exists }}"
-        compose_private_exists: "{{ _optional.results[1].stat.exists }}"
-
     - name: Compose render + environment
       ansible.builtin.include_role:
         name: compose
