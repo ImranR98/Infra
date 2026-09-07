@@ -156,7 +156,6 @@
 # it here keeps them owned by $MY_UID so containers can write.
 - name: Resolve host bind dirs from compose config
   ansible.builtin.shell: |
-    set -o pipefail
     docker compose {{ compose_files | join(' ') }} config --format yaml 2>/dev/null |
       yq -r '.services[] | select(.volumes) | .volumes[] | (.source? // .) | split(":") | .[0]' |
       grep -F "{{ compose_state_dir }}/" || true

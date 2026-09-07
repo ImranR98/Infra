@@ -6,7 +6,6 @@
 #                     preboot_port (ethernet only)
 - name: Check whether the root partition is LUKS-encrypted
   ansible.builtin.shell: |
-    set -o pipefail
     root_src=$(findmnt -n -o SOURCE /sysroot 2>/dev/null | sed 's/\[.*//')
     [ -n "$root_src" ] || root_src=$(findmnt -n -o SOURCE / 2>/dev/null | sed 's/\[.*//')
     [ -n "$root_src" ] && [ -b "$root_src" ] && lsblk -s -o TYPE "$root_src" | grep -q crypt
