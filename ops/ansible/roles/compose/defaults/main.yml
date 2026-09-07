@@ -1,3 +1,4 @@
 ---
 # roles/compose/defaults/main.yml
-compose_infra_root: "{{ lookup('env', 'INFRA_ROOT') }}"
+# Passed by the calling playbook (playbook_dir-derived repo root).
+compose_infra_root: ""

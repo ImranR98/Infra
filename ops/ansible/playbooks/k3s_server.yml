@@ -1,6 +1,6 @@
 ---
 # Bootstrap this machine as the K3s control plane (cluster-init).
-# Run via `task srv0:k3s:provision` ON the node being provisioned.
+# Usage: ansible-playbook ops/ansible/playbooks/k3s_server.yml  (run ON the node, no args)
 - name: Bootstrap the K3s control-plane node
   hosts: localhost
   connection: local

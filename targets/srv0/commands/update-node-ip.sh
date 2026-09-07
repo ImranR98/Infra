@@ -162,7 +162,4 @@ if [ -n "$node_name" ]; then
     fi
 fi
 
-echo "Re-applying network policies with updated API server subnet..."
-bash "$INFRA_ROOT/commands/k3s/deploy.sh" namespaces apply
-
 echo "Done. K3s node IP updated to $new_ip."

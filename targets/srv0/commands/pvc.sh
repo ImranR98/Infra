@@ -1,5 +1,5 @@
 # shellcheck shell=bash
-# lib/pvc.sh — shared PVC backup/restore utilities
+# targets/srv0/commands/pvc.sh — PVC backup/restore utilities (srv0 k3s cluster)
 # Sourced by lib/common.sh. All functions take explicit parameters.
 
 # pvc_find_namespace <pvc-name> → namespace (stdout)

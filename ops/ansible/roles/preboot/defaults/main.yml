@@ -1,0 +1,5 @@
+---
+# roles/preboot/defaults/main.yml
+preboot_module: frpc     # frpc (srv0: initramfs frpc → FRPS:8887) or crypt-ssh (bigpc: direct LAN)
+preboot_infra_root: ""   # repo root, passed by the calling playbook
+preboot_port: "8887"     # bigpc crypt-ssh: initramfs SSH listen port (direct LAN)

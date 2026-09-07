@@ -46,7 +46,6 @@ _confirm() {
 source "$_lib_dir/pkg.sh"
 source "$_lib_dir/net.sh"
 source "$_lib_dir/k3s.sh"
-source "$_lib_dir/pvc.sh"
 
 # ---- Target mode guards ------------------------------------------------------
 if [ -n "$TARGET" ]; then

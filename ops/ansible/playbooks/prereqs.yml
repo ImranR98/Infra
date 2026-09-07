@@ -1,8 +1,8 @@
 ---
 # Install system prerequisites: packages, the pinned Task binary, Docker
-# (official bootstrap), and the Ansible collections. Run via `task prereqs`
-# (or `bash commands/prereqs.sh` when task itself is missing — the wrapper
-# bootstraps ansible-core first, so this playbook can assume it exists).
+# (official bootstrap), and the Ansible collections.
+# Usage: ansible-playbook ops/ansible/playbooks/prereqs.yml  (run on the machine
+# to prepare; bootstraps ansible-core via the package manager first when missing).
 - name: Install system prerequisites
   hosts: localhost
   connection: local

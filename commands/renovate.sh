@@ -27,7 +27,7 @@ fi
 # pending — install it with: task <target>:prereqs
 if ! command -v go >/dev/null 2>&1; then
     echo "Warning: 'go' not found — pending gomod updates will crash the run." >&2
-    echo "Install with: task <target>:prereqs (or let the srv0 renovate CronJob handle it)." >&2
+    echo "Install with: ansible-playbook ops/ansible/playbooks/prereqs.yml (or let the srv0 renovate CronJob handle it)." >&2
 fi
 
 export RENOVATE_TOKEN="$RENOVATE_GITHUB_TOKEN"

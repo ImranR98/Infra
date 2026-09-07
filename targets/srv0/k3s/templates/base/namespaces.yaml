@@ -82,9 +82,6 @@ spec:
 # System namespace. Allow DNS from all namespaces, Traefik ingress,
 # and the cert-manager webhook.
 #
-# NOTE: After a node IP change, this component must be re-applied to refresh
-# network policies. See commands/k3s/update-node-ip.sh.
-#
 ---
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy

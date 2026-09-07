@@ -1,17 +1,20 @@
 ---
 # compose_install.yml — render templates + start the Compose stack for one target.
-# Usage: ansible-playbook compose_install.yml -i ops/ansible/inventory.yml -l <target>
+# Usage: ansible-playbook ops/ansible/playbooks/compose_install.yml -l <target>
 - name: Install compose stack
   hosts: all
   gather_facts: true
+
+  vars:
+    infra_root: "{{ playbook_dir }}/../../.."
 
   tasks:
     - name: Detect optional files
       ansible.builtin.stat:
         path: "{{ item }}"
       loop:
-        - "{{ lookup('env', 'INFRA_ROOT') }}/targets/{{ inventory_hostname }}/VARS.template.env"
-        - "{{ lookup('env', 'INFRA_ROOT') }}/targets/{{ inventory_hostname }}/compose/compose.private.yaml"
+        - "{{ infra_root }}/targets/{{ inventory_hostname }}/VARS.template.env"
+        - "{{ infra_root }}/targets/{{ inventory_hostname }}/compose/compose.private.yaml"
       register: _optional
 
     - name: Set availability facts
@@ -19,9 +22,16 @@
         compose_has_vars_template: "{{ _optional.results[0].stat.exists }}"
         compose_private_exists: "{{ _optional.results[1].stat.exists }}"
 
+    - name: Validate VARS
+      ansible.builtin.command: python3 {{ infra_root }}/lib/vars_validator.py {{ inventory_hostname }}
+      changed_when: false
+      when: compose_has_vars_template
+
     - name: Compose render + environment
       ansible.builtin.include_role:
         name: compose
+      vars:
+        compose_infra_root: "{{ infra_root }}"
 
     - name: Compose up
       ansible.builtin.command:
@@ -29,3 +39,4 @@
       environment: "{{ compose_env }}"
       changed_when: true
       tags: [up]
+      become: true  # docker socket is sudo-only on the nodes (see AGENTS.md)

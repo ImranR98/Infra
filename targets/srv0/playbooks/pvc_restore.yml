@@ -1,0 +1,36 @@
+---
+# Restore PVCs on the srv0 cluster (auto-backup labelled, or a single named PVC).
+# Runs the retained script (targets/srv0/commands/restore-pvc.sh).
+# NOTE: interactive confirmations can't prompt under Ansible — pass auto_yes=true
+# (--all only) or run the script directly on srv0 for the single-PVC prompt.
+# Usage: ansible-playbook targets/srv0/playbooks/pvc_restore.yml \
+#          [-e pvc_name=my-pvc] | [-e pvc_all=true] [-e auto_yes=true]
+- name: Restore PVCs
+  hosts: srv0
+  gather_facts: true
+
+  vars:
+    infra_root: "{{ playbook_dir }}/../../.."
+
+  tasks:
+    - name: Must run on srv0
+      ansible.builtin.assert:
+        that: ansible_hostname == inventory_hostname
+        fail_msg: "Running on '{{ ansible_hostname }}' but this playbook targets {{ inventory_hostname }} — run it on that machine."
+
+    - name: Exactly one of pvc_name / pvc_all
+      ansible.builtin.assert:
+        that: (pvc_name | default('') | length > 0) != (pvc_all | default(false) | bool)
+        fail_msg: "Pass either pvc_name=<name> or pvc_all=true"
+
+    - name: Run the PVC restore script
+      ansible.builtin.command:
+        cmd: >-
+          bash {{ infra_root }}/targets/srv0/commands/restore-pvc.sh
+          {{ pvc_name | default('') }}
+          {{ '--all' if pvc_all | default(false) | bool else '' }}
+          {{ '-y' if auto_yes | default(false) | bool else '' }}
+      environment:
+        TARGET: srv0
+        INFRA_ROOT: "{{ infra_root }}"
+      changed_when: true
