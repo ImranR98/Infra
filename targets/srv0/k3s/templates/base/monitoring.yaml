@@ -11,7 +11,7 @@ spec:
   failurePolicy: abort
   targetNamespace: base
   createNamespace: false
-  version: 89.2.3
+  version: 89.2.4
   valuesContent: |-
     # No receivers configured yet; enable later with an ntfy webhook.
     alertmanager:
