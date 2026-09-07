@@ -54,7 +54,6 @@ services:
             - /dev/video0:/dev/video2
         volumes:
             - $COMPOSE_STATE_DIR/go2rtc:/config
-        command: ["-config", "/config/go2rtc.yaml"]
         env_file:
             - path: $COMPOSE_STATE_DIR/go2rtc/go2rtc.env
               required: false
