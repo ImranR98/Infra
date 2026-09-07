@@ -57,7 +57,6 @@
 
 - name: Check for Docker and Compose
   ansible.builtin.shell: |
-    set -o pipefail
     command -v docker >/dev/null 2>&1 && docker compose version >/dev/null 2>&1
   register: prereqs_docker_check
   changed_when: false
@@ -65,8 +64,10 @@
 
 - name: Install Docker (official bootstrap)
   ansible.builtin.shell: |
-    set -o pipefail
-    curl -fsSL --connect-timeout 30 --max-time 300 https://get.docker.com | sh
+    set -e
+    curl -fsSL --connect-timeout 30 --max-time 300 https://get.docker.com -o /tmp/get-docker.sh
+    sh /tmp/get-docker.sh
+    rm -f /tmp/get-docker.sh
   when: prereqs_docker_check.rc != 0
   changed_when: true
 
@@ -84,7 +85,6 @@
 
 - name: Verify prerequisites
   ansible.builtin.shell: |
-    set -o pipefail
     missing=0
     for tool in helm docker yq jq curl python3 go openssl shellcheck ansible-lint yamllint ansible-playbook; do
       if command -v "$tool" >/dev/null 2>&1; then
