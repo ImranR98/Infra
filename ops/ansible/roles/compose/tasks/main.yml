@@ -38,10 +38,42 @@
     TARGET: "{{ inventory_hostname }}"
     USER: "{{ ansible_user_id }}"
 
-- name: Include resolved VARS
+- name: Include VARS template (key list)
   ansible.builtin.include_vars:
-    file: "{{ infra_root }}/current_target/vars.yml"
+    file: "{{ target_dir }}/VARS.template.yml"
+    name: template_vars
   when: compose_has_vars_template | default(false)
+
+- name: Include vaulted VARS (flat, for jinja templates)
+  ansible.builtin.include_vars:
+    file: "{{ infra_root }}/secrets/VARS.{{ inventory_hostname }}.yml"
+  when: compose_has_vars_template | default(false)
+
+- name: Include vaulted VARS (dict, for compose interpolation)
+  ansible.builtin.include_vars:
+    file: "{{ infra_root }}/secrets/VARS.{{ inventory_hostname }}.yml"
+    name: secret_vars
+  when: compose_has_vars_template | default(false)
+
+# Completeness + placeholder checks. Fail messages print key names only —
+# values never reach argv, stdout, or stderr.
+- name: VARS completeness
+  ansible.builtin.assert:
+    that: secret_vars.keys() | difference(template_vars.keys()) | length == 0
+    fail_msg: >-
+      secrets/VARS.{{ inventory_hostname }}.yml is missing required
+      variables: {{ secret_vars.keys() | difference(template_vars.keys()) }}
+  when: compose_has_vars_template | default(false)
+
+- name: VARS placeholders
+  ansible.builtin.assert:
+    that: "not (_v is string and (_v | trim in _placeholders or _v is regex('^<.*>$')))"
+    fail_msg: "secrets/VARS.{{ inventory_hostname }}.yml: '{{ item }}' has a placeholder value"
+  loop: "{{ secret_vars.keys() | list }}"
+  when: compose_has_vars_template | default(false)
+  vars:
+    _v: "{{ secret_vars[item] }}"
+    _placeholders: ["change_me", "changeme", "abc", "REPLACE_ME"]
 
 - name: Resolve PROXY_IP
   ansible.builtin.shell: getent hosts "{{ PROXY_HOST }}" | awk '{print $1; exit}'
@@ -58,7 +90,7 @@
 - name: Compose environment dict (native interpolation)
   ansible.builtin.set_fact:
     compose_env: >-
-      {{ dict(_vars_keys | default([]) | zip(_vars_keys | default([]) | map('extract', vars)))
+      {{ dict(secret_vars | default({}) | dict2items | map(attribute='key') | zip(secret_vars | default({}) | dict2items | map(attribute='value') | map('string')))
          | combine({'MY_UID': MY_UID, 'DOCKER_GID': DOCKER_GID, 'COMPOSE_STATE_DIR': COMPOSE_STATE_DIR,
                     'TARGET': TARGET, 'USER': USER, 'PROXY_IP': PROXY_IP | default('')}) }}
 
@@ -106,25 +138,34 @@
     group: "{{ MY_UID }}"
     force: false
 
-- name: Create host bind dirs
-  ansible.builtin.shell: |
-    set -e
-    for f in {{ target_dir }}/compose/compose.yaml {% if compose_private_exists | default(false) %}{{ target_dir }}/compose/compose.private.yaml{% endif %}; do
-      [ -f "$f" ] || continue
-      yq -r '.services[] | select(.volumes) | .volumes[] | (.source? // .) | split(":") | .[0]' "$f" 2>/dev/null
-    done | while read -r p; do
-      case "$p" in
-        {{ compose_state_dir }}/*)
-          if [[ "$(basename "$p")" == *.* ]]; then d="$(dirname "$p")"; else d="$p"; fi
-          mkdir -p "$d"
-          if [ "$(id -u)" -eq 0 ]; then chown {{ MY_UID }}:{{ MY_UID }} "$d"; fi
-          ;;
-      esac
-    done
-  changed_when: false
-
 - name: Compose file list
   ansible.builtin.set_fact:
     compose_files: >-
       {{ ['-f', target_dir ~ '/compose/compose.yaml'] + (['-f', target_dir ~ '/compose/compose.private.yaml']
          if compose_private_exists | default(false) else []) }}
+
+# Host bind dirs come from `docker compose config` itself (the resolved,
+# interpolated output) rather than a hand-written list — the compose file is
+# the single source of truth. Docker would create missing dirs as root; doing
+# it here keeps them owned by $MY_UID so containers can write.
+- name: Resolve host bind dirs from compose config
+  ansible.builtin.shell: |
+    set -o pipefail
+    docker compose {{ compose_files | join(' ') }} config --format yaml 2>/dev/null |
+      yq -r '.services[] | select(.volumes) | .volumes[] | (.source? // .) | split(":") | .[0]' |
+      grep -F "{{ compose_state_dir }}/" || true
+  register: _host_binds
+  changed_when: false
+  environment: "{{ compose_env }}"
+
+- name: Create host bind dirs
+  ansible.builtin.file:
+    # A dot in the final component means it's a file bind — create its parent.
+    path: "{{ item | regex_replace('/[^/]*\\.[^/]*$', '') }}"
+    state: directory
+    mode: "0755"
+    owner: "{{ MY_UID }}"
+    group: "{{ MY_UID }}"
+  become: true
+  loop: "{{ _host_binds.stdout_lines | default([]) | unique }}"
+  when: _host_binds.stdout_lines | default([]) | length > 0

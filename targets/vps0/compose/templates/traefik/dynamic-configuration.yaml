@@ -24,7 +24,7 @@ http:
           forceMonthlyUpdate: true
           allowUnknownCountries: false
           unknownCountryApiResponse: "nil"
-          {{ GEOBLOCK_CONFIG_SUBSET }}
+{{ GEOBLOCK_CONFIG_SUBSET | indent(10, true) }}
     crowdsec-bouncer:
       plugin:
         crowdsec-bouncer-traefik-plugin:

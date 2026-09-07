@@ -1,8 +1,8 @@
 #!/bin/bash
-# lib/common.sh — library index + per-invocation environment for the remaining
-# bash commands (k3s helm/pvc/preboot/renovate). The compose pipeline and
-# config validation are Ansible playbooks now (ops/ansible/); VARS handling
-# moved to lib/vars_validator.py (emits current_target/vars.yml for playbooks).
+# lib/common.sh — shared helpers for the remaining bash commands (k3s helm/pvc/
+# preboot/renovate). The compose pipeline and config validation are Ansible
+# playbooks now (ops/ansible/); VARS live in ansible-vault YAML
+# (secrets/VARS.<t>.yml).
 [[ "${INFRA_LIB_LOADED:-}" = true ]] && return 0
 INFRA_LIB_LOADED=true
 
@@ -43,9 +43,31 @@ _confirm() {
     [[ "$yn" =~ ^[Yy] ]]
 }
 
-source "$_lib_dir/pkg.sh"
-source "$_lib_dir/net.sh"
-source "$_lib_dir/k3s.sh"
+get_sudo_cmd() {
+    echo "sudo"
+}
+
+get_node_ip() {
+    local iface
+    iface=$(ip -4 route show default 2>/dev/null | awk '{print $5; exit}')
+    [ -n "$iface" ] || return 1
+    ip -4 addr show "$iface" | grep -oP 'inet \K[\d.]+'
+}
+
+wait_for_k3s_cluster() {
+    local timeout_secs="${1:-150}"
+    local max_tries=$(( timeout_secs / 5 ))
+    for i in $(seq 1 "$max_tries"); do
+        if kubectl get nodes >/dev/null 2>&1; then
+            echo "Cluster ready."
+            return 0
+        fi
+        echo "Waiting... ($i/$max_tries)"
+        sleep 5
+    done
+    echo "Error: Could not connect to Kubernetes cluster after ${timeout_secs} seconds." >&2
+    return 1
+}
 
 # ---- Target mode guards ------------------------------------------------------
 if [ -n "$TARGET" ]; then

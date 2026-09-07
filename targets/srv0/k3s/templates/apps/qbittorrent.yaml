@@ -80,6 +80,29 @@ spec:
   storageClassName: longhorn
 ---
 ---
+# Declarative first-boot qBittorrent config (replaces the old API-seeding Job).
+# The initContainer copies it into the PVC only when no config exists yet, so
+# later UI changes keep persisting. The WebUI password is adminadmin by design
+# (the UI sits behind forwardauth-authelia + geoblock + crowdsec).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: qbittorrent-conf
+  namespace: apps
+data:
+  qBittorrent.conf: |
+    [LegalNotice]
+    Accepted=true
+
+    [Preferences]
+    Connection\PortRangeMin=56881
+    Connection\UPnP=false
+    Session\DefaultSavePath=/data/downloads
+    Session\TempPath=/data/downloads/incomplete
+    Session\TempPathEnabled=true
+    WebUI\Address=*
+    WebUI\Password_PBKDF2=@ByteArray(/Yc2TaVYE08zl9k2r7nOPw==:S3kE16CIAGffWqTn9BbKolyzIXfEEFibUFE8I00/VQjW86WkU4W6bSbcrKya+OpG5/TB6xlFYTZucuonUEpS4A==)
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -97,6 +120,22 @@ spec:
       labels:
         app: qbittorrent
     spec:
+      initContainers:
+        - name: seed-conf
+          image: busybox:1.38
+          command:
+            - sh
+            - -c
+            - |
+              if [ ! -f /config/qBittorrent/qBittorrent.conf ]; then
+                mkdir -p /config/qBittorrent
+                cp /seed/qBittorrent.conf /config/qBittorrent/qBittorrent.conf
+              fi
+          volumeMounts:
+            - name: config
+              mountPath: /config
+            - name: seed
+              mountPath: /seed
       containers:
         - name: qbittorrent
           image: lscr.io/linuxserver/qbittorrent:latest@sha256:8d48fa8c619caadfb103f04efea8747e2a2762d6c7551690919cffb987e61cee
@@ -142,6 +181,9 @@ spec:
         - name: data
           persistentVolumeClaim:
             claimName: arrstack-media-pvc
+        - name: seed
+          configMap:
+            name: qbittorrent-conf
 ---
 apiVersion: v1
 kind: Service

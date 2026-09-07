@@ -76,8 +76,8 @@
     enabled: true
     state: started
 
-- name: Install Ansible collections
-  ansible.builtin.command: ansible-galaxy collection install -r "{{ playbook_dir }}/../requirements.yml"
+- name: Install Ansible collections and roles
+  ansible.builtin.command: ansible-galaxy install -r "{{ playbook_dir }}/../requirements.yml"
   become: false
   register: prereqs_galaxy
   changed_when: "'nothing to do' not in prereqs_galaxy.stdout"
@@ -98,12 +98,6 @@
       echo "  [OK] docker compose"
     else
       echo "  [MISSING] docker compose"
-      missing=1
-    fi
-    if python3 -c 'import dotenv' 2>/dev/null; then
-      echo "  [OK] python3-dotenv"
-    else
-      echo "  [MISSING] python3-dotenv"
       missing=1
     fi
     exit $missing
