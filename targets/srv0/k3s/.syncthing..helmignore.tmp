@@ -1,6 +1,0 @@
-# Files to never include in the chart package/render (syncthing sync artifacts,
-# plugin sources).
-*.tmp
-.syncthing.*
-geoip-src/
-plugins/
