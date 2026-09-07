@@ -1,19 +1,19 @@
 # ====== VARS template for srv0 ======
-# Documented variables + generation commands. The actual values live in two
-# gitignored files:
-#   - secrets/values.srv0.yaml  — Helm values for the k3s umbrella chart
-#     (YAML; every key below maps 1:1, multi-line values are 'indentation as
-#     data' at base column 0 like the old dotenv format).
-#   - secrets/VARS.srv0.yml     — plain YAML consumed by the compose sidecar
-#     (frpc); copy this template to secrets/, replace placeholders, done —
+# Documented variables + generation commands. The actual values live in ONE
+# gitignored file per target:
+#   - secrets/VARS.srv0.yml — plain YAML consumed by BOTH the compose sidecar
+#     (frpc) and the k3s umbrella chart (helm_apply passes it as a values
+#     file). Copy this template to secrets/, replace placeholders, done —
 #     no encryption, the file is gitignored (see AGENTS.md).
 # Placeholders (change_me / changeme / abc / REPLACE_ME / <...>) are rejected
 # on deploy. Multi-line values are literal block scalars (|); bare $ and #
 # inside scalars are literal; there are NO ${NAME} references (values are
 # final — no expansion step).
-# NOTE: the *_HASHABLE keys are consumed pre-hashed: store the output of
-# `openssl passwd -6` (or `authelia crypto hash generate pbkdf2 ...`) as the
-# *_HASHED key in secrets/values.srv0.yaml instead.
+# NOTE: the *_HASHABLE keys are consumed pre-hashed: the *_HASHED key (same
+# file) holds the output of `openssl passwd -6` (or `authelia crypto hash
+# generate pbkdf2 ...`); the *_HASHABLE plaintext stays for reference.
+# NOTE: keys below the first ====== line are machine/env paths (INFRA_ROOT,
+# TARGET, PVC_BACKUP_DIR) — k3s-chart-only, not used by the compose sidecar.
 
 # ====== Domain ======
 SERVICES_DOMAIN: "home.example.org"
@@ -62,7 +62,6 @@ AUTHELIA_USERS_DATABASE: |
           groups:
             - admins
 AUTHELIA_DB_ENCRYPTION_KEY: "change_me" # openssl rand -hex 128
-AUTHELIA_JWT_SECRET: "change_me" # openssl rand -hex 128
 AUTHELIA_OIDC_HMAC_SECRET: "change_me" # openssl rand -hex 128
 AUTHELIA_REDIS_PASSWORD: "change_me" # openssl rand -base64 32
 AUTHELIA_DB_PASSWORD: "change_me" # openssl rand -base64 32
@@ -76,6 +75,12 @@ AUTHELIA_IMMICH_CLIENT_SECRET_HASHABLE: "change_me" # docker run authelia/authel
 AUTHELIA_OPENWEBUI_CLIENT_SECRET_HASHABLE: "change_me" # docker run authelia/authelia:latest authelia crypto hash generate pbkdf2 --variant sha512 --random --random.length 72 --random.charset rfc3986
 AUTHELIA_HEADLAMP_CLIENT_SECRET_HASHABLE: "change_me" # docker run authelia/authelia:latest authelia crypto hash generate pbkdf2 --variant sha512 --random --random.length 72 --random.charset rfc3986
 AUTHELIA_LINKWARDEN_CLIENT_SECRET_HASHABLE: "change_me" # docker run authelia/authelia:latest authelia crypto hash generate pbkdf2 --variant sha512 --random --random.length 72 --random.charset rfc3986
+# The precomputed hashes of the *_HASHABLE values above (k3s-chart-only; the
+# chart mounts these into Authelia's OIDC client definitions).
+AUTHELIA_IMMICH_CLIENT_SECRET_HASHED: "change_me"
+AUTHELIA_OPENWEBUI_CLIENT_SECRET_HASHED: "change_me"
+AUTHELIA_HEADLAMP_CLIENT_SECRET_HASHED: "change_me"
+AUTHELIA_LINKWARDEN_CLIENT_SECRET_HASHED: "change_me"
 
 # ====== Authelia header gate ======
 # Set to "true" to force the gate on (blocking all requests without a valid
@@ -107,12 +112,12 @@ MOSQUITTO_CREDENTIALS: "change_me" # tmpfile=$(mktemp) && mosquitto_passwd -b "$
 # Password of the rpi go2rtc stream: `docker logs go2rtc` on the Pi, or
 # current_target/compose_live_state/go2rtc/password. Update if the Pi password regenerates.
 FRIGATE_RTSP_PASSWORD: "change_me"
-RPI_CAM_IP: "change_me" # LAN IP of the rpi go2rtc webcam host
 FRIGATE_MQTT_PASSWORD: "change_me" # openssl rand -hex 16 (also add `frigate` user to MOSQUITTO_CREDENTIALS)
 HA_MQTT_PASSWORD: "change_me" # openssl rand -hex 16 (also add `homeassistant` user to MOSQUITTO_CREDENTIALS)
+# The rpi go2rtc host's LAN IP is written literally into FRIGATE_ADDITIONAL_CONFIG below.
 # Deployment-specific Frigate config (go2rtc streams, cameras) appended to the
 # hardcoded section in frigate/helmchart.yaml.
-# Multi-line YAML block scalar (6-space base in values.srv0.yaml). {FRIGATE_*}
+# Multi-line YAML block scalar. {FRIGATE_*}
 # tokens are substituted by Frigate at runtime. GUI config-editor changes
 # don't survive restarts - scrape them back into here.
 FRIGATE_ADDITIONAL_CONFIG: |
@@ -310,3 +315,11 @@ GRAFANA_ADMIN_PASSWORD: "change_me" # openssl rand -base64 32
 # Grafana presents as its OIDC client secret (the _HASHED form is mounted
 # into Authelia via authelia/prereqs.yaml).
 AUTHELIA_GRAFANA_CLIENT_SECRET_HASHABLE: "change_me" # docker run authelia/authelia:latest authelia crypto hash generate pbkdf2 --variant sha512 --random --random.length 72 --random.charset rfc3986
+AUTHELIA_GRAFANA_CLIENT_SECRET_HASHED: "change_me"
+
+# ====== Infra paths (k3s-chart-only, machine/env layout) ======
+# Repo + state paths used by the in-cluster pvc-backup CronJob and the
+# renovate CronJob (hostPath mounts of the synced repo).
+INFRA_ROOT: "/home/imranr/Main/Infra"
+TARGET: "srv0"
+PVC_BACKUP_DIR: "/home/imranr/Main/Infra/k3s_state_backups"

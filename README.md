@@ -32,7 +32,7 @@ ansible-playbook ops/ansible/playbooks/prereqs.yml
 
 # Create your variables file from the template (plain YAML, gitignored under secrets/ — no encryption)
 cp targets/<target>/VARS.template.yml secrets/VARS.<target>.yml   # then fill in real values
-# srv0 k3s: helm values live in secrets/values.srv0.yaml (keys documented in VARS.template.yml)
+# srv0: the same secrets/VARS.srv0.yml is passed to helm as the chart's values file
 
 # Validate your configuration
 ansible-playbook ops/ansible/playbooks/validate.yml -l <target>

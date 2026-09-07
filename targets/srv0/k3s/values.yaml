@@ -1,6 +1,6 @@
 # values.yaml — committed defaults: release-scope gates + machine-independent
 # built-ins. All secrets and target-specific config live in the gitignored
-# secrets/values.srv0.yaml (passed as a later -f, so it wins on conflicts).
+# secrets/VARS.srv0.yml (passed as a later -f, so it wins on conflicts).
 base:
   enabled: true
 apps:
