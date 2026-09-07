@@ -299,7 +299,7 @@ metadata:
   namespace: kube-system
 data:
   .traefik.yml: |
-    {{- .Files.Get "traefik-plugin-config.yml" | nindent 4 }}
+    {{- .Files.Get "files/traefik-plugin-config.yml" | nindent 4 }}
 binaryData:
-  plugin.wasm: {{ .Files.Get "plugin.wasm" | b64enc }}
+  plugin.wasm: {{ .Files.Get "files/plugin.wasm" | b64enc }}
 {{- end }}
