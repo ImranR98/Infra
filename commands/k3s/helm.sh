@@ -14,7 +14,7 @@ case "$SCOPE" in
     *) echo "Error: scope must be base or apps" >&2; exit 1 ;;
 esac
 
-CHART_DIR="$INFRA_ROOT/charts/srv0"
+CHART_DIR="$INFRA_ROOT/targets/${TARGET:?TARGET not set}/k3s"
 STAGED="$K3S_STATE_DIR/chart"
 
 # k3s's kubectl auto-resolves the local admin config; plain helm does not.

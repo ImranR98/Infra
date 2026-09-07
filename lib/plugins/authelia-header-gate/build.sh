@@ -1,5 +1,5 @@
 #!/bin/bash
-# Regenerate plugin.wasm (and refresh charts/srv0/files/plugin.wasm).
+# Regenerate plugin.wasm (and refresh targets/srv0/k3s/files/plugin.wasm).
 # Requires tinygo: https://tinygo.org/getting-started/install/
 set -euo pipefail
 
