@@ -52,9 +52,7 @@ _build_yaml() {
 
     RAW_YAML=$(kubectl kustomize "$TMP_DIR") || { echo "Error: kustomize build failed for $COMPONENT" >&2; exit 1; }
 
-    # kustomize strips YAML quotes; envsubst makes numeric vars bare ints.
-    # Kubernetes rejects unquoted ints in env[].value.  Sed re-quotes them.
-    PROCESSED_YAML=$(printf '%s\n' "$RAW_YAML" | sed -E 's/^(\s+value: )([+-]?[0-9]+)$/\1"\2"/')
+    PROCESSED_YAML="$RAW_YAML"
 }
 
 _run_hook() {

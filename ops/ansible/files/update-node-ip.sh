@@ -154,9 +154,8 @@ node_name=$(kubectl get node "$(hostname)" -o jsonpath='{.metadata.name}' 2>/dev
 if [ -n "$node_name" ]; then
     kubectl annotate node "$node_name" flannel.alpha.coreos.com/public-ip="$new_ip" --overwrite 2>/dev/null || true
 
-    if command -v python3 >/dev/null 2>&1; then
-        _patch_ip="$INFRA_ROOT/commands/_internal/_patch_node_ip.py"
-        if kubectl get node "$node_name" -o json 2>/dev/null | python3 "$_patch_ip" "$new_ip" > /tmp/k3s-node-status-patch.json 2>/dev/null; then
+    if command -v jq >/dev/null 2>&1; then
+        if kubectl get node "$node_name" -o json 2>/dev/null | jq --arg ip "$new_ip" '{status: {addresses: (.status.addresses | map(if .type == "InternalIP" then .address = $ip else . end))}}' > /tmp/k3s-node-status-patch.json 2>/dev/null; then
             kubectl patch node "$node_name" --subresource=status --type=merge -p "$(cat /tmp/k3s-node-status-patch.json)" 2>/dev/null || true
         fi
         rm -f /tmp/k3s-node-status-patch.json

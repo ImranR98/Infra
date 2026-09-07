@@ -6,3 +6,4 @@ resources:
   - ingress.yaml
   - network-policy.yaml
   - helmchart.yaml
+  - values-secret.yaml

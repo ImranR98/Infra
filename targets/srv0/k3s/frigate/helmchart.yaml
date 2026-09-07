@@ -11,6 +11,13 @@ spec:
   targetNamespace: apps
   createNamespace: false
   version: 7.8.0
+  # Secret values (env passwords) live in apps/frigate-values via
+  # values-secret.yaml — merged as a later values file, so this CR stays
+  # free of plaintext secrets.
+  valuesSecrets:
+    - name: frigate-values
+      keys:
+        - values.yaml
   valuesContent: |-
     strategyType: Recreate
     # Pin to srv0: config PVC is RWO, media is NFS from srv0, and VAAPI/
@@ -39,13 +46,6 @@ spec:
       # ROCm build was only needed for bigpc's RX 9070 (RDNA4) — its bundled
       # Mesa hangs probing that GPU.
       tag: 0.17.2
-    env:
-      # {FRIGATE_*_PASSWORD} tokens in `config` are substituted by Frigate from
-      # these env vars. NOTE: this chart's `env` key only supports plain
-      # string values — secretKeyRef cannot be used here (falls under the
-      # documented HelmChart valuesContent tradeoff).
-      FRIGATE_RTSP_PASSWORD: "$FRIGATE_RTSP_PASSWORD"
-      FRIGATE_MQTT_PASSWORD: "$FRIGATE_MQTT_PASSWORD"
     config: |-
       mqtt:
         host: mosquitto
