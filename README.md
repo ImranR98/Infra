@@ -20,33 +20,36 @@ The IaaC system for my homelab and other devices.
 ## Project Goals
 
 - **Infrastructure as Code**: Everything should be declarative and automated, using standard tooling wherever possible. Custom scripts should be minimal and only where necessary.
-- **Single CLI**: `ansible-playbook` is the only entry point — no inventory anywhere: generic ops run on the machine you are on (the target is its hostname, `-e target=` overrides), target-specific ops via target-root playbooks (`targets/<t>/*.yaml`); a few retained payload scripts run directly on their target (PVC backup/restore, node-IP update).
+- **Single CLI**: `infra` (a thin wrapper over `ansible-playbook`) is the entry point — no inventory anywhere, and the target is **always explicit**: target-selecting ops take it as `infra <target> <op>` (compose/validate/helm/pvc), machine-local ops run on the machine you are on and take no target; a few retained payload scripts run directly on their target (PVC backup/restore, node-IP update).
 - **Security**: As the codebase is public and the system runs public-facing services containing highly personal data, security must be taken seriously.
 
 ## Quick start
 
 ```bash
+# Optional one-time: make `infra` available from anywhere
+ln -s ~/Main/Infra/infra ~/bin/infra
+
 # Install prerequisites (Docker, yq, jq, python3, go, ansible-core, helm) — an Ansible playbook
 # (if ansible-playbook itself is missing, bootstrap it first: sudo dnf|apt install ansible-core)
-ansible-playbook ansible/playbooks/prereqs.yaml
+infra prereqs
 
 # Create your variables file from the template (plain YAML, gitignored under secrets/ — no encryption)
 cp targets/<target>/VARS.template.yaml secrets/VARS.<target>.yaml   # then fill in real values
-# srv0: the same secrets/VARS.srv0.yaml is passed to helm as the chart's values file
 
-# Validate your configuration
-ansible-playbook ansible/playbooks/validate.yaml
+# Validate your configuration (the target is explicit; <target> is e.g. srv0)
+infra <target> validate
 
-# Deploy compose / k3s
-ansible-playbook ansible/playbooks/compose_install.yaml
-ansible-playbook targets/srv0/helm_apply.yaml -e helm_scope=base
-ansible-playbook targets/srv0/helm_apply.yaml -e helm_scope=apps
+# Deploy compose / k3s — compose ops must run ON the target machine;
+# helm ops target the machine whose k3s chart you mean
+infra <target> compose-install
+infra <target> helm base
+infra <target> helm apps
 
-# Check for updates (opens Renovate PRs on GitHub)
-ansible-playbook ansible/playbooks/renovate.yaml
+# Check for updates (opens Renovate PRs on GitHub) — machine-local
+infra renovate
 ```
 
-Extra vars ride `-e key=value` (e.g. `-e target=vps0` to point a generic playbook at another target's files); `--check` dry-runs everything. Run playbooks from the repo root (roles paths in `ansible/ansible.cfg` are config-relative).
+Extra args ride after the op (`infra vps0 validate -e ...`; `--check` dry-runs everything). Raw `ansible-playbook` works the same from the repo root (the root `ansible.cfg` is auto-discovered there); target-selecting playbooks require `-e target=<t>`, machine-local ones take none.
 
 ## More
 

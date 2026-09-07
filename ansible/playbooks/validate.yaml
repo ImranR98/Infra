@@ -1,18 +1,23 @@
 ---
 # validate.yaml — config validation for one target (yq, compose config, helm).
-# Target = this machine's hostname (overridable with -e target=, e.g. to check
-# another target's files from this checkout).
-# Usage: ansible-playbook ansible/playbooks/validate.yaml
+# The target is explicit — pass -e target=<t> (e.g. to check another target's
+# files from this checkout).
+# Usage: ansible-playbook ansible/playbooks/validate.yaml -e target=<t>
+#        (or: infra <t> validate)
 - name: Validate configs
   hosts: localhost
   gather_facts: true
 
   vars:
     infra_root: "{{ playbook_dir }}/../.."
-    target: "{{ ansible_hostname }}"
     target_dir: "{{ infra_root }}/targets/{{ target }}"
 
   pre_tasks:
+    - name: Target required
+      ansible.builtin.assert:
+        that: target | default('') | length > 0
+        fail_msg: "No target set. Pass -e target=<t> (or use: infra <t> validate)"
+
     - name: Stat optional inputs
       ansible.builtin.stat:
         path: "{{ item }}"
