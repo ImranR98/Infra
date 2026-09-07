@@ -1,20 +1,23 @@
 ---
-# compose_install.yaml — render templates + start the Compose stack for one target.
-# Usage: ansible-playbook ansible/playbooks/compose_install.yaml -l <target>
+# compose_install.yaml — render templates + start the Compose stack for the
+# machine you are on (no inventory: the target is this machine's hostname,
+# overridable with -e target=).
+# Usage: ansible-playbook ansible/playbooks/compose_install.yaml
 - name: Install compose stack
-  hosts: all
+  hosts: localhost
   gather_facts: true
 
   vars:
     infra_root: "{{ playbook_dir }}/../.."
+    target: "{{ ansible_hostname }}"
 
   tasks:
     - name: Detect optional files
       ansible.builtin.stat:
         path: "{{ item }}"
       loop:
-        - "{{ infra_root }}/targets/{{ inventory_hostname }}/VARS.template.yaml"
-        - "{{ infra_root }}/targets/{{ inventory_hostname }}/compose/compose.private.yaml"
+        - "{{ infra_root }}/targets/{{ target }}/VARS.template.yaml"
+        - "{{ infra_root }}/targets/{{ target }}/compose/compose.private.yaml"
       register: _optional
 
     - name: Set availability facts
@@ -30,7 +33,7 @@
 
     - name: Compose up
       ansible.builtin.command:
-        cmd: docker compose -p {{ inventory_hostname }} {{ compose_files | join(' ') }} up -d --remove-orphans
+        cmd: docker compose -p {{ target }} {{ compose_files | join(' ') }} up -d --remove-orphans
       environment: "{{ compose_env }}"
       changed_when: true
       tags: [up]

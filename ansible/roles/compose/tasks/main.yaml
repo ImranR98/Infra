@@ -3,10 +3,10 @@
 # docker-compose native interpolation, create host dirs, and run `docker compose`.
 # Replaces the old bash compose render pipeline.
 
-- name: Hostname matches selected target
+- name: Target derived from the machine hostname
   ansible.builtin.assert:
-    that: ansible_hostname == inventory_hostname
-    fail_msg: "Refusing: running on host '{{ ansible_hostname }}' but target is '{{ inventory_hostname }}'"
+    that: ansible_hostname == target
+    fail_msg: "Refusing: running on host '{{ ansible_hostname }}' but target is '{{ target }}'"
 
 - name: compose_infra_root required
   ansible.builtin.assert:
@@ -17,7 +17,7 @@
   ansible.builtin.set_fact:
     infra_root: "{{ compose_infra_root }}"
     compose_state_dir: "{{ compose_infra_root }}/current_target/compose_live_state"
-    target_dir: "{{ compose_infra_root }}/targets/{{ inventory_hostname }}"
+    target_dir: "{{ compose_infra_root }}/targets/{{ target }}"
 
 - name: Resolve docker group id
   ansible.builtin.shell: "getent group docker | cut -d: -f3"
@@ -35,7 +35,7 @@
     MY_UID: "{{ 1000 if ansible_user_id == 'root' else (ansible_user_uid | default(1000)) }}"
     DOCKER_GID: "{{ _docker_gid.stdout }}"
     COMPOSE_STATE_DIR: "{{ compose_state_dir }}"
-    TARGET: "{{ inventory_hostname }}"
+    TARGET: "{{ target }}"
     USER: "{{ ansible_user_id }}"
 
 - name: Include VARS template (key list)
@@ -44,14 +44,14 @@
     name: template_vars
   when: compose_has_vars_template | default(false)
 
-- name: Include vaulted VARS (flat, for jinja templates)
+- name: Include VARS (flat, for jinja templates)
   ansible.builtin.include_vars:
-    file: "{{ infra_root }}/secrets/VARS.{{ inventory_hostname }}.yaml"
+    file: "{{ infra_root }}/secrets/VARS.{{ target }}.yaml"
   when: compose_has_vars_template | default(false)
 
-- name: Include vaulted VARS (dict, for compose interpolation)
+- name: Include VARS (dict, for compose interpolation)
   ansible.builtin.include_vars:
-    file: "{{ infra_root }}/secrets/VARS.{{ inventory_hostname }}.yaml"
+    file: "{{ infra_root }}/secrets/VARS.{{ target }}.yaml"
     name: secret_vars
   when: compose_has_vars_template | default(false)
 
@@ -61,14 +61,14 @@
   ansible.builtin.assert:
     that: template_vars.keys() | difference(secret_vars.keys()) | length == 0
     fail_msg: >-
-      secrets/VARS.{{ inventory_hostname }}.yaml is missing required
+      secrets/VARS.{{ target }}.yaml is missing required
       variables: {{ template_vars.keys() | difference(secret_vars.keys()) }}
   when: compose_has_vars_template | default(false)
 
 - name: VARS placeholders
   ansible.builtin.assert:
     that: "not (_v is string and (_v | trim in _placeholders or _v is regex('^<.*>$')))"
-    fail_msg: "secrets/VARS.{{ inventory_hostname }}.yaml: '{{ item }}' has a placeholder value"
+    fail_msg: "secrets/VARS.{{ target }}.yaml: '{{ item }}' has a placeholder value"
   loop: "{{ secret_vars.keys() | list }}"
   when: compose_has_vars_template | default(false)
   vars:
