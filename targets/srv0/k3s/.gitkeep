@@ -1,0 +1,2 @@
+# srv0 K3s components live in charts/srv0/ now (umbrella chart, see
+# commands/k3s/helm.sh). This directory intentionally stays empty.

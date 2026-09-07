@@ -1,0 +1,401 @@
+{{- if .Values.apps.enabled }}
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: linkwarden-prod-tls
+  namespace: apps
+spec:
+  secretName: linkwarden-prod-tls
+  issuerRef:
+    name: letsencrypt-prod
+    kind: ClusterIssuer
+  dnsNames:
+    - links.$SERVICES_DOMAIN
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: linkwarden-ingress
+  namespace: apps
+spec:
+  entryPoints:
+    - websecure
+    - websecure-proxy
+  routes:
+    - match: Host(`links.$SERVICES_DOMAIN`)
+      kind: Rule
+      middlewares:
+        - name: geoblock
+          namespace: base
+        - name: crowdsec-bouncer
+          namespace: base
+        - name: authelia-with-optional-header-gate
+          namespace: base
+      services:
+        - name: linkwarden
+          port: 3000
+  tls:
+    secretName: linkwarden-prod-tls
+---
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: linkwarden
+  namespace: apps
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: linkwarden
+  template:
+    metadata:
+      labels:
+        app: linkwarden
+    spec:
+      containers:
+        - name: linkwarden
+          image: ghcr.io/linkwarden/linkwarden:v2.16.2
+          securityContext:
+            allowPrivilegeEscalation: false
+          ports:
+            - containerPort: 3000
+          readinessProbe:
+            tcpSocket:
+              port: 3000
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+            initialDelaySeconds: 15
+          env:
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: linkwarden-secrets
+                  key: POSTGRES_PASSWORD
+            - name: DATABASE_URL
+              value: postgresql://postgres:$(POSTGRES_PASSWORD)@linkwarden-postgresql:5432/linkwarden
+            - name: NEXTAUTH_URL
+              value: https://links.$SERVICES_DOMAIN/api/v1/auth
+            - name: NEXTAUTH_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: linkwarden-secrets
+                  key: NEXTAUTH_SECRET
+            - name: MEILI_HOST
+              value: http://linkwarden-meilisearch:7700
+            - name: MEILI_MASTER_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: linkwarden-secrets
+                  key: MEILI_MASTER_KEY
+            - name: STORAGE_FOLDER
+              value: data
+            - name: ARCHIVE_TAKE_COUNT
+              value: "$LINKWARDEN_ARCHIVE_TAKE_COUNT"
+            # Full inlining (audio/video/fonts/CSS/images) minus JS, which the
+            # static-page snapshot can't execute anyway. Monolith buffers assets
+            # in RAM, so keep ARCHIVE_TAKE_COUNT=1 + 16Gi limit for media-heavy
+            # pages. Per-link escape hatch: toggle "monolith" off in the link UI.
+            - name: MONOLITH_CUSTOM_OPTIONS
+              value: "-j -q"
+            - name: NEXT_PUBLIC_DISABLE_REGISTRATION
+              value: "true"
+            - name: NEXT_PUBLIC_AUTHELIA_ENABLED
+              value: "true"
+            - name: AUTHELIA_WELLKNOWN_URL
+              value: https://auth.$SERVICES_DOMAIN/.well-known/openid-configuration
+            - name: AUTHELIA_CLIENT_ID
+              value: linkwarden
+            - name: AUTHELIA_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: linkwarden-secrets
+                  key: AUTHELIA_CLIENT_SECRET
+            - name: TZ
+              value: "$TZ"
+          volumeMounts:
+            - name: linkwarden-data
+              mountPath: /data/data
+          resources:
+            limits:
+              memory: 16Gi
+            requests:
+              memory: 2Gi
+      volumes:
+        - name: linkwarden-data
+          persistentVolumeClaim:
+            claimName: linkwarden-data-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: linkwarden
+  namespace: apps
+spec:
+  type: ClusterIP
+  selector:
+    app: linkwarden
+  ports:
+    - port: 3000
+      targetPort: 3000
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: linkwarden-postgresql
+  namespace: apps
+  labels:
+    app: linkwarden-postgresql
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: linkwarden-postgresql
+  template:
+    metadata:
+      labels:
+        app: linkwarden-postgresql
+    spec:
+      securityContext:
+        fsGroup: 999
+      initContainers:
+        - name: volume-permissions
+          image: postgres:16.15-alpine
+          command:
+            - sh
+            - -c
+            - |
+              rm -rf /var/lib/postgresql/data/lost+found
+              chown -R 999:999 /var/lib/postgresql/data
+          securityContext:
+            runAsUser: 0  # root required: chown on PVC for postgresql (uid 999)
+          resources:
+            limits:
+              memory: 512Mi
+            requests:
+              memory: 128Mi
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+      containers:
+        - name: postgresql
+          image: postgres:16.15-alpine
+          securityContext:
+            runAsUser: 999
+            runAsGroup: 999
+            allowPrivilegeEscalation: false
+          ports:
+            - containerPort: 5432
+          readinessProbe:
+            exec:
+              command:
+                - pg_isready
+                - -U
+                - postgres
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+            initialDelaySeconds: 15
+          env:
+            - name: POSTGRES_USER
+              value: postgres
+            - name: POSTGRES_DB
+              value: linkwarden
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: linkwarden-secrets
+                  key: POSTGRES_PASSWORD
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+          resources:
+            limits:
+              memory: 512Mi
+            requests:
+              memory: 128Mi
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: linkwarden-db-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: linkwarden-postgresql
+  namespace: apps
+spec:
+  selector:
+    app: linkwarden-postgresql
+  ports:
+    - protocol: TCP
+      port: 5432
+      targetPort: 5432
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: linkwarden-meilisearch
+  namespace: apps
+  labels:
+    app: linkwarden-meilisearch
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: linkwarden-meilisearch
+  template:
+    metadata:
+      labels:
+        app: linkwarden-meilisearch
+    spec:
+      containers:
+        - name: meilisearch
+          image: getmeili/meilisearch:v1.53.1
+          securityContext:
+            allowPrivilegeEscalation: false
+          ports:
+            - containerPort: 7700
+          readinessProbe:
+            tcpSocket:
+              port: 7700
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+            initialDelaySeconds: 10
+          env:
+            - name: MEILI_MASTER_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: linkwarden-secrets
+                  key: MEILI_MASTER_KEY
+          volumeMounts:
+            - name: meili-data
+              mountPath: /meili_data
+          resources:
+            limits:
+              memory: 8Gi
+            requests:
+              memory: 2Gi
+      volumes:
+        - name: meili-data
+          persistentVolumeClaim:
+            claimName: linkwarden-meili-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: linkwarden-meilisearch
+  namespace: apps
+spec:
+  selector:
+    app: linkwarden-meilisearch
+  ports:
+    - protocol: TCP
+      port: 7700
+      targetPort: 7700
+---
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-linkwarden-meilisearch-ingress
+  namespace: apps
+spec:
+  podSelector:
+    matchLabels:
+      app: linkwarden-meilisearch
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: linkwarden
+      ports:
+        - port: 7700
+  policyTypes:
+    - Ingress
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-linkwarden-postgresql-ingress
+  namespace: apps
+spec:
+  podSelector:
+    matchLabels:
+      app: linkwarden-postgresql
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: linkwarden
+      ports:
+        - port: 5432
+  policyTypes:
+    - Ingress
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: linkwarden-secrets
+  namespace: apps
+type: Opaque
+stringData:
+  NEXTAUTH_SECRET: "$LINKWARDEN_NEXTAUTH_SECRET"
+  POSTGRES_PASSWORD: "$LINKWARDEN_DB_PASSWORD"
+  MEILI_MASTER_KEY: "$LINKWARDEN_MEILI_MASTER_KEY"
+  AUTHELIA_CLIENT_SECRET: "$AUTHELIA_LINKWARDEN_CLIENT_SECRET_HASHABLE"
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: linkwarden-data-pvc
+  namespace: apps
+  labels:
+    auto-backup: "true"
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+  storageClassName: longhorn
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: linkwarden-db-pvc
+  namespace: apps
+  labels:
+    auto-backup: "true"
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+  storageClassName: longhorn
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: linkwarden-meili-pvc
+  namespace: apps
+  labels:
+    auto-backup: "true"
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+  storageClassName: longhorn
+{{- end }}

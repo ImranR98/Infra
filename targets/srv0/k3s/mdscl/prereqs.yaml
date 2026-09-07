@@ -1,8 +1,0 @@
-apiVersion: v1
-kind: Secret
-metadata:
-  name: mdscl-ntfy-token
-  namespace: apps
-type: Opaque
-stringData:
-  token: "$NTFY_WRITE_ONLY_ACCOUNT_TOKEN"

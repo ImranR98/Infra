@@ -1,24 +1,32 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "baseBranches": ["master"],
+  "baseBranches": [
+    "master"
+  ],
   "rangeStrategy": "replace",
   "prHourlyLimit": 20,
   "prConcurrentLimit": 20,
   "branchConcurrentLimit": 20,
   "automerge": true,
   "ignoreTests": true,
-  "labels": ["deps"],
-  "digest": { "enabled": true },
-
-  "kubernetes": {
-    "managerFilePatterns": ["/^targets\\/.*\\.ya?ml$/"]
+  "labels": [
+    "deps"
+  ],
+  "digest": {
+    "enabled": true
   },
-
+  "kubernetes": {
+    "managerFilePatterns": [
+      "/^charts\\/.*\\.ya?ml$/"
+    ]
+  },
   "customManagers": [
     {
       "customType": "regex",
       "description": "Images inside HelmChart valuesContent blocks (repository/tag pairs and single-line image refs)",
-      "fileMatch": ["targets/.+/k3s/.*helmchart.*\\.ya?ml$"],
+      "fileMatch": [
+        "charts/.+\\.ya?ml$"
+      ],
       "matchStrings": [
         "repository:\\s*(?<depName>\\S+)\\s*\\n(?:[^\\n]*\\n){0,10}?\\s*tag:\\s*\"?(?<currentValue>[^\"\\s@#]+)(?:@sha256:\\S+)?\"?",
         "image:\\s*(?<depName>[^\\s@:\"']+):(?<currentValue>[^\\s@:\"'#]+)(?:@sha256:\\S+)?"
@@ -28,8 +36,10 @@
     },
     {
       "customType": "regex",
-      "description": "helm.cattle.io HelmChart CR chart versions (oci:// — via docker datasource; the helm datasource has no OCI support)",
-      "fileMatch": ["targets/.+/k3s/.*\\.ya?ml$"],
+      "description": "helm.cattle.io HelmChart CR chart versions (oci:// \u2014 via docker datasource; the helm datasource has no OCI support)",
+      "fileMatch": [
+        "charts/.+\\.ya?ml$"
+      ],
       "matchStrings": [
         "chart:\\s*oci://(?<depName>\\S+)\\s*\\n(?:[^\\n]*\\n){0,5}?\\s*version:\\s*(?<currentValue>\\S+)"
       ],
@@ -39,7 +49,9 @@
     {
       "customType": "regex",
       "description": "helm.cattle.io HelmChart CR chart versions (classic chart:+repo: form)",
-      "fileMatch": ["targets/.+/k3s/.*\\.ya?ml$"],
+      "fileMatch": [
+        "charts/.+\\.ya?ml$"
+      ],
       "matchStrings": [
         "chart:\\s*(?<depName>\\S+)\\s*\\n(?:[^\\n]*\\n){0,5}?\\s*repo:\\s*(?<registryUrl>\\S+)\\s*\\n(?:[^\\n]*\\n){0,10}?\\s*version:\\s*(?<currentValue>\\S+)"
       ],
@@ -49,7 +61,9 @@
     {
       "customType": "regex",
       "description": "upgrade.cattle.io Plan CR k3s versions",
-      "fileMatch": ["targets/.+/k3s/.*\\.ya?ml$"],
+      "fileMatch": [
+        "charts/.+\\.ya?ml$"
+      ],
       "matchStrings": [
         "version:\\s*\"?v(?<currentValue>\\d+\\.\\d+\\.\\d+\\+k3s\\d+)\"?"
       ],
@@ -60,7 +74,10 @@
     {
       "customType": "regex",
       "description": "Traefik plugin version pins in additionalArguments (k3s HelmChartConfig + compose)",
-      "fileMatch": ["targets/.+/k3s/.*\\.ya?ml$", "targets/.+/compose/compose\\.ya?ml$"],
+      "fileMatch": [
+        "charts/.+\\.ya?ml$",
+        "targets/.+/compose/compose\\.ya?ml$"
+      ],
       "matchStrings": [
         "--experimental\\.plugins\\.[^\\s.\"=]+\\.modulename=github\\.com/(?<owner>[^/]+)/(?<repo>[^\\s\"']+)[^\\n]*\\n\\s*-\\s*\"--experimental\\.plugins\\.[^\\s.\"=]+\\.version=v?(?<currentValue>[^\\s\"']+)"
       ],
@@ -69,56 +86,81 @@
       "versioningTemplate": "semver"
     }
   ],
-
   "packageRules": [
     {
       "description": "One PR for all docker digest pins and refreshes (the noisy batch); version bumps stay separate",
-      "matchUpdateTypes": ["pin", "pinDigest", "digest"],
+      "matchUpdateTypes": [
+        "pin",
+        "pinDigest",
+        "digest"
+      ],
       "groupName": "docker digests",
       "automerge": false
     },
     {
       "description": "Never automerge major updates to critical infra (base-namespace srv0 K3s group, public VPS edge vps0, srv0 frpc tunnel); minor/patch automerge normally",
       "matchFileNames": [
-        "targets/srv0/k3s/{namespaces,nfs-server,host-volumes,csi-driver-nfs,cert-manager,longhorn,geoip,traefik,crowdsec,authelia,pvc-backup,ntfy,descheduler,system-upgrade,rustfs,monitoring}/**",
+        "charts/srv0/templates/base/**",
         "targets/vps0/compose/**",
         "targets/srv0/compose/**"
       ],
-      "matchUpdateTypes": ["major"],
+      "matchUpdateTypes": [
+        "major"
+      ],
       "automerge": false
     },
     {
       "description": "Pin floating tags to digests",
-      "matchDatasources": ["docker"],
+      "matchDatasources": [
+        "docker"
+      ],
       "matchCurrentValue": "/^(latest|stable|release|alpine)$/",
       "pinDigests": true
     },
     {
       "description": "No major bumps for infra images that previously carried PRESERVE_MAJOR annotations",
-      "matchPackageNames": ["postgres", "clickhouse/clickhouse-server", "fedora"],
-      "matchUpdateTypes": ["major"],
+      "matchPackageNames": [
+        "postgres",
+        "clickhouse/clickhouse-server",
+        "fedora"
+      ],
+      "matchUpdateTypes": [
+        "major"
+      ],
       "enabled": false
     },
     {
       "description": "Compose-side syncthing on pc/bigpc is watchtower-owned",
-      "matchManagers": ["docker-compose"],
-      "matchPackageNames": ["syncthing/syncthing"],
+      "matchManagers": [
+        "docker-compose"
+      ],
+      "matchPackageNames": [
+        "syncthing/syncthing"
+      ],
       "enabled": false
     },
     {
       "description": "moving-sale is a frozen one-off site (untagged image, no digest pins)",
-      "matchPackageNames": ["imranrdev/moving-sale-2027"],
+      "matchPackageNames": [
+        "imranrdev/moving-sale-2027"
+      ],
       "enabled": false
     },
     {
       "description": "immich postgres: same-shape tags only (major-vectorchordX.Y.Z-pgvectorA.B.C), locked to the current postgres major via the compatibility group so pg-major jumps stay manual",
-      "matchPackageNames": ["ghcr.io/immich-app/postgres"],
+      "matchPackageNames": [
+        "ghcr.io/immich-app/postgres"
+      ],
       "versioning": "regex:^(?<compatibility>\\d+)-vectorchord(?<major>\\d+)\\.(?<minor>\\d+)\\.(?<patch>\\d+)-pgvector(?<pv_major>\\d+)\\.(?<pv_minor>\\d+)\\.(?<pv_patch>\\d+)$"
     },
     {
-      "description": "Longhorn requires sequential minor upgrades — minors are proposed but never automerged (patches automerge; majors already blocked by the critical-infra rule)",
-      "matchPackageNames": ["longhorn"],
-      "matchUpdateTypes": ["minor"],
+      "description": "Longhorn requires sequential minor upgrades \u2014 minors are proposed but never automerged (patches automerge; majors already blocked by the critical-infra rule)",
+      "matchPackageNames": [
+        "longhorn"
+      ],
+      "matchUpdateTypes": [
+        "minor"
+      ],
       "automerge": false
     }
   ]

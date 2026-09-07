@@ -1,0 +1,339 @@
+{{- if .Values.base.enabled }}
+# Host-level PersistentVolumes — shared resources tied to specific cluster nodes.
+# Each PV is paired with a PVC in the namespace of the app that consumes it.
+# All are RWX so multiple pods can share the same host directory if needed.
+
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: hostpath-main-node-main-pv
+spec:
+  capacity:
+    storage: 4096Gi
+  volumeMode: Filesystem
+  accessModes:
+    - ReadWriteMany
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: hostpath
+  local:
+    path: $MAIN_PARENT_DIR/Main
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - key: hostpath-main
+              operator: In
+              values:
+                - "true"
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: hostpath-main-node-main-pvc
+  namespace: apps
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: hostpath
+  resources:
+    requests:
+      storage: 4096Gi
+  volumeName: hostpath-main-node-main-pv
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: hostpath-main-node-devicesync-pv
+spec:
+  capacity:
+    storage: 4096Gi
+  volumeMode: Filesystem
+  accessModes:
+    - ReadWriteMany
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: hostpath
+  local:
+    path: $MAIN_PARENT_DIR/deviceSync
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - key: hostpath-main
+              operator: In
+              values:
+                - "true"
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: hostpath-main-node-devicesync-pvc
+  namespace: apps
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: hostpath
+  resources:
+    requests:
+      storage: 4096Gi
+  volumeName: hostpath-main-node-devicesync-pv
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: external-exposed-node-syslog-pv
+spec:
+  capacity:
+    storage: 5Gi
+  volumeMode: Filesystem
+  accessModes:
+    - ReadWriteMany
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: hostpath
+  local:
+    path: /var/log/journal
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - key: external-exposed
+              operator: In
+              values:
+                - "true"
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: external-exposed-node-syslog-pvc
+  namespace: apps
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: hostpath
+  resources:
+    requests:
+      storage: 5Gi
+  volumeName: external-exposed-node-syslog-pv
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: hostpath-main-node-devicesync-camera-pv
+spec:
+  capacity:
+    storage: 4096Gi
+  volumeMode: Filesystem
+  accessModes:
+    - ReadWriteMany
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: hostpath
+  local:
+    path: $MDSCL_DEVICE_SYNC_PATH/DCIM/Camera
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - key: hostpath-main
+              operator: In
+              values:
+                - "true"
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: hostpath-main-node-devicesync-camera-pvc
+  namespace: apps
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: hostpath
+  resources:
+    requests:
+      storage: 4096Gi
+  volumeName: hostpath-main-node-devicesync-camera-pv
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: hostpath-main-node-media-camera-pv
+spec:
+  capacity:
+    storage: 4096Gi
+  volumeMode: Filesystem
+  accessModes:
+    - ReadWriteMany
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: hostpath
+  local:
+    path: $MEDIA_DIR_PATH/Camera
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - key: hostpath-main
+              operator: In
+              values:
+                - "true"
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: hostpath-main-node-media-camera-pvc
+  namespace: apps
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: hostpath
+  resources:
+    requests:
+      storage: 4096Gi
+  volumeName: hostpath-main-node-media-camera-pv
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: hostpath-main-node-devicesync-screenshots-pv
+spec:
+  capacity:
+    storage: 4096Gi
+  volumeMode: Filesystem
+  accessModes:
+    - ReadWriteMany
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: hostpath
+  local:
+    path: $MDSCL_DEVICE_SYNC_PATH/Screenshots
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - key: hostpath-main
+              operator: In
+              values:
+                - "true"
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: hostpath-main-node-devicesync-screenshots-pvc
+  namespace: apps
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: hostpath
+  resources:
+    requests:
+      storage: 4096Gi
+  volumeName: hostpath-main-node-devicesync-screenshots-pv
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: hostpath-main-node-media-screenshots-pv
+spec:
+  capacity:
+    storage: 4096Gi
+  volumeMode: Filesystem
+  accessModes:
+    - ReadWriteMany
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: hostpath
+  local:
+    path: $MEDIA_DIR_PATH/Screenshots
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - key: hostpath-main
+              operator: In
+              values:
+                - "true"
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: hostpath-main-node-media-screenshots-pvc
+  namespace: apps
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: hostpath
+  resources:
+    requests:
+      storage: 4096Gi
+  volumeName: hostpath-main-node-media-screenshots-pv
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: hostpath-main-node-devicesync-screenrecs-pv
+spec:
+  capacity:
+    storage: 4096Gi
+  volumeMode: Filesystem
+  accessModes:
+    - ReadWriteMany
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: hostpath
+  local:
+    path: $MDSCL_DEVICE_SYNC_PATH/Screen Recordings
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - key: hostpath-main
+              operator: In
+              values:
+                - "true"
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: hostpath-main-node-devicesync-screenrecs-pvc
+  namespace: apps
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: hostpath
+  resources:
+    requests:
+      storage: 4096Gi
+  volumeName: hostpath-main-node-devicesync-screenrecs-pv
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: hostpath-main-node-media-screenrecs-pv
+spec:
+  capacity:
+    storage: 4096Gi
+  volumeMode: Filesystem
+  accessModes:
+    - ReadWriteMany
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: hostpath
+  local:
+    path: $MEDIA_DIR_PATH/Recordings
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - key: hostpath-main
+              operator: In
+              values:
+                - "true"
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: hostpath-main-node-media-screenrecs-pvc
+  namespace: apps
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: hostpath
+  resources:
+    requests:
+      storage: 4096Gi
+  volumeName: hostpath-main-node-media-screenrecs-pv
+{{- end }}
