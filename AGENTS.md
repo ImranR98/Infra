@@ -121,7 +121,7 @@ Node provisioning is Ansible, invoked through one Task entry point. There is **n
 
 Roles: `k3s_prepare` (config drop-ins, CDI, sysctl, firewall, kubectl group, pciutils for AMD detection), `k3s_install` (downloads `get.k3s.io`, dual-source SHA256 cross-check against GitHub `main` install.sh — fail-closed, overridable with `k3s_installer_sha256` — runs the installer, waits for service + cluster API), `k3s_configure` (labels/taint/Longhorn via kubectl, `KUBECONFIG=/etc/rancher/k3s/k3s.yaml`). The install block skips when `/usr/local/bin/k3s` exists (`k3s_force_reinstall=true` escapes) — unlike the old `setup.sh`, re-running provision never re-runs the installer, so it can't fight system-upgrade-controller's version ownership. `--check`/`--diff` dry-runs work for everything except the installer execution itself (get_url/command report what they would do). Prereq: `task prereqs` (installs ansible-core + collections); pciutils is auto-installed on agents. SSH host-key checking is left at Ansible's default (on) — the first join prompts to accept the fingerprint, same trust model as the old `ssh` call.
 
-**system-upgrade** — system-upgrade-controller manifests are always applied from GitHub latest in `prep.sh`; `server-plan`/`agent-plan` versions are Renovate-managed (`vX.Y.Z+k3sN`). After a bump: `k3s deploy system-upgrade apply`, then `kubectl -n system-upgrade get plans,jobs`.
+**system-upgrade** — system-upgrade-controller manifests are **vendored** in `templates/base/system-upgrade-controller.yaml` (downloaded from `releases/latest` of rancher/system-upgrade-controller at cutover; bump by re-downloading `crd.yaml` + `system-upgrade-controller.yaml` and replacing the template — the controller image inside is Renovate-managed via the kubernetes manager). `server-plan`/`agent-plan` versions are Renovate-managed (`vX.Y.Z+k3sN`, matched in the templates by the plan-version regex manager). After a bump: `task srv0:k3s:group:base:apply`, then `kubectl -n system-upgrade get plans,jobs`.
 
 **Umbrella-chart cutover mechanics (used for the current migration; retained for future releases)** — the kustomize pipeline was replaced by the `srv0-base`/`srv0-apps` Helm releases via zero-uninstall adoption:
 1. **Adopt live resources**: `helm install` refuses pre-existing objects unless they carry the new release's ownership metadata. For every object the umbrella renders (`helm template` output) that already exists, set `app.kubernetes.io/managed-by: Helm` + `meta.helm.sh/release-name: <rel>` + `meta.helm.sh/release-namespace: <ns>` (cross-namespace objects adopt fine). Helm then imports them in place and reconciles only diffs — unchanged rendered state means no restarts.
@@ -129,6 +129,47 @@ Roles: `k3s_prepare` (config drop-ins, CDI, sysctl, firewall, kubectl group, pci
 3. Helm `uninstall` honors `helm.sh/resource-policy: keep` only when the annotation is in the *stored manifest* — live-object annotations do NOT protect against the old release's uninstall (checked in helm v3 source). Don't rely on that as a protection.
 
 **valuesSecrets** (k3s helm-controller) — HelmChart CRs can pull values from a namespaced Secret: `spec.valuesSecrets: [{name, keys}]`; each listed key is projected as a `values-0-00N-HelmChart-ValuesSecret.yaml` file merged after `valuesContent` (plain Helm deep-merge, later file wins; `keys` must be non-empty). Used by frigate + loki (see Security); changes to the Secret re-trigger the chart upgrade (`ignoreUpdates: false` default). The referenced Secret must live in the CR's namespace and not be named `chart-values-<chart>`.
+
+## Helm crash course (as used in this repo)
+
+**Mental model.** Helm is a package manager that turns a *chart* (templates + values) into Kubernetes manifests and tracks the result as a *release*. Helm is **client-only** — nothing runs in the cluster; the `helm` binary (installed by `task prereqs`, pinned like the Task binary) does everything from wherever `task` runs. Each install/upgrade stores the full rendered manifest as a revision (in `sh.helm.release.v1.<name>.v<n>` Secrets). `helm upgrade --install` is idempotent: it three-way-merges the new render against the *last stored* manifest and patches only what changed — re-running `task srv0:k3s:group:base:apply` with no file changes touches nothing and just bumps the revision counter.
+
+**Three layers of "helm" in this repo — do not conflate them:**
+1. **Our umbrella chart** (`targets/srv0/k3s/`, the chart root) → releases `srv0-base` + `srv0-apps`, run by `commands/k3s/helm.sh` via `task`.
+2. **k3s's embedded helm-controller** → the 19 `HelmChart` CRs *inside* our chart. Our releases apply the CR objects; the controller then installs/upgrades the app releases (frigate, immich, …). `helm uninstall srv0-*` does NOT touch these; `kubectl delete helmchart` triggers THEIR uninstall (see cutover mechanics above).
+3. **k3s bootstrap charts** (traefik + traefik-crd in kube-system) — not ours at all; we only customize traefik via the `HelmChartConfig` template.
+
+**Chart layout** (chart root = `targets/srv0/k3s/`):
+- `Chart.yaml` — name/version only (no dependencies in this chart).
+- `values.yaml` — committed defaults; just the `base.enabled`/`apps.enabled` gates.
+- `templates/` — one file per former component, each wrapped in `{{ if .Values.base.enabled }}`/`{{ if .Values.apps.enabled }}`. Content is **verbatim YAML with `$VAR` refs**: `helm.sh` envsubsts every template from VARS *before* helm parses anything, so multi-line VARS, block scalars, and bare `$` in values behave exactly like the old pipeline.
+- `files/` — raw files shipped inside the chart, referenced from templates via `.Files.Get "files/<name>"` (**paths are chart-root-relative — the `files/` prefix is mandatory**; omitting it silently renders empty, which is how the WASM plugin broke).
+- `templates/hooks.yaml` — Helm **hooks**: Jobs annotated `helm.sh/hook: post-install,post-upgrade` run automatically after every install/upgrade, retried via Job backoff, deleted on success (`helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded`).
+
+**Everyday commands:**
+```
+task srv0:k3s:group:base:apply            # = helm.sh srv0-base base (upgrade --install, idempotent)
+task srv0:k3s:group:apps:apply
+helm ls -A                                # releases + revision + status
+helm history srv0-base -n base            # revision log
+helm rollback srv0-base <rev> -n base     # instant rollback to an earlier revision
+helm get values srv0-base -n base         # effective values
+helm status srv0-base -n base
+helm template srv0-base targets/srv0/k3s -n base --set apps.enabled=false   # dry render (envsubst first, or use helm.sh)
+helm diff upgrade srv0-base targets/srv0/k3s --set apps.enabled=false       # preview (helm-diff plugin)
+helm uninstall srv0-apps -n apps          # delete a release; PVCs are retained by Helm default
+```
+
+**Pitfalls learned the hard way:**
+- `helm template` on the raw chart fails on `$VAR` structural lines — the envsubst pass (helm.sh) must run first. Validate with `task srv0:validate` or `helm ... --dry-run=server`.
+- `.Files.Get` paths need the `files/` prefix (see above).
+- Literal `{{` in templates is interpreted by helm — the homeassistant CR's embedded Go templates are escaped as `{{ "{{" }}`.
+- Subchart resource names derive from `{{ .Release.Name }}` — that's why the app charts stay HelmChart CRs (helm-controller-managed) instead of umbrella dependencies.
+- Never `helm install --force` casually — it deletes/recreates resources; one accidental `--force` during the cutover re-released 4 HelmChart CRs.
+- `kubectl apply --dry-run=server` on rendered output gives false positives (e.g. the 256KiB `last-applied-configuration` limit that doesn't apply to Helm's merge) — use helm's own `--dry-run=server`.
+- Adoption: pre-existing objects must carry `app.kubernetes.io/managed-by: Helm` + `meta.helm.sh/release-name`/`release-namespace` annotations or helm refuses to install over them (see cutover mechanics above).
+- Helm uninstall ignores live-object annotations entirely — `helm.sh/resource-policy: keep` only works from the *stored* manifest.
+- Helm doesn't auto-resolve k3s's kubeconfig the way k3s's kubectl does — `helm.sh` exports `KUBECONFIG=/etc/rancher/k3s/k3s.yaml` when unset.
 
 ## Storage & PVC backups
 
