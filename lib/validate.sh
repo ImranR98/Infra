@@ -22,7 +22,7 @@ validate() {
     local target="${1:-$TARGET}"
     local k3s_ok=true compose_ok=true
 
-    if [ "$target" = "srv0" ] && [ -d "$INFRA_ROOT/charts/srv0" ]; then
+    if [ -d "$INFRA_ROOT/targets/$target/k3s" ]; then
         _validate_helm || k3s_ok=false
     fi
     if [ -f "$INFRA_ROOT/targets/$target/compose/compose.yaml" ]; then
@@ -35,7 +35,7 @@ validate() {
 }
 
 _validate_helm() {
-    local errors=0 chart="$INFRA_ROOT/charts/srv0"
+    local errors=0 chart="$INFRA_ROOT/targets/$target/k3s"
     if command -v helm >/dev/null 2>&1; then
         local staged="$K3S_STATE_DIR/chart-validate"
         rm -rf "$staged"

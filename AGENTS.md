@@ -98,7 +98,7 @@ Place at `commands/<name>.sh` or `commands/<subdir>/<name>.sh`; target overrides
 
 ## K3s conventions
 
-Components live in the srv0 umbrella chart (`charts/srv0/`):
+Components live in the srv0 umbrella chart (`targets/srv0/k3s/`, the chart root itself):
 - `templates/base/` + `templates/apps/` — one file per former component, verbatim YAML with `$VAR` refs (envsubst'd by `commands/k3s/helm.sh`), gated by `{{ if .Values.base.enabled }}` / `{{ if .Values.apps.enabled }}`. Filenames keep the old conventions (secrets/configmaps inside `prereqs` sections, Traefik `IngressRoute`s, `NetworkPolicy`s).
 - `templates/hooks.yaml` — seeding Jobs (`immich-seed`, `qbittorrent-seed`, `geoipupdate-init`) as Helm `post-install,post-upgrade` hooks with `helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded`; RBAC via the `helm-hooks` ServiceAccounts/Roles. The old `prep.sh`/`post.sh`/`delete.sh` host-side hooks are gone (waits are handled by helm-controller + Job backoff).
 
@@ -149,7 +149,7 @@ Roles: `k3s_prepare` (config drop-ins, CDI, sysctl, firewall, kubectl group, pci
 
 - Secrets never touch git (`/secrets/`, `/VARS*.env`, `compose.private.yaml` gitignored); `.secret` → chmod 600; Authelia SSO (forward-auth + basic-auth, 2FA); CrowdSec (srv0: Helm chart, agent/LAPI/AppSec + per-service postoverflow whitelists; vps0: single container, bouncer key auto-registered from `BOUNCER_KEY_TRAEFIK`); geoblock allowlist (CA/CN/CU); per-component NetworkPolicies plus baselines in the `namespaces` component (kube-system policy explicitly allows 80/443/8000/8443 to Traefik).
 - Docker socket via `wollomatic/socket-proxy`: `dockerproxy` (read-only, Traefik/monitoring); `dockerproxy_priv` (read-write, watchtower) exists only on pc/bigpc — `cap_drop: ALL`, `read_only: true`, `mem_limit: 512M`, user `65534:$DOCKER_GID`.
-- Known tradeoff: K3s `HelmChart` `valuesContent` (incl. DB passwords, JWKS, OIDC secrets) is readable by anyone with `get` on `helmcharts.helm.cattle.io` — fine for single-user, audit before granting namespace access. Reduced where charts support it: authelia (secret `path:` refs), crowdsec (`externalSecret`), grafana (`admin.existingSecret`), headlamp (`oidc.externalSecret`), rustfs (`secret.existingSecret`), immich/nextcloud/plik (plain-YAML `secretKeyRef`). Where the chart has no secret-ref support but the value is plain YAML, the component uses **`spec.valuesSecrets`** (k3s helm-controller): the secret values live in a namespaced Secret (now `charts/srv0/templates/apps/frigate.yaml` + `templates/base/monitoring.yaml`, key `values.yaml`) listed in the CR via `valuesSecrets: [{name, keys}]` — the controller projects it as a later `-f` values file, so the merge is plain Helm deep-merge and renders identically. Done this way: **frigate**'s `env` passwords (its `env` key only accepts plain strings — chart limitation) and **loki**'s S3 keys (the 7.x chart's config handling makes `existingSecretForConfig` too risky; the values merge sidesteps the chart). Remaining unavoidable plaintext: authelia's JWKS PEM (`value:` embedded — the chart generates a RANDOM key if the `CryptographicKey` secret isn't inline; verified the hard way). Also: freshrss stays a root container (official image hardcodes apache on :80 and its entrypoint runs as root — de-rooting needs a custom apache config); nextcloud stays a root container too (verified: the official entrypoint writes /etc/apache2 as root even with APACHE_PORT set — uid 33 crashes on `remoteip.conf` removal; the PVC is already www-data-owned so this is purely an entrypoint limitation).
+- Known tradeoff: K3s `HelmChart` `valuesContent` (incl. DB passwords, JWKS, OIDC secrets) is readable by anyone with `get` on `helmcharts.helm.cattle.io` — fine for single-user, audit before granting namespace access. Reduced where charts support it: authelia (secret `path:` refs), crowdsec (`externalSecret`), grafana (`admin.existingSecret`), headlamp (`oidc.externalSecret`), rustfs (`secret.existingSecret`), immich/nextcloud/plik (plain-YAML `secretKeyRef`). Where the chart has no secret-ref support but the value is plain YAML, the component uses **`spec.valuesSecrets`** (k3s helm-controller): the secret values live in a namespaced Secret (now `targets/srv0/k3s/templates/apps/frigate.yaml` + `templates/base/monitoring.yaml`, key `values.yaml`) listed in the CR via `valuesSecrets: [{name, keys}]` — the controller projects it as a later `-f` values file, so the merge is plain Helm deep-merge and renders identically. Done this way: **frigate**'s `env` passwords (its `env` key only accepts plain strings — chart limitation) and **loki**'s S3 keys (the 7.x chart's config handling makes `existingSecretForConfig` too risky; the values merge sidesteps the chart). Remaining unavoidable plaintext: authelia's JWKS PEM (`value:` embedded — the chart generates a RANDOM key if the `CryptographicKey` secret isn't inline; verified the hard way). Also: freshrss stays a root container (official image hardcodes apache on :80 and its entrypoint runs as root — de-rooting needs a custom apache config); nextcloud stays a root container too (verified: the official entrypoint writes /etc/apache2 as root even with APACHE_PORT set — uid 33 crashes on `remoteip.conf` removal; the PVC is already www-data-owned so this is purely an entrypoint limitation).
 - **SELinux (Fedora nodes)** — Kubernetes assigns per-pod MCS categories; files carry their creator's categories forever. Pods sharing a hostPath tree (syncthing/mdscl/dscpln) and backup/restore pods must set **pod-level** `seLinuxOptions.level: s0` (container-level is ignored). `privileged: true` bypasses enforcement but new files are still labelled. Python/Node `io_uring` denials are audit spam with epoll fallback — fix with `PYTHON_IO_URING=0` / `UV_USE_IO_URING=0` rather than SELinux changes. `setroubleshootd` CPU pegged = denial backlog; fix the denials, don't mask.
 
 ### Accepted Security Tradeoffs
@@ -228,7 +228,7 @@ commands/                       # Global command implementations
 commands/renovate.sh            # Universal: run Renovate (opens PRs on GitHub)
 ops/ansible/                    # Ansible (connection=local): playbooks/ + roles/ (k3s_prepare|install|configure,
                                 #   prereqs, wireguard), files/update-node-ip.sh (retained bash), .ansible-lint/.yamllint
-lib/plugins/authelia-header-gate/   # WASM plugin source + build (shipped via charts/srv0/files/)
+lib/plugins/authelia-header-gate/   # WASM plugin source + build (shipped via targets/srv0/k3s/files/)
 secrets/                        # VARS.<target>.env + VARS.env (gitignored)
 targets/<target>/
   Taskfile.yml                  # Hand-written task entries for this target
@@ -236,8 +236,9 @@ targets/<target>/
   compose/compose.yaml          # $VARIABLE placeholders
   compose/compose.private.yaml  # Optional gitignored overlay, merged over compose.yaml
   compose/templates/            # .secret/.plain render pipeline + per-component prep.sh
-charts/<target>/               # umbrella Helm chart (srv0): templates/ (repo-owned components
-                                #   + HelmChart CRs + hook Jobs), files/ (WASM plugin), values.yaml
+  k3s/                           # srv0 umbrella Helm chart (k3s-specific: HelmChart CRs, k3s
+                                #   traefik HelmChartConfig, k3s plan versions): templates/ (repo-owned
+                                #   components + HelmChart CRs + hook Jobs), files/ (WASM plugin), values.yaml
   commands/                     # Target-specific overrides
 current_target/compose_live_state/   # Rendered state (gitignored, ephemeral)
 compose_state_backups/ k3s_state_backups/   # Backup archives (gitignored)

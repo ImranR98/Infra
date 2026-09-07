@@ -17,7 +17,7 @@
   },
   "kubernetes": {
     "managerFilePatterns": [
-      "/^charts\\/.*\\.ya?ml$/"
+      "/^targets\\/srv0\\/k3s\\/.*\\.ya?ml$/"
     ]
   },
   "customManagers": [
@@ -100,7 +100,7 @@
     {
       "description": "Never automerge major updates to critical infra (base-namespace srv0 K3s group, public VPS edge vps0, srv0 frpc tunnel); minor/patch automerge normally",
       "matchFileNames": [
-        "charts/srv0/templates/base/**",
+        "targets/srv0/k3s/templates/base/**",
         "targets/vps0/compose/**",
         "targets/srv0/compose/**"
       ],
