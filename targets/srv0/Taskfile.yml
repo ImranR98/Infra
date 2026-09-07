@@ -6,33 +6,27 @@ tasks:
   validate:
     desc: Check configs for errors
     cmds:
-      - TARGET=srv0 INFRA_ROOT={{.ROOT_DIR}} bash {{.ROOT_DIR}}/commands/validate.sh {{.CLI_ARGS}}
-
-  list-domains:
-    desc: Show domains used by this target
-    cmds:
-      - TARGET=srv0 INFRA_ROOT={{.ROOT_DIR}} bash {{.ROOT_DIR}}/commands/list-domains.sh {{.CLI_ARGS}}
+      - INFRA_ROOT={{.ROOT_DIR}} ANSIBLE_CONFIG={{.ROOT_DIR}}/ops/ansible/ansible.cfg ansible-playbook {{.ROOT_DIR}}/ops/ansible/playbooks/validate.yml -i {{.ROOT_DIR}}/ops/ansible/inventory.yml -l srv0
 
   # ----- compose -----
   compose:install:
     desc: Render templates and start Compose stack
     cmds:
-      - TARGET=srv0 INFRA_ROOT={{.ROOT_DIR}} bash {{.ROOT_DIR}}/commands/compose/install.sh {{.CLI_ARGS}}
+      - cmd: |
+          [ ! -f {{.ROOT_DIR}}/targets/srv0/VARS.template.env ] || python3 {{.ROOT_DIR}}/lib/vars_validator.py srv0
+      - INFRA_ROOT={{.ROOT_DIR}} ANSIBLE_CONFIG={{.ROOT_DIR}}/ops/ansible/ansible.cfg ansible-playbook {{.ROOT_DIR}}/ops/ansible/playbooks/compose_install.yml -i {{.ROOT_DIR}}/ops/ansible/inventory.yml -l srv0 {{.CLI_ARGS}}
 
   compose:restart:
     desc: Restart a specific Compose service (pass the service name after --)
     cmds:
-      - TARGET=srv0 INFRA_ROOT={{.ROOT_DIR}} bash {{.ROOT_DIR}}/commands/compose/restart.sh {{.CLI_ARGS}}
+      - cmd: |
+          [ ! -f {{.ROOT_DIR}}/targets/srv0/VARS.template.env ] || python3 {{.ROOT_DIR}}/lib/vars_validator.py srv0
+      - INFRA_ROOT={{.ROOT_DIR}} ANSIBLE_CONFIG={{.ROOT_DIR}}/ops/ansible/ansible.cfg ansible-playbook {{.ROOT_DIR}}/ops/ansible/playbooks/compose_restart.yml -i {{.ROOT_DIR}}/ops/ansible/inventory.yml -l srv0 -e "compose_service={{.CLI_ARGS}}"
 
   compose:backup-state:
-    desc: Backup Compose runtime state (local file or remote via SSH; pass [remote target] after --)
+    desc: Backup Compose runtime state (local; or remote via '-e backup_remote=user@host:path' after --)
     cmds:
-      - TARGET=srv0 INFRA_ROOT={{.ROOT_DIR}} bash {{.ROOT_DIR}}/commands/compose/backup-state.sh {{.CLI_ARGS}}
-
-  compose:generate-mtls-certs:
-    desc: Generate mTLS certificates for a client↔server pair (pass the server target after --)
-    cmds:
-      - TARGET=srv0 INFRA_ROOT={{.ROOT_DIR}} bash {{.ROOT_DIR}}/commands/compose/generate-mtls-certs.sh {{.CLI_ARGS}}
+      - INFRA_ROOT={{.ROOT_DIR}} ANSIBLE_CONFIG={{.ROOT_DIR}}/ops/ansible/ansible.cfg ansible-playbook {{.ROOT_DIR}}/ops/ansible/playbooks/compose_backup_state.yml -i {{.ROOT_DIR}}/ops/ansible/inventory.yml -l srv0 {{.CLI_ARGS}}
 
   compose:install-preboot:
     desc: Install preboot FRPC for remote LUKS unlock via SSH
@@ -48,12 +42,17 @@ tasks:
   k3s:validate:
     desc: Lint and syntax-check the Ansible provisioning playbooks (no hosts touched)
     cmds:
-      - TARGET=srv0 INFRA_ROOT={{.ROOT_DIR}} bash {{.ROOT_DIR}}/commands/k3s/validate.sh {{.CLI_ARGS}}
+      - cmd: |
+          set -e
+          cd {{.ROOT_DIR}}/ops/ansible
+          for pb in playbooks/*.yml; do ansible-playbook --syntax-check -i localhost, "$pb"; done
+          yamllint -c .yamllint .
+          ansible-lint -c .ansible-lint --offline .
 
   k3s:deploy:
     desc: Deploy the umbrella chart for a scope (pass "base" or "apps" + extra helm args after --)
     cmds:
-      - TARGET=srv0 INFRA_ROOT={{.ROOT_DIR}} bash {{.ROOT_DIR}}/commands/k3s/helm.sh srv0-{{.CLI_ARGS}}
+      - TARGET=srv0 INFRA_ROOT={{.ROOT_DIR}} bash {{.ROOT_DIR}}/commands/k3s/helm.sh srv0-{{splitList " " .CLI_ARGS | first}} {{.CLI_ARGS}}
 
   k3s:update-node-ip:
     desc: Update K3s node IP after a network change (pass [--ip X] [--force] after --; run on the node)
@@ -86,22 +85,28 @@ tasks:
       - TARGET=srv0 INFRA_ROOT={{.ROOT_DIR}} bash {{.ROOT_DIR}}/commands/k3s/helm.sh srv0-apps apps
 
   k3s:group:apps:delete:
-    desc: Delete the apps K3s component group
+    desc: Delete the apps K3s component group (helm uninstall; PVCs are retained by Helm default)
     cmds:
       - helm uninstall srv0-apps -n apps
 
-  # ----- universal aliases (run with TARGET set (target mode), like the old ./infra.sh srv0 <cmd>) -----
+  # ----- universal aliases -----
   prereqs:
     desc: Install system prerequisites
     cmds:
-      - TARGET=srv0 INFRA_ROOT={{.ROOT_DIR}} bash {{.ROOT_DIR}}/commands/prereqs.sh {{.CLI_ARGS}}
+      - cmd: |
+          if ! command -v ansible-playbook >/dev/null 2>&1; then
+            if command -v apt-get >/dev/null 2>&1; then sudo apt-get update -qq && sudo apt-get install -y ansible-core
+            elif command -v dnf >/dev/null 2>&1; then sudo dnf install -y ansible-core
+            else echo "Error: unsupported package manager. Install ansible-core manually." >&2; exit 1; fi
+          fi
+      - INFRA_ROOT={{.ROOT_DIR}} ANSIBLE_CONFIG={{.ROOT_DIR}}/ops/ansible/ansible.cfg ansible-playbook -i localhost, {{.ROOT_DIR}}/ops/ansible/playbooks/prereqs.yml {{.CLI_ARGS}}
 
   renovate:
     desc: Run Renovate against ImranR98/Infra (needs RENOVATE_GITHUB_TOKEN in secrets/VARS.env)
     cmds:
-      - TARGET=srv0 INFRA_ROOT={{.ROOT_DIR}} bash {{.ROOT_DIR}}/commands/renovate.sh {{.CLI_ARGS}}
+      - INFRA_ROOT={{.ROOT_DIR}} bash {{.ROOT_DIR}}/commands/renovate.sh {{.CLI_ARGS}}
 
   wireguard:
     desc: Install WireGuard and deploy a config file (pass the .conf path after --)
     cmds:
-      - TARGET=srv0 INFRA_ROOT={{.ROOT_DIR}} bash {{.ROOT_DIR}}/commands/wireguard.sh {{.CLI_ARGS}}
+      - INFRA_ROOT={{.ROOT_DIR}} ANSIBLE_CONFIG={{.ROOT_DIR}}/ops/ansible/ansible.cfg ansible-playbook -i localhost, {{.ROOT_DIR}}/ops/ansible/playbooks/wireguard.yml -e "wireguard_conf_src=$(readlink -f {{.CLI_ARGS}})"

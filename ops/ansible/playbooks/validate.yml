@@ -1,0 +1,112 @@
+---
+# validate.yml — config validation for one target (yq, compose config, helm).
+# Usage: ansible-playbook validate.yml -i ops/ansible/inventory.yml -l <target>
+- name: Validate configs
+  hosts: all
+  gather_facts: true
+
+  vars:
+    infra_root: "{{ lookup('env', 'INFRA_ROOT') }}"
+    target_dir: "{{ infra_root }}/targets/{{ inventory_hostname }}"
+
+  pre_tasks:
+    - name: Stat optional inputs
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      loop:
+        - "{{ infra_root }}/targets/{{ inventory_hostname }}/VARS.template.env"
+        - "{{ target_dir }}/compose/compose.yaml"
+        - "{{ infra_root }}/targets/{{ inventory_hostname }}/k3s"
+        - "{{ infra_root }}/secrets/values.srv0.yaml"
+        - "{{ infra_root }}/secrets/VARS.{{ inventory_hostname }}.env"
+        - "{{ infra_root }}/secrets/VARS.env"
+        - "{{ infra_root }}/VARS.{{ inventory_hostname }}.env"
+        - "{{ infra_root }}/VARS.env"
+      register: _stats
+
+    - name: Set availability facts
+      ansible.builtin.set_fact:
+        _vars_tpl: "{{ _stats.results[0].stat.exists }}"
+        _compose_yaml: "{{ _stats.results[1].stat.exists }}"
+        _k3s_chart: "{{ _stats.results[2].stat.exists }}"
+        _secret_values: "{{ _stats.results[3].stat.exists }}"
+        _vars_file: "{{ _stats.results[4:8] | map(attribute='stat.exists') | select | list | length > 0 }}"
+
+  tasks:
+    - name: Run VARS validator
+      ansible.builtin.command:
+        cmd: python3 {{ infra_root }}/lib/vars_validator.py {{ inventory_hostname }}
+      changed_when: false
+      when: _vars_file
+
+    - name: Include resolved VARS
+      ansible.builtin.include_vars:
+        file: "{{ infra_root }}/current_target/vars.yml"
+      failed_when: false
+      when: _vars_file
+
+    - name: Compose YAML syntax
+      ansible.builtin.shell: |
+        errs=0
+        for f in "{{ target_dir }}/compose/compose.yaml" "{{ target_dir }}/compose/compose.private.yaml"; do
+          [ -f "$f" ] || continue
+          if yq eval '.' "$f" >/dev/null 2>&1; then
+            echo "OK: $(basename "$f")"
+          elif grep -qP '^\s+\$[A-Z_][A-Z_0-9]*\s*$' "$f"; then
+            echo "WARN: $(basename "$f") YAML syntax skipped (structural \$VARIABLE placeholder)"
+          else
+            echo "ERROR: $(basename "$f") has invalid YAML syntax"; errs=1
+          fi
+        done
+        exit $errs
+      changed_when: false
+      when: _compose_yaml
+
+    - name: Compose config validation
+      ansible.builtin.shell: |
+        files="-f {{ target_dir }}/compose/compose.yaml"
+        [ -f "{{ target_dir }}/compose/compose.private.yaml" ] && files="$files -f {{ target_dir }}/compose/compose.private.yaml"
+        docker compose $files config --dry-run >/dev/null && echo "OK: docker compose config"
+      environment:
+        MY_UID: "{{ 1000 if ansible_user_id == 'root' else (ansible_user_uid | default(1000)) }}"
+        COMPOSE_STATE_DIR: "{{ infra_root }}/current_target/compose_live_state"
+        TARGET: "{{ inventory_hostname }}"
+      changed_when: false
+      failed_when: false
+      when: _compose_yaml
+
+    - name: Helm lint (srv0 chart)
+      ansible.builtin.shell: |
+        errs=0
+        helm lint "{{ infra_root }}/targets/srv0/k3s" -f "{{ infra_root }}/targets/srv0/k3s/values.yaml" \
+          {% if _secret_values %}-f "{{ infra_root }}/secrets/values.srv0.yaml"{% endif %} >/dev/null 2>&1 \
+          || { echo "ERROR: helm lint failed"; errs=1; }
+        exit $errs
+      changed_when: false
+      when: _k3s_chart
+
+    - name: Helm template (srv0 chart, both scopes)
+      ansible.builtin.shell: |
+        errs=0
+        for scope in base apps; do
+          if [ "$scope" = base ]; then other=apps; else other=base; fi
+          out=$(helm template "srv0-$scope" "{{ infra_root }}/targets/srv0/k3s" -n "$scope" \
+            -f "{{ infra_root }}/targets/srv0/k3s/values.yaml" \
+            {% if _secret_values %}-f "{{ infra_root }}/secrets/values.srv0.yaml"{% endif %} \
+            --set "$other.enabled=false" 2>&1) || { echo "ERROR: helm template ($scope) failed"; errs=1; continue; }
+          if echo "$out" | grep -q '<no value>'; then
+            echo "ERROR: helm template ($scope) rendered missing values (<no value>)"; errs=1
+          fi
+        done
+        exit $errs
+      changed_when: false
+      when: _k3s_chart
+
+    - name: Placeholder check (srv0 helm secret values)
+      ansible.builtin.shell: |
+        if grep -qE 'change_me|changeme|REPLACE_ME|^[^#]*"[^"]*<[^>]*>[^"]*"' "{{ infra_root }}/secrets/values.srv0.yaml"; then
+          echo "ERROR: secrets/values.srv0.yaml contains placeholder values"; exit 1
+        fi
+        echo "OK: secrets/values.srv0.yaml"
+      changed_when: false
+      when: _k3s_chart and _secret_values

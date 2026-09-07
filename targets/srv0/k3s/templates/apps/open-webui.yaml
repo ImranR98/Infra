@@ -11,7 +11,7 @@ spec:
     name: letsencrypt-prod
     kind: ClusterIssuer
   dnsNames:
-    - gpt.$SERVICES_DOMAIN
+    - gpt.{{ .Values.SERVICES_DOMAIN }}
 ---
 apiVersion: traefik.io/v1alpha1
 kind: IngressRoute
@@ -23,7 +23,7 @@ spec:
     - websecure
     - websecure-proxy
   routes:
-    - match: Host(`gpt.$SERVICES_DOMAIN`)
+    - match: Host(`gpt.{{ .Values.SERVICES_DOMAIN }}`)
       kind: Rule
       middlewares:
         - name: geoblock
@@ -113,7 +113,7 @@ spec:
       - name: OAUTH_PROVIDER_NAME
         value: "Authelia"
       - name: OPENID_PROVIDER_URL
-        value: "https://auth.$SERVICES_DOMAIN/.well-known/openid-configuration"
+        value: "https://auth.{{ .Values.SERVICES_DOMAIN }}/.well-known/openid-configuration"
       - name: OAUTH_CLIENT_ID
         value: "open-webui"
       - name: OAUTH_CLIENT_SECRET
@@ -132,7 +132,7 @@ spec:
       - name: OAUTH_ROLES_CLAIM
         value: "groups"
       - name: WEBUI_URL
-        value: "https://gpt.$SERVICES_DOMAIN"
+        value: "https://gpt.{{ .Values.SERVICES_DOMAIN }}"
       - name: ENABLE_LOGIN_FORM
         value: "false"
       - name: OAUTH_CODE_CHALLENGE_METHOD
@@ -145,7 +145,7 @@ spec:
     # NOTE: open-webui, redis, and pipelines run as root — copy-app-data
     # init container copies files as root, sub-charts uncontrolled by parent.
     podSecurityContext:
-      fsGroup: $MY_UID
+      fsGroup: {{ .Values.MY_UID }}
     containerSecurityContext:
       allowPrivilegeEscalation: false
 ---
@@ -184,5 +184,5 @@ metadata:
   namespace: apps
 type: Opaque
 stringData:
-  client-secret: "$AUTHELIA_OPENWEBUI_CLIENT_SECRET_HASHABLE"
+  client-secret: "{{ .Values.AUTHELIA_OPENWEBUI_CLIENT_SECRET_HASHABLE }}"
 {{- end }}

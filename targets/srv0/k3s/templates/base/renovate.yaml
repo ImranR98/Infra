@@ -25,8 +25,8 @@ spec:
         spec:
           restartPolicy: Never
           securityContext:
-            runAsUser: $MY_UID
-            runAsGroup: $MY_UID
+            runAsUser: {{ .Values.MY_UID }}
+            runAsGroup: {{ .Values.MY_UID }}
             # Pods sharing a hostPath tree need pod-level s0 (container-level is ignored).
             seLinuxOptions:
               level: s0
@@ -66,10 +66,10 @@ spec:
           volumes:
             - name: vars-file
               hostPath:
-                path: "$MAIN_PARENT_DIR/Main/Infra/secrets/VARS.env"
+                path: "{{ .Values.MAIN_PARENT_DIR }}/Main/Infra/secrets/VARS.env"
                 type: File
             - name: git-config
               hostPath:
-                path: "$MAIN_PARENT_DIR/Main/Infra/.git/config"
+                path: "{{ .Values.MAIN_PARENT_DIR }}/Main/Infra/.git/config"
                 type: File
 {{- end }}

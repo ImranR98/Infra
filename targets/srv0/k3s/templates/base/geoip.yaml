@@ -16,9 +16,9 @@ spec:
       template:
         spec:
           securityContext:
-            runAsUser: $MY_UID
-            runAsGroup: $MY_UID
-            fsGroup: $MY_UID
+            runAsUser: {{ .Values.MY_UID }}
+            runAsGroup: {{ .Values.MY_UID }}
+            fsGroup: {{ .Values.MY_UID }}
             runAsNonRoot: true
             # Shared with the geoip service pod via the geoip PVC: pods
             # writing/reading the same volume must share MCS category s0
@@ -76,8 +76,8 @@ spec:
         app: geoip-service
     spec:
       securityContext:
-        runAsUser: $MY_UID
-        runAsGroup: $MY_UID
+        runAsUser: {{ .Values.MY_UID }}
+        runAsGroup: {{ .Values.MY_UID }}
         runAsNonRoot: true
         # Shared with the geoipupdate pod via the geoip PVC: both must use MCS
         # category s0 (pod-level; container-level is ignored) or DB files
@@ -179,6 +179,6 @@ metadata:
   namespace: base
 type: Opaque
 stringData:
-  account-id: "$GEOIPUPDATE_ACCOUNT_ID"
-  license-key: "$GEOIPUPDATE_LICENSE_KEY"
+  account-id: "{{ .Values.GEOIPUPDATE_ACCOUNT_ID }}"
+  license-key: "{{ .Values.GEOIPUPDATE_LICENSE_KEY }}"
 {{- end }}

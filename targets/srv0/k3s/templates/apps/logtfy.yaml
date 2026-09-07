@@ -104,15 +104,15 @@ stringData:
             "configs": [
                 {
                     "id": "ntfy_self",
-                    "host": "https://ntfy.$SERVICES_DOMAIN",
-                    "authHeader": "Bearer $NTFY_WRITE_ONLY_ACCOUNT_TOKEN",
-                    "topicPrefix": "${TARGET}_services_"
+                    "host": "https://ntfy.{{ .Values.SERVICES_DOMAIN }}",
+                    "authHeader": "Bearer {{ .Values.NTFY_WRITE_ONLY_ACCOUNT_TOKEN }}",
+                    "topicPrefix": "{{ .Values.TARGET }}_services_"
                 },
                 {
                     "id": "ntfy_official",
                     "host": "https://ntfy.sh",
                     "authHeader": null,
-                    "topicPrefix": "$NTFY_FALLBACK_TOPIC"
+                    "topicPrefix": "{{ .Values.NTFY_FALLBACK_TOPIC }}"
                 }
             ],
             "defaultConfig": "ntfy_self",
@@ -165,10 +165,10 @@ spec:
       labels:
         app: logtfy
     spec:
-      hostname: ${TARGET}
+      hostname: {{ .Values.TARGET }}
       serviceAccountName: logtfy-service-account
       securityContext:
-        fsGroup: $MY_UID
+        fsGroup: {{ .Values.MY_UID }}
       containers:
         - name: logtfy
           image: imranrdev/logtfy:latest@sha256:c234a89fe4969806c28b972509c3575ff2595f77ba4b3f1def540a7a2b0b07bd

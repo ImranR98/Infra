@@ -1,0 +1,15 @@
+---
+# Committed inventory for local (connection=local) operations: compose
+# install/restart/backup-state, validate. Node provisioning (k3s:provision)
+# keeps its throwaway join inventory — never add host metadata here.
+# `-l <target>` selects the machine; playbooks run on the machine itself and
+# assert the hostname matches the selected target.
+all:
+  hosts:
+    srv0: {}
+    vps0: {}
+    bigpc: {}
+    pc: {}
+    rpi: {}
+  vars:
+    ansible_connection: local

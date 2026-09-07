@@ -18,7 +18,7 @@ spec:
         app: dscpln
     spec:
       securityContext:
-        fsGroup: $MY_UID
+        fsGroup: {{ .Values.MY_UID }}
         seLinuxOptions:
           level: s0
       containers:
@@ -44,20 +44,20 @@ spec:
             - name: UV_USE_IO_URING
               value: "0"
             - name: TEXTFILE_DATA_PROVIDER_DATA_PATH
-              value: "/data/$DSCPLN_DATA_FILE"
+              value: "/data/{{ .Values.DSCPLN_DATA_FILE }}"
             - name: MONTHLY_LIMIT_NTFY_URL
-              value: "http://ntfy.base.svc.cluster.local:3000/${TARGET}_services_dscpln"
+              value: "http://ntfy.base.svc.cluster.local:3000/{{ .Values.TARGET }}_services_dscpln"
             - name: WEEKLY_LIMIT_NTFY_URL
-              value: "http://ntfy.base.svc.cluster.local:3000/${TARGET}_services_dscpln"
+              value: "http://ntfy.base.svc.cluster.local:3000/{{ .Values.TARGET }}_services_dscpln"
             - name: NTFY_TOKEN
               valueFrom:
                 secretKeyRef:
                   name: dscpln-ntfy-token
                   key: token
             - name: TEXTFILE_BUDGET_INIT_AMT
-              value: "$DSCPLN_BUDGET_INIT_AMT"
+              value: "{{ .Values.DSCPLN_BUDGET_INIT_AMT }}"
             - name: TEXTFILE_FIRST_WEEK_BIAS_INIT_AMT
-              value: "$DSCPLN_FIRST_WEEK_BIAS_INIT_AMT"
+              value: "{{ .Values.DSCPLN_FIRST_WEEK_BIAS_INIT_AMT }}"
           volumeMounts:
             - name: dscpln-data
               mountPath: /data
@@ -92,7 +92,7 @@ spec:
     name: letsencrypt-prod
     kind: ClusterIssuer
   dnsNames:
-    - dscpln.$SERVICES_DOMAIN
+    - dscpln.{{ .Values.SERVICES_DOMAIN }}
 ---
 apiVersion: traefik.io/v1alpha1
 kind: IngressRoute
@@ -104,7 +104,7 @@ spec:
     - websecure
     - websecure-proxy
   routes:
-    - match: Host(`dscpln.$SERVICES_DOMAIN`)
+    - match: Host(`dscpln.{{ .Values.SERVICES_DOMAIN }}`)
       kind: Rule
       middlewares:
         - name: geoblock
@@ -132,7 +132,7 @@ spec:
   persistentVolumeReclaimPolicy: Retain
   storageClassName: hostpath
   local:
-    path: $DSCPLN_TRANSACTIONS_PATH
+    path: {{ .Values.DSCPLN_TRANSACTIONS_PATH }}
   nodeAffinity:
     required:
       nodeSelectorTerms:
@@ -163,5 +163,5 @@ metadata:
   namespace: apps
 type: Opaque
 stringData:
-  token: "$NTFY_WRITE_ONLY_ACCOUNT_TOKEN"
+  token: "{{ .Values.NTFY_WRITE_ONLY_ACCOUNT_TOKEN }}"
 {{- end }}

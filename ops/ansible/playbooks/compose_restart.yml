@@ -1,0 +1,42 @@
+---
+# compose_restart.yml — re-render templates and restart one Compose service.
+# Usage: ansible-playbook compose_restart.yml -i ops/ansible/inventory.yml -l <target> -e compose_service=<svc>
+- name: Restart compose service
+  hosts: all
+  gather_facts: true
+
+  tasks:
+    - name: Service name required
+      ansible.builtin.assert:
+        that: compose_service | default('') | length > 0
+        fail_msg: "No service specified. Usage: task <target>:compose:restart -- <service>"
+
+    - name: Detect optional files
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      loop:
+        - "{{ lookup('env', 'INFRA_ROOT') }}/targets/{{ inventory_hostname }}/VARS.template.env"
+        - "{{ lookup('env', 'INFRA_ROOT') }}/targets/{{ inventory_hostname }}/compose/compose.private.yaml"
+      register: _optional
+
+    - name: Set availability facts
+      ansible.builtin.set_fact:
+        compose_has_vars_template: "{{ _optional.results[0].stat.exists }}"
+        compose_private_exists: "{{ _optional.results[1].stat.exists }}"
+
+    - name: Compose render + environment
+      ansible.builtin.include_role:
+        name: compose
+
+    - name: Stop service
+      ansible.builtin.command:
+        cmd: docker compose -p {{ inventory_hostname }} {{ compose_files | join(' ') }} down "{{ compose_service }}"
+      environment: "{{ compose_env }}"
+      failed_when: false
+      changed_when: true
+
+    - name: Start service
+      ansible.builtin.command:
+        cmd: docker compose -p {{ inventory_hostname }} {{ compose_files | join(' ') }} up -d "{{ compose_service }}"
+      environment: "{{ compose_env }}"
+      changed_when: true

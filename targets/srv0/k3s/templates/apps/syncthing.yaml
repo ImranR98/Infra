@@ -36,14 +36,14 @@ spec:
     spec:
       hostNetwork: true
       securityContext:
-        runAsUser: $MY_UID
-        runAsGroup: $MY_UID
+        runAsUser: {{ .Values.MY_UID }}
+        runAsGroup: {{ .Values.MY_UID }}
         seLinuxOptions:
           level: s0
       initContainers:
         - name: fix-perms
           image: busybox:1.38
-          command: ["sh", "-c", "chown -R $MY_UID:$MY_UID /var/syncthing/config"]
+          command: ["sh", "-c", "chown -R {{ .Values.MY_UID }}:{{ .Values.MY_UID }} /var/syncthing/config"]
           securityContext:
             runAsUser: 0
           volumeMounts:

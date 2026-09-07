@@ -54,7 +54,7 @@ spec:
           memory: 2Gi
       grafana.ini:
         server:
-          root_url: https://grafana.$SERVICES_DOMAIN
+          root_url: https://grafana.{{ .Values.SERVICES_DOMAIN }}
         auth:
           # OIDC-only UI: no local username/password form. Recovery if
           # Authelia ever breaks: kubectl -n base exec deploy/... grafana-cli
@@ -65,9 +65,9 @@ spec:
           name: Authelia
           client_id: grafana
           scopes: openid profile email groups
-          auth_url: https://auth.$SERVICES_DOMAIN/api/oidc/authorization
-          token_url: https://auth.$SERVICES_DOMAIN/api/oidc/token
-          api_url: https://auth.$SERVICES_DOMAIN/api/oidc/userinfo
+          auth_url: https://auth.{{ .Values.SERVICES_DOMAIN }}/api/oidc/authorization
+          token_url: https://auth.{{ .Values.SERVICES_DOMAIN }}/api/oidc/token
+          api_url: https://auth.{{ .Values.SERVICES_DOMAIN }}/api/oidc/userinfo
           use_pkce: true
           allow_sign_up: true
           role_attribute_path: "contains(groups[*], 'admins') && 'Admin' || 'Viewer'"
@@ -110,7 +110,7 @@ spec:
     name: letsencrypt-prod
     kind: ClusterIssuer
   dnsNames:
-    - grafana.$SERVICES_DOMAIN
+    - grafana.{{ .Values.SERVICES_DOMAIN }}
 ---
 apiVersion: traefik.io/v1alpha1
 kind: IngressRoute
@@ -122,7 +122,7 @@ spec:
     - websecure
     - websecure-proxy
   routes:
-    - match: Host(`grafana.$SERVICES_DOMAIN`)
+    - match: Host(`grafana.{{ .Values.SERVICES_DOMAIN }}`)
       kind: Rule
       middlewares:
         - name: geoblock
@@ -290,8 +290,8 @@ spec:
             - -common.storage.backend=s3
             - -common.storage.s3.endpoint=rustfs-svc.base.svc.cluster.local:9000
             - -common.storage.s3.insecure=true
-            - -common.storage.s3.access-key-id=$RUSTFS_ACCESS_KEY
-            - -common.storage.s3.secret-access-key=$RUSTFS_SECRET_KEY
+            - -common.storage.s3.access-key-id={{ .Values.RUSTFS_ACCESS_KEY }}
+            - -common.storage.s3.secret-access-key={{ .Values.RUSTFS_SECRET_KEY }}
             - -blocks-storage.s3.bucket-name=mimir-blocks
             - -blocks-storage.tsdb.dir=/data/tsdb
             - -blocks-storage.bucket-store.sync-dir=/data/tsdb-sync
@@ -465,7 +465,7 @@ metadata:
   namespace: base
 type: Opaque
 stringData:
-  GF_AUTH_GENERIC_OAUTH_CLIENT_SECRET: "$AUTHELIA_GRAFANA_CLIENT_SECRET_HASHABLE"
+  GF_AUTH_GENERIC_OAUTH_CLIENT_SECRET: "{{ .Values.AUTHELIA_GRAFANA_CLIENT_SECRET_HASHABLE }}"
 ---
 apiVersion: v1
 kind: Secret
@@ -475,7 +475,7 @@ metadata:
 type: Opaque
 stringData:
   admin-user: admin
-  admin-password: "$GRAFANA_ADMIN_PASSWORD"
+  admin-password: "{{ .Values.GRAFANA_ADMIN_PASSWORD }}"
 ---
 ---
 apiVersion: helm.cattle.io/v1
@@ -541,6 +541,6 @@ stringData:
           # as a later values file) rather than the HelmChart CR — the loki
           # chart's unified config handling makes existingSecretForConfig too
           # risky, but a plain values merge sidesteps the chart entirely.
-          accessKeyId: "$RUSTFS_ACCESS_KEY"
-          secretAccessKey: "$RUSTFS_SECRET_KEY"
+          accessKeyId: "{{ .Values.RUSTFS_ACCESS_KEY }}"
+          secretAccessKey: "{{ .Values.RUSTFS_SECRET_KEY }}"
 {{- end }}

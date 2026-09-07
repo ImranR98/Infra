@@ -19,19 +19,19 @@ spec:
         app.kubernetes.io/component: mdscl
     spec:
       securityContext:
-        fsGroup: $MY_UID
+        fsGroup: {{ .Values.MY_UID }}
         seLinuxOptions:
           level: s0
       containers:
         - name: mdscl-camera
           image: imranrdev/media-date-standardize-copy-loop:latest@sha256:d6e7368ab0846e01049fd62cc645e146bfc9c5a9804430dd4f43fc503ef373b3
           securityContext:
-            runAsUser: $MY_UID
-            runAsGroup: $MY_UID
+            runAsUser: {{ .Values.MY_UID }}
+            runAsGroup: {{ .Values.MY_UID }}
             allowPrivilegeEscalation: false
           env:
             - name: NTFY_URL
-              value: "http://ntfy.base.svc.cluster.local:3000/${TARGET}_services_mdscl_errors"
+              value: "http://ntfy.base.svc.cluster.local:3000/{{ .Values.TARGET }}_services_mdscl_errors"
             - name: NTFY_TOKEN
               valueFrom:
                 secretKeyRef:
@@ -74,19 +74,19 @@ spec:
         app.kubernetes.io/component: mdscl
     spec:
       securityContext:
-        fsGroup: $MY_UID
+        fsGroup: {{ .Values.MY_UID }}
         seLinuxOptions:
           level: s0
       containers:
         - name: mdscl-screenshots
           image: imranrdev/media-date-standardize-copy-loop:latest@sha256:d6e7368ab0846e01049fd62cc645e146bfc9c5a9804430dd4f43fc503ef373b3
           securityContext:
-            runAsUser: $MY_UID
-            runAsGroup: $MY_UID
+            runAsUser: {{ .Values.MY_UID }}
+            runAsGroup: {{ .Values.MY_UID }}
             allowPrivilegeEscalation: false
           env:
             - name: NTFY_URL
-              value: "http://ntfy.base.svc.cluster.local:3000/${TARGET}_services_mdscl_errors"
+              value: "http://ntfy.base.svc.cluster.local:3000/{{ .Values.TARGET }}_services_mdscl_errors"
             - name: NTFY_TOKEN
               valueFrom:
                 secretKeyRef:
@@ -129,19 +129,19 @@ spec:
         app.kubernetes.io/component: mdscl
     spec:
       securityContext:
-        fsGroup: $MY_UID
+        fsGroup: {{ .Values.MY_UID }}
         seLinuxOptions:
           level: s0
       containers:
         - name: mdscl-screenrecs
           image: imranrdev/media-date-standardize-copy-loop:latest@sha256:d6e7368ab0846e01049fd62cc645e146bfc9c5a9804430dd4f43fc503ef373b3
           securityContext:
-            runAsUser: $MY_UID
-            runAsGroup: $MY_UID
+            runAsUser: {{ .Values.MY_UID }}
+            runAsGroup: {{ .Values.MY_UID }}
             allowPrivilegeEscalation: false
           env:
             - name: NTFY_URL
-              value: "http://ntfy.base.svc.cluster.local:3000/${TARGET}_services_mdscl_errors"
+              value: "http://ntfy.base.svc.cluster.local:3000/{{ .Values.TARGET }}_services_mdscl_errors"
             - name: NTFY_TOKEN
               valueFrom:
                 secretKeyRef:
@@ -172,5 +172,5 @@ metadata:
   namespace: apps
 type: Opaque
 stringData:
-  token: "$NTFY_WRITE_ONLY_ACCOUNT_TOKEN"
+  token: "{{ .Values.NTFY_WRITE_ONLY_ACCOUNT_TOKEN }}"
 {{- end }}

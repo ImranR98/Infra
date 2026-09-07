@@ -29,7 +29,7 @@ metadata:
 spec:
   acme:
     server: https://acme-staging-v02.api.letsencrypt.org/directory
-    email: $DOMAIN_OWNER_EMAIL
+    email: {{ .Values.DOMAIN_OWNER_EMAIL }}
     privateKeySecretRef:
       name: letsencrypt-staging-account-key
     solvers:
@@ -50,7 +50,7 @@ metadata:
 spec:
   acme:
     server: https://acme-v02.api.letsencrypt.org/directory
-    email: $DOMAIN_OWNER_EMAIL
+    email: {{ .Values.DOMAIN_OWNER_EMAIL }}
     privateKeySecretRef:
       name: letsencrypt-prod-account-key
     solvers:

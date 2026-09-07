@@ -17,7 +17,7 @@ spec:
   persistentVolumeReclaimPolicy: Retain
   storageClassName: hostpath
   local:
-    path: $MAIN_PARENT_DIR/Main
+    path: {{ .Values.MAIN_PARENT_DIR }}/Main
   nodeAffinity:
     required:
       nodeSelectorTerms:
@@ -54,7 +54,7 @@ spec:
   persistentVolumeReclaimPolicy: Retain
   storageClassName: hostpath
   local:
-    path: $MAIN_PARENT_DIR/deviceSync
+    path: {{ .Values.MAIN_PARENT_DIR }}/deviceSync
   nodeAffinity:
     required:
       nodeSelectorTerms:
@@ -128,7 +128,7 @@ spec:
   persistentVolumeReclaimPolicy: Retain
   storageClassName: hostpath
   local:
-    path: $MDSCL_DEVICE_SYNC_PATH/DCIM/Camera
+    path: {{ .Values.MDSCL_DEVICE_SYNC_PATH }}/DCIM/Camera
   nodeAffinity:
     required:
       nodeSelectorTerms:
@@ -165,7 +165,7 @@ spec:
   persistentVolumeReclaimPolicy: Retain
   storageClassName: hostpath
   local:
-    path: $MEDIA_DIR_PATH/Camera
+    path: {{ .Values.MEDIA_DIR_PATH }}/Camera
   nodeAffinity:
     required:
       nodeSelectorTerms:
@@ -202,7 +202,7 @@ spec:
   persistentVolumeReclaimPolicy: Retain
   storageClassName: hostpath
   local:
-    path: $MDSCL_DEVICE_SYNC_PATH/Screenshots
+    path: {{ .Values.MDSCL_DEVICE_SYNC_PATH }}/Screenshots
   nodeAffinity:
     required:
       nodeSelectorTerms:
@@ -239,7 +239,7 @@ spec:
   persistentVolumeReclaimPolicy: Retain
   storageClassName: hostpath
   local:
-    path: $MEDIA_DIR_PATH/Screenshots
+    path: {{ .Values.MEDIA_DIR_PATH }}/Screenshots
   nodeAffinity:
     required:
       nodeSelectorTerms:
@@ -276,7 +276,7 @@ spec:
   persistentVolumeReclaimPolicy: Retain
   storageClassName: hostpath
   local:
-    path: $MDSCL_DEVICE_SYNC_PATH/Screen Recordings
+    path: {{ .Values.MDSCL_DEVICE_SYNC_PATH }}/Screen Recordings
   nodeAffinity:
     required:
       nodeSelectorTerms:
@@ -313,7 +313,7 @@ spec:
   persistentVolumeReclaimPolicy: Retain
   storageClassName: hostpath
   local:
-    path: $MEDIA_DIR_PATH/Recordings
+    path: {{ .Values.MEDIA_DIR_PATH }}/Recordings
   nodeAffinity:
     required:
       nodeSelectorTerms:

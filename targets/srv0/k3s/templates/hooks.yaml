@@ -65,11 +65,11 @@ spec:
           image: bitnami/kubectl:latest
           env:
             - name: DOMAIN_OWNER_EMAIL
-              value: "$DOMAIN_OWNER_EMAIL"
+              value: "{{ .Values.DOMAIN_OWNER_EMAIL }}"
             - name: SERVICES_DOMAIN
-              value: "$SERVICES_DOMAIN"
+              value: "{{ .Values.SERVICES_DOMAIN }}"
             - name: AUTHELIA_IMMICH_CLIENT_SECRET
-              value: "$AUTHELIA_IMMICH_CLIENT_SECRET_HASHABLE"
+              value: "{{ .Values.AUTHELIA_IMMICH_CLIENT_SECRET_HASHABLE }}"
           command: ["bash", "-c"]
           args:
             - |
@@ -79,7 +79,7 @@ spec:
               PWD=$(head -c 12 /dev/urandom | od -An -tx1 | tr -d ' \n')
               kubectl exec -n apps deploy/immich-server -- immich-admin enable-password-login 2>/dev/null || true
               _try_login() {
-                TOKEN=$(printf '{"email":"%s","password":"%s"}' "$DOMAIN_OWNER_EMAIL" "$1" | \
+                TOKEN=$(printf '{"email":"%s","password":"%s"}' "{{ .Values.DOMAIN_OWNER_EMAIL }}" "$1" | \
                   kubectl exec -i -n apps deploy/immich-server -- \
                   curl -sk -X POST http://localhost:2283/api/auth/login \
                     -H "Content-Type: application/json" \
@@ -90,7 +90,7 @@ spec:
                 timeout 30 immich-admin reset-admin-password 2>/dev/null || true
               sleep 2
               if ! _try_login "$PWD"; then
-                printf '{"email":"%s","name":"Admin","password":"%s"}' "$DOMAIN_OWNER_EMAIL" "$PWD" | \
+                printf '{"email":"%s","name":"Admin","password":"%s"}' "{{ .Values.DOMAIN_OWNER_EMAIL }}" "$PWD" | \
                   kubectl exec -i -n apps deploy/immich-server -- \
                   curl -sk -X POST "http://localhost:2283/api/auth/admin-sign-up" \
                     -H "Content-Type: application/json" \
@@ -114,7 +114,7 @@ spec:
                     -H "Authorization: Bearer $tok" 2>/dev/null')
               UPDATED_JSON=$(jq -c \
                 --arg sec "$AUTHELIA_IMMICH_CLIENT_SECRET" \
-                --arg iss "https://auth.$SERVICES_DOMAIN" \
+                --arg iss "https://auth.{{ .Values.SERVICES_DOMAIN }}" \
                 '.oauth.enabled=true
                  | .oauth.issuerUrl=$iss
                  | .oauth.clientId="immich"
