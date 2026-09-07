@@ -18,6 +18,19 @@
     compose_state_dir: "{{ compose_infra_root }}/current_target/compose_live_state"
     target_dir: "{{ compose_infra_root }}/targets/{{ target }}"
 
+- name: Detect optional files
+  ansible.builtin.stat:
+    path: "{{ item }}"
+  loop:
+    - "{{ target_dir }}/VARS.template.yaml"
+    - "{{ target_dir }}/compose/compose.private.yaml"
+  register: compose_optional_stats
+
+- name: Set optional-file facts
+  ansible.builtin.set_fact:
+    compose_has_vars_template: "{{ compose_optional_stats.results[0].stat.exists }}"
+    compose_private_exists: "{{ compose_optional_stats.results[1].stat.exists }}"
+
 - name: Resolve docker group id
   ansible.builtin.shell: "getent group docker | cut -d: -f3"
   register: _docker_gid
@@ -37,42 +50,11 @@
     TARGET: "{{ target }}"
     USER: "{{ ansible_user_id }}"
 
-- name: Include VARS template (key list)
-  ansible.builtin.include_vars:
-    file: "{{ target_dir }}/VARS.template.yaml"
-    name: template_vars
-  when: compose_has_vars_template | default(false)
-
-- name: Include VARS (flat, for jinja templates)
-  ansible.builtin.include_vars:
-    file: "{{ infra_root }}/secrets/VARS.{{ target }}.yaml"
-  when: compose_has_vars_template | default(false)
-
-- name: Include VARS (dict, for compose interpolation)
-  ansible.builtin.include_vars:
-    file: "{{ infra_root }}/secrets/VARS.{{ target }}.yaml"
-    name: secret_vars
-  when: compose_has_vars_template | default(false)
-
-# Completeness + placeholder checks. Fail messages print key names only —
-# values never reach argv, stdout, or stderr.
-- name: VARS completeness
-  ansible.builtin.assert:
-    that: template_vars.keys() | difference(secret_vars.keys()) | length == 0
-    fail_msg: >-
-      secrets/VARS.{{ target }}.yaml is missing required
-      variables: {{ template_vars.keys() | difference(secret_vars.keys()) }}
-  when: compose_has_vars_template | default(false)
-
-- name: VARS placeholders
-  ansible.builtin.assert:
-    that: "not (_v is string and (_v | trim in _placeholders or _v is regex('^<.*>$')))"
-    fail_msg: "secrets/VARS.{{ target }}.yaml: '{{ item }}' has a placeholder value"
-  loop: "{{ secret_vars.keys() | list }}"
-  when: compose_has_vars_template | default(false)
+- name: Load and validate VARS
+  ansible.builtin.include_tasks: vars.yaml
   vars:
-    _v: "{{ secret_vars[item] }}"
-    _placeholders: ["change_me", "changeme", "abc", "REPLACE_ME"]
+    secrets_vars_file: "{{ infra_root }}/secrets/VARS.{{ target }}.yaml"
+  when: compose_has_vars_template | bool
 
 - name: Resolve PROXY_IP
   ansible.builtin.shell: getent hosts "{{ PROXY_HOST }}" | awk '{print $1; exit}'

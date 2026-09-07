@@ -48,42 +48,6 @@ ansible-playbook ansible/playbooks/renovate.yaml
 
 Extra vars ride `-e key=value` (e.g. `-e target=vps0` to point a generic playbook at another target's files); `--check` dry-runs everything. Run playbooks from the repo root (roles paths in `ansible/ansible.cfg` are config-relative).
 
-## K3s node provisioning (Ansible)
-
-Node provisioning uses the semi-official **k3s-io/k3s-ansible collection** ([`k3s.orchestration`](https://github.com/k3s-io/k3s-ansible), git-pinned in `ansible/requirements.yaml`): the collection owns the installer, `/etc/rancher/k3s/config.yaml`, and the systemd service. There is **no inventory file for provisioning**: `k3s_join.yaml` builds its node host at runtime via `add_host`, so any node can become the control plane and any node can join in any role. Cluster policy (SELinux, `write-kubeconfig-mode: "0640"`, `flannel-backend: wireguard-native`, sysctls, firewall ports, node labels, the containerd CDI drop-in, the kubectl group) lives in the playbooks + the `k3s_node_extra` role.
-
-Prerequisites on the control host only (not on the nodes being provisioned): `ansible-playbook ansible/playbooks/prereqs.yaml` — bootstraps ansible-core via the package manager first — installs the required collections (`ansible.posix`, `community.general`, `k3s.orchestration`) and the `githubixx.ansible_role_wireguard` role, plus the validation tools (`ansible-lint`, `yamllint`). Manual alternative:
-
-```bash
-dnf install ansible-core
-ansible-galaxy install -r ansible/requirements.yaml
-```
-
-Bootstrap a control plane — run **on** the node (the collection downloads the official `get.k3s.io` installer over TLS; the repo's node extras cover firewall, sysctls, CDI, kubectl group, labels):
-
-```bash
-ansible-playbook ansible/playbooks/k3s_server.yaml
-```
-
-Join a worker (run **on** the control plane; the token is read locally and passed to the joining node as an inventory variable — `no_log` at both ends, stored on the node in the root-only `k3s-agent.service.env`, the standard k3s agent pattern):
-
-```bash
-ansible-playbook ansible/playbooks/k3s_join.yaml -e node_ip=192.168.1.50 -e node_user=myuser -e k3s_role=agent
-# or join another server: ... -e k3s_role=server
-# AMD GPU: -e k3s_amdgpu_mode=auto (lspci-detected) | yes | no
-# other flags: -e k3s_scheduling_discouraged=true, -e k3s_longhorn_replicas=true, --check, --diff
-```
-
-Update a node IP after a network change (run **on** srv0; retained bash):
-
-```bash
-sudo bash targets/srv0/update-node-ip.sh --ip 192.168.1.51
-```
-
-Validate the provisioning playbooks without touching any hosts: `ansible-playbook --syntax-check ansible/playbooks/*.yaml` + `yamllint -c ansible/.yamllint ansible` + `ansible-lint -c ansible/.ansible-lint --offline ansible`.
-
-Dry-run on a test VM (Multipass): `multipass launch -n testnode fedora`, SSH in, copy the repo, run the prereqs playbook, then `ansible-playbook ansible/playbooks/k3s_server.yaml --check --diff` before the real run. Re-running it on an installed node is a no-op (the collection only re-runs the installer when the installed version is older than `k3s_version` (`stable`), so it can't fight system-upgrade-controller's version ownership).
-
 ## More
 
 Detailed documentation lives in [AGENTS.md](AGENTS.md). Note that while LLMs are used in development, the LLM isn't the one putting its data on the line. [It is just a tool](https://www.normaltech.ai/p/ai-as-normal-technology) and is used like one.

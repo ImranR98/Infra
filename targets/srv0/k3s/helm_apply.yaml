@@ -47,23 +47,22 @@
       when: helm_state_eff != 'absent'
 
     - name: Reject placeholder values (apply only)
-      ansible.builtin.shell: |
-        if grep -qE 'change_me|changeme|REPLACE_ME|^[^#]*"[^"]*<[^>]*>[^"]*"' "{{ secret_values }}"; then
-          echo "ERROR: {{ secret_values }} contains placeholder values" >&2
-          exit 1
-        fi
-      changed_when: false
+      ansible.builtin.assert:
+        that: >-
+          not (secret_values_text
+               | regex_search('change_me|changeme|REPLACE_ME|^[^#\n]*"[^"\n]*<[^>\n]*>[^"\n]*"', multiline=True))
+        fail_msg: "{{ secret_values }} contains placeholder values"
+      vars:
+        secret_values_text: "{{ lookup('file', secret_values) }}"
       when: helm_state_eff != 'absent'
 
     - name: No missing values in the render (apply only)
-      ansible.builtin.shell: |
-        out=$(helm template "srv0-preflight" "{{ chart_dir }}" -n base \
-          -f "{{ chart_dir }}/values.yaml" -f "{{ secret_values }}" 2>&1)
-        if echo "$out" | grep -q '<no value>'; then
-          echo "ERROR: missing values (<no value>) in the rendered chart — check {{ secret_values }}" >&2
-          exit 1
-        fi
+      ansible.builtin.command:
+        argv: ['helm', 'template', 'srv0-preflight', '{{ chart_dir }}', '-n', 'base',
+               '-f', '{{ chart_dir }}/values.yaml', '-f', '{{ secret_values }}']
+      register: helm_preflight
       changed_when: false
+      failed_when: helm_preflight.rc != 0 or '<no value>' in (helm_preflight.stdout | default(''))
       when: helm_state_eff != 'absent'
 
     - name: Helm upgrade --install

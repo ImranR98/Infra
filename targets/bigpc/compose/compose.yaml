@@ -3,23 +3,26 @@ x-logging: &logging
         max-size: 10m
         max-file: 5
 
+x-socket-proxy-priv: &socket-proxy-priv
+    image: wollomatic/socket-proxy:1
+    restart: unless-stopped
+    read_only: true
+    mem_limit: 512M
+    cap_drop:
+        - ALL
+    security_opt:
+        - no-new-privileges
+    user: "65534:$DOCKER_GID"
+    healthcheck:
+        test: ["CMD", "./healthcheck"]
+        interval: 10s
+        timeout: 5s
+        retries: 2
+    logging: *logging
+
 services:
     dockerproxy_priv:
-        image: wollomatic/socket-proxy:1
-        restart: unless-stopped
-        read_only: true
-        mem_limit: 512M
-        cap_drop:
-            - ALL
-        security_opt:
-            - no-new-privileges
-        user: "65534:$DOCKER_GID"
-        healthcheck:
-            test: ["CMD", "./healthcheck"]
-            interval: 10s
-            timeout: 5s
-            retries: 2
-        logging: *logging
+        <<: *socket-proxy-priv
         container_name: dockerproxy_priv
         command:
             - "-loglevel=info"

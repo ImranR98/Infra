@@ -1,8 +1,8 @@
 ---
-# Node preparation extras the k3s-io/k3s-ansible collection does not cover:
-# sysctls, the containerd CDI drop-in, firewalld/ufw port rules (default-zone),
-# pciutils for AMD detection, and the kubectl group. Everything else
-# (installer, config.yaml, systemd service) is the collection's job.
+# Node preparation extras beyond the k3s_install role: sysctls, the containerd
+# CDI drop-in, firewalld/ufw port rules (default-zone), pciutils for AMD
+# detection, and the kubectl group. The installer/config.yaml/systemd service
+# are k3s_install's job.
 k3s_role: agent
 k3s_amdgpu_mode: auto
 k3s_admin_user: "{{ ansible_user }}"

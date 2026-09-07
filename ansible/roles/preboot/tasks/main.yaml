@@ -22,25 +22,25 @@
   block:
     - name: Fresh work dir
       ansible.builtin.file:
-        path: "{{ preboot_work_dir | default('/tmp/dracut-remote-luks-unlock') }}"
+        path: "{{ preboot_work_dir }}"
         state: absent
 
     - name: Clone dracut-remote-luks-unlock
       ansible.builtin.git:
         repo: https://github.com/ImranR98/dracut-remote-luks-unlock.git
-        dest: "{{ preboot_work_dir | default('/tmp/dracut-remote-luks-unlock') }}"
+        dest: "{{ preboot_work_dir }}"
         depth: 1
 
     - name: "crypt-ssh: listen on preboot_port (direct LAN)"
       ansible.builtin.replace:
-        path: "{{ preboot_work_dir | default('/tmp/dracut-remote-luks-unlock') }}/modules/99crypt-ssh/crypt-ssh.conf"
+        path: "{{ preboot_work_dir }}/modules/99crypt-ssh/crypt-ssh.conf"
         regexp: '^dropbear_port="22"'
         replace: 'dropbear_port="{{ preboot_port }}"'
       when: preboot_module == 'crypt-ssh'
 
     - name: Run the setup script (frpc variant)
       ansible.builtin.command: >-
-        bash {{ preboot_work_dir | default('/tmp/dracut-remote-luks-unlock') }}/setup.sh
+        bash {{ preboot_work_dir }}/setup.sh
         --frpc-config "{{ preboot_infra_root }}/current_target/compose_live_state/frpc/frpc-preboot.toml"
         --frpc-cert   "{{ preboot_infra_root }}/current_target/compose_live_state/frpc/preboot-client.crt"
         --frpc-key    "{{ preboot_infra_root }}/current_target/compose_live_state/frpc/preboot-client.key"
@@ -51,7 +51,7 @@
 
     - name: Run the setup script (crypt-ssh variant)
       ansible.builtin.command: >-
-        bash {{ preboot_work_dir | default('/tmp/dracut-remote-luks-unlock') }}/setup.sh
+        bash {{ preboot_work_dir }}/setup.sh
         --module crypt-ssh
         --user "{{ preboot_user }}"
       become: true
@@ -59,6 +59,6 @@
 
     - name: Remove the work dir
       ansible.builtin.file:
-        path: "{{ preboot_work_dir | default('/tmp/dracut-remote-luks-unlock') }}"
+        path: "{{ preboot_work_dir }}"
         state: absent
   when: _luks.rc == 0

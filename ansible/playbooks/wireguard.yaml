@@ -59,20 +59,11 @@
              | combine({'preshared_key': _wg_peer_preshared_key} if _wg_peer_preshared_key | length > 0 else {})
              | combine({'persistent_keepalive': _wg_keepalive} if _wg_keepalive | length > 0 else {})} }}
 
-    - name: WireGuard DNS
+    - name: WireGuard optional settings
       ansible.builtin.set_fact:
-        wireguard_dns: "{{ _wg_dns }}"
-      when: _wg_dns | length > 0
-
-    - name: WireGuard MTU
-      ansible.builtin.set_fact:
-        wireguard_mtu: "{{ _wg_mtu }}"
-      when: _wg_mtu | length > 0
-
-    - name: WireGuard FwMark
-      ansible.builtin.set_fact:
-        wireguard_fwmark: "{{ _wg_fwmark }}"
-      when: _wg_fwmark | length > 0
+        wireguard_dns: "{{ _wg_dns if _wg_dns | length > 0 else omit }}"
+        wireguard_mtu: "{{ _wg_mtu if _wg_mtu | length > 0 else omit }}"
+        wireguard_fwmark: "{{ _wg_fwmark if _wg_fwmark | length > 0 else omit }}"
 
     - name: Endpoint dead-loop routes
       ansible.builtin.set_fact:

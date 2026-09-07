@@ -1,0 +1,10 @@
+---
+# Shared K3s provisioning policy (vars_files in k3s_server.yaml and
+# k3s_join.yaml): one place for the installer version and the server
+# config baseline.
+k3s_version: stable
+k3s_server_config_base:
+  selinux: true
+  write-kubeconfig-mode: "0640"
+  flannel-backend: wireguard-native
+  flannel-iface-regex: "^(eth|ens|enp|eno|enx|wlan|wlp|wlo|bond|ib)"

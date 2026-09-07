@@ -1,0 +1,11 @@
+---
+# k3s_install — installs K3s (server, joined server, or agent) via the
+# official get.k3s.io installer. Playbooks pass k3s_mode and the mode's
+# inputs (k3s_server_config for server modes, k3s_install_exec + k3s_token
+# for agents, api_endpoint for agents/joined servers).
+k3s_mode: server
+k3s_version: stable
+k3s_server_config: {}
+k3s_install_exec: ""
+k3s_token: ""
+api_endpoint: "127.0.0.1"

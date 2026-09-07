@@ -42,6 +42,8 @@
         umask 0077
         ssh -T "$host" "cd '$path' && docker run --rm --log-driver none -v \$PWD/current_target/compose_live_state:/backup/state:ro alpine sh -c 'apk add --no-cache tar >/dev/null && find /backup/state \( -type f -o -type d -o -type l \) -print0 | tar cf - --null -T - --sparse --ignore-failed-read --warning=no-file-changed --warning=no-file-removed'" > "$out"
         echo "Backup created: $out"
+        ls -1t "{{ infra_root }}/compose_state_backups"/{{ target }}-backup-*.tar 2>/dev/null \
+          | tail -n +{{ backup_retention | int + 1 }} | xargs -r rm -f
       delegate_to: localhost
       changed_when: true
       when: backup_remote | default('') != ''
