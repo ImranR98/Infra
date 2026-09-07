@@ -1,0 +1,31 @@
+---
+# compose_install.yml — render templates + start the Compose stack for one target.
+# Usage: ansible-playbook compose_install.yml -i ops/ansible/inventory.yml -l <target>
+- name: Install compose stack
+  hosts: all
+  gather_facts: true
+
+  tasks:
+    - name: Detect optional files
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      loop:
+        - "{{ lookup('env', 'INFRA_ROOT') }}/targets/{{ inventory_hostname }}/VARS.template.env"
+        - "{{ lookup('env', 'INFRA_ROOT') }}/targets/{{ inventory_hostname }}/compose/compose.private.yaml"
+      register: _optional
+
+    - name: Set availability facts
+      ansible.builtin.set_fact:
+        compose_has_vars_template: "{{ _optional.results[0].stat.exists }}"
+        compose_private_exists: "{{ _optional.results[1].stat.exists }}"
+
+    - name: Compose render + environment
+      ansible.builtin.include_role:
+        name: compose
+
+    - name: Compose up
+      ansible.builtin.command:
+        cmd: docker compose -p {{ inventory_hostname }} {{ compose_files | join(' ') }} up -d --remove-orphans
+      environment: "{{ compose_env }}"
+      changed_when: true
+      tags: [up]

@@ -42,9 +42,9 @@ spec:
       nodeSelector:
         hostpath-main: "true"
       securityContext:
-        runAsUser: $MY_UID
-        runAsGroup: $MY_UID
-        fsGroup: $MY_UID
+        runAsUser: {{ .Values.MY_UID }}
+        runAsGroup: {{ .Values.MY_UID }}
+        fsGroup: {{ .Values.MY_UID }}
         # container_t + s0 (verified): SELinux allows container_t the
         # /dev/dri CDI grant, the external hostPath library read, and the
         # library PVC; s0 keeps files category-free so server/ML and the
@@ -67,7 +67,7 @@ spec:
       persistence:
         external:
           type: hostPath
-          hostPath: $MEDIA_DIR_PATH
+          hostPath: {{ .Values.MEDIA_DIR_PATH }}
           globalMounts:
             - path: /external
               readOnly: true
@@ -126,7 +126,7 @@ spec:
     name: letsencrypt-prod
     kind: ClusterIssuer
   dnsNames:
-    - immich.$SERVICES_DOMAIN
+    - immich.{{ .Values.SERVICES_DOMAIN }}
 ---
 apiVersion: traefik.io/v1alpha1
 kind: IngressRoute
@@ -138,7 +138,7 @@ spec:
     - websecure
     - websecure-proxy
   routes:
-    - match: Host(`immich.$SERVICES_DOMAIN`)
+    - match: Host(`immich.{{ .Values.SERVICES_DOMAIN }}`)
       kind: Rule
       middlewares:
         - name: geoblock
@@ -248,7 +248,7 @@ metadata:
   namespace: apps
 type: Opaque
 stringData:
-  password: "$IMMICH_DB_PASSWORD"
+  password: "{{ .Values.IMMICH_DB_PASSWORD }}"
 ---
 # PostgreSQL with VectorChord extension for Immich smart search
 apiVersion: apps/v1
@@ -269,7 +269,7 @@ spec:
         app: immich-postgresql
     spec:
       securityContext:
-        fsGroup: $MY_UID
+        fsGroup: {{ .Values.MY_UID }}
       containers:
         - name: postgresql
           image: ghcr.io/immich-app/postgres:18-vectorchord1.1.1-pgvector0.8.5

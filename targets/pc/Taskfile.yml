@@ -6,44 +6,40 @@ tasks:
   validate:
     desc: Check configs for errors
     cmds:
-      - TARGET=pc INFRA_ROOT={{.ROOT_DIR}} bash {{.ROOT_DIR}}/commands/validate.sh {{.CLI_ARGS}}
-
-  list-domains:
-    desc: Show domains used by this target
-    cmds:
-      - TARGET=pc INFRA_ROOT={{.ROOT_DIR}} bash {{.ROOT_DIR}}/commands/list-domains.sh {{.CLI_ARGS}}
+      - INFRA_ROOT={{.ROOT_DIR}} ANSIBLE_CONFIG={{.ROOT_DIR}}/ops/ansible/ansible.cfg ansible-playbook {{.ROOT_DIR}}/ops/ansible/playbooks/validate.yml -i {{.ROOT_DIR}}/ops/ansible/inventory.yml -l pc
 
   compose:install:
     desc: Render templates and start Compose stack
     cmds:
-      - TARGET=pc INFRA_ROOT={{.ROOT_DIR}} bash {{.ROOT_DIR}}/commands/compose/install.sh {{.CLI_ARGS}}
+      - INFRA_ROOT={{.ROOT_DIR}} ANSIBLE_CONFIG={{.ROOT_DIR}}/ops/ansible/ansible.cfg ansible-playbook {{.ROOT_DIR}}/ops/ansible/playbooks/compose_install.yml -i {{.ROOT_DIR}}/ops/ansible/inventory.yml -l pc {{.CLI_ARGS}}
 
   compose:restart:
     desc: Restart a specific Compose service (pass the service name after --)
     cmds:
-      - TARGET=pc INFRA_ROOT={{.ROOT_DIR}} bash {{.ROOT_DIR}}/commands/compose/restart.sh {{.CLI_ARGS}}
+      - INFRA_ROOT={{.ROOT_DIR}} ANSIBLE_CONFIG={{.ROOT_DIR}}/ops/ansible/ansible.cfg ansible-playbook {{.ROOT_DIR}}/ops/ansible/playbooks/compose_restart.yml -i {{.ROOT_DIR}}/ops/ansible/inventory.yml -l pc -e "compose_service={{.CLI_ARGS}}"
 
   compose:backup-state:
-    desc: Backup Compose runtime state (local file or remote via SSH; pass [remote target] after --)
+    desc: Backup Compose runtime state (local; or remote via '-e backup_remote=user@host:path' after --)
     cmds:
-      - TARGET=pc INFRA_ROOT={{.ROOT_DIR}} bash {{.ROOT_DIR}}/commands/compose/backup-state.sh {{.CLI_ARGS}}
-
-  compose:generate-mtls-certs:
-    desc: Generate mTLS certificates for a client↔server pair (pass the server target after --)
-    cmds:
-      - TARGET=pc INFRA_ROOT={{.ROOT_DIR}} bash {{.ROOT_DIR}}/commands/compose/generate-mtls-certs.sh {{.CLI_ARGS}}
+      - INFRA_ROOT={{.ROOT_DIR}} ANSIBLE_CONFIG={{.ROOT_DIR}}/ops/ansible/ansible.cfg ansible-playbook {{.ROOT_DIR}}/ops/ansible/playbooks/compose_backup_state.yml -i {{.ROOT_DIR}}/ops/ansible/inventory.yml -l pc {{.CLI_ARGS}}
 
   prereqs:
     desc: Install system prerequisites
     cmds:
-      - TARGET=pc INFRA_ROOT={{.ROOT_DIR}} bash {{.ROOT_DIR}}/commands/prereqs.sh {{.CLI_ARGS}}
+      - cmd: |
+          if ! command -v ansible-playbook >/dev/null 2>&1; then
+            if command -v apt-get >/dev/null 2>&1; then sudo apt-get update -qq && sudo apt-get install -y ansible-core
+            elif command -v dnf >/dev/null 2>&1; then sudo dnf install -y ansible-core
+            else echo "Error: unsupported package manager. Install ansible-core manually." >&2; exit 1; fi
+          fi
+      - INFRA_ROOT={{.ROOT_DIR}} ANSIBLE_CONFIG={{.ROOT_DIR}}/ops/ansible/ansible.cfg ansible-playbook -i localhost, {{.ROOT_DIR}}/ops/ansible/playbooks/prereqs.yml {{.CLI_ARGS}}
 
   renovate:
     desc: Run Renovate against ImranR98/Infra (needs RENOVATE_GITHUB_TOKEN in secrets/VARS.env)
     cmds:
-      - TARGET=pc INFRA_ROOT={{.ROOT_DIR}} bash {{.ROOT_DIR}}/commands/renovate.sh {{.CLI_ARGS}}
+      - INFRA_ROOT={{.ROOT_DIR}} bash {{.ROOT_DIR}}/commands/renovate.sh {{.CLI_ARGS}}
 
   wireguard:
     desc: Install WireGuard and deploy a config file (pass the .conf path after --)
     cmds:
-      - TARGET=pc INFRA_ROOT={{.ROOT_DIR}} bash {{.ROOT_DIR}}/commands/wireguard.sh {{.CLI_ARGS}}
+      - INFRA_ROOT={{.ROOT_DIR}} ANSIBLE_CONFIG={{.ROOT_DIR}}/ops/ansible/ansible.cfg ansible-playbook -i localhost, {{.ROOT_DIR}}/ops/ansible/playbooks/wireguard.yml -e "wireguard_conf_src=$(readlink -f {{.CLI_ARGS}})"

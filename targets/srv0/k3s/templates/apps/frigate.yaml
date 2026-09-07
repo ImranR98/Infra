@@ -76,14 +76,14 @@ spec:
         labelmap_path: /openvino-model/coco_91cl_bkgr.txt
       # Deployment-specific config (go2rtc streams, cameras) comes from
       # FRIGATE_ADDITIONAL_CONFIG in targets/srv0/VARS.template.env
-      $FRIGATE_ADDITIONAL_CONFIG
+{{ .Values.FRIGATE_ADDITIONAL_CONFIG | indent 6 }}
     persistence:
       config:
         enabled: true
         existingClaim: frigate-config-pvc
       media:
         enabled: false
-    # NFS-backed media: recordings stay on srv0's $SECONDARY_STORAGE_PATH/frigate
+    # NFS-backed media: recordings stay on srv0's {{ .Values.SECONDARY_STORAGE_PATH }}/frigate
     # (exported by the nfs-server component). Kept on NFS deliberately so the
     # pod can move nodes without moving data.
     extraVolumes:
@@ -116,7 +116,7 @@ spec:
     name: letsencrypt-prod
     kind: ClusterIssuer
   dnsNames:
-    - frigate.$SERVICES_DOMAIN
+    - frigate.{{ .Values.SERVICES_DOMAIN }}
 ---
 apiVersion: traefik.io/v1alpha1
 kind: IngressRoute
@@ -128,7 +128,7 @@ spec:
     - websecure
     - websecure-proxy
   routes:
-    - match: Host(`frigate.$SERVICES_DOMAIN`)
+    - match: Host(`frigate.{{ .Values.SERVICES_DOMAIN }}`)
       kind: Rule
       middlewares:
         - name: geoblock
@@ -233,6 +233,6 @@ stringData:
       # The values ride in this Secret via spec.valuesSecrets instead, so they
       # stay out of the HelmChart CR (same namespace-scoped Secret surface as
       # the app's other secrets).
-      FRIGATE_RTSP_PASSWORD: "$FRIGATE_RTSP_PASSWORD"
-      FRIGATE_MQTT_PASSWORD: "$FRIGATE_MQTT_PASSWORD"
+      FRIGATE_RTSP_PASSWORD: "{{ .Values.FRIGATE_RTSP_PASSWORD }}"
+      FRIGATE_MQTT_PASSWORD: "{{ .Values.FRIGATE_MQTT_PASSWORD }}"
 {{- end }}

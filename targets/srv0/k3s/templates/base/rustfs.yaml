@@ -64,6 +64,6 @@ metadata:
   namespace: base
 type: Opaque
 stringData:
-  RUSTFS_ACCESS_KEY: "$RUSTFS_ACCESS_KEY"
-  RUSTFS_SECRET_KEY: "$RUSTFS_SECRET_KEY"
+  RUSTFS_ACCESS_KEY: "{{ .Values.RUSTFS_ACCESS_KEY }}"
+  RUSTFS_SECRET_KEY: "{{ .Values.RUSTFS_SECRET_KEY }}"
 {{- end }}

@@ -26,13 +26,14 @@ The IaaC system for my homelab and other devices.
 ## Quick start
 
 ```bash
-# Install prerequisites (task, Docker, yq, envsubst, jq, python3, python3-dotenv, go, ansible-core) — an Ansible playbook
-# (no task installed yet? `bash commands/prereqs.sh` works the same)
+# Install prerequisites (task, Docker, yq, jq, python3, python3-dotenv, go, ansible-core) — an Ansible playbook
+# (no task installed yet? run the ansible-core bootstrap from the prereqs task manually)
 task prereqs
 
 # Create your variables file from the template (dotenv format)
 cp targets/<target>/VARS.template.env secrets/VARS.<target>.env
 # Edit secrets/VARS.<target>.env with your secrets and settings
+# srv0 k3s: helm values live in secrets/values.srv0.yaml (keys documented in VARS.template.env)
 
 # Validate your configuration
 task <target>:validate
@@ -46,7 +47,7 @@ task <target>:k3s:group:apps:apply
 task renovate
 ```
 
-Commands that take arguments pass them after `--`, e.g. `task srv0:k3s:deploy -- traefik diff`.
+Commands that take arguments pass them after `--`, e.g. `task srv0:k3s:deploy -- base diff`.
 
 ## K3s node provisioning (Ansible)
 

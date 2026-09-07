@@ -3,15 +3,15 @@
         "configs": [
             {
                 "id": "ntfy_home",
-                "host": "https://ntfy.home.$BASE_SERVICES_DOMAIN",
-                "authHeader": "Bearer $NTFY_WRITE_ONLY_ACCOUNT_TOKEN",
-                "topicPrefix": "${TARGET}_services_"
+                "host": "https://ntfy.home.{{ BASE_SERVICES_DOMAIN }}",
+                "authHeader": "Bearer {{ NTFY_WRITE_ONLY_ACCOUNT_TOKEN }}",
+                "topicPrefix": "{{ TARGET }}_services_"
             },
             {
                 "id": "ntfy_official",
                 "host": "https://ntfy.sh",
                 "authHeader": null,
-                "topicPrefix": "${NTFY_FALLBACK_TOPIC}"
+                "topicPrefix": "{{ NTFY_FALLBACK_TOPIC }}"
             }
         ],
         "defaultConfig": "ntfy_home",

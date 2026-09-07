@@ -58,7 +58,7 @@ spec:
         app: opencanary
     spec:
       securityContext:
-        fsGroup: $MY_UID
+        fsGroup: {{ .Values.MY_UID }}
       containers:
         - name: opencanary
           image: thinkst/opencanary:0.9.9
@@ -105,7 +105,7 @@ type: Opaque
 stringData:
   opencanary.conf: |
     {
-      "device.node_id": "opencanary-${TARGET}",
+      "device.node_id": "opencanary-{{ .Values.TARGET }}",
       "ip.ignorelist": [],
       "logtype.ignorelist": [],
       "git.enabled": true,
@@ -172,12 +172,12 @@ stringData:
             },
             "Webhook": {
               "class": "opencanary.logger.WebhookHandler",
-              "url": "https://ntfy.sh/${OPENCANARY_NTFY_SECRET_TOPIC}",
+              "url": "https://ntfy.sh/{{ .Values.OPENCANARY_NTFY_SECRET_TOPIC }}",
               "method": "POST",
               "data": "%(message)s",
               "status_code": 200,
               "headers": {
-                "Title": "OpenCanary on ${TARGET}"
+                "Title": "OpenCanary on {{ .Values.TARGET }}"
               }
             }
           }

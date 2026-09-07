@@ -55,15 +55,15 @@ spec:
             - name: FRESHRSS_INSTALL
               value: |-
                 --api-enabled
-                --base-url https://rss.$SERVICES_DOMAIN
+                --base-url https://rss.{{ .Values.SERVICES_DOMAIN }}
                 --default-user admin
                 --language en
             - name: FRESHRSS_USER
               value: |-
-                --api-password \$FRESHRSS_PASSWORD
-                --email $DOMAIN_OWNER_EMAIL
+                --api-password $FRESHRSS_PASSWORD
+                --email {{ .Values.DOMAIN_OWNER_EMAIL }}
                 --language en
-                --password \$FRESHRSS_PASSWORD
+                --password $FRESHRSS_PASSWORD
                 --user admin
           volumeMounts:
             - name: freshrss-data
@@ -103,7 +103,7 @@ spec:
     name: letsencrypt-prod
     kind: ClusterIssuer
   dnsNames:
-    - rss.$SERVICES_DOMAIN
+    - rss.{{ .Values.SERVICES_DOMAIN }}
 ---
 apiVersion: traefik.io/v1alpha1
 kind: IngressRoute
@@ -115,7 +115,7 @@ spec:
     - websecure
     - websecure-proxy
   routes:
-    - match: Host(`rss.$SERVICES_DOMAIN`)
+    - match: Host(`rss.{{ .Values.SERVICES_DOMAIN }}`)
       kind: Rule
       middlewares:
         - name: geoblock
@@ -165,5 +165,5 @@ metadata:
   namespace: apps
 type: Opaque
 stringData:
-  password: "$FRESHRSS_PASSWORD"
+  password: "{{ .Values.FRESHRSS_PASSWORD }}"
 {{- end }}

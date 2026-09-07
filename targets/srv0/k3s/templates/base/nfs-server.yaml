@@ -101,27 +101,27 @@ spec:
             name: nfs-etab
         - name: music-storage
           hostPath:
-            path: $MEDIA_DIR_PATH/Music
+            path: {{ .Values.MEDIA_DIR_PATH }}/Music
             type: DirectoryOrCreate
         - name: tv-storage
           hostPath:
-            path: $MEDIA_DIR_PATH/TV
+            path: {{ .Values.MEDIA_DIR_PATH }}/TV
             type: DirectoryOrCreate
         - name: youtube-storage
           hostPath:
-            path: $MEDIA_DIR_PATH/YouTube
+            path: {{ .Values.MEDIA_DIR_PATH }}/YouTube
             type: DirectoryOrCreate
         - name: arrstack-media-storage
           hostPath:
-            path: $SECONDARY_STORAGE_PATH/arrstack_media
+            path: {{ .Values.SECONDARY_STORAGE_PATH }}/arrstack_media
             type: DirectoryOrCreate
         - name: frigate-storage
           hostPath:
-            path: $SECONDARY_STORAGE_PATH/frigate
+            path: {{ .Values.SECONDARY_STORAGE_PATH }}/frigate
             type: DirectoryOrCreate
         - name: backups-storage
           hostPath:
-            path: $PVC_BACKUP_DIR
+            path: {{ .Values.PVC_BACKUP_DIR }}
             type: DirectoryOrCreate
 ---
 ---

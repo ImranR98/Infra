@@ -11,7 +11,7 @@ spec:
     name: letsencrypt-prod
     kind: ClusterIssuer
   dnsNames:
-    - links.$SERVICES_DOMAIN
+    - links.{{ .Values.SERVICES_DOMAIN }}
 ---
 apiVersion: traefik.io/v1alpha1
 kind: IngressRoute
@@ -23,7 +23,7 @@ spec:
     - websecure
     - websecure-proxy
   routes:
-    - match: Host(`links.$SERVICES_DOMAIN`)
+    - match: Host(`links.{{ .Values.SERVICES_DOMAIN }}`)
       kind: Rule
       middlewares:
         - name: geoblock
@@ -79,7 +79,7 @@ spec:
             - name: DATABASE_URL
               value: postgresql://postgres:$(POSTGRES_PASSWORD)@linkwarden-postgresql:5432/linkwarden
             - name: NEXTAUTH_URL
-              value: https://links.$SERVICES_DOMAIN/api/v1/auth
+              value: https://links.{{ .Values.SERVICES_DOMAIN }}/api/v1/auth
             - name: NEXTAUTH_SECRET
               valueFrom:
                 secretKeyRef:
@@ -95,7 +95,7 @@ spec:
             - name: STORAGE_FOLDER
               value: data
             - name: ARCHIVE_TAKE_COUNT
-              value: "$LINKWARDEN_ARCHIVE_TAKE_COUNT"
+              value: "{{ .Values.LINKWARDEN_ARCHIVE_TAKE_COUNT }}"
             # Full inlining (audio/video/fonts/CSS/images) minus JS, which the
             # static-page snapshot can't execute anyway. Monolith buffers assets
             # in RAM, so keep ARCHIVE_TAKE_COUNT=1 + 16Gi limit for media-heavy
@@ -107,7 +107,7 @@ spec:
             - name: NEXT_PUBLIC_AUTHELIA_ENABLED
               value: "true"
             - name: AUTHELIA_WELLKNOWN_URL
-              value: https://auth.$SERVICES_DOMAIN/.well-known/openid-configuration
+              value: https://auth.{{ .Values.SERVICES_DOMAIN }}/.well-known/openid-configuration
             - name: AUTHELIA_CLIENT_ID
               value: linkwarden
             - name: AUTHELIA_CLIENT_SECRET
@@ -116,7 +116,7 @@ spec:
                   name: linkwarden-secrets
                   key: AUTHELIA_CLIENT_SECRET
             - name: TZ
-              value: "$TZ"
+              value: "{{ .Values.TZ }}"
           volumeMounts:
             - name: linkwarden-data
               mountPath: /data/data
@@ -349,10 +349,10 @@ metadata:
   namespace: apps
 type: Opaque
 stringData:
-  NEXTAUTH_SECRET: "$LINKWARDEN_NEXTAUTH_SECRET"
-  POSTGRES_PASSWORD: "$LINKWARDEN_DB_PASSWORD"
-  MEILI_MASTER_KEY: "$LINKWARDEN_MEILI_MASTER_KEY"
-  AUTHELIA_CLIENT_SECRET: "$AUTHELIA_LINKWARDEN_CLIENT_SECRET_HASHABLE"
+  NEXTAUTH_SECRET: "{{ .Values.LINKWARDEN_NEXTAUTH_SECRET }}"
+  POSTGRES_PASSWORD: "{{ .Values.LINKWARDEN_DB_PASSWORD }}"
+  MEILI_MASTER_KEY: "{{ .Values.LINKWARDEN_MEILI_MASTER_KEY }}"
+  AUTHELIA_CLIENT_SECRET: "{{ .Values.AUTHELIA_LINKWARDEN_CLIENT_SECRET_HASHABLE }}"
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim

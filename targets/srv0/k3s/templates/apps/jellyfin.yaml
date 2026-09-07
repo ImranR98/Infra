@@ -52,8 +52,8 @@ spec:
         memory: 128Mi
         infra.local/devices-dri: "1"
     podSecurityContext:
-      runAsUser: $MY_UID
-      runAsGroup: $MY_UID
+      runAsUser: {{ .Values.MY_UID }}
+      runAsGroup: {{ .Values.MY_UID }}
       # level s0: keeps PVC files category-free so the pvc-backup temp pods
       # (also s0) can read the config volume (see syncthing for precedent).
       seLinuxOptions:
@@ -88,7 +88,7 @@ spec:
     name: letsencrypt-prod
     kind: ClusterIssuer
   dnsNames:
-    - tv.$SERVICES_DOMAIN
+    - tv.{{ .Values.SERVICES_DOMAIN }}
 ---
 apiVersion: traefik.io/v1alpha1
 kind: IngressRoute
@@ -100,7 +100,7 @@ spec:
     - websecure
     - websecure-proxy
   routes:
-    - match: Host(`tv.$SERVICES_DOMAIN`)
+    - match: Host(`tv.{{ .Values.SERVICES_DOMAIN }}`)
       kind: Rule
       middlewares:
         - name: crowdsec-bouncer
@@ -115,7 +115,7 @@ spec:
   tls:
     secretName: jellyfin-prod-tls
 ---
-# In initial mode, tv.$SERVICES_DOMAIN is protected by the Authelia header gate
+# In initial mode, tv.{{ .Values.SERVICES_DOMAIN }} is protected by the Authelia header gate
 # while it is enabled. This breaks Jellyfin's first-time setup, so a LAN-only
 # route (defined below) provides unauthenticated access from private IPs.
 #

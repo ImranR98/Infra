@@ -5,8 +5,15 @@ source "$INFRA_ROOT/lib/common.sh"
 
 echo "=== Check if root partition is LUKS-encrypted ==="
 if bash "$INFRA_ROOT/lib/check_root_luks.sh"; then
-    echo "LUKS detected. Installing remote unlock..."
-    configure_compose_templates "$TARGET"
+    echo "LUKS detected. Rendering frpc preboot config and installing remote unlock..."
+
+    # Resolve VARS into current_target/vars.yml, then render the compose
+    # templates (frpc-preboot.toml + certs) via the standard compose
+    # playbook, skipping the compose-up step.
+    python3 "$INFRA_ROOT/lib/vars_validator.py" "$TARGET"
+    ANSIBLE_CONFIG="$INFRA_ROOT/ops/ansible/ansible.cfg" ansible-playbook \
+        "$INFRA_ROOT/ops/ansible/playbooks/compose_install.yml" \
+        -i "$INFRA_ROOT/ops/ansible/inventory.yml" -l "$TARGET" --skip-tags up
 
     TMPDIR="$(mktemp -d)"
     trap 'rm -rf "$TMPDIR"' EXIT

@@ -11,7 +11,7 @@ spec:
     name: letsencrypt-prod
     kind: ClusterIssuer
   dnsNames:
-    - nextcloud.$SERVICES_DOMAIN
+    - nextcloud.{{ .Values.SERVICES_DOMAIN }}
 ---
 apiVersion: traefik.io/v1alpha1
 kind: IngressRoute
@@ -23,7 +23,7 @@ spec:
     - websecure
     - websecure-proxy
   routes:
-    - match: Host(`nextcloud.$SERVICES_DOMAIN`) && PathPrefix(`/heartbeat`)
+    - match: Host(`nextcloud.{{ .Values.SERVICES_DOMAIN }}`) && PathPrefix(`/heartbeat`)
       kind: Rule
       middlewares:
         - name: nextcloud-hsts
@@ -31,7 +31,7 @@ spec:
       services:
         - name: nextcloud
           port: 80
-    - match: Host(`nextcloud.$SERVICES_DOMAIN`)
+    - match: Host(`nextcloud.{{ .Values.SERVICES_DOMAIN }}`)
       kind: Rule
       middlewares:
         - name: nextcloud-hsts
@@ -135,7 +135,7 @@ spec:
                   name: nextcloud-db-secret
                   key: password
             - name: NEXTCLOUD_TRUSTED_DOMAINS
-              value: "nextcloud.$SERVICES_DOMAIN"
+              value: "nextcloud.{{ .Values.SERVICES_DOMAIN }}"
             - name: APACHE_DISABLE_REWRITE_IP
               value: "1"
             - name: TRUSTED_PROXIES
@@ -179,8 +179,8 @@ metadata:
   namespace: apps
 type: Opaque
 stringData:
-  NEXTCLOUD_ADMIN_USER: "$NEXTCLOUD_ADMIN_USER"
-  NEXTCLOUD_ADMIN_PASSWORD: "$NEXTCLOUD_ADMIN_PASSWORD"
+  NEXTCLOUD_ADMIN_USER: "{{ .Values.NEXTCLOUD_ADMIN_USER }}"
+  NEXTCLOUD_ADMIN_PASSWORD: "{{ .Values.NEXTCLOUD_ADMIN_PASSWORD }}"
 ---
 apiVersion: v1
 kind: Secret
@@ -189,7 +189,7 @@ metadata:
   namespace: apps
 type: Opaque
 stringData:
-  password: "$NEXTCLOUD_DB_PASSWORD"
+  password: "{{ .Values.NEXTCLOUD_DB_PASSWORD }}"
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim

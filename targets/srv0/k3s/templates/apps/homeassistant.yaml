@@ -280,7 +280,7 @@ spec:
     name: letsencrypt-prod
     kind: ClusterIssuer
   dnsNames:
-    - ha.$SERVICES_DOMAIN
+    - ha.{{ .Values.SERVICES_DOMAIN }}
 ---
 apiVersion: traefik.io/v1alpha1
 kind: IngressRoute
@@ -299,7 +299,7 @@ spec:
     # appsec/auth failure breaks custom card loading intermittently while
     # HA itself keeps working. The files are immutable GitHub release
     # assets (no auth needed); geoblock still applies.
-    - match: Host(`ha.$SERVICES_DOMAIN`) && PathPrefix(`/local/community`)
+    - match: Host(`ha.{{ .Values.SERVICES_DOMAIN }}`) && PathPrefix(`/local/community`)
       kind: Rule
       middlewares:
         - name: geoblock
@@ -309,7 +309,7 @@ spec:
       services:
         - name: homeassistant-home-assistant
           port: 8080
-    - match: Host(`ha.$SERVICES_DOMAIN`)
+    - match: Host(`ha.{{ .Values.SERVICES_DOMAIN }}`)
       kind: Rule
       middlewares:
         - name: geoblock

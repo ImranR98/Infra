@@ -1,0 +1,3 @@
+---
+# roles/compose/defaults/main.yml
+compose_infra_root: "{{ lookup('env', 'INFRA_ROOT') }}"

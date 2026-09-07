@@ -2,10 +2,10 @@ type: http
 name: http_default
 log_level: debug
 format: |
-  {{.|toJson}}
-url: https://ntfy.home.$BASE_SERVICES_DOMAIN/${TARGET}_services_crowdsec
+  {{ '{{.|toJson}}' }}
+url: https://ntfy.home.{{ BASE_SERVICES_DOMAIN }}/{{ TARGET }}_services_crowdsec
 method: POST
 headers:
-  Authorization: Bearer $NTFY_WRITE_ONLY_ACCOUNT_TOKEN
-  Title: CrowdSec on ${TARGET}
+  Authorization: Bearer {{ NTFY_WRITE_ONLY_ACCOUNT_TOKEN }}
+  Title: CrowdSec on {{ TARGET }}
   Priority: min

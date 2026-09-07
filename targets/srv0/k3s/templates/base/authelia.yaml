@@ -17,8 +17,8 @@ spec:
       kind: Deployment
       securityContext:
         container:
-          runAsUser: $MY_UID
-          runAsGroup: $MY_UID
+          runAsUser: {{ .Values.MY_UID }}
+          runAsGroup: {{ .Values.MY_UID }}
       resources:
         limits:
           memory: 2Gi
@@ -92,7 +92,7 @@ spec:
             nodes: []
         cookies:
           - subdomain: "auth"
-            domain: "$SERVICES_DOMAIN"
+            domain: "{{ .Values.SERVICES_DOMAIN }}"
 
       storage:
         encryption_key:
@@ -129,7 +129,7 @@ spec:
                 # RANDOM key instead — verified the hard way) — the PEM must
                 # stay embedded as value:.
                 value: |
-                  $AUTHELIA_JWKS_KEY
+{{ .Values.AUTHELIA_JWKS_KEY | indent 18 }}
           clients:
           - client_id: 'immich'
             client_name: 'immich'
@@ -138,8 +138,8 @@ spec:
             public: false
             authorization_policy: 'two_factor'
             redirect_uris:
-              - 'https://immich.$SERVICES_DOMAIN/auth/login'
-              - 'https://immich.$SERVICES_DOMAIN/user-settings'
+              - 'https://immich.{{ .Values.SERVICES_DOMAIN }}/auth/login'
+              - 'https://immich.{{ .Values.SERVICES_DOMAIN }}/user-settings'
               - 'app.immich:/'
               - 'app.immich:///oauth-callback'
             scopes:
@@ -156,7 +156,7 @@ spec:
             authorization_policy: 'two_factor'
             require_pkce: true
             redirect_uris:
-              - 'https://gpt.$SERVICES_DOMAIN/oauth/oidc/callback'
+              - 'https://gpt.{{ .Values.SERVICES_DOMAIN }}/oauth/oidc/callback'
             scopes:
               - 'openid'
               - 'profile'
@@ -177,7 +177,7 @@ spec:
             authorization_policy: 'two_factor'
             require_pkce: true
             redirect_uris:
-              - 'https://k8s.$SERVICES_DOMAIN/oidc-callback'
+              - 'https://k8s.{{ .Values.SERVICES_DOMAIN }}/oidc-callback'
             scopes:
               - 'openid'
               - 'profile'
@@ -199,7 +199,7 @@ spec:
             authorization_policy: 'one_factor'
             consent_mode: 'implicit'
             redirect_uris:
-              - 'https://links.$SERVICES_DOMAIN/api/v1/auth/callback/authelia'
+              - 'https://links.{{ .Values.SERVICES_DOMAIN }}/api/v1/auth/callback/authelia'
             scopes:
               - 'openid'
               - 'profile'
@@ -214,7 +214,7 @@ spec:
             authorization_policy: 'two_factor'
             require_pkce: true
             redirect_uris:
-              - 'https://grafana.$SERVICES_DOMAIN/login/generic_oauth'
+              - 'https://grafana.{{ .Values.SERVICES_DOMAIN }}/login/generic_oauth'
             scopes:
               - 'openid'
               - 'profile'
@@ -233,29 +233,29 @@ spec:
       log:
         level: debug
       totp:
-        issuer: $SERVICES_DOMAIN
+        issuer: {{ .Values.SERVICES_DOMAIN }}
       access_control:
         default_policy: 'deny'
         rules:
-          - domain: '*.$SERVICES_DOMAIN'
+          - domain: '*.{{ .Values.SERVICES_DOMAIN }}'
             resources:
             - '^/\.well-known/acme-challenge/.*$'
             policy: bypass
-          - domain: tv.$SERVICES_DOMAIN
+          - domain: tv.{{ .Values.SERVICES_DOMAIN }}
             policy: bypass
-          - domain: ha.$SERVICES_DOMAIN
+          - domain: ha.{{ .Values.SERVICES_DOMAIN }}
             policy: bypass
-          - domain: music.$SERVICES_DOMAIN
+          - domain: music.{{ .Values.SERVICES_DOMAIN }}
             policy: bypass
-          - domain: immich.$SERVICES_DOMAIN
+          - domain: immich.{{ .Values.SERVICES_DOMAIN }}
             policy: bypass
-          - domain: links.$SERVICES_DOMAIN
+          - domain: links.{{ .Values.SERVICES_DOMAIN }}
             policy: bypass
-          - domain: auth.$SERVICES_DOMAIN
+          - domain: auth.{{ .Values.SERVICES_DOMAIN }}
             policy: bypass
-          - domain: opodsync.$SERVICES_DOMAIN
+          - domain: opodsync.{{ .Values.SERVICES_DOMAIN }}
             policy: bypass
-          - domain: '*.$SERVICES_DOMAIN'
+          - domain: '*.{{ .Values.SERVICES_DOMAIN }}'
             policy: two_factor
             subject:
             - 'group:admins'
@@ -276,7 +276,7 @@ spec:
     name: letsencrypt-prod
     kind: ClusterIssuer
   dnsNames:
-    - auth.$SERVICES_DOMAIN
+    - auth.{{ .Values.SERVICES_DOMAIN }}
 ---
 apiVersion: traefik.io/v1alpha1
 kind: IngressRoute
@@ -288,7 +288,7 @@ spec:
     - websecure
     - websecure-proxy
   routes:
-    - match: Host(`auth.$SERVICES_DOMAIN`)
+    - match: Host(`auth.{{ .Values.SERVICES_DOMAIN }}`)
       kind: Rule
       middlewares:
         - name: crowdsec-bouncer
@@ -351,7 +351,7 @@ metadata:
 type: Opaque
 stringData:
   users-database.yaml: |
-    $AUTHELIA_USERS_DATABASE
+{{ .Values.AUTHELIA_USERS_DATABASE | indent 4 }}
 ---
 apiVersion: v1
 kind: Secret
@@ -362,7 +362,7 @@ metadata:
     app.kubernetes.io/instance: authelia
 type: Opaque
 stringData:
-  password: "$AUTHELIA_DB_PASSWORD"
+  password: "{{ .Values.AUTHELIA_DB_PASSWORD }}"
 ---
 apiVersion: v1
 kind: Secret
@@ -373,7 +373,7 @@ metadata:
     app.kubernetes.io/instance: authelia
 type: Opaque
 stringData:
-  redis-password: "$AUTHELIA_REDIS_PASSWORD"
+  redis-password: "{{ .Values.AUTHELIA_REDIS_PASSWORD }}"
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -550,12 +550,12 @@ metadata:
 type: Opaque
 stringData:
   jwks.private-key.pem: |
-    $AUTHELIA_JWKS_KEY
-  oidc.immich.client-secret: "${AUTHELIA_IMMICH_CLIENT_SECRET_HASHED}"
-  oidc.openwebui.client-secret: "${AUTHELIA_OPENWEBUI_CLIENT_SECRET_HASHED}"
-  oidc.headlamp.client-secret: "${AUTHELIA_HEADLAMP_CLIENT_SECRET_HASHED}"
-  oidc.linkwarden.client-secret: "${AUTHELIA_LINKWARDEN_CLIENT_SECRET_HASHED}"
-  oidc.grafana.client-secret: "${AUTHELIA_GRAFANA_CLIENT_SECRET_HASHED}"
+{{ .Values.AUTHELIA_JWKS_KEY | indent 4 }}
+  oidc.immich.client-secret: "{{ .Values.AUTHELIA_IMMICH_CLIENT_SECRET_HASHED }}"
+  oidc.openwebui.client-secret: "{{ .Values.AUTHELIA_OPENWEBUI_CLIENT_SECRET_HASHED }}"
+  oidc.headlamp.client-secret: "{{ .Values.AUTHELIA_HEADLAMP_CLIENT_SECRET_HASHED }}"
+  oidc.linkwarden.client-secret: "{{ .Values.AUTHELIA_LINKWARDEN_CLIENT_SECRET_HASHED }}"
+  oidc.grafana.client-secret: "{{ .Values.AUTHELIA_GRAFANA_CLIENT_SECRET_HASHED }}"
 ---
 apiVersion: v1
 kind: Secret
@@ -564,6 +564,6 @@ metadata:
   namespace: base
 type: Opaque
 stringData:
-  encryption-key: "$AUTHELIA_DB_ENCRYPTION_KEY"
-  oidc-hmac: "$AUTHELIA_OIDC_HMAC_SECRET"
+  encryption-key: "{{ .Values.AUTHELIA_DB_ENCRYPTION_KEY }}"
+  oidc-hmac: "{{ .Values.AUTHELIA_OIDC_HMAC_SECRET }}"
 {{- end }}

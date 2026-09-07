@@ -24,7 +24,7 @@ spec:
       # To enable per-user identity instead (flip this to false):
       #   1. /etc/rancher/k3s/config.yaml.d/20-oidc.yaml:
       #      kube-apiserver-arg:
-      #        - "oidc-issuer-url=https://auth.$SERVICES_DOMAIN"
+      #        - "oidc-issuer-url=https://auth.{{ .Values.SERVICES_DOMAIN }}"
       #        - "oidc-client-id=headlamp"
       #        - "oidc-username-claim=preferred_username"
       #        - "oidc-groups-claim=groups"
@@ -63,7 +63,7 @@ spec:
     name: letsencrypt-prod
     kind: ClusterIssuer
   dnsNames:
-    - k8s.$SERVICES_DOMAIN
+    - k8s.{{ .Values.SERVICES_DOMAIN }}
 ---
 apiVersion: traefik.io/v1alpha1
 kind: IngressRoute
@@ -75,7 +75,7 @@ spec:
     - websecure
     - websecure-proxy
   routes:
-    - match: Host(`k8s.$SERVICES_DOMAIN`)
+    - match: Host(`k8s.{{ .Values.SERVICES_DOMAIN }}`)
       kind: Rule
       middlewares:
         - name: geoblock
@@ -102,10 +102,10 @@ metadata:
 type: Opaque
 stringData:
   OIDC_CLIENT_ID: "headlamp"
-  OIDC_CLIENT_SECRET: "$AUTHELIA_HEADLAMP_CLIENT_SECRET_HASHABLE"
-  OIDC_ISSUER_URL: "https://auth.$SERVICES_DOMAIN"
+  OIDC_CLIENT_SECRET: "{{ .Values.AUTHELIA_HEADLAMP_CLIENT_SECRET_HASHABLE }}"
+  OIDC_ISSUER_URL: "https://auth.{{ .Values.SERVICES_DOMAIN }}"
   OIDC_SCOPES: "openid profile email groups"
-  OIDC_CALLBACK_URL: "https://k8s.$SERVICES_DOMAIN/oidc-callback"
+  OIDC_CALLBACK_URL: "https://k8s.{{ .Values.SERVICES_DOMAIN }}/oidc-callback"
   OIDC_USE_PKCE: "true"
 ---
 ---

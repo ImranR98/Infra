@@ -2,7 +2,7 @@ http:
   middlewares:
     authelia:
       forwardAuth:
-        address: http://authelia:9091/api/verify?rd=https://auth.$CLOUD_SERVICES_DOMAIN/
+        address: http://authelia:9091/api/verify?rd=https://auth.{{ CLOUD_SERVICES_DOMAIN }}/
         maxResponseBodySize: 1048576
         trustForwardHeader: true
         authResponseHeaders:
@@ -24,7 +24,7 @@ http:
           forceMonthlyUpdate: true
           allowUnknownCountries: false
           unknownCountryApiResponse: "nil"
-          $GEOBLOCK_CONFIG_SUBSET
+          {{ GEOBLOCK_CONFIG_SUBSET }}
     crowdsec-bouncer:
       plugin:
         crowdsec-bouncer-traefik-plugin:
@@ -33,7 +33,7 @@ http:
           crowdsecMode: stream
           crowdsecLapiScheme: http
           crowdsecLapiHost: crowdsec:8080
-          crowdsecLapiKey: $CROWDSEC_BOUNCER_KEY
+          crowdsecLapiKey: {{ CROWDSEC_BOUNCER_KEY }}
           crowdsecappsecenabled: true
           crowdsecAppsecScheme: http
           crowdsecAppsecHost: crowdsec:7422
@@ -41,7 +41,7 @@ http:
           forwardedheaderstrustedips: "127.0.0.1/32"
   routers:
     http-to-frps:
-      rule: "Host(`home.$BASE_SERVICES_DOMAIN`) || Host(`*.home.$BASE_SERVICES_DOMAIN`)"
+      rule: "Host(`home.{{ BASE_SERVICES_DOMAIN }}`) || Host(`*.home.{{ BASE_SERVICES_DOMAIN }}`)"
       entryPoints: [web]
       service: http-frps
       priority: 100
@@ -58,7 +58,7 @@ tcp:
         version: 2
   routers:
     https-to-frps:
-      rule: "HostSNI(`home.$BASE_SERVICES_DOMAIN`) || HostSNI(`*.home.$BASE_SERVICES_DOMAIN`)"
+      rule: "HostSNI(`home.{{ BASE_SERVICES_DOMAIN }}`) || HostSNI(`*.home.{{ BASE_SERVICES_DOMAIN }}`)"
       entryPoints: [websecure]
       service: https-frps
       tls:

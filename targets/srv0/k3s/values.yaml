@@ -1,6 +1,11 @@
-# values.yaml — release-scope flags. All component YAML is envsubst'd from
-# VARS by commands/k3s/helm.sh before helm renders (no .Values refs).
+# values.yaml — committed defaults: release-scope gates + machine-independent
+# built-ins. All secrets and target-specific config live in the gitignored
+# secrets/values.srv0.yaml (passed as a later -f, so it wins on conflicts).
 base:
   enabled: true
 apps:
   enabled: true
+
+# Non-root pod UID used across templates (computed by lib/common.sh in the old
+# envsubst pipeline; 1000 is the repo-wide convention).
+MY_UID: 1000

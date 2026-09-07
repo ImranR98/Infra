@@ -11,7 +11,7 @@ spec:
     name: letsencrypt-prod
     kind: ClusterIssuer
   dnsNames:
-    - send.$SERVICES_DOMAIN
+    - send.{{ .Values.SERVICES_DOMAIN }}
 ---
 apiVersion: traefik.io/v1alpha1
 kind: IngressRoute
@@ -24,7 +24,7 @@ spec:
     - websecure
     - websecure-proxy
   routes:
-    - match: Host(`send.$SERVICES_DOMAIN`)
+    - match: Host(`send.{{ .Values.SERVICES_DOMAIN }}`)
       kind: Rule
       middlewares:
         - name: geoblock
@@ -56,11 +56,11 @@ spec:
         app: plik
     spec:
       securityContext:
-        fsGroup: $MY_UID
+        fsGroup: {{ .Values.MY_UID }}
       initContainers:
         - name: fix-perms
           image: busybox:1.38
-          command: ["sh", "-c", "chown -R $MY_UID:$MY_UID /data"]
+          command: ["sh", "-c", "chown -R {{ .Values.MY_UID }}:{{ .Values.MY_UID }} /data"]
           securityContext:
             runAsUser: 0
           volumeMounts:
@@ -74,8 +74,8 @@ spec:
           ports:
             - containerPort: 8080
           securityContext:
-            runAsUser: $MY_UID
-            runAsGroup: $MY_UID
+            runAsUser: {{ .Values.MY_UID }}
+            runAsGroup: {{ .Values.MY_UID }}
             runAsNonRoot: true
             allowPrivilegeEscalation: false
           volumeMounts:
@@ -169,14 +169,14 @@ type: Opaque
 stringData:
   # Separate key so the Deployment can pull the password via secretKeyRef
   # instead of an inline env value (readable via `get deployments`).
-  admin-password: "$PLIK_ADMIN_PASSWORD"
+  admin-password: "{{ .Values.PLIK_ADMIN_PASSWORD }}"
   plikd.cfg: |
     Debug               = false
     LogLevel            = "INFO"
     ListenPort          = 8080
     ListenAddress       = "0.0.0.0"
     NoWebInterface      = false
-    PlikDomain          = "https://send.$SERVICES_DOMAIN"
+    PlikDomain          = "https://send.{{ .Values.SERVICES_DOMAIN }}"
     AssumeHTTPS         = true
     SourceIpHeader      = "X-Forwarded-For"
     SessionTimeout      = "365d"
@@ -197,7 +197,7 @@ stringData:
     no_anonymous_uploads   = true
     feature_local_login     = "enabled"
     DefaultAdminLogin    = "admin"
-    DefaultAdminPassword = "$PLIK_ADMIN_PASSWORD"
+    DefaultAdminPassword = "{{ .Values.PLIK_ADMIN_PASSWORD }}"
 
     feature_one_shot        = "enabled"
     feature_removable      = "enabled"
