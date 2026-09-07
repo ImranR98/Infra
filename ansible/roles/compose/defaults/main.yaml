@@ -2,6 +2,4 @@
 # roles/compose/defaults/main.yaml
 # Passed by the calling playbook (playbook_dir-derived repo root).
 compose_infra_root: ""
-# Target this role manages (the machine hostname by default; playbooks can
-# override with -e target=).
-target: "{{ ansible_hostname }}"
+# target is required (asserted in tasks) — set via playbook var or -e target=.

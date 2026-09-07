@@ -1,20 +1,25 @@
 ---
 # compose_restart.yaml — re-render templates and restart one Compose service
-# (target = this machine's hostname, overridable with -e target=).
-# Usage: ansible-playbook ansible/playbooks/compose_restart.yaml -e compose_service=<svc>
+# of one target (explicit; must be this machine — the compose role asserts it).
+# Usage: ansible-playbook ansible/playbooks/compose_restart.yaml -e target=<t> -e compose_service=<svc>
+#        (or: infra <t> compose-restart <svc>)
 - name: Restart compose service
   hosts: localhost
   gather_facts: true
 
   vars:
     infra_root: "{{ playbook_dir }}/../.."
-    target: "{{ ansible_hostname }}"
 
   tasks:
     - name: Service name required
       ansible.builtin.assert:
         that: compose_service | default('') | length > 0
         fail_msg: "No service specified. Usage: ansible-playbook compose_restart.yaml -e compose_service=<svc>"
+
+    - name: Target required
+      ansible.builtin.assert:
+        that: target | default('') | length > 0
+        fail_msg: "No target set. Pass -e target=<hostname> (or use: infra <target> compose-restart <svc>)"
 
     - name: Compose render + environment
       ansible.builtin.include_role:

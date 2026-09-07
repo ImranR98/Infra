@@ -1,15 +1,15 @@
 ---
-# compose_install.yaml — render templates + start the Compose stack for the
-# machine you are on (no inventory: the target is this machine's hostname,
-# overridable with -e target=).
-# Usage: ansible-playbook ansible/playbooks/compose_install.yaml
+# compose_install.yaml — render templates + start the Compose stack of one
+# target. The target is explicit and must be this machine (the compose role
+# asserts hostname == target).
+# Usage: ansible-playbook ansible/playbooks/compose_install.yaml -e target=<t>
+#        (or: infra <t> compose-install)
 - name: Install compose stack
   hosts: localhost
   gather_facts: true
 
   vars:
     infra_root: "{{ playbook_dir }}/../.."
-    target: "{{ ansible_hostname }}"
 
   tasks:
     - name: Compose render + environment

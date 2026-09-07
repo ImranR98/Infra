@@ -1,8 +1,8 @@
 ---
 # compose_backup_state.yaml — tar the compose runtime state via an Alpine
 # container (skips FIFOs/sockets), prune to BACKUP_RETENTION (default 1).
-# Target = this machine's hostname (overridable with -e target=).
-# Local:   ansible-playbook compose_backup_state.yaml
+# Target is explicit and must be this machine.
+# Local:   ansible-playbook compose_backup_state.yaml -e target=<t>
 # Remote:  -e 'backup_remote=user@host:path' (streams the tar back over SSH into
 #          compose_state_backups/<target>-backup-<ts>.tar)
 - name: Backup compose state
@@ -11,10 +11,14 @@
 
   vars:
     infra_root: "{{ playbook_dir }}/../.."
-    target: "{{ ansible_hostname }}"
     backup_retention: "{{ lookup('env', 'BACKUP_RETENTION') | default(1, true) }}"
 
   tasks:
+    - name: Target required
+      ansible.builtin.assert:
+        that: target | default('') | length > 0
+        fail_msg: "No target set. Pass -e target=<hostname> (or use: infra <target> compose-backup)"
+
     - name: Local backup archive
       ansible.builtin.shell: |
         set -e

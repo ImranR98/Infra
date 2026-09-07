@@ -2,7 +2,13 @@
 # Compose role: render templates (jinja2), stage the environment for
 # docker-compose native interpolation, create host dirs, and run `docker compose`.
 
-- name: Target derived from the machine hostname
+# The target is explicit (playbook var or -e target=) — never inferred.
+- name: Target required
+  ansible.builtin.assert:
+    that: target | default('') | length > 0
+    fail_msg: "No target set. Pass -e target=<hostname> (or use: infra <target> compose-install)"
+
+- name: Target must be this machine
   ansible.builtin.assert:
     that: ansible_hostname == target
     fail_msg: "Refusing: running on host '{{ ansible_hostname }}' but target is '{{ target }}'"
