@@ -1,6 +1,0 @@
-# values.yaml — release-scope flags. All component YAML is envsubst'd from
-# VARS by commands/k3s/helm.sh before helm renders (no .Values refs).
-base:
-  enabled: true
-apps:
-  enabled: true

@@ -1,8 +1,0 @@
-displayName: Authelia Header Gate
-runtime: wasm
-type: middleware
-summary: Returns 401 for requests lacking trusted Authelia headers while blocking is enabled.
-testData:
-  trustedHeaders:
-    - Remote-User
-  blocking: "false"
