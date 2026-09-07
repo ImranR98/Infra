@@ -1,26 +1,27 @@
 ---
-# compose_restart.yaml — re-render templates and restart one Compose service.
-# Usage: ansible-playbook ansible/playbooks/compose_restart.yaml \
-#          -l <target> -e compose_service=<svc>
+# compose_restart.yaml — re-render templates and restart one Compose service
+# (target = this machine's hostname, overridable with -e target=).
+# Usage: ansible-playbook ansible/playbooks/compose_restart.yaml -e compose_service=<svc>
 - name: Restart compose service
-  hosts: all
+  hosts: localhost
   gather_facts: true
 
   vars:
     infra_root: "{{ playbook_dir }}/../.."
+    target: "{{ ansible_hostname }}"
 
   tasks:
     - name: Service name required
       ansible.builtin.assert:
         that: compose_service | default('') | length > 0
-        fail_msg: "No service specified. Usage: ansible-playbook compose_restart.yaml -l <target> -e compose_service=<svc>"
+        fail_msg: "No service specified. Usage: ansible-playbook compose_restart.yaml -e compose_service=<svc>"
 
     - name: Detect optional files
       ansible.builtin.stat:
         path: "{{ item }}"
       loop:
-        - "{{ infra_root }}/targets/{{ inventory_hostname }}/VARS.template.yaml"
-        - "{{ infra_root }}/targets/{{ inventory_hostname }}/compose/compose.private.yaml"
+        - "{{ infra_root }}/targets/{{ target }}/VARS.template.yaml"
+        - "{{ infra_root }}/targets/{{ target }}/compose/compose.private.yaml"
       register: _optional
 
     - name: Set availability facts
@@ -36,7 +37,7 @@
 
     - name: Stop service
       ansible.builtin.command:
-        cmd: docker compose -p {{ inventory_hostname }} {{ compose_files | join(' ') }} down "{{ compose_service }}"
+        cmd: docker compose -p {{ target }} {{ compose_files | join(' ') }} down "{{ compose_service }}"
       environment: "{{ compose_env }}"
       failed_when: false
       changed_when: true
@@ -44,7 +45,7 @@
 
     - name: Start service
       ansible.builtin.command:
-        cmd: docker compose -p {{ inventory_hostname }} {{ compose_files | join(' ') }} up -d "{{ compose_service }}"
+        cmd: docker compose -p {{ target }} {{ compose_files | join(' ') }} up -d "{{ compose_service }}"
       environment: "{{ compose_env }}"
       changed_when: true
       become: true

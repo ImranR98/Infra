@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Infra is an Ansible-driven IaC repo for a multi-machine homelab. Ansible is the orchestration CLI (`ansible-playbook` against `ansible/playbooks/`, run with `-l <target>`), and a few retained payload scripts run directly on their target (PVC backup/restore, node-IP update). Everything for a target lives in `targets/<t>/`; shared engine (playbooks, roles, inventory) sits in `ansible/`, secrets in the gitignored `secrets/`. No build step, no agent: playbooks run on the machine being managed (the committed inventory is `connection=local`), k3s applies go through plain Helm via a target playbook, compose VARS are plain YAML in the gitignored `secrets/` dir, loaded natively via `include_vars` (validated by in-role asserts). K3s provisioning uses the k3s-io/k3s-ansible community collection. Audience assumed to know Docker/Compose, Kubernetes, Traefik, Ansible.
+Infra is an Ansible-driven IaC repo for a multi-machine homelab. Ansible is the orchestration CLI (`ansible-playbook` against `ansible/playbooks/`), and a few retained payload scripts run directly on their target (PVC backup/restore, node-IP update). Everything for a target lives in `targets/<t>/`; shared engine (playbooks, roles) sits in `ansible/`, secrets in the gitignored `secrets/`. No build step, no agent, no inventory: playbooks run **on the machine being managed** (implicit `localhost`) and derive the target from the machine's hostname (`-e target=` overrides). k3s applies go through plain Helm via the srv0 chart's own playbook, compose VARS are plain YAML in the gitignored `secrets/` dir, loaded natively via `include_vars` (validated by in-role asserts). K3s provisioning uses the k3s-io/k3s-ansible community collection. Audience assumed to know Docker/Compose, Kubernetes, Traefik, Ansible.
 
 ## Prerequisites
 
@@ -27,18 +27,18 @@ Notable per-target facts:
 
 ## Essential commands
 
-Generic ops run against any target (`-l <target>`); target-specific ops are invoked by their own playbook path. Run from the repo root; `ANSIBLE_CONFIG=ansible/ansible.cfg` is needed only if you don't `cd` there (the config makes roles/inventory paths config-relative). Docker commands need elevation where the user is not in the docker group — add `-K` (ansible prompts for sudo once) on compose up/restart/backup-state runs.
+Generic ops run on the machine you are on (the target is that machine's hostname — override with `-e target=<t>` if you need to point at another target's files, e.g. validate from a synced checkout). Target-specific ops are invoked by their own playbook path. Run from the repo root; `ANSIBLE_CONFIG=ansible/ansible.cfg` is needed only if you don't `cd` there (the config makes roles paths config-relative). Docker commands need elevation where the user is not in the docker group — add `-K` (ansible prompts for sudo once) on compose up/restart/backup-state runs.
 
 ```
 # generic (any target):
-ansible-playbook ansible/playbooks/validate.yaml -l srv0             # yq + compose config + (per-target k3s) helm lint/template
-ansible-playbook ansible/playbooks/compose_install.yaml -l srv0      # validate VARS, render templates (jinja2), up -d [-K]
-ansible-playbook ansible/playbooks/compose_restart.yaml -l srv0 -e compose_service=frpc   # re-render, down+up one service [-K]
-ansible-playbook ansible/playbooks/compose_backup_state.yaml -l srv0  # [-e backup_remote=user@host:path] [-K]
+ansible-playbook ansible/playbooks/validate.yaml                      # yq + compose config + (srv0) helm lint/template
+ansible-playbook ansible/playbooks/compose_install.yaml               # validate VARS, render templates (jinja2), up -d [-K]
+ansible-playbook ansible/playbooks/compose_restart.yaml -e compose_service=frpc            # re-render, down+up one service [-K]
+ansible-playbook ansible/playbooks/compose_backup_state.yaml           # [-e backup_remote=user@host:path] [-K]
 ansible-playbook ansible/playbooks/prereqs.yaml                       # universal: install prerequisites
 ansible-playbook ansible/playbooks/renovate.yaml [-e renovate_args="--dry-run"]
 ansible-playbook ansible/playbooks/wireguard.yaml -e wireguard_conf_src=$(readlink -f wg.conf)
-ansible-playbook ansible/playbooks/preboot.yaml -l srv0|bigpc        # initramfs LUKS unlock (frpc tunnel / crypt-ssh)
+ansible-playbook ansible/playbooks/preboot.yaml                       # initramfs LUKS unlock (frpc tunnel / crypt-ssh)
 ansible-playbook ansible/playbooks/k3s_server.yaml                    # bootstrap control plane (no args; run ON the node)
 ansible-playbook ansible/playbooks/k3s_join.yaml -e node_ip=.. -e node_user=..   [-e k3s_role=agent|server] [-e k3s_amdgpu_mode=auto|yes|no] [-e k3s_scheduling_discouraged=true] [-e k3s_longhorn_replicas=true] [-K]
 
@@ -49,7 +49,7 @@ bash targets/srv0/pvc.sh restore --all -y           # PVC restore (or: pvc.sh re
 sudo bash targets/srv0/update-node-ip.sh [--ip X] [--force]   # K3s node IP change
 ```
 
-Playbook args after the playbook name are plain ansible (`-e` extra vars, `--check`, `--tags`); playbooks assert `hostname == inventory_hostname` so a wrong-machine run fails loudly (the retained scripts warn instead). Non-interactive PVC confirmations: pass `-y` to the script. Dev-only checks: `shellcheck $(find scripts targets -name '*.sh' -not -path '*/plugins/*')`, `ansible-lint -c ansible/.ansible-lint --offline ansible`, `yamllint -c ansible/.yamllint ansible`.
+Playbook args after the playbook name are plain ansible (`-e` extra vars, `--check`, `--tags`); the compose role asserts `hostname == target` so an explicitly-wrong-target run fails loudly (the retained scripts warn instead). Non-interactive PVC confirmations: pass `-y` to the script. Dev-only checks: `shellcheck $(find scripts targets -name '*.sh' -not -path '*/plugins/*')`, `ansible-lint -c ansible/.ansible-lint --offline ansible`, `yamllint -c ansible/.yamllint ansible`.
 
 Ad-hoc diagnostics (no dedicated commands; run on the srv0 control plane):
 - Mount a PVC + hostPath in a throwaway pod and shell into it:
@@ -59,13 +59,13 @@ Ad-hoc diagnostics (no dedicated commands; run on the srv0 control plane):
 
 ## Dispatch system
 
-**Ansible is the only CLI** (plus a few retained scripts that run directly on their target — see above). `ansible/playbooks/` holds generic ops (compose, validate, prereqs, wireguard, renovate, preboot, k3s provisioning) invoked with `-l <target>` against the committed `ansible/inventory.yaml` (`ansible_connection: local` for all five targets — playbooks run **on** the machine being managed). Target-root playbooks (`targets/<t>/*.yaml`) hold the target-specific ops with the host hardcoded (helm apply); a hostname `assert` fails loudly on a wrong-machine run. K3s node joins (`k3s_join.yaml`) build their node host at runtime with `add_host` — no inventory files for provisioning. `ansible.cfg` (roles_path + inventory) is config-relative, so plain `ansible-playbook ...` works from any CWD with `ANSIBLE_CONFIG=ansible/ansible.cfg` (or by running from `ansible/`).
+**Ansible is the only CLI** (plus a few retained scripts that run directly on their target — see above). `ansible/playbooks/` holds generic ops (compose, validate, prereqs, wireguard, renovate, preboot, k3s provisioning) that run on the machine you are on (implicit `localhost`; `target: {{ ansible_hostname }}`, overridable with `-e target=`). Target-root playbooks (`targets/<t>/*.yaml`, e.g. `targets/srv0/k3s/helm_apply.yaml`) hold the target-specific ops. The compose role asserts `hostname == target` so a wrong-machine run fails loudly. K3s node joins (`k3s_join.yaml`) build their node host at runtime with `add_host` — no inventory anywhere, for anything. `ansible.cfg` (roles_path) is config-relative, so plain `ansible-playbook ...` works from any CWD with `ANSIBLE_CONFIG=ansible/ansible.cfg` (or by running from `ansible/`).
 
 Retained bash scripts (`scripts/common.sh` bootstrap: state dirs, `MY_UID`, `retry`/`_confirm`, hostname warning; `targets/<t>/` payloads) exist only where something must run **as a file**: the in-cluster `pvc-backup` CronJob runs `targets/srv0/pvc.sh backup --all -y` from a kubectl pod (no ansible there), the node-IP update is deliberately kept as bash (`targets/srv0/update-node-ip.sh` — a native Ansible port of the etcdctl dance would be larger and riskier), and `scripts/renovate.sh` is the runner invoked by `renovate.yaml`. Compose VARS live as plain YAML (`secrets/VARS.<t>.yaml`, gitignored — no encryption; same at-rest trust model as the old dotenv files) and are loaded natively by the compose role via `include_vars` (flat, for jinja templates, and named `secret_vars`, for the compose interpolation env) when the target has a `VARS.template.yaml` (srv0, vps0).
 
 ### Writing a new playbook or script
 
-New compose/validation logic belongs in `ansible/` (generic: role + playbook with `hosts: all` and `-l <target>`) or at the target root (`targets/<t>/foo.yaml`, `hosts: <t>` hardcoded + the hostname assert) when it serves a single target. A retained bash script goes to `targets/<t>/` (or `scripts/` when truly universal, like `renovate.sh`) with a `# DESC:` second line, sourcing `$INFRA_ROOT/scripts/common.sh`. Useful helpers in `scripts/common.sh`: `retry <tries> <delay> <cmd-string>`, `_confirm`, `get_sudo_cmd`, `wait_for_k3s_cluster`, `get_node_ip`.
+New compose/validation logic belongs in `ansible/` (generic: role + playbook on `hosts: localhost` with `target: "{{ ansible_hostname }}"`) or at the target root (`targets/<t>/foo.yaml`, `hosts: localhost` + the hostname assert) when it serves a single target. A retained bash script goes to `targets/<t>/` (or `scripts/` when truly universal, like `renovate.sh`) with a `# DESC:` second line, sourcing `$INFRA_ROOT/scripts/common.sh`. Useful helpers in `scripts/common.sh`: `retry <tries> <delay> <cmd-string>`, `_confirm`, `get_sudo_cmd`, `wait_for_k3s_cluster`, `get_node_ip`.
 
 ## Variables & templating
 
@@ -104,7 +104,7 @@ Ops: `helm list/history/rollback`, `helm get values`, `helm template`, `helm dif
 
 **Node commands (Ansible-provisioned — `ansible/`)**
 
-Node provisioning uses the **k3s-io/k3s-ansible community collection** (`k3s.orchestration`, git-pinned in `requirements.yml`): it owns the installer, `/etc/rancher/k3s/config.yaml`, and the systemd service. Provisioning itself uses **no inventory file**: `k3s_join.yaml` builds its node host at runtime via `add_host` from extra vars, so any node can become the control plane and any node can join in any role at runtime — no host metadata in the repo (the committed `ansible/inventory.yaml` exists only for the local compose/validate playbooks). The collection's group lookups degenerate to `server_group: ungrouped` (single-host plays, HA paths skipped). Cluster policy defaults live in the playbooks + `k3s_node_extra` role defaults; per-run values are extra vars from the CLI.
+Node provisioning uses the **k3s-io/k3s-ansible community collection** (`k3s.orchestration`, git-pinned in `requirements.yaml`): it owns the installer, `/etc/rancher/k3s/config.yaml`, and the systemd service. Provisioning uses **no inventory file**: `k3s_join.yaml` builds its node host at runtime via `add_host` from extra vars, so any node can become the control plane and any node can join in any role at runtime — no host metadata in the repo. The collection's group lookups degenerate to `server_group: ungrouped` (single-host plays, HA paths skipped). Cluster policy defaults live in the playbooks + `k3s_node_extra` role defaults; per-run values are extra vars from the CLI.
 
 - `k3s_server.yaml` (no args, run ON the node): `connection=local`; passes `server_config_yaml` (`selinux: true`, `write-kubeconfig-mode: "0640"`, `flannel-backend: wireguard-native`, `node-ip`, `flannel-iface-regex`, `cluster-init: true`, labels `hostpath-main=true`, `hostpath-extra-storage=true`, `external-exposed=true`) to the collection's `k3s_server` role; `k3s_node_extra` adds the containerd CDI drop-in (`enable-cdi.toml` — enables CDI so the `cdi-specs` component can grant host devices), the `kubectl` group, firewall (firewalld/ufw; K3s ports incl. 51820–21/udp for flannel-wg) and sysctls (inotify, user namespaces); then `k3s_configure` labels the node for Longhorn default disk + `has-homeassistant-hardware`. K3s needs a fixed IP — if it changes, run `targets/srv0/update-node-ip.sh`.
 - `k3s_join.yaml` (`-e node_ip=.. -e node_user=.. [-e k3s_role=agent|server] [-e k3s_amdgpu_mode=auto|yes|no] [-e k3s_scheduling_discouraged=true] [-e k3s_longhorn_replicas=true]`, run ON the control plane): play 1 reads the token from `/var/lib/rancher/k3s/server/token` (slurp, `no_log`) and resolves the server IP; play 2 runs `k3s_node_extra` + the collection's `k3s_agent` (or `k3s_server` with a `server:` URL when joining another server) on the node over ssh; play 3 waits for the node to appear + become Ready, then `k3s_configure`. The token reaches the node as an inventory variable (`no_log` both ends); the collection stores it in the node's root-only `k3s-agent.service.env` (the standard k3s agent pattern). Non-interactive by design: the old join prompts are CLI flags. AMD GPU detection is `lspci`-based (vendor `1002`, VGA class; `--amdgpu yes|no` forces, default `auto`) and applies the existing `has-amdgpu=true` label (AMD-specific naming kept — the label drives ROCm/Ollama scheduling). Longhorn flag: `create-default-disk=true` + auto-increment `default-replica-count` (guarded by the label task's `changed`, so re-runs don't double-count); without the flag → `create-default-disk=false`.
@@ -176,7 +176,7 @@ helm uninstall srv0-apps -n apps          # delete a release; PVCs are retained 
 - **vps0 edge** — one Traefik routes by Host/SNI: vps0-local services via Docker labels (two zones, see Targets); `home.$SERVICES_DOMAIN` + wildcard goes through the file provider (`dynamic-configuration.yaml`) to `frps:8080` (HTTP) / `frps:8443` with `tls.passthrough` — vps0 never terminates srv0's TLS; cert-manager on srv0 owns the LE lifecycle. On srv0, cert-manager also runs a local chain (self-signed → `k3s-local-ca` → `ca-issuer`) for `*.home.local`/MQTT TLS; its `post.sh` waits for each chain step before proceeding (race-condition guard).
 - **FRP** — frps on vps0 (ports: 7000 control, 8887 preboot SSH, 8888 SSH; healthcheck on admin API :7500). frpc sidecar on srv0 (host network, `pgrep` healthcheck) proxies: ssh→8888, http→8080, https→8443 (local), qbittorrent peer 56881 tcp+udp. Mutual TLS with a per-pair CA (generated via the documented openssl commands in `VARS.template.yaml`); preboot frpc uses a separate client cert.
 - **WireGuard** (`wireguard` command, Ansible playbook `wireguard.yaml` `connection=local`) — deploys a provider `wg0.conf` via the `githubixx.ansible_role_wireguard` community role. The playbook parses the provider conf into role vars (PrivateKey/Address/DNS/MTU/PresharedKey/Endpoint — values never echoed), rewrites `AllowedIPs` to `0.0.0.0/1, 128.0.0.0/1` (split-tunnel: less specific than LAN routes, so K3s subnets and LAN stay direct), and adds PostUp/PreDown `/32` routes for the endpoint via the physical gateway (dead-loop fix) through the role's `wireguard_postup`/`wireguard_predown`. The role owns package install, the 0600 conf, and the `wg-quick@wg0` systemd unit (config changes apply via `wg syncconf`).
-- **LUKS preboot** — `ansible/playbooks/preboot.yaml -l srv0|bigpc` (shared `preboot` role; the per-target variant comes from `preboot_module` in the inventory host vars). srv0 (frpc): the frpc compose templates are rendered first (mTLS certs), then initramfs frpc tunnels SSH via FRPS on port 8887. bigpc (crypt-ssh): dropbear patched to preboot_port for direct LAN unlock (ethernet only). After rotating preboot mTLS certs, re-run the playbook with `-l srv0`. When adding initramfs networking, verify with `lsinitrd` that firmware actually made it in (drivers don't retry firmware loads after pivot_root).
+- **LUKS preboot** — `ansible/playbooks/preboot.yaml`, run on the node (shared `preboot` role; `preboot_module` is derived from the hostname in the playbook vars). srv0 (frpc): the frpc compose templates are rendered first (mTLS certs), then initramfs frpc tunnels SSH via FRPS on port 8887. bigpc (crypt-ssh): dropbear patched to preboot_port for direct LAN unlock (ethernet only). After rotating preboot mTLS certs, re-run the playbook on srv0. When adding initramfs networking, verify with `lsinitrd` that firmware actually made it in (drivers don't retry firmware loads after pivot_root).
 
 ## Security
 
@@ -219,7 +219,7 @@ One-time web-UI setup steps (formerly printed by deleted echo-hooks) for the app
 
 Renovate runs **automatically every day at 17:00 America/Toronto** as the `renovate` K3s CronJob on srv0 (base group, `targets/srv0/k3s/renovate/`) — the full `renovate/renovate` image (ships the Go toolchain, so the gomod manager works). The pod mounts only two files of the syncthing-synced repo (`secrets/VARS.env` and `.git/config`, read-only) to source `RENOVATE_GITHUB_TOKEN` (auto-rotates on sync) and to infer `RENOVATE_GIT_AUTHOR`; Renovate itself clones from GitHub. `ansible-playbook ansible/playbooks/renovate.yaml [-e renovate_args="--dry-run"]` (runs `scripts/renovate.sh`) is the manual/on-demand equivalent for other machines (needs Node/npm and `go` from prereqs for gomod updates; runs on the machine you're on, opening PRs directly on GitHub).
 
-Review/apply flow (manual only for critical infra; automerge for everything else per scope below): fetch the PR branch (`git fetch origin pull/<n>/head:renovate/pr-<n>`, then `git checkout renovate/pr-<n>`), `ansible-playbook ansible/playbooks/validate.yaml -l <target>`, then merge locally and `git push origin master`. Merges never happen in the platform UI — origin stays the source of truth. Renovate rebases its open PRs and auto-closes them once the change lands on `master` (next run).
+Review/apply flow (manual only for critical infra; automerge for everything else per scope below): fetch the PR branch (`git fetch origin pull/<n>/head:renovate/pr-<n>`, then `git checkout renovate/pr-<n>`), `ansible-playbook ansible/playbooks/validate.yaml`, then merge locally and `git push origin master`. Merges never happen in the platform UI — origin stays the source of truth. Renovate rebases its open PRs and auto-closes them once the change lands on `master` (next run).
 
 **Automerge scope** — Renovate auto-merges anything *not* matching the critical-infra exclusion (packageRules `matchFileNames` + `matchUpdateTypes`). For critical infra — srv0 K3s base group (namespaces, nfs-server, host-volumes, csi-driver-nfs, cert-manager, longhorn, geoip, traefik, crowdsec, authelia, pvc-backup, ntfy, descheduler, system-upgrade, rustfs, monitoring), vps0 compose (public edge), and the srv0 frpc tunnel compose — only **major** updates stay manual; minor/patch automerges normally. Longhorn exception: patches automerge, but **minor** bumps are proposed without automerge (sequential minor upgrades are mandatory — never merge a minor skip). The grouped docker-digests PR is always manual (it mixes base images). Everything else — apps-namespace k3s components, pc/bigpc/rpi compose, unmanaged arr-stack dirs — automerges including majors (no CI gate; a merged change only deploys when you next run `compose install`/`k3s group apply`).
 
@@ -234,7 +234,7 @@ Compose image ownership:
 | vps0 compose (pinned or digest-pinned) | Renovate PRs (no watchtower on vps0) |
 | Floating/untagged k3s + compose images | Renovate digest-pin PRs (tag stays, digest refreshed) |
 
-Post-update: `git diff` → `ansible-playbook ansible/playbooks/validate.yaml -l <target>` → deploy.
+Post-update: `git diff` → `ansible-playbook ansible/playbooks/validate.yaml` → deploy.
 
 ## Resource sizing tiers (never ad-hoc)
 
@@ -254,7 +254,7 @@ Post-update: `git diff` → `ansible-playbook ansible/playbooks/validate.yaml -l
 ## Directory layout
 
 ```
-ansible/                        # Ansible: ansible.cfg + inventory.yaml (connection=local) + playbooks/
+ansible/                        # Ansible: ansible.cfg + playbooks/
                                 #   (compose_install|restart|backup_state, validate, prereqs, wireguard,
                                 #   renovate, preboot, k3s_server|join) + roles/ (compose, preboot,
                                 #   k3s_node_extra|configure, prereqs) + requirements.yaml + lint configs

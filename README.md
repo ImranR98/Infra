@@ -20,7 +20,7 @@ The IaaC system for my homelab and other devices.
 ## Project Goals
 
 - **Infrastructure as Code**: Everything should be declarative and automated, using standard tooling wherever possible. Custom scripts should be minimal and only where necessary.
-- **Single CLI**: `ansible-playbook` is the only entry point — generic ops against the committed inventory with `-l <target>`, target-specific ops via target-root playbooks (`targets/<t>/*.yaml`, host hardcoded); a few retained payload scripts run directly on their target (PVC backup/restore, node-IP update).
+- **Single CLI**: `ansible-playbook` is the only entry point — no inventory anywhere: generic ops run on the machine you are on (the target is its hostname, `-e target=` overrides), target-specific ops via target-root playbooks (`targets/<t>/*.yaml`); a few retained payload scripts run directly on their target (PVC backup/restore, node-IP update).
 - **Security**: As the codebase is public and the system runs public-facing services containing highly personal data, security must be taken seriously.
 
 ## Quick start
@@ -35,10 +35,10 @@ cp targets/<target>/VARS.template.yaml secrets/VARS.<target>.yaml   # then fill 
 # srv0: the same secrets/VARS.srv0.yaml is passed to helm as the chart's values file
 
 # Validate your configuration
-ansible-playbook ansible/playbooks/validate.yaml -l <target>
+ansible-playbook ansible/playbooks/validate.yaml
 
 # Deploy compose / k3s
-ansible-playbook ansible/playbooks/compose_install.yaml -l <target>
+ansible-playbook ansible/playbooks/compose_install.yaml
 ansible-playbook targets/srv0/helm_apply.yaml -e helm_scope=base
 ansible-playbook targets/srv0/helm_apply.yaml -e helm_scope=apps
 
@@ -46,7 +46,7 @@ ansible-playbook targets/srv0/helm_apply.yaml -e helm_scope=apps
 ansible-playbook ansible/playbooks/renovate.yaml
 ```
 
-Extra vars ride `-e key=value`; `--check` dry-runs everything. Run playbooks from the repo root (roles/inventory paths in `ansible/ansible.cfg` are config-relative).
+Extra vars ride `-e key=value` (e.g. `-e target=vps0` to point a generic playbook at another target's files); `--check` dry-runs everything. Run playbooks from the repo root (roles paths in `ansible/ansible.cfg` are config-relative).
 
 ## K3s node provisioning (Ansible)
 

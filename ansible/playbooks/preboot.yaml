@@ -1,33 +1,37 @@
 ---
-# Install the preboot initramfs LUKS-unlock module. Per-target variant comes
-# from the inventory host vars (srv0: frpc — initramfs frpc tunnels SSH via
+# Install the preboot initramfs LUKS-unlock module. The variant is derived
+# from the machine hostname (srv0: frpc — initramfs frpc tunnels SSH via
 # FRPS :8887 with mTLS certs rendered from the compose templates first;
 # bigpc: crypt-ssh — dropbear SSH directly on the LAN).
-# Usage: ansible-playbook ansible/playbooks/preboot.yaml -l srv0
-#        ansible-playbook ansible/playbooks/preboot.yaml -l bigpc
+# Usage: ansible-playbook ansible/playbooks/preboot.yaml   (run ON the node)
 # Re-run after rotating the preboot mTLS certs (srv0).
 - name: Install preboot LUKS unlock (initramfs)
-  hosts: all
+  hosts: localhost
   gather_facts: true
 
   vars:
     infra_root: "{{ playbook_dir }}/../.."
+    target: "{{ ansible_hostname }}"
     preboot_user: "{{ ansible_env.SUDO_USER | default(ansible_user_id) }}"
 
   tasks:
     - name: Preboot variant known
       ansible.builtin.assert:
-        that: preboot_module | default('') in ['frpc', 'crypt-ssh']
+        that: target in ['srv0', 'bigpc']
         fail_msg: >-
-          preboot_module missing for {{ inventory_hostname }} — set it in the
-          inventory host vars (srv0: frpc, bigpc: crypt-ssh).
+          No preboot variant for host '{{ target }}' — preboot targets srv0
+          (frpc) or bigpc (crypt-ssh) only.
+
+    - name: Derive the preboot module from the hostname
+      ansible.builtin.set_fact:
+        preboot_module: "{{ {'srv0': 'frpc', 'bigpc': 'crypt-ssh'}[target] }}"
 
     - name: Stat frpc compose inputs
       ansible.builtin.stat:
         path: "{{ item }}"
       loop:
-        - "{{ infra_root }}/targets/{{ inventory_hostname }}/VARS.template.yaml"
-        - "{{ infra_root }}/targets/{{ inventory_hostname }}/compose/compose.private.yaml"
+        - "{{ infra_root }}/targets/{{ target }}/VARS.template.yaml"
+        - "{{ infra_root }}/targets/{{ target }}/compose/compose.private.yaml"
       register: _compose_inputs
       when: preboot_module == 'frpc'
 
