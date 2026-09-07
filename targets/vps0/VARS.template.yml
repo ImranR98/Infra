@@ -1,7 +1,6 @@
 # ====== VARS template for vps0 ======
-# Copy to secrets/VARS.vps0.yml, replace every placeholder with a real value,
-# then encrypt it with ansible-vault (the playbooks decrypt it automatically
-# via the vault password file; see AGENTS.md).
+# Copy to secrets/VARS.vps0.yml (gitignored), replace every placeholder with a
+# real value, done — no encryption (see AGENTS.md).
 # YAML map of KEY: value. Multi-line values are literal block scalars (|) —
 # indentation is data and splices are verbatim: match the documented nesting
 # exactly. Bare $ and # inside scalars are literal; there are NO ${NAME}

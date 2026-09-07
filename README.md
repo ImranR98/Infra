@@ -30,10 +30,8 @@ The IaaC system for my homelab and other devices.
 # (if ansible-playbook itself is missing, bootstrap it first: sudo dnf|apt install ansible-core)
 ansible-playbook ops/ansible/playbooks/prereqs.yml
 
-# Create your variables file from the template (YAML; then encrypt it with ansible-vault)
-cp targets/<target>/VARS.template.yml /tmp/VARS.yml   # fill in real values
-openssl rand -base64 32 > secrets/.vault_pass         # once; the vault password
-ansible-vault encrypt --vault-password-file secrets/.vault_pass /tmp/VARS.yml --output secrets/VARS.<target>.yml
+# Create your variables file from the template (plain YAML, gitignored under secrets/ — no encryption)
+cp targets/<target>/VARS.template.yml secrets/VARS.<target>.yml   # then fill in real values
 # srv0 k3s: helm values live in secrets/values.srv0.yaml (keys documented in VARS.template.yml)
 
 # Validate your configuration
@@ -88,7 +86,7 @@ Dry-run on a test VM (Multipass): `multipass launch -n testnode fedora`, SSH in,
 
 ## Migrating from the old `./infra.sh` CLI
 
-`./infra.sh` (and the bash dispatcher behind it) was replaced by `task` + a Python VARS validator, then by plain `ansible-playbook` as the single CLI. Compose VARS are now ansible-vault encrypted YAML (`secrets/VARS.<t>.yml`, one-time dotenv→YAML migration documented in AGENTS.md); the old bash K3s provisioning (`k3s:setup` / `k3s:join`) was replaced by the Ansible playbooks described above. See `git log` for the intermediate Task-based layout.
+`./infra.sh` (and the bash dispatcher behind it) was replaced by `task` + a Python VARS validator, then by plain `ansible-playbook` as the single CLI. Compose VARS are now plain gitignored YAML (`secrets/VARS.<t>.yml`, one-time dotenv→YAML migration documented in AGENTS.md); the old bash K3s provisioning (`k3s:setup` / `k3s:join`) was replaced by the Ansible playbooks described above. See `git log` for the intermediate Task-based layout.
 
 ## More
 

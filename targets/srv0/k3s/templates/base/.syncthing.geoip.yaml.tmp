@@ -1,0 +1,184 @@
+{{- if .Values.base.enabled }}
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: geoipupdate
+  namespace: base
+spec:
+  schedule: "0 2 * * 0"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      template:
+        spec:
+          securityContext:
+            runAsUser: $MY_UID
+            runAsGroup: $MY_UID
+            fsGroup: $MY_UID
+            runAsNonRoot: true
+            # Shared with the geoip service pod via the geoip PVC: pods
+            # writing/reading the same volume must share MCS category s0
+            # (pod-level; container-level is ignored), otherwise files carry
+            # their creator's random category and readers get EACCES.
+            seLinuxOptions:
+              level: s0
+          restartPolicy: Never
+          containers:
+            - name: geoipupdate
+              image: maxmindinc/geoipupdate:latest@sha256:51e70dd6f16cd3e4d845ac02d09940b10772a75b9d741427d235a78570923c1d
+              env:
+                - name: GEOIPUPDATE_ACCOUNT_ID
+                  valueFrom:
+                    secretKeyRef:
+                      name: geoipupdate-secret
+                      key: account-id
+                - name: GEOIPUPDATE_LICENSE_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      name: geoipupdate-secret
+                      key: license-key
+                - name: GEOIPUPDATE_EDITION_IDS
+                  value: "GeoLite2-Country"
+                - name: GEOIPUPDATE_DB_DIR
+                  value: "/data"
+              volumeMounts:
+                - name: geoip-data
+                  mountPath: /data
+          volumes:
+            - name: geoip-data
+              persistentVolumeClaim:
+                claimName: geoip-pvc
+---
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: geoip
+  namespace: base
+  labels:
+    app: geoip-service
+spec:
+  replicas: 1
+  # Recreate: the geoip PVC is RWO Longhorn - RollingUpdate deadlocks on the
+  # volume (new pod can't attach while the old pod holds it).
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: geoip-service
+  template:
+    metadata:
+      labels:
+        app: geoip-service
+    spec:
+      securityContext:
+        runAsUser: $MY_UID
+        runAsGroup: $MY_UID
+        runAsNonRoot: true
+        # Shared with the geoipupdate pod via the geoip PVC: both must use MCS
+        # category s0 (pod-level; container-level is ignored) or DB files
+        # written by one pod are unreadable by the other (EACCES on startup).
+        seLinuxOptions:
+          level: s0
+      containers:
+        - name: geoip
+          image: imranrdev/geoip-service:latest@sha256:652a22d8a7a801f02ecbfdec7c61456656dff9ac86b18cc52644f377f5ca0f63
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+          securityContext:
+            readOnlyRootFilesystem: true
+          resources:
+            requests:
+              memory: "16Mi"
+            limits:
+              memory: "32Mi"
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          volumeMounts:
+            - name: geoip-data
+              mountPath: /data
+              readOnly: true
+      volumes:
+        - name: geoip-data
+          persistentVolumeClaim:
+            claimName: geoip-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: geoip-service
+  namespace: base
+spec:
+  selector:
+    app: geoip-service
+  ports:
+    - port: 8080
+      targetPort: 8080
+---
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-geoip-from-traefik
+  namespace: base
+spec:
+  podSelector:
+    matchLabels:
+      app: geoip-service
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: traefik
+      ports:
+        - port: 8080
+  policyTypes:
+    - Ingress
+---
+# --- prereqs.yaml ---
+# PVC only — the Secret is created in post.sh (kustomize strips quotes from
+# stringData values, turning numeric account IDs into bare integers that
+# Kubernetes rejects).
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: geoip-pvc
+  namespace: base
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 50Mi
+  storageClassName: longhorn
+---
+# geoipupdate credentials — previously created by the deleted post.sh hook.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: geoipupdate-secret
+  namespace: base
+type: Opaque
+stringData:
+  account-id: "$GEOIPUPDATE_ACCOUNT_ID"
+  license-key: "$GEOIPUPDATE_LICENSE_KEY"
+{{- end }}

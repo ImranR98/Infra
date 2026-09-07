@@ -1,0 +1,87 @@
+{{- if .Values.apps.enabled }}
+---
+apiVersion: helm.cattle.io/v1
+kind: HelmChart
+metadata:
+  name: seerr
+  namespace: apps
+spec:
+  chart: oci://ghcr.io/seerr-team/seerr/seerr-chart
+  failurePolicy: abort
+  targetNamespace: apps
+  createNamespace: false
+  version: 3.9.1
+  valuesContent: |-
+    fullnameOverride: seerr
+    config:
+      persistence:
+        # existingClaim is used instead of inline PVC because the seerr Helm
+        # chart does not support PVC labels — we need auto-backup: "true" on
+        # the PVC, so we create it ourselves in prereqs.yaml.
+        existingClaim: seerr-config
+        size: 5Gi
+        storageClass: longhorn
+    extraEnv:
+      - name: TZ
+        value: $TZ
+    resources:
+      requests:
+        memory: 128Mi
+      limits:
+        memory: 2Gi
+    podSecurityContext:
+      runAsUser: $MY_UID
+      runAsGroup: $MY_UID
+---
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: seerr-prod-tls
+  namespace: apps
+spec:
+  secretName: seerr-prod-tls
+  issuerRef:
+    name: letsencrypt-prod
+    kind: ClusterIssuer
+  dnsNames:
+    - seerr.$SERVICES_DOMAIN
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: seerr-ingress
+  namespace: apps
+spec:
+  entryPoints:
+    - websecure
+    - websecure-proxy
+  routes:
+    - match: Host(`seerr.$SERVICES_DOMAIN`)
+      kind: Rule
+      middlewares:
+        - name: geoblock
+          namespace: base
+        - name: crowdsec-bouncer
+          namespace: base
+      services:
+        - name: seerr
+          port: 80
+  tls:
+    secretName: seerr-prod-tls
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: seerr-config
+  namespace: apps
+  labels:
+    auto-backup: "true"
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+  storageClassName: longhorn
+{{- end }}
