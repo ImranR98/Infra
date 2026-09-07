@@ -1,10 +1,10 @@
 #!/bin/bash
-# DESC: Run Renovate against ImranR98/Infra — opens update PRs on GitHub (manual). srv0 runs this automatically via the renovate CronJob; use this for on-demand runs.
+# DESC: Run Renovate against ImranR98/Infra — opens update PRs on GitHub (manual). The in-cluster renovate CronJob runs this automatically; use this for on-demand runs.
 set -euo pipefail
 source "$INFRA_ROOT/scripts/common.sh"
 
 # Universal VARS (dotenv, e.g. secrets/VARS.env — gitignored). Simple KEY="value"
-# lines source fine in bash; set -a exports them like the old `export` prefixes.
+# lines source fine in bash; set -a exports them.
 UNIVERSAL_VARS_FILE=""
 for _f in "$INFRA_ROOT/secrets/VARS.env" "$INFRA_ROOT/VARS.env"; do
     if [ -f "$_f" ]; then UNIVERSAL_VARS_FILE="$_f"; break; fi
@@ -27,7 +27,7 @@ fi
 # pending — install it with: task <target>:prereqs
 if ! command -v go >/dev/null 2>&1; then
     echo "Warning: 'go' not found — pending gomod updates will crash the run." >&2
-    echo "Install with: ansible-playbook ansible/playbooks/prereqs.yaml (or let the srv0 renovate CronJob handle it)." >&2
+    echo "Install with: ansible-playbook ansible/playbooks/prereqs.yaml (or let the in-cluster renovate CronJob handle it)." >&2
 fi
 
 export RENOVATE_TOKEN="$RENOVATE_GITHUB_TOKEN"

@@ -85,8 +85,7 @@ spec:
         seLinuxOptions:
           level: s0
       # Seed/refresh the GeoLite2 DB on every start so the service pod becomes
-      # ready immediately on a fresh install (replaces the old
-      # geoipupdate-init helm hook); the weekly CronJob keeps it current.
+      # ready immediately on a fresh install; the weekly CronJob keeps it current.
       initContainers:
         - name: geoipupdate
           image: maxmindinc/geoipupdate:latest@sha256:51e70dd6f16cd3e4d845ac02d09940b10772a75b9d741427d235a78570923c1d
@@ -195,7 +194,7 @@ spec:
       storage: 50Mi
   storageClassName: longhorn
 ---
-# geoipupdate credentials — previously created by the deleted post.sh hook.
+# geoipupdate credentials (MaxMind GeoLite2).
 apiVersion: v1
 kind: Secret
 metadata:
