@@ -25,7 +25,7 @@ The IaaC system for my homelab and other devices.
   - **Network policies** are used in the `srv0` Kubernetes stack to ensure that pod-to-pod communication is only allowed where necessary.
   - **mTLS** (as opposed to symmetric token-based encryption) is used to protect the FRP tunnel between `srv0` and `vps0` (this prevents certain kinds of MITM attacks).
   - **The Principle of Least Privilege** is applied to containers, with elevated privileges and root runtime user only allowed where necessary. Access to host devices is granted via [CDI](https://docs.docker.com/build/building/cdi/) rather than `privileged: true`.
-  - **Comprehensive Monitoring and Alerting** is done using [Prometheus](https://prometheus.io/) + [Mimir](https://grafana.com/oss/mimir/), [Loki](https://grafana.com/docs/loki/latest/), [Grafana](https://grafana.com/), [Ntfy.sh](https://ntfy.sh/) + [Logtfy](https://github.com/ImranR98/Logtfy), [Headlamp](https://headlamp.dev/), [Dozzle](https://dozzle.dev/), and [Uptime Kuma](https://uptimekuma.co/).
+  - **Comprehensive Monitoring and Alerting** is done using [Alloy](https://grafana.com/docs/alloy/) + [Mimir](https://grafana.com/oss/mimir/), [Loki](https://grafana.com/docs/loki/latest/), [Grafana](https://grafana.com/), [Ntfy.sh](https://ntfy.sh/) + [Logtfy](https://github.com/ImranR98/Logtfy), [Headlamp](https://headlamp.dev/), [Dozzle](https://dozzle.dev/), and [Uptime Kuma](https://uptimekuma.co/).
   - **A Honeypot ([Opencanary](https://github.com/thinkst/opencanary))** is used to discover intruders. 
   - **Regular update checking** is done via [Renovate](https://www.mend.io/renovate/) (updates are applied manually to avoid unplanned changes).
 
