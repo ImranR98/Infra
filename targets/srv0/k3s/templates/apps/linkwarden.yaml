@@ -277,6 +277,11 @@ spec:
                 secretKeyRef:
                   name: linkwarden-secrets
                   key: MEILI_MASTER_KEY
+            # Meilisearch bumps its on-disk DB format on minor releases; the
+            # engine refuses to start otherwise. Keep this so Renovate tag
+            # bumps self-migrate on startup.
+            - name: MEILI_UPGRADE_DB
+              value: "true"
           volumeMounts:
             - name: meili-data
               mountPath: /meili_data
