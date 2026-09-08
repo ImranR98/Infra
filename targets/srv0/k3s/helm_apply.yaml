@@ -75,7 +75,21 @@
              + (helm_args | default('') | split) }}
       environment:
         KUBECONFIG: "{{ kubeconfig }}"
+      register: helm_result
+      failed_when: false
       when: helm_state_eff != 'absent'
+
+    - name: Fail with helm output
+      ansible.builtin.fail:
+        msg: >-
+          helm upgrade failed (rc={{ helm_result.rc }}).
+
+          stdout:
+          {{ helm_result.stdout }}
+
+          stderr:
+          {{ helm_result.stderr }}
+      when: helm_state_eff != 'absent' and helm_result.rc != 0
 
     - name: Helm uninstall
       ansible.builtin.command:
