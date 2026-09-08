@@ -9,7 +9,7 @@ services:
     # untouched and reads the password via its native ${GO2RTC_PASSWORD}
     # config substitution.
     go2rtc-init:
-        image: alpine:3.21
+        image: alpine:3.24
         container_name: go2rtc-init
         restart: "no"
         volumes:
