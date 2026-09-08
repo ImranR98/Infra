@@ -3,101 +3,243 @@
 apiVersion: helm.cattle.io/v1
 kind: HelmChart
 metadata:
-  name: monitoring
+  name: k8s-monitoring
   namespace: base
 spec:
-  chart: kube-prometheus-stack
-  repo: https://prometheus-community.github.io/helm-charts
+  chart: k8s-monitoring
+  repo: https://grafana.github.io/helm-charts
   failurePolicy: abort
   targetNamespace: base
   createNamespace: false
-  version: 89.2.4
+  version: 4.5.0
   valuesContent: |-
-    # No receivers configured yet; enable later with an ntfy webhook.
-    alertmanager:
-      enabled: false
-
-    prometheus:
-      prometheusSpec:
-        replicas: 1
-        resources:
-          requests:
-            memory: 128Mi
-          limits:
-            memory: 2Gi
-        storageSpec:
-          volumeClaimTemplate:
-            spec:
-              storageClassName: longhorn
-              accessModes:
-                - ReadWriteOnce
-              resources:
-                requests:
-                  storage: 50Gi
-        remoteWrite:
-          - url: http://mimir.base.svc.cluster.local:8080/api/v1/push
-
-    grafana:
-      enabled: true
-      admin:
-        existingSecret: grafana-admin-secret
-        passwordKey: admin-password
-      envFromSecret: grafana-oidc-secret
-      persistence:
+    # Grafana's first-party Kubernetes observability chart: generates all Alloy
+    # collector configs for cluster metrics (kubelet/cadvisor/ksm/api-server/
+    # coredns), host metrics (node-exporter) and pod logs (streamed via the
+    # Kubernetes API - no host mounts), shipping to the in-cluster Mimir/Loki.
+    cluster:
+      name: k3s
+    destinations:
+      prometheus:
+        type: prometheus
+        url: http://mimir.base.svc.cluster.local:8080/api/v1/push
+      loki:
+        type: loki
+        url: http://loki.base.svc.cluster.local:3100/loki/api/v1/push
+    collectors:
+      alloy-metrics:
         enabled: true
-        size: 5Gi
-        storageClassName: longhorn
-      resources:
-        requests:
-          memory: 128Mi
-        limits:
-          memory: 2Gi
-      grafana.ini:
-        server:
-          root_url: https://grafana.{{ .Values.SERVICES_DOMAIN }}
-        auth:
-          # OIDC-only UI: no local username/password form. Recovery if
-          # Authelia ever breaks: kubectl -n base exec deploy/... grafana-cli
-          # admin reset-admin-password.
-          disable_login_form: true
-        auth.generic_oauth:
-          enabled: true
-          name: Authelia
-          client_id: grafana
-          scopes: openid profile email groups
-          auth_url: https://auth.{{ .Values.SERVICES_DOMAIN }}/api/oidc/authorization
-          token_url: https://auth.{{ .Values.SERVICES_DOMAIN }}/api/oidc/token
-          api_url: https://auth.{{ .Values.SERVICES_DOMAIN }}/api/oidc/userinfo
-          use_pkce: true
-          allow_sign_up: true
-          role_attribute_path: "contains(groups[*], 'admins') && 'Admin' || 'Viewer'"
-      additionalDataSources:
-        - name: Mimir
-          type: prometheus
-          url: http://mimir.base.svc.cluster.local:8080/prometheus
-          access: proxy
-          isDefault: false
-        - name: Loki
-          type: loki
-          url: http://loki.base.svc.cluster.local:3100
-          access: proxy
-          isDefault: false
-
-    kube-state-metrics: {}
-
-    prometheus-node-exporter: {}
-
-    # K3s runs etcd/controller-manager/scheduler/kube-proxy embedded without
-    # scrapeable endpoints - their ServiceMonitors would just fail forever.
-    kubeEtcd:
-      enabled: false
-    kubeControllerManager:
-      enabled: false
-    kubeScheduler:
-      enabled: false
-    kubeProxy:
-      enabled: false
+        presets: [clustered]
+        alloy:
+          resources:
+            requests:
+              memory: 128Mi
+            limits:
+              memory: 512Mi
+      alloy-logs:
+        enabled: true
+        presets: [clustered]
+        alloy:
+          resources:
+            requests:
+              memory: 128Mi
+            limits:
+              memory: 512Mi
+    clusterMetrics:
+      enabled: true
+      destinations: [prometheus]
+      collector: alloy-metrics
+      # K3s control plane components (etcd/scheduler/controller-manager) are
+      # embedded without scrapeable endpoints; the API server and CoreDNS run
+      # as real workloads and are scraped.
+      apiServer:
+        enabled: true
+      kubeDNS:
+        enabled: true
+      # Default allowlists off: they are tuned to Grafana's own dashboards and
+      # would drop series the dotdc dashboards query.
+      kubelet:
+        metricsTuning:
+          useDefaultAllowList: false
+      kubeletResource:
+        metricsTuning:
+          useDefaultAllowList: false
+      cadvisor:
+        metricsTuning:
+          useDefaultAllowList: false
+      kube-state-metrics:
+        metricsTuning:
+          useDefaultAllowList: false
+    hostMetrics:
+      enabled: true
+      destinations: [prometheus]
+      collector: alloy-metrics
+      linuxHosts:
+        enabled: true
+        metricsTuning:
+          useDefaultAllowList: false
+    podLogsViaKubernetesApi:
+      enabled: true
+      destinations: [loki]
+      collector: alloy-logs
+      labels:
+        # The pod's app.kubernetes.io/name label is exposed as the plain `app`
+        # stream label (dashboards/Explore filters).
+        app: app.kubernetes.io/name
+      extraDiscoveryRules: |
+        // Fallbacks for pods without app.kubernetes.io/name: plain `app`
+        // wins over k8s-app, which wins over the job-name of Job pods; the
+        // temp copy is dropped afterwards.
+        rule {
+          source_labels = ["__meta_kubernetes_pod_label_job_name"]
+          regex         = ".+"
+          target_label  = "__tmp_log_app"
+          replacement   = "$0"
+        }
+        rule {
+          source_labels = ["__meta_kubernetes_pod_label_k8s_app"]
+          regex         = ".+"
+          target_label  = "__tmp_log_app"
+          replacement   = "$0"
+        }
+        rule {
+          source_labels = ["__meta_kubernetes_pod_label_app"]
+          regex         = ".+"
+          target_label  = "__tmp_log_app"
+          replacement   = "$0"
+        }
+        rule {
+          source_labels = ["__tmp_log_app"]
+          regex         = ".+"
+          target_label  = "app"
+          replacement   = "$0"
+        }
+        rule {
+          regex  = "__tmp_log_app"
+          action = "labeldrop"
+        }
+    selfReporting:
+      enabled: true
+      destinations: [prometheus]
+      collector: alloy-metrics
+    telemetryServices:
+      kube-state-metrics:
+        deploy: true
+      node-exporter:
+        deploy: true
 ---
+apiVersion: helm.cattle.io/v1
+kind: HelmChart
+metadata:
+  name: grafana
+  namespace: base
+spec:
+  chart: grafana
+  repo: https://grafana.github.io/helm-charts
+  failurePolicy: abort
+  targetNamespace: base
+  createNamespace: false
+  version: 10.5.15
+  valuesContent: |-
+    admin:
+      existingSecret: grafana-admin-secret
+      userKey: admin-user
+      passwordKey: admin-password
+    envFromSecret: grafana-oidc-secret
+    persistence:
+      enabled: true
+      size: 5Gi
+      storageClassName: longhorn
+    resources:
+      requests:
+        memory: 128Mi
+      limits:
+        memory: 2Gi
+    grafana.ini:
+      server:
+        root_url: https://grafana.{{ .Values.SERVICES_DOMAIN }}
+      auth:
+        # OIDC-only UI: no local username/password form. Recovery if
+        # Authelia ever breaks: kubectl -n base exec deploy/... grafana-cli
+        # admin reset-admin-password.
+        disable_login_form: true
+      auth.generic_oauth:
+        enabled: true
+        name: Authelia
+        client_id: grafana
+        scopes: openid profile email groups
+        auth_url: https://auth.{{ .Values.SERVICES_DOMAIN }}/api/oidc/authorization
+        token_url: https://auth.{{ .Values.SERVICES_DOMAIN }}/api/oidc/token
+        api_url: https://auth.{{ .Values.SERVICES_DOMAIN }}/api/oidc/userinfo
+        use_pkce: true
+        allow_sign_up: true
+        role_attribute_path: "contains(groups[*], 'admins') && 'Admin' || email == '{{ .Values.DOMAIN_OWNER_EMAIL }}' && 'Admin' || 'Viewer'"
+        # Authelia's ID token carries no email/groups claims and Grafana never
+        # merges the userinfo claims into role mapping, so mapping-based roles
+        # always land on Viewer. Roles are therefore assigned once (the
+        # operator is promoted via the Grafana API; signups default to Viewer)
+        # and login never overwrites them.
+        skip_org_role_sync: true
+    datasources:
+      datasources.yaml:
+        apiVersion: 1
+        datasources:
+          - name: Prometheus
+            type: prometheus
+            uid: prometheus
+            url: http://mimir.base.svc.cluster.local:8080/prometheus
+            access: proxy
+            isDefault: true
+          - name: Loki
+            type: loki
+            url: http://loki.base.svc.cluster.local:3100
+            access: proxy
+            isDefault: false
+    dashboardProviders:
+      dashboardproviders.yaml:
+        apiVersion: 1
+        providers:
+          - name: dotdc
+            orgId: 1
+            folder: ""
+            type: file
+            disableDeletion: true
+            editable: true
+            options:
+              path: /var/lib/grafana/dashboards/dotdc
+          - name: kubernetes-logs
+            orgId: 1
+            folder: ""
+            type: file
+            disableDeletion: true
+            editable: true
+            options:
+              path: /var/lib/grafana/dashboards/kubernetes-logs
+    dashboards:
+      dotdc:
+        k8s-views-global:
+          url: https://raw.githubusercontent.com/dotdc/grafana-dashboards-kubernetes/v3.0.6/dashboards/k8s-views-global.json
+        k8s-views-namespaces:
+          url: https://raw.githubusercontent.com/dotdc/grafana-dashboards-kubernetes/v3.0.6/dashboards/k8s-views-namespaces.json
+        k8s-views-nodes:
+          url: https://raw.githubusercontent.com/dotdc/grafana-dashboards-kubernetes/v3.0.6/dashboards/k8s-views-nodes.json
+        k8s-views-pods:
+          url: https://raw.githubusercontent.com/dotdc/grafana-dashboards-kubernetes/v3.0.6/dashboards/k8s-views-pods.json
+        k8s-system-api-server:
+          url: https://raw.githubusercontent.com/dotdc/grafana-dashboards-kubernetes/v3.0.6/dashboards/k8s-system-api-server.json
+        k8s-system-coredns:
+          url: https://raw.githubusercontent.com/dotdc/grafana-dashboards-kubernetes/v3.0.6/dashboards/k8s-system-coredns.json
+    dashboardsConfigMaps:
+      kubernetes-logs: k8s-monitoring-kubernetes-logs-dashboard
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: k8s-monitoring-kubernetes-logs-dashboard
+  namespace: base
+data:
+  kubernetes-logs.json: |-
+{{ .Files.Get "files/dashboards/kubernetes-logs.json" | indent 4 }}
 ---
 apiVersion: cert-manager.io/v1
 kind: Certificate
@@ -129,11 +271,10 @@ spec:
         - name: crowdsec-bouncer
         - name: forwardauth-authelia
       services:
-        - name: monitoring-grafana
+        - name: grafana
           port: 80
   tls:
     secretName: grafana-prod-tls
----
 ---
 apiVersion: helm.cattle.io/v1
 kind: HelmChart
@@ -170,7 +311,8 @@ spec:
       replicas: 0
     write:
       replicas: 0
-    # No canary/gateway: promtail and Grafana talk to the loki Service directly.
+    # No canary/gateway: the k8s-monitoring log collector and Grafana talk to
+    # the loki Service directly.
     lokiCanary:
       enabled: false
     test:
@@ -219,27 +361,16 @@ spec:
       enabled: false
     resultsCache:
       enabled: false
-    # Prebuilt Loki dashboards (chart-bundled mixin) auto-imported by the
-    # Grafana sidecar via the grafana_dashboard: "1" label, plus the
-    # ServiceMonitor and recording rules that feed them.
+    # Chart-bundled mixin dashboards/SM/PrometheusRules are disabled: the
+    # minimal stack keeps no ServiceMonitor/PrometheusRule CRs anywhere, logs
+    # are browsed in Grafana Explore and the kubernetes-logs dashboard.
     monitoring:
       dashboards:
-        enabled: true
+        enabled: false
       serviceMonitor:
-        enabled: true
-        # The kube-prometheus-stack Prometheus CR selects ServiceMonitors
-        # by release: monitoring.
-        labels:
-          release: monitoring
+        enabled: false
       rules:
-        enabled: true
-        labels:
-          release: monitoring
-        # Alert rules included in the rules bundle will evaluate but have no
-        # alertmanager to fire into (disabled in the monitoring stack);
-        # recording rules are what the dashboards need.
-        alerting: true
----
+        enabled: false
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -302,9 +433,9 @@ spec:
             - -alertmanager-storage.s3.bucket-name=mimir-alertmanager
             # 1 year of blocks.
             - -compactor.blocks-retention-period=8760h
-            # Single trusted tenant (Prometheus): generous limits so backlog
-            # flushes after downtime are never rejected, and the >150k series
-            # the cluster scrapes fit under the per-user cap.
+            # Single trusted tenant: generous limits so backlog flushes after
+            # downtime are never rejected, and the series the cluster scrapes
+            # fit under the per-user cap.
             - -distributor.ingestion-rate-limit=1000000
             - -distributor.ingestion-burst-size=1000000
             - -ingester.max-global-series-per-user=1000000
@@ -343,7 +474,6 @@ spec:
       port: 8080
       targetPort: http
 ---
----
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -360,63 +490,6 @@ spec:
               kubernetes.io/metadata.name: base
       ports:
         - port: 8080
-  policyTypes:
-    - Ingress
----
-apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
-metadata:
-  name: allow-grafana-metrics-ingress
-  namespace: base
-spec:
-  podSelector:
-    matchLabels:
-      app.kubernetes.io/name: grafana
-  ingress:
-    - from:
-        - namespaceSelector:
-            matchLabels:
-              kubernetes.io/metadata.name: base
-      ports:
-        - port: 3000
-  policyTypes:
-    - Ingress
----
-apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
-metadata:
-  name: allow-operator-metrics-ingress
-  namespace: base
-spec:
-  podSelector:
-    matchLabels:
-      app: kube-prometheus-stack-operator
-  ingress:
-    - from:
-        - namespaceSelector:
-            matchLabels:
-              kubernetes.io/metadata.name: base
-      ports:
-        - port: 10250
-  policyTypes:
-    - Ingress
----
-apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
-metadata:
-  name: allow-prometheus-ingress
-  namespace: base
-spec:
-  podSelector:
-    matchLabels:
-      app.kubernetes.io/name: prometheus
-  ingress:
-    - from:
-        - namespaceSelector:
-            matchLabels:
-              kubernetes.io/metadata.name: base
-      ports:
-        - port: 9090
   policyTypes:
     - Ingress
 ---
@@ -476,55 +549,6 @@ type: Opaque
 stringData:
   admin-user: admin
   admin-password: "{{ .Values.GRAFANA_ADMIN_PASSWORD }}"
----
----
-apiVersion: helm.cattle.io/v1
-kind: HelmChart
-metadata:
-  name: promtail
-  namespace: base
-spec:
-  chart: promtail
-  repo: https://grafana.github.io/helm-charts
-  failurePolicy: abort
-  targetNamespace: base
-  createNamespace: false
-  version: 6.17.1
-  valuesContent: |-
-    config:
-      clients:
-        - url: http://loki.base.svc.cluster.local:3100/loki/api/v1/push
-      snippets:
-        extraRelabelConfigs:
-          # __tmp_controller_name is computed by the chart's default relabels
-          # (controller name with the ReplicaSet hash stripped) - expose it as
-          # a `deployment` label so logs can be filtered by workload.
-          - source_labels:
-              - __tmp_controller_name
-            target_label: deployment
-    # Kubernetes pod logs only (no docker-side scraping; the Compose sidecar
-    # is out of scope for the logging stack).
-    # SELinux host: spc_t (not privileged) is enough to read /var/log/pods
-    # (hostPath, container_log_t) and write positions to /run/promtail.
-    podSecurityContext:
-      seLinuxOptions:
-        type: spc_t
-    containerSecurityContext:
-      allowPrivilegeEscalation: false
-      readOnlyRootFilesystem: false
-    defaultVolumes:
-      - name: run
-        hostPath:
-          path: /run/promtail
-      - name: pods
-        hostPath:
-          path: /var/log/pods
-    defaultVolumeMounts:
-      - name: run
-        mountPath: /run/promtail
-      - name: pods
-        mountPath: /var/log/pods
-        readOnly: true
 ---
 apiVersion: v1
 kind: Secret
