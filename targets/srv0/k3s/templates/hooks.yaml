@@ -17,14 +17,11 @@ metadata:
   namespace: apps
 rules:
   - apiGroups: [""]
-    resources: ["pods/exec", "pods/log"]
-    verbs: ["get", "create"]
+    resources: ["pods", "pods/exec", "pods/log", "secrets"]
+    verbs: ["get", "list", "watch", "create", "patch", "update"]
   - apiGroups: ["apps"]
     resources: ["deployments"]
     verbs: ["get"]
-  - apiGroups: [""]
-    resources: ["pods"]
-    verbs: ["get", "list", "watch"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
@@ -40,8 +37,12 @@ subjects:
     name: helm-hooks
     namespace: apps
 ---
-# Immich OAuth/password seeding. Idempotent: skips when OAuth is already
-# configured. Runs in-cluster with scoped RBAC.
+# Immich OAuth/password seeding. Skips when the admin already has an OAuth
+# identity (immich-admin list-users reads the DB in-container, no auth
+# needed); the admin password from the one-time sign-up is persisted in the
+# immich-seed-admin Secret so later runs can authenticate without the
+# version-fragile immich-admin interactive prompts. Runs in-cluster with
+# scoped RBAC.
 apiVersion: batch/v1
 kind: Job
 metadata:
@@ -52,7 +53,7 @@ metadata:
     helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
     helm.sh/hook-weight: "10"
 spec:
-  backoffLimit: 10
+  backoffLimit: 3
   template:
     metadata:
       labels:
@@ -76,21 +77,54 @@ spec:
               set -euo pipefail
               echo "=== Checking Immich configuration ==="
               kubectl -n apps wait --for=condition=Ready pod -l app.kubernetes.io/name=server,app.kubernetes.io/instance=immich --timeout=600s
-              PWD=$(head -c 12 /dev/urandom | od -An -tx1 | tr -d ' \n')
-              kubectl exec -n apps deploy/immich-server -- immich-admin enable-password-login 2>/dev/null || true
+
+              ADMIN_EMAIL="{{ .Values.DOMAIN_OWNER_EMAIL }}"
+              TOKEN=""
+
+              # Password persisted by the first seed, so later runs can log in
+              # via the API instead of the immich-admin prompt flow.
+              ADMIN_PWD=""
+              if kubectl -n apps get secret immich-seed-admin >/dev/null 2>&1; then
+                ADMIN_PWD=$(kubectl -n apps get secret immich-seed-admin -o jsonpath='{.data.password}' | base64 -d)
+              fi
+
               _try_login() {
-                TOKEN=$(printf '{"email":"%s","password":"%s"}' "{{ .Values.DOMAIN_OWNER_EMAIL }}" "$1" | \
+                TOKEN=$(printf '{"email":"%s","password":"%s"}' "$ADMIN_EMAIL" "$1" | \
                   kubectl exec -i -n apps deploy/immich-server -- \
                   curl -sk -X POST http://localhost:2283/api/auth/login \
                     -H "Content-Type: application/json" \
                     -d @- 2>/dev/null | jq -r '.accessToken // empty' 2>/dev/null || echo "")
                 [ -n "$TOKEN" ]
               }
-              { printf '%s\n%s\n' "$PWD" "$PWD"; sleep 3; printf 'Y\n'; } | kubectl exec -i -n apps deploy/immich-server -- \
-                timeout 30 immich-admin reset-admin-password 2>/dev/null || true
-              sleep 2
-              if ! _try_login "$PWD"; then
-                printf '{"email":"%s","name":"Admin","password":"%s"}' "{{ .Values.DOMAIN_OWNER_EMAIL }}" "$PWD" | \
+
+              USERS=$(kubectl exec -n apps deploy/immich-server -- immich-admin list-users 2>/dev/null || true)
+              ADMIN_OAUTH_ID=$(printf '%s\n' "$USERS" | awk '
+                /^  \{/ {inobj=1; oauth=""; isadmin=0}
+                inobj && /oauthId: / { oauth=$0 }
+                inobj && /isAdmin: true/ { isadmin=1 }
+                inobj && /^  \},?$/ && isadmin { print oauth; exit }
+              ' | sed -n "s/.*oauthId: '\([^']*\)'.*/\1/p")
+
+              if [ -n "$ADMIN_OAUTH_ID" ]; then
+                echo "OAuth already configured (oauthId=$ADMIN_OAUTH_ID). Skipping."
+                exit 0
+              fi
+              echo "OAuth not yet configured. Seeding configuration..."
+
+              if echo "$USERS" | grep -q "isAdmin: true"; then
+                # Admin exists but has no OAuth identity. Password login must be
+                # available for the API login to work.
+                kubectl exec -n apps deploy/immich-server -- immich-admin enable-password-login >/dev/null 2>&1 || true
+                if [ -z "$ADMIN_PWD" ] || ! _try_login "$ADMIN_PWD"; then
+                  echo "Error: admin exists without an OAuth identity and no persisted seed password." >&2
+                  echo "Reset the admin password manually (immich-admin reset-admin-password), then re-run." >&2
+                  exit 1
+                fi
+              else
+                # Fresh database: create the admin through the sign-up API and
+                # persist the generated password for future runs.
+                PWD=$(head -c 12 /dev/urandom | od -An -tx1 | tr -d ' \n')
+                printf '{"email":"%s","name":"Admin","password":"%s"}' "$ADMIN_EMAIL" "$PWD" | \
                   kubectl exec -i -n apps deploy/immich-server -- \
                   curl -sk -X POST "http://localhost:2283/api/auth/admin-sign-up" \
                     -H "Content-Type: application/json" \
@@ -100,15 +134,14 @@ spec:
                   echo "Error: could not create or authenticate as admin" >&2
                   exit 1
                 fi
+                ADMIN_PWD="$PWD"
+                kubectl -n apps create secret generic immich-seed-admin \
+                  --from-literal=password="$ADMIN_PWD" --dry-run=client -o yaml | \
+                  kubectl -n apps apply -f -
+                echo "Admin seeded; password stored in apps/immich-seed-admin."
               fi
-              CLIENT_ID=$(printf '%s\n' "$TOKEN" | kubectl exec -i -n apps deploy/immich-server -- \
-                sh -c 'IFS= read -r tok; curl -sk "http://localhost:2283/api/system-config" \
-                    -H "Authorization: Bearer $tok" 2>/dev/null' | jq -r '.oauth.clientId // empty' 2>/dev/null || echo "")
-              if [ -n "$CLIENT_ID" ] && [ "$CLIENT_ID" != "null" ]; then
-                echo "OAuth already configured (clientId=$CLIENT_ID). Skipping."
-                exit 0
-              fi
-              echo "OAuth not yet configured. Seeding configuration..."
+
+              echo "Configuring OAuth and system settings..."
               CONFIG_JSON=$(printf '%s\n' "$TOKEN" | kubectl exec -i -n apps deploy/immich-server -- \
                 sh -c 'IFS= read -r tok; curl -sk "http://localhost:2283/api/system-config" \
                     -H "Authorization: Bearer $tok" 2>/dev/null')
