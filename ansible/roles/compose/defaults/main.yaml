@@ -1,5 +1,0 @@
----
-# roles/compose/defaults/main.yaml
-# Passed by the calling playbook (playbook_dir-derived repo root).
-compose_infra_root: ""
-# target is required (asserted in tasks) — set via playbook var or -e target=.

@@ -52,6 +52,44 @@ wait_for_k3s_cluster() {
     return 1
 }
 
+set_my_uid() {
+    if [ -z "${MY_UID:-}" ]; then
+        if [ "$(id -u)" -eq 0 ]; then
+            export MY_UID=1000
+        else
+            MY_UID="$(id -u)"
+            export MY_UID
+        fi
+    fi
+}
+
+# require_target — export TARGET from the first argument. Warns (does not fail)
+# when this machine's hostname differs, so check flows like validate can run
+# for any target from any checkout.
+require_target() {
+    local t="${1:-}"
+    if [ -z "$t" ]; then
+        echo "Error: usage: $(basename "$0") <target>" >&2
+        exit 1
+    fi
+    if [ ! -d "$INFRA_ROOT/targets/$t" ]; then
+        echo "Error: unknown target '$t' — targets: $(find "$INFRA_ROOT/targets" -mindepth 1 -maxdepth 1 -type d ! -name templates -printf '%f ' 2>/dev/null)" >&2
+        exit 1
+    fi
+    export TARGET="$t"
+    set_my_uid
+}
+
+# require_target_host — like require_target, but hard-fails when this machine's
+# hostname does not match the target (compose ops run on the target machine).
+require_target_host() {
+    require_target "$1"
+    if [ "$(hostname)" != "$TARGET" ]; then
+        echo "Error: running on host '$(hostname)' but target is '$TARGET'." >&2
+        exit 1
+    fi
+}
+
 # ---- Target mode guards ------------------------------------------------------
 if [ -n "$TARGET" ]; then
     # Warn if this machine's hostname does not match the target name
@@ -63,12 +101,5 @@ if [ -n "$TARGET" ]; then
         fi
     fi
 
-    if [ -z "${MY_UID:-}" ]; then
-        if [ "$(id -u)" -eq 0 ]; then
-            export MY_UID=1000
-        else
-            MY_UID="$(id -u)"
-            export MY_UID
-        fi
-    fi
+    set_my_uid
 fi

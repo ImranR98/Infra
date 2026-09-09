@@ -1,7 +1,62 @@
+name: srv0
+
 x-logging: &logging
     options:
         max-size: 10m
         max-file: 5
+
+# frpc.toml is inlined as a compose config so docker compose interpolates
+# ${PROXY_HOST}/${TLS_SERVER_NAME} natively (secrets/VARS.srv0.env via
+# --env-file). The mTLS certs are real 0600 files under secrets/srv0/frpc/.
+configs:
+    frpc_toml:
+        content: |
+            serverAddr = "${PROXY_HOST}"
+            serverPort = 7000
+            auth.additionalScopes = ["HeartBeats", "NewWorkConns"]
+
+            transport.tls.enable = true
+            transport.tls.serverName = "${TLS_SERVER_NAME}"
+            transport.tls.certFile = "/etc/frp/client.crt"
+            transport.tls.keyFile = "/etc/frp/client.key"
+            transport.tls.trustedCaFile = "/etc/frp/ca.crt"
+
+            [[proxies]]
+            name = "ssh"
+            type = "tcp"
+            localIP = "127.0.0.1"
+            localPort = 22
+            remotePort = 8888
+
+            [[proxies]]
+            name = "http"
+            type = "tcp"
+            localIP = "127.0.0.1"
+            localPort = 80
+            remotePort = 8080
+            transport.useEncryption = true
+
+            [[proxies]]
+            name = "https"
+            type = "tcp"
+            localIP = "127.0.0.1"
+            localPort = 8443
+            remotePort = 8443
+            transport.useEncryption = true
+
+            [[proxies]]
+            name = "qbittorrent-peer-tcp"
+            type = "tcp"
+            localIP = "127.0.0.1"
+            localPort = 31581
+            remotePort = 56881
+
+            [[proxies]]
+            name = "qbittorrent-peer-udp"
+            type = "udp"
+            localIP = "127.0.0.1"
+            localPort = 31581
+            remotePort = 56881
 
 services:
 
@@ -10,10 +65,13 @@ services:
         container_name: frpc
         restart: always
         volumes:
-          - $COMPOSE_STATE_DIR/frpc/frpc.toml:/frpc.toml
-          - $COMPOSE_STATE_DIR/frpc/ca.crt:/etc/frp/ca.crt:ro
-          - $COMPOSE_STATE_DIR/frpc/client.crt:/etc/frp/client.crt:ro
-          - $COMPOSE_STATE_DIR/frpc/client.key:/etc/frp/client.key:ro
+          - ../../../secrets/srv0/frpc/ca.crt:/etc/frp/ca.crt:ro
+          - ../../../secrets/srv0/frpc/client.crt:/etc/frp/client.crt:ro
+          - ../../../secrets/srv0/frpc/client.key:/etc/frp/client.key:ro
+        configs:
+          - source: frpc_toml
+            target: /frpc.toml
+            mode: 0400
         network_mode: host
         healthcheck:
             test: ["CMD", "pgrep", "frpc"]

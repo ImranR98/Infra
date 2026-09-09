@@ -1,10 +1,12 @@
 # ====== VARS template for srv0 ======
 # Documented variables + generation commands. The actual values live in ONE
 # gitignored file per target:
-#   - secrets/VARS.srv0.yaml — plain YAML consumed by BOTH the compose sidecar
-#     (frpc) and the k3s umbrella chart (helm_apply passes it as a values
-#     file). Copy this template to secrets/, replace placeholders, done —
-#     no encryption, the file is gitignored (see AGENTS.md).
+#   - secrets/VARS.srv0.yaml — plain YAML consumed ONLY by the k3s umbrella
+#     chart (helm upgrade -f). Copy this template to secrets/, replace
+#     placeholders, done — no encryption, the file is gitignored (see AGENTS.md).
+#   - The compose sidecar (frpc) has its own inputs: secrets/VARS.srv0.env
+#     (dotenv) + the mTLS cert files under secrets/srv0/frpc/ — see the
+#     FRP section below.
 # Placeholders (change_me / changeme / abc / REPLACE_ME / <...>) are rejected
 # on deploy. Multi-line values are literal block scalars (|); bare $ and #
 # inside scalars are literal; there are NO ${NAME} references (values are
@@ -13,7 +15,7 @@
 # file) holds the output of `openssl passwd -6` (or `authelia crypto hash
 # generate pbkdf2 ...`); the *_HASHABLE plaintext stays for reference.
 # NOTE: keys below the first ====== line are machine/env paths (INFRA_ROOT,
-# TARGET, PVC_BACKUP_DIR) — k3s-chart-only, not used by the compose sidecar.
+# TARGET, PVC_BACKUP_DIR) — k3s-chart-only.
 
 # ====== Domain ======
 SERVICES_DOMAIN: "home.example.org"
@@ -268,9 +270,17 @@ NEXTCLOUD_ADMIN_PASSWORD: "change_me" # openssl rand -hex 16
 NEXTCLOUD_DB_PASSWORD: "change_me" # openssl rand -hex 16
 
 # ====== FRP ======
-PROXY_HOST: "vps0.example.org"
-# Generate the per-pair mTLS CA + certs with openssl (once per pair, on either
-# machine; paste the PEM blocks into the matching keys below):
+# The FRP vars are NOT in this file anymore — they are compose-only (the k3s
+# chart never uses them):
+#   - secrets/VARS.srv0.env (dotenv, passed with `docker compose --env-file`):
+#       PROXY_HOST=<frps server hostname>
+#       TLS_SERVER_NAME=<frps TLS server name (matches its cert CN)>
+#   - secrets/srv0/frpc/ — the per-pair mTLS CA + client certs as real 0600
+#     files (mounted read-only by the compose stack and read by scripts/preboot.sh):
+#     ca.crt, ca.key (rotation material, not mounted), client.crt, client.key,
+#     preboot-client.crt, preboot-client.key
+# Generate with openssl (once per pair, on either machine; save the output
+# directly into secrets/srv0/frpc/):
 #   # CA
 #   openssl req -x509 -newkey rsa:4096 -keyout ca.key -out ca.crt -days 3650 -nodes -subj "/CN=infra-mtls-ca"
 #   # client (srv0)
@@ -281,31 +291,6 @@ PROXY_HOST: "vps0.example.org"
 #   openssl genrsa -out preboot-client.key 2048
 #   openssl req -new -key preboot-client.key -out preboot-client.csr -subj "/CN=srv0-preboot"
 #   openssl x509 -req -in preboot-client.csr -CA ca.crt -CAkey ca.key -CAcreateserial -out preboot-client.crt -days 1825
-# Multi-line PEM data: literal block scalars.
-MTLS_CA_CERT: |
-  -----BEGIN CERTIFICATE-----
-  <CA-certificate-pem-block>
-  -----END CERTIFICATE-----
-MTLS_CA_KEY: |
-  -----BEGIN PRIVATE KEY-----
-  <CA-private-key-pem-block>
-  -----END PRIVATE KEY-----
-MTLS_CLIENT_CERT: |
-  -----BEGIN CERTIFICATE-----
-  <client-certificate-pem-block>
-  -----END CERTIFICATE-----
-MTLS_CLIENT_KEY: |
-  -----BEGIN PRIVATE KEY-----
-  <client-private-key-pem-block>
-  -----END PRIVATE KEY-----
-MTLS_PREBOOT_CLIENT_CERT: |
-  -----BEGIN CERTIFICATE-----
-  <preboot-client-certificate-pem-block>
-  -----END CERTIFICATE-----
-MTLS_PREBOOT_CLIENT_KEY: |
-  -----BEGIN PRIVATE KEY-----
-  <preboot-client-private-key-pem-block>
-  -----END PRIVATE KEY-----
 
 # ====== Observability ======
 RUSTFS_ACCESS_KEY: "change_me" # openssl rand -hex 16
