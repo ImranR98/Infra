@@ -467,6 +467,9 @@ services:
         restart: unless-stopped
         mem_limit: 8G
         container_name: plausible_events_db
+        depends_on:
+            state-fixperms:
+                condition: service_completed_successfully
         networks:
             - traefik
         volumes:
@@ -487,20 +490,26 @@ services:
                 ]
             start_period: 1m
         logging: *logging
-    plausible-init:
+    # One-shot: chowns the state dirs of the containers that run as a FIXED
+    # non-MY_UID user (ClickHouse 101, Plausible 999) — self-heals ownership
+    # drift (e.g. a host-side chown). Re-runs on every up after a down.
+    state-fixperms:
         image: alpine:latest@sha256:28bd5fe8b56d1bd048e5babf5b10710ebe0bae67db86916198a6eec434943f8b
-        container_name: plausible-init
+        container_name: state-fixperms
         restart: no
         cap_drop:
             - ALL
         cap_add:
             - CHOWN
             - FOWNER
+            - DAC_OVERRIDE
         security_opt:
             - no-new-privileges
         volumes:
+            - ../../../current_target/compose_live_state/plausible/event_data:/var/lib/clickhouse
+            - ../../../current_target/compose_live_state/plausible/event_logs:/var/log/clickhouse-server
             - ../../../current_target/compose_live_state/plausible/data:/var/lib/plausible
-        command: chown -R 999:999 /var/lib/plausible
+        command: chown -R 101:101 /var/lib/clickhouse /var/log/clickhouse-server && chown -R 999:999 /var/lib/plausible
     plausible:
         image: ghcr.io/plausible/community-edition:v3
         restart: unless-stopped
@@ -508,7 +517,7 @@ services:
         container_name: plausible
         command: sh -c "for i in \$(seq 1 30); do /entrypoint.sh db createdb 2>/dev/null && break; sleep 2; done && /entrypoint.sh db migrate && /entrypoint.sh run"
         depends_on:
-            plausible-init:
+            state-fixperms:
                 condition: service_completed_successfully
             traefik:
                 condition: service_started
