@@ -38,7 +38,7 @@ configs:
 
             authentication_backend:
               file:
-                path: /etc/authelia/users_database.yml
+                path: /config/users_database.yml
 
             access_control:
               default_policy: 'deny'
@@ -290,24 +290,19 @@ services:
             - dockerproxy:/socket/
 
     # Authelia - 2FA Authentication
-    # The read-only config files mount OUTSIDE /config (/etc/authelia/) — the
-    # image's entrypoint chowns /config at boot, which fails on read-only files.
     authelia:
         image: authelia/authelia:latest@sha256:936134132eaf01bfa2faf85055afbc1e0cc1cc5ca4547e9c06408fd0dd784646
         container_name: authelia
         user: "$MY_UID:$MY_UID"
-        command:
-            - --config
-            - /etc/authelia/configuration.yml
         depends_on:
             authelia-db:
                 condition: service_healthy
         volumes:
             - ../../../current_target/compose_live_state/authelia/config:/config
-            - ../../../config/vps0/authelia/users_database.yml:/etc/authelia/users_database.yml:ro
+            - ../../../config/vps0/authelia/users_database.yml:/config/users_database.yml:ro
         configs:
           - source: authelia_configuration
-            target: /etc/authelia/configuration.yml
+            target: /config/configuration.yml
             uid: "$MY_UID"
             gid: "$MY_UID"
             mode: 0400
