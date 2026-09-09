@@ -1,0 +1,34 @@
+---
+apiVersion: helm.cattle.io/v1
+kind: HelmChart
+metadata:
+  name: csi-driver-nfs
+  namespace: kube-system
+spec:
+  chart: csi-driver-nfs
+  repo: https://raw.githubusercontent.com/kubernetes-csi/csi-driver-nfs/master/charts
+  failurePolicy: abort
+  targetNamespace: kube-system
+  version: 4.13.4
+  valuesContent: |-
+    node:
+      dnsPolicy: ClusterFirstWithHostNet
+---
+---
+# RWX NFS-backed storage class for the shared PVC backup destination.
+# No provisioner: the pvc-backup-dest PVC binds to the static PV
+# pvc-backup-dest-pv, which mounts the ROOT of the NFS backups share
+# (nfs-server pod, pinned to the hostpath-main node, exporting
+# /exports/backups = hostPath {{ .Values.PVC_BACKUP_DIR }} on srv0). Nothing is
+# dynamically provisioned, so no pvc-* subdirs ever appear in the
+# backup directory.
+# NOTE: the fsid=0 export is /exports, so the pseudofs root IS /exports and
+# sub-exports are addressed by their relative name (/backups, not /exports/backups).
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: nfs-backup
+provisioner: kubernetes.io/no-provisioner
+volumeBindingMode: Immediate
+mountOptions:
+  - nfsvers=4.2

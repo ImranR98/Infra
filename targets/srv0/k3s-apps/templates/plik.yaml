@@ -1,0 +1,209 @@
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: plik-prod-tls
+  namespace: apps
+spec:
+  secretName: plik-prod-tls
+  issuerRef:
+    name: letsencrypt-prod
+    kind: ClusterIssuer
+  dnsNames:
+    - send.{{ .Values.SERVICES_DOMAIN }}
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: plik-ingress
+  namespace: apps
+spec:
+  entryPoints:
+    - web
+    - websecure
+    - websecure-proxy
+  routes:
+    - match: Host(`send.{{ .Values.SERVICES_DOMAIN }}`)
+      kind: Rule
+      middlewares:
+        - name: geoblock
+          namespace: base
+        - name: crowdsec-bouncer
+          namespace: base
+      services:
+        - name: plik
+          port: 8080
+  tls:
+    secretName: plik-prod-tls
+---
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: plik
+  namespace: apps
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: plik
+  template:
+    metadata:
+      labels:
+        app: plik
+    spec:
+      securityContext:
+        fsGroup: {{ .Values.MY_UID }}
+      initContainers:
+        - name: fix-perms
+          image: busybox:1.38
+          command: ["sh", "-c", "chown -R {{ .Values.MY_UID }}:{{ .Values.MY_UID }} /data"]
+          securityContext:
+            runAsUser: 0
+          volumeMounts:
+            - name: data
+              mountPath: /data/files
+            - name: state
+              mountPath: /data/state
+      containers:
+        - name: plik
+          image: rootgg/plik:1.4.2
+          ports:
+            - containerPort: 8080
+          securityContext:
+            runAsUser: {{ .Values.MY_UID }}
+            runAsGroup: {{ .Values.MY_UID }}
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false
+          volumeMounts:
+            - name: data
+              mountPath: /data/files
+            - name: state
+              mountPath: /data/state
+            - name: config
+              mountPath: /home/plik/server/plikd.cfg
+              subPath: plikd.cfg
+              readOnly: true
+          resources:
+            limits:
+              memory: 512Mi
+            requests:
+              memory: 128Mi
+          env:
+            - name: PLIKD_FEATURE_AUTHENTICATION
+              value: "forced"
+            - name: PLIKD_DEFAULT_ADMIN_LOGIN
+              value: "admin"
+            - name: PLIKD_DEFAULT_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: plik-config
+                  key: admin-password
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 5
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: plik-data-pvc
+        - name: state
+          persistentVolumeClaim:
+            claimName: plik-state-pvc
+        - name: config
+          secret:
+            secretName: plik-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: plik
+  namespace: apps
+spec:
+  selector:
+    app: plik
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: plik-data-pvc
+  namespace: apps
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: longhorn
+  resources:
+    requests:
+      storage: 200Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: plik-state-pvc
+  namespace: apps
+  labels:
+    auto-backup: "true"
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: longhorn
+  resources:
+    requests:
+      storage: 5Gi
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: plik-config
+  namespace: apps
+type: Opaque
+stringData:
+  # Separate key so the Deployment can pull the password via secretKeyRef
+  # instead of an inline env value (readable via `get deployments`).
+  admin-password: "{{ .Values.PLIK_ADMIN_PASSWORD }}"
+  plikd.cfg: |
+    Debug               = false
+    LogLevel            = "INFO"
+    ListenPort          = 8080
+    ListenAddress       = "0.0.0.0"
+    NoWebInterface      = false
+    PlikDomain          = "https://send.{{ .Values.SERVICES_DOMAIN }}"
+    AssumeHTTPS         = true
+    SourceIpHeader      = "X-Forwarded-For"
+    SessionTimeout      = "365d"
+
+    DataBackend = "file"
+    [DataBackendConfig]
+        Directory = "/data/files"
+
+    [MetadataBackendConfig]
+        Driver = "sqlite3"
+        ConnectionString = "/data/state/plik.db"
+
+    MaxFileSizeStr      = "10GB"
+    DefaultTTLStr       = "30d"
+    MaxTTLStr           = "30d"
+
+    feature_authentication = "forced"
+    no_anonymous_uploads   = true
+    feature_local_login     = "enabled"
+    DefaultAdminLogin    = "admin"
+    DefaultAdminPassword = "{{ .Values.PLIK_ADMIN_PASSWORD }}"
+
+    feature_one_shot        = "enabled"
+    feature_removable      = "enabled"
+    feature_stream         = "enabled"
+    feature_password       = "enabled"
+    feature_comments       = "enabled"
+    feature_set_ttl         = "enabled"
+    feature_api_tokens      = "enabled"
+    feature_e2ee           = "enabled"
+    feature_text           = "enabled"

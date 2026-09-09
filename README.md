@@ -43,10 +43,10 @@ bash scripts/validate.sh <target>
 
 # Deploy k3s
 export KUBECONFIG="${KUBECONFIG:-/etc/rancher/k3s/k3s.yaml}" # helm doesn't find k3s's kubeconfig on its own
-helm upgrade --install srv0-base targets/srv0/k3s -n base --create-namespace \
-  -f targets/srv0/k3s/values.yaml -f config/srv0/values.yaml --set apps.enabled=false
-helm upgrade --install srv0-apps targets/srv0/k3s -n apps --create-namespace \
-  -f targets/srv0/k3s/values.yaml -f config/srv0/values.yaml --set base.enabled=false
+helm upgrade --install srv0-base targets/srv0/k3s-base -n base --create-namespace \
+  -f targets/srv0/k3s-base/values.yaml -f config/srv0/values.yaml
+helm upgrade --install srv0-apps targets/srv0/k3s-apps -n apps --create-namespace \
+  -f targets/srv0/k3s-apps/values.yaml -f config/srv0/values.yaml
 
 # Deploy compose
 docker compose --env-file config/<target>/compose.env --env-file targets/<target>/compose/.env \

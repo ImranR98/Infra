@@ -1,0 +1,567 @@
+---
+apiVersion: helm.cattle.io/v1
+kind: HelmChart
+metadata:
+  name: authelia
+  namespace: base
+spec:
+  chart: authelia
+  repo: https://charts.authelia.com
+  failurePolicy: abort
+  targetNamespace: base
+  createNamespace: false
+  version: 0.11.20
+  valuesContent: |-
+    pod:
+      kind: Deployment
+      securityContext:
+        container:
+          runAsUser: {{ .Values.MY_UID }}
+          runAsGroup: {{ .Values.MY_UID }}
+      resources:
+        limits:
+          memory: 2Gi
+        requests:
+          memory: 128Mi
+      probes:
+        startup:
+          failureThreshold: 30
+      extraVolumeMounts:
+        - name: notifier-data
+          mountPath: "/notifications"
+        - name: users-database
+          mountPath: "/config/users"
+          readOnly: true
+        - name: oidc-secrets
+          mountPath: "/secrets/oidc"
+          readOnly: true
+      extraVolumes:
+        - name: notifier-data
+          emptyDir: {}
+        - name: users-database
+          secret:
+            secretName: authelia-users
+            items:
+              - key: users-database.yaml
+                path: users-database.yaml
+        - name: oidc-secrets
+          secret:
+            secretName: authelia-oidc-secrets
+    secret:
+      # External secrets referenced via secret_name: must be listed here so
+      # the chart mounts them at /secrets/<name>/<path>.
+      additionalSecrets:
+        authelia-redis: {}
+        authelia-postgresql: {}
+        authelia-secrets: {}
+    configMap:
+      server:
+        timeouts:
+          read: "30 seconds"
+          write: "30 seconds"
+      authentication_backend:
+        ldap:
+          enabled: false
+        file:
+          enabled: true
+          path: /config/users/users-database.yaml
+        password_reset:
+          disable: true
+      session:
+        redis:
+          enabled: true
+          deploy: false
+          host: "authelia-redis-master.base.svc.cluster.local"
+          port: 6379
+          username: ""
+          password:
+            secret_name: authelia-redis
+            path: redis-password
+          database_index: 0
+          maximum_active_connections: 8
+          minimum_idle_connections: 0
+          tls:
+            enabled: false
+          high_availability:
+            enabled: false
+            sentinel_name: "mysentinel"
+            username: ""
+            password:
+              value: ""
+            nodes: []
+        cookies:
+          - subdomain: "auth"
+            domain: "{{ .Values.SERVICES_DOMAIN }}"
+
+      storage:
+        encryption_key:
+          secret_name: authelia-secrets
+          path: encryption-key
+        local:
+          enabled: false
+        postgres:
+          enabled: true
+          deploy: false
+          address: "tcp://authelia-postgresql.base.svc.cluster.local:5432"
+          timeout: "5 seconds"
+          password:
+            secret_name: authelia-postgresql
+            path: password
+          tls:
+            enabled: false
+      notifier:
+        filesystem:
+          enabled: true
+          filename: /notifications/notification.txt
+        smtp:
+          enabled: false
+      identity_providers:
+        oidc:
+          enabled: true
+          hmac_secret:
+            secret_name: authelia-secrets
+            path: oidc-hmac
+          jwks:
+            - key:
+                # NOTE: the chart does not support external secrets for
+                # CryptographicKey objects (path:/secret_name: generate a
+                # RANDOM key instead — verified the hard way) — the PEM must
+                # stay embedded as value:.
+                value: |
+{{ .Values.AUTHELIA_JWKS_KEY | indent 18 }}
+          clients:
+          - client_id: 'immich'
+            client_name: 'immich'
+            client_secret:
+               path: '/secrets/oidc/oidc.immich.client-secret'
+            public: false
+            authorization_policy: 'two_factor'
+            redirect_uris:
+              - 'https://immich.{{ .Values.SERVICES_DOMAIN }}/auth/login'
+              - 'https://immich.{{ .Values.SERVICES_DOMAIN }}/user-settings'
+              - 'app.immich:/'
+              - 'app.immich:///oauth-callback'
+            scopes:
+              - 'openid'
+              - 'profile'
+              - 'email'
+            userinfo_signed_response_alg: 'none'
+            token_endpoint_auth_method: 'client_secret_post'
+          - client_id: 'open-webui'
+            client_name: 'Open WebUI'
+            client_secret:
+               path: '/secrets/oidc/oidc.openwebui.client-secret'
+            public: false
+            authorization_policy: 'two_factor'
+            require_pkce: true
+            redirect_uris:
+              - 'https://gpt.{{ .Values.SERVICES_DOMAIN }}/oauth/oidc/callback'
+            scopes:
+              - 'openid'
+              - 'profile'
+              - 'groups'
+              - 'email'
+            response_types:
+              - 'code'
+            grant_types:
+              - 'authorization_code'
+            access_token_signed_response_alg: 'none'
+            userinfo_signed_response_alg: 'none'
+            token_endpoint_auth_method: 'client_secret_basic'
+          - client_id: 'headlamp'
+            client_name: 'Headlamp'
+            client_secret:
+               path: '/secrets/oidc/oidc.headlamp.client-secret'
+            public: false
+            authorization_policy: 'two_factor'
+            require_pkce: true
+            redirect_uris:
+              - 'https://k8s.{{ .Values.SERVICES_DOMAIN }}/oidc-callback'
+            scopes:
+              - 'openid'
+              - 'profile'
+              - 'groups'
+              - 'email'
+            response_types:
+              - 'code'
+            grant_types:
+              - 'authorization_code'
+            access_token_signed_response_alg: 'none'
+            userinfo_signed_response_alg: 'none'
+            # Headlamp's backend uses HTTP Basic auth for the token exchange.
+            token_endpoint_auth_method: 'client_secret_basic'
+          - client_id: 'linkwarden'
+            client_name: 'Linkwarden'
+            client_secret:
+               path: '/secrets/oidc/oidc.linkwarden.client-secret'
+            public: false
+            authorization_policy: 'one_factor'
+            consent_mode: 'implicit'
+            redirect_uris:
+              - 'https://links.{{ .Values.SERVICES_DOMAIN }}/api/v1/auth/callback/authelia'
+            scopes:
+              - 'openid'
+              - 'profile'
+              - 'groups'
+              - 'email'
+            userinfo_signed_response_alg: 'none'
+          - client_id: 'grafana'
+            client_name: 'Grafana'
+            client_secret:
+               path: '/secrets/oidc/oidc.grafana.client-secret'
+            public: false
+            authorization_policy: 'two_factor'
+            require_pkce: true
+            redirect_uris:
+              - 'https://grafana.{{ .Values.SERVICES_DOMAIN }}/login/generic_oauth'
+            scopes:
+              - 'openid'
+              - 'profile'
+              - 'groups'
+              - 'email'
+            response_types:
+              - 'code'
+            grant_types:
+              - 'authorization_code'
+            access_token_signed_response_alg: 'none'
+            userinfo_signed_response_alg: 'none'
+            # Grafana's OAuth client (x/oauth2 autodetect) falls back to
+            # params-based auth after Authelia's token endpoint rejects
+            # basic-auth probing (immich uses the same mode successfully).
+            token_endpoint_auth_method: 'client_secret_post'
+      log:
+        level: debug
+      totp:
+        issuer: {{ .Values.SERVICES_DOMAIN }}
+      access_control:
+        default_policy: 'deny'
+        rules:
+          - domain: '*.{{ .Values.SERVICES_DOMAIN }}'
+            resources:
+            - '^/\.well-known/acme-challenge/.*$'
+            policy: bypass
+          - domain: tv.{{ .Values.SERVICES_DOMAIN }}
+            policy: bypass
+          - domain: ha.{{ .Values.SERVICES_DOMAIN }}
+            policy: bypass
+          - domain: music.{{ .Values.SERVICES_DOMAIN }}
+            policy: bypass
+          - domain: immich.{{ .Values.SERVICES_DOMAIN }}
+            policy: bypass
+          - domain: links.{{ .Values.SERVICES_DOMAIN }}
+            policy: bypass
+          - domain: auth.{{ .Values.SERVICES_DOMAIN }}
+            policy: bypass
+          - domain: opodsync.{{ .Values.SERVICES_DOMAIN }}
+            policy: bypass
+          - domain: '*.{{ .Values.SERVICES_DOMAIN }}'
+            policy: two_factor
+            subject:
+            - 'group:admins'
+      regulation:
+        max_retries: 3
+        find_time: 120
+        ban_time: 3600
+---
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: authelia-prod-tls
+  namespace: base
+spec:
+  secretName: authelia-prod-tls
+  issuerRef:
+    name: letsencrypt-prod
+    kind: ClusterIssuer
+  dnsNames:
+    - auth.{{ .Values.SERVICES_DOMAIN }}
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: authelia-ingress
+  namespace: base
+spec:
+  entryPoints:
+    - websecure
+    - websecure-proxy
+  routes:
+    - match: Host(`auth.{{ .Values.SERVICES_DOMAIN }}`)
+      kind: Rule
+      middlewares:
+        - name: crowdsec-bouncer
+          namespace: base
+      services:
+        - name: authelia
+          port: 80
+  tls:
+    secretName: authelia-prod-tls
+---
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-authelia-internal
+  namespace: base
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/instance: authelia
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/instance: authelia
+  policyTypes:
+    - Ingress
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: authelia-db-pvc
+  namespace: base
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+  storageClassName: longhorn
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: authelia-session-pvc
+  namespace: base
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+  storageClassName: longhorn
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: authelia-users
+  namespace: base
+type: Opaque
+stringData:
+  users-database.yaml: |
+{{ .Values.AUTHELIA_USERS_DATABASE | indent 4 }}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: authelia-postgresql
+  namespace: base
+  labels:
+    app.kubernetes.io/instance: authelia
+type: Opaque
+stringData:
+  password: "{{ .Values.AUTHELIA_DB_PASSWORD }}"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: authelia-redis
+  namespace: base
+  labels:
+    app.kubernetes.io/instance: authelia
+type: Opaque
+stringData:
+  redis-password: "{{ .Values.AUTHELIA_REDIS_PASSWORD }}"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: authelia-postgresql
+  namespace: base
+  labels:
+    app.kubernetes.io/instance: authelia
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: authelia
+      app.kubernetes.io/name: authelia-postgresql
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/instance: authelia
+        app.kubernetes.io/name: authelia-postgresql
+    spec:
+      initContainers:
+        - name: volume-permissions
+          image: docker.io/bitnami/postgresql:latest@sha256:5614f19e4a5077217e53b3bd7e7f69d06af6a02919af4b90a9702e3648190c8c
+          command:
+            - chown
+            - -R
+            - "1001:1001"
+            - /bitnami/postgresql
+          securityContext:
+            runAsUser: 0  # root required: chown on NFS-backed PVC for postgresql (uid 1001)
+          resources:
+            limits:
+              memory: 2Gi
+            requests:
+              memory: 128Mi
+          volumeMounts:
+            - name: data
+              mountPath: /bitnami/postgresql
+      containers:
+        - name: postgresql
+          image: docker.io/bitnami/postgresql:latest@sha256:5614f19e4a5077217e53b3bd7e7f69d06af6a02919af4b90a9702e3648190c8c
+          ports:
+            - name: tcp-postgresql
+              containerPort: 5432
+          readinessProbe:
+            exec:
+              command:
+                - pg_isready
+                - -U
+                - authelia
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+            initialDelaySeconds: 15
+          env:
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: authelia-postgresql
+                  key: password
+            - name: POSTGRES_USER
+              value: authelia
+            - name: POSTGRES_DATABASE
+              value: authelia
+          volumeMounts:
+            - name: data
+              mountPath: /bitnami/postgresql
+          resources:
+            limits:
+              memory: 2Gi
+            requests:
+              memory: 128Mi
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: authelia-db-pvc
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: authelia-redis-master
+  namespace: base
+  labels:
+    app.kubernetes.io/instance: authelia
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: authelia
+      app.kubernetes.io/name: authelia-redis-master
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/instance: authelia
+        app.kubernetes.io/name: authelia-redis-master
+    spec:
+      securityContext:
+        fsGroup: 1001
+      containers:
+        - name: redis
+          image: docker.io/bitnami/redis:latest@sha256:ffa455a3ad00bccc24dfde113ef55329dde687da242e9feb6ccd2b30eb93e8f3
+          ports:
+            - name: tcp-redis
+              containerPort: 6379
+          readinessProbe:
+            tcpSocket:
+              port: 6379
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+            initialDelaySeconds: 5
+          env:
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: authelia-redis
+                  key: redis-password
+            - name: REDIS_REPLICATION_MODE
+              value: master
+          volumeMounts:
+            - name: data
+              mountPath: /bitnami/redis/data
+          resources:
+            limits:
+              memory: 2Gi
+            requests:
+              memory: 128Mi
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: authelia-session-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: authelia-postgresql
+  namespace: base
+  labels:
+    app.kubernetes.io/instance: authelia
+spec:
+  ports:
+    - name: tcp-postgresql
+      port: 5432
+      targetPort: tcp-postgresql
+  selector:
+    app.kubernetes.io/instance: authelia
+    app.kubernetes.io/name: authelia-postgresql
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: authelia-redis-master
+  namespace: base
+  labels:
+    app.kubernetes.io/instance: authelia
+spec:
+  ports:
+    - name: tcp-redis
+      port: 6379
+      targetPort: tcp-redis
+  selector:
+    app.kubernetes.io/instance: authelia
+    app.kubernetes.io/name: authelia-redis-master
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: authelia-oidc-secrets
+  namespace: base
+type: Opaque
+stringData:
+  jwks.private-key.pem: |
+{{ .Values.AUTHELIA_JWKS_KEY | indent 4 }}
+  oidc.immich.client-secret: "{{ .Values.AUTHELIA_IMMICH_CLIENT_SECRET_HASHED }}"
+  oidc.openwebui.client-secret: "{{ .Values.AUTHELIA_OPENWEBUI_CLIENT_SECRET_HASHED }}"
+  oidc.headlamp.client-secret: "{{ .Values.AUTHELIA_HEADLAMP_CLIENT_SECRET_HASHED }}"
+  oidc.linkwarden.client-secret: "{{ .Values.AUTHELIA_LINKWARDEN_CLIENT_SECRET_HASHED }}"
+  oidc.grafana.client-secret: "{{ .Values.AUTHELIA_GRAFANA_CLIENT_SECRET_HASHED }}"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: authelia-secrets
+  namespace: base
+type: Opaque
+stringData:
+  encryption-key: "{{ .Values.AUTHELIA_DB_ENCRYPTION_KEY }}"
+  oidc-hmac: "{{ .Values.AUTHELIA_OIDC_HMAC_SECRET }}"

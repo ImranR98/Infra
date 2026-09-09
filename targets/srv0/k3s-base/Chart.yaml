@@ -1,0 +1,5 @@
+apiVersion: v2
+name: srv0-base
+description: Base-scope chart for the srv0 homelab server — namespaces, storage, security, traefik, monitoring + base HelmChart CRs
+type: application
+version: 0.1.0

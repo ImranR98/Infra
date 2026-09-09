@@ -23,7 +23,8 @@ usage() {
     echo "    (same relative path) and contains no template placeholders"
     echo "  - values.yaml: key completeness vs the template + placeholder values"
     echo "  - compose.env: key completeness vs the template + placeholder values"
-    echo "  - helm lint + helm template of both scopes of targets/<target>/k3s"
+    echo "  - helm lint + helm template of each k3s chart (targets/<target>/k3s-base,"
+    echo "    k3s-apps), rejecting '<no value>' renders"
     echo "  - compose mounts under ../../../config/ point at existing files"
     exit 1
 }
@@ -145,33 +146,36 @@ check_compose_mounts() {
     [ "$ok" = 1 ]
 }
 
-# check_helm <target_dir> — lint + both-scope template render of the k3s chart.
+# check_helm <target_dir> — lint + template render of each k3s chart
+# (targets/<t>/k3s-base → namespace/release base, k3s-apps → apps).
 check_helm() {
     local target_dir="$1"
-    local chart="$target_dir/k3s"
-    local vars_args=(-f "$chart/values.yaml")
     local config_file="$INFRA_ROOT/config/$TARGET/values.yaml"
     local ok=1
 
-    [ -f "$config_file" ] && vars_args+=(-f "$config_file")
+    local chart_dir chart ns release vars_args out
+    for chart_dir in "$target_dir"/k3s-base "$target_dir"/k3s-apps; do
+        [ -d "$chart_dir" ] || continue
+        chart="$(basename "$chart_dir")"
+        ns="${chart#k3s-}"
+        release="$TARGET-$ns"
+        vars_args=(-f "$chart_dir/values.yaml")
+        [ -f "$config_file" ] && vars_args+=(-f "$config_file")
 
-    if ! helm lint "$chart" "${vars_args[@]}" >/dev/null 2>&1; then
-        _err "ERROR: helm lint failed"
-        ok=0
-    fi
+        if ! helm lint "$chart_dir" "${vars_args[@]}" >/dev/null 2>&1; then
+            _err "ERROR: helm lint failed ($chart)"
+            ok=0
+        fi
 
-    local scope other out
-    for scope in base apps; do
-        [ "$scope" = base ] && other=apps || other=base
-        out=$(helm template "$TARGET-$scope" "$chart" -n "$scope" \
-            "${vars_args[@]}" --set "$other.enabled=false" 2>&1) || {
-            _err "ERROR: helm template ($scope) failed:"
+        out=$(helm template "$release" "$chart_dir" -n "$ns" \
+            "${vars_args[@]}" 2>&1) || {
+            _err "ERROR: helm template ($chart) failed:"
             echo "$out" >&2
             ok=0
             continue
         }
         if grep -q '<no value>' <<<"$out"; then
-            _err "ERROR: helm template ($scope) rendered missing values (<no value>)"
+            _err "ERROR: helm template ($chart) rendered missing values (<no value>)"
             ok=0
         fi
     done
@@ -190,7 +194,7 @@ else
     echo "validate: target '$TARGET' has no config_template (no secret variables) — nothing to check"
 fi
 
-[ -d "$target_dir/k3s" ] && { check_helm "$target_dir" || ok=0; }
+[ -d "$target_dir/k3s-base" ] && { check_helm "$target_dir" || ok=0; }
 
 [ -d "$target_dir/compose" ] && { check_compose_mounts "$target_dir" || ok=0; }
 

@@ -1,8 +1,8 @@
 # ====== values.yaml template for srv0 ======
 # Documented variables + generation commands. The actual values live in ONE
 # gitignored file per target:
-#   - config/srv0/values.yaml — plain YAML consumed ONLY by the k3s umbrella
-#     chart (helm upgrade -f). Copy this template folder
+#   - config/srv0/values.yaml — plain YAML consumed ONLY by the k3s charts
+#     (helm upgrade -f, both k3s-base and k3s-apps). Copy this template folder
 #     (targets/srv0/config_template/) to config/srv0/, replace placeholders,
 #     done — no encryption, config/ is gitignored (see AGENTS.md).
 #   - The compose sidecar (frpc) has its own inputs in the same folder:

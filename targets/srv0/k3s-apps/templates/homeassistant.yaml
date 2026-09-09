@@ -1,0 +1,339 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ha-dashboards
+  namespace: apps
+data:
+  # YAML-mode Lovelace dashboard, mounted at /config/dashboards (see
+  # helmchart.yaml additionalMounts) and registered in configuration.yaml via
+  # lovelace.dashboards.frigate-nvr. Uses the Advanced Camera Card
+  # (auto-installed by the integration-update init container into
+  # /config/www/community and registered via frontend.extra_module_url).
+  #
+  # Every card config below was validated against the card's OWN zod schema
+  # (advancedCameraCardConfigSchema from the v7.27.4 source, run via tsx) -
+  # no keys are guessed. Note: `view` is an OBJECT (view.default), not a
+  # string; a string fails the schema with "Expected object, received
+  # string". camera_entity is required for engine (Frigate) detection.
+  # go2rtc stream "rpi" comes from go2rtc.streams in FRIGATE_ADDITIONAL_CONFIG.
+  frigate.yaml: |
+    views:
+      - title: Live
+        path: live
+        type: panel
+        cards:
+          - type: custom:advanced-camera-card
+            cameras:
+              - camera_entity: camera.rpi
+                go2rtc:
+                  stream: rpi
+      - title: Timeline
+        path: timeline
+        type: panel
+        cards:
+          - type: custom:advanced-camera-card
+            view:
+              default: timeline
+            cameras:
+              - camera_entity: camera.rpi
+                go2rtc:
+                  stream: rpi
+            timeline:
+              # 1-day default window; zoom/pan back through retained history
+              # (Frigate record.retain days, see FRIGATE_ADDITIONAL_CONFIG).
+              window_seconds: 86400
+              show_recordings: true
+      - title: Recordings
+        path: recordings
+        type: panel
+        cards:
+          - type: custom:advanced-camera-card
+            view:
+              default: recordings
+            cameras:
+              - camera_entity: camera.rpi
+                go2rtc:
+                  stream: rpi
+---
+---
+apiVersion: helm.cattle.io/v1
+kind: HelmChart
+metadata:
+  name: homeassistant
+  namespace: apps
+spec:
+  chart: home-assistant
+  repo: https://blog.pavelsklenar.com/home-assistant-helm-chart/
+  targetNamespace: apps
+  createNamespace: false
+  version: 0.3.80
+  valuesContent: |-
+    deploymentStrategy: Recreate
+    controller:
+      type: Deployment
+    image:
+      repository: ghcr.io/home-assistant/home-assistant
+      # Pinned to the chart's appVersion (chart tracks latest HA release) so
+      # Renovate can manage bumps; a floating "stable" would only get digest-pinned.
+      tag: 2026.9.1
+    podSecurityContext:
+      # spc_t (not privileged): SELinux blocks container_t from the host dbus
+      # socket (Bluetooth integration -> host bluez) and the ConBee II device.
+      # The device itself is granted via CDI (see cdi-specs component).
+      # level s0: keeps PVC files category-free so the pvc-backup temp pods
+      # (also s0) can read the config volume (see syncthing for precedent).
+      seLinuxOptions:
+        type: spc_t
+        level: s0
+    # No hostNetwork: LAN auto-discovery (mDNS/HomeKit/Cast) is not used.
+    # NET_ADMIN/NET_RAW then apply to the pod netns only, not the host stack.
+    securityContext:
+      allowPrivilegeEscalation: false
+      # habluetooth manages the host BT adapter via direct HCI sockets
+      # (needs NET_ADMIN/NET_RAW) in addition to the bluez dbus socket.
+      capabilities:
+        add:
+          - NET_ADMIN
+          - NET_RAW
+    affinity:
+      nodeAffinity:
+        requiredDuringSchedulingIgnoredDuringExecution:
+          nodeSelectorTerms:
+            - matchExpressions:
+                - key: has-homeassistant-hardware
+                  operator: In
+                  values:
+                    - "true"
+    persistence:
+      enabled: true
+      existingClaim: homeassistant-config-pvc
+    ingress:
+      external: true
+    configuration:
+      enabled: true
+      forceInit: true
+      trusted_proxies:
+        - 10.0.0.0/8
+        - 172.16.0.0/12
+        - 192.168.0.0/16
+      templateConfig: |-
+        # Loads default set of integrations. Do not remove.
+        default_config:
+
+        {{ "{{" }}- if .Values.serviceMonitor.enabled }}
+        prometheus:
+        {{ "{{" }}- end }}
+
+        {{ "{{" }}- if or .Values.ingress.enabled .Values.ingress.external .Values.httpRoute.enabled }}
+        http:
+          use_x_forwarded_for: true
+          trusted_proxies:
+            {{ "{{" }}- range .Values.configuration.trusted_proxies }}
+            - {{ "{{" }} . }}
+            {{ "{{" }}- end }}
+        {{ "{{" }}- end}}
+        # Load frontend themes from the themes folder
+        frontend:
+          themes: !include_dir_merge_named themes
+          # Advanced Camera Card (dashboard live view + timeline scrub);
+          # installed by the integration-update init container (zip layout:
+          # dist/). Served via /local, which is exempt from the session-
+          # dependent ingress middlewares (see ingress.yaml). The versioned
+          # path forces a cache miss on clients whose service worker holds
+          # stale/poisoned copies of the old path.
+          extra_module_url:
+            - /local/community/advanced-camera-card-2026/dist/advanced-camera-card.js
+
+        # Frigate dashboard (YAML mode): provisioned via the ha-dashboards
+        # ConfigMap, mounted at /config/dashboards. Uses the Advanced Camera
+        # Card above.
+        # NOTE: the chart deep-merges templateConfig into an existing
+        # configuration.yaml on the PVC (yq *d), so removed keys must be
+        # deleted from /config/configuration.yaml manually (or restored from
+        # a configuration.yaml.<timestamp> backup).
+        lovelace:
+          dashboards:
+            frigate-nvr:
+              mode: yaml
+              title: Frigate
+              icon: mdi:cctv
+              filename: /config/dashboards/frigate.yaml
+              show_in_sidebar: true
+
+        automation: !include automations.yaml
+        script: !include scripts.yaml
+        scene: !include scenes.yaml
+
+        # NOTE: MQTT broker config cannot live in configuration.yaml anymore
+        # (modern HA accepts only UI config flow for the broker). After applying,
+        # add MQTT once in the HA UI: Settings > Devices & Services > Add
+        # Integration > MQTT: broker=mosquitto, port=1883, user=homeassistant,
+        # password=<HA_MQTT_PASSWORD>. Frigate's MQTT discovery then auto-creates
+        # camera/event entities.
+
+        # NOTE: the Frigate integration (v5.15.4) ignores configuration.yaml
+        # ("Set up this integration using YAML is not supported"). Add it via the
+        # UI config flow: Settings > Devices & Services > Add Integration >
+        # Frigate > URL http://frigate:5000 (internal unauth port).
+    initContainers:
+      # Keeps the Frigate integration installed + up to date in /config/custom_components.
+      # Checks the latest GitHub release on every pod start and re-extracts when newer
+      # (version marker: /config/custom_components/frigate/.installed-version).
+      # Network failures never block HA startup - the existing install is kept and a
+      # pinned fallback version is used for fresh installs.
+      - name: integration-update
+        image: busybox:1.38
+        command:
+          - /bin/sh
+          - -ec
+          - |
+            set -e
+            # Lowercase var names so the var-reference validator doesn't mistake
+            # them for envsubst placeholders.
+            comp=/config/custom_components
+            www=/config/www/community
+            repo=blakeblackshear/frigate-hass-integration
+            mkdir -p "$comp" "$www"
+            # HACS is not used anymore - clean up any previous install
+            rm -rf "$comp/hacs"
+            latest="$(wget -qO- https://api.github.com/repos/$repo/releases/latest | sed -n 's/.*"tag_name": *"\([^"]*\)".*/\1/p' | head -1)" || true
+            [ -n "$latest" ] || latest="v5.15.4"
+            if [ "$(cat "$comp/frigate/.installed-version" 2>/dev/null)" != "$latest" ]; then
+              echo "installing frigate integration $latest"
+              tmpdir=$(mktemp -d)
+              wget -qO- https://github.com/$repo/archive/refs/tags/$latest.tar.gz | tar xz -C "$tmpdir"
+              rm -rf "$comp/frigate"
+              cp -r "$tmpdir/frigate-hass-integration-${latest#v}/custom_components/frigate" "$comp/"
+              rm -rf "$tmpdir"
+              echo "$latest" > "$comp/frigate/.installed-version"
+            fi
+            # Advanced Camera Card (dashboard live view via go2rtc restream,
+            # timeline scrub + recordings gallery for the Frigate dashboard).
+            # No HACS: the card JS is downloaded directly and registered via
+            # configuration.yaml frontend.extra_module_url (see templateConfig).
+            # Versioned install dir: clients with a stale service-worker cache
+            # of the previous path get a clean miss (bump the suffix when the
+            # card version changes to bust those caches again).
+            card=dermotduffy/advanced-camera-card
+            card_dir="$www/advanced-camera-card-2026"
+            mkdir -p "$card_dir"
+            card_latest="$(wget -qO- https://api.github.com/repos/$card/releases/latest | sed -n 's/.*"tag_name": *"\([^"]*\)".*/\1/p' | head -1)" || true
+            [ -n "$card_latest" ] || card_latest="v7.27.4"
+            # Layout token guards against stale installs (e.g. pre-zip layout) with the same version
+            card_version="$card_latest+zip"
+            if [ "$(cat "$card_dir/.installed-version" 2>/dev/null)" != "$card_version" ]; then
+              echo "installing advanced-camera-card $card_version"
+              tmpdir=$(mktemp -d)
+              wget -qO- "https://github.com/$card/releases/download/$card_latest/advanced-camera-card.zip" -O "$tmpdir/card.zip"
+              rm -rf "$card_dir"
+              mkdir -p "$card_dir"
+              unzip -q -o "$tmpdir/card.zip" -d "$card_dir"
+              rm -rf "$tmpdir"
+              echo "$card_version" > "$card_dir/.installed-version"
+            fi
+            # Remove the legacy unversioned install path (kept temporarily for
+            # clients with stale cached frontends; no longer needed).
+            rm -rf "$www/advanced-camera-card"
+        volumeMounts:
+          - name: homeassistant-home-assistant-pvc
+            mountPath: /config
+    additionalVolumes:
+      - name: usb-serial
+        hostPath:
+          path: /dev/serial/by-id
+          type: DirectoryOrCreate
+      - name: dbus
+        hostPath:
+          path: /run/dbus/system_bus_socket
+          type: Socket
+      - name: ha-dashboards
+        configMap:
+          name: ha-dashboards
+    additionalMounts:
+      - name: usb-serial
+        mountPath: /dev/serial/by-id
+        readOnly: true
+      - name: dbus
+        mountPath: /run/dbus/system_bus_socket
+      - name: ha-dashboards
+        mountPath: /config/dashboards
+        readOnly: true
+    resources:
+      limits:
+        memory: 2Gi
+        infra.local/devices-conbee: "1"
+      requests:
+        memory: 128Mi
+        infra.local/devices-conbee: "1"
+---
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: homeassistant-prod-tls
+  namespace: apps
+spec:
+  secretName: homeassistant-prod-tls
+  issuerRef:
+    name: letsencrypt-prod
+    kind: ClusterIssuer
+  dnsNames:
+    - ha.{{ .Values.SERVICES_DOMAIN }}
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: homeassistant-ingress
+  namespace: apps
+spec:
+  entryPoints:
+    - websecure
+    - websecure-proxy
+  routes:
+    # Static custom-card assets under /local/community skip the state-
+    # dependent middlewares (crowdsec appsec + Authelia forward-auth). The
+    # browser fetches dozens of hashed JS chunks on every page load (the
+    # service worker only precaches HA's own frontend), so a transient
+    # appsec/auth failure breaks custom card loading intermittently while
+    # HA itself keeps working. The files are immutable GitHub release
+    # assets (no auth needed); geoblock still applies.
+    - match: Host(`ha.{{ .Values.SERVICES_DOMAIN }}`) && PathPrefix(`/local/community`)
+      kind: Rule
+      middlewares:
+        - name: geoblock
+          namespace: base
+        - name: local-no-store
+          namespace: base
+      services:
+        - name: homeassistant-home-assistant
+          port: 8080
+    - match: Host(`ha.{{ .Values.SERVICES_DOMAIN }}`)
+      kind: Rule
+      middlewares:
+        - name: geoblock
+          namespace: base
+        - name: crowdsec-bouncer
+          namespace: base
+        - name: authelia-with-optional-header-gate
+          namespace: base
+      services:
+        - name: homeassistant-home-assistant
+          port: 8080
+  tls:
+    secretName: homeassistant-prod-tls
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: homeassistant-config-pvc
+  namespace: apps
+  labels:
+    auto-backup: "true"
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+  storageClassName: longhorn

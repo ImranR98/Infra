@@ -1,5 +1,0 @@
-apiVersion: v2
-name: srv0
-description: Umbrella chart for the srv0 homelab server — repo-owned components + HelmChart CRs (helm-controller manages the app releases)
-type: application
-version: 0.1.0

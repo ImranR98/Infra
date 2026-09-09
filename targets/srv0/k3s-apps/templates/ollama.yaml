@@ -1,0 +1,113 @@
+---
+apiVersion: helm.cattle.io/v1
+kind: HelmChart
+metadata:
+  name: ollama
+  namespace: apps
+spec:
+  chart: ollama
+  repo: https://helm.otwld.com/
+  targetNamespace: apps
+  createNamespace: false
+  failurePolicy: abort
+  version: 1.79.0
+  valuesContent: |-
+    image:
+      repository: ollama/ollama
+      tag: "0.33.3-rocm"
+    volumes:
+      - name: ollama-models
+        hostPath:
+          path: /var/lib/ollama
+          type: DirectoryOrCreate
+    volumeMounts:
+      - name: ollama-models
+        mountPath: /.ollama
+    # GPU devices (kfd + dri) come from the CDI amd grant (see cdi-specs);
+    # spc_t covers SELinux, s0 keeps /var/lib/ollama labels stable across
+    # pod recreates. No privileged.
+    securityContext:
+      allowPrivilegeEscalation: false
+    persistentVolume:
+      enabled: false
+    ollama:
+      # Chart always renders its own ollama-data emptyDir volume at this path.
+      # Divert it to an unused path; the real model storage is the hostPath
+      # volume below mounted at /.ollama (per-node models, survives recreates).
+      mountPath: /.ollama-unused
+    initContainers:
+      - name: ollama-models-prep
+        image: fedora:44
+        # hostPath volumes do not get fsGroup ownership management, and
+        # DirectoryOrCreate leaves the dir root-owned with var_lib_t label.
+        # Fix ownership for the uid-1000 container and SELinux label so the
+        # container can write, on whichever node the pod is scheduled.
+        command:
+          - sh
+          - -c
+          - |
+            chown -R 1000:1000 /var/lib/ollama
+            chcon -R -t container_file_t /var/lib/ollama
+        securityContext:
+          runAsUser: 0
+          runAsGroup: 0
+          seLinuxOptions:
+            type: spc_t
+            level: s0
+        volumeMounts:
+          - name: ollama-models
+            mountPath: /var/lib/ollama
+    resources:
+      requests:
+        memory: 2Gi
+        infra.local/devices-amd: "1"
+      limits:
+        infra.local/devices-amd: "1"
+    podSecurityContext:
+      fsGroup: {{ .Values.MY_UID }}
+      runAsUser: {{ .Values.MY_UID }}
+      runAsGroup: {{ .Values.MY_UID }}
+      # container_t + s0 (verified): the CDI amd grant (kfd+dri) and the
+      # container_file_t-labelled /var/lib/ollama are both container_t-accessible.
+      seLinuxOptions:
+        level: s0
+    containerSecurityContext:
+      allowPrivilegeEscalation: false
+    affinity:
+      nodeAffinity:
+        preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            preference:
+              matchExpressions:
+                - key: has-amdgpu
+                  operator: In
+                  values:
+                    - "true"
+    tolerations:
+      - key: scheduling-discouraged
+        operator: Equal
+        value: "true"
+        effect: PreferNoSchedule
+    extraEnv:
+      - name: OLLAMA_MODELS
+        value: /.ollama
+---
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-openwebui-ollama-ingress
+  namespace: apps
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/instance: ollama
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/instance: open-webui
+      ports:
+        - port: 11434
+  policyTypes:
+    - Ingress

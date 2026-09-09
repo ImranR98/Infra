@@ -1,0 +1,4 @@
+# values.yaml — committed defaults: machine-independent built-ins. All secrets
+# and target-specific config live in the gitignored config/srv0/values.yaml
+# (passed as a later -f, so it wins on conflicts).
+MY_UID: 1000
