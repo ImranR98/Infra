@@ -31,9 +31,11 @@ esac
 target="$(hostname)"
 work_dir=/tmp/dracut-remote-luks-unlock
 
-# LUKS check — silently skip machines without an encrypted root.
-root_src=$(findmnt -n -o SOURCE /sysroot 2>/dev/null | sed 's/\[.*//')
-[ -n "$root_src" ] || root_src=$(findmnt -n -o SOURCE / 2>/dev/null | sed 's/\[.*//')
+# LUKS check — silently skip machines without an encrypted root. The /sysroot
+# mount only exists in some environments; findmnt's non-zero exit must not kill
+# the script under set -e (|| true).
+root_src=$(findmnt -n -o SOURCE /sysroot 2>/dev/null | sed 's/\[.*//' || true)
+[ -n "$root_src" ] || root_src=$(findmnt -n -o SOURCE / 2>/dev/null | sed 's/\[.*//' || true)
 if ! { [ -n "$root_src" ] && [ -b "$root_src" ] && lsblk -s -o TYPE "$root_src" | grep -q crypt; }; then
     echo "Root partition is not LUKS-encrypted — nothing to do. Re-run after adding LUKS."
     exit 0
