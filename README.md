@@ -34,10 +34,9 @@ The IaaC system for my homelab and other devices.
 # Install prerequisites (Docker, yq, jq, python3, go, helm)
 bash scripts/prereqs.sh
 
-# Create your variables from the template
-cp targets/<target>/VARS.template.yaml secrets/VARS.<target>.yaml # k3s targets
-cp targets/<target>/VARS.template.env secrets/VARS.<target>.env # compose targets
-# Other multi-line secrets + mTLS certs are real files under secrets/<target>/ (see the templates)
+# Create your configuration from the template (values.yaml for k3s, compose.env
+# for compose, plus extra files like certs and the Authelia users DB):
+cp -r targets/<target>/config_template config/<target>   # then fill in real values
 
 # Validate your configuration
 bash scripts/validate.sh <target>
@@ -45,12 +44,12 @@ bash scripts/validate.sh <target>
 # Deploy k3s
 export KUBECONFIG="${KUBECONFIG:-/etc/rancher/k3s/k3s.yaml}" # helm doesn't find k3s's kubeconfig on its own
 helm upgrade --install srv0-base targets/srv0/k3s -n base --create-namespace \
-  -f targets/srv0/k3s/values.yaml -f secrets/VARS.srv0.yaml --set apps.enabled=false
+  -f targets/srv0/k3s/values.yaml -f config/srv0/values.yaml --set apps.enabled=false
 helm upgrade --install srv0-apps targets/srv0/k3s -n apps --create-namespace \
-  -f targets/srv0/k3s/values.yaml -f secrets/VARS.srv0.yaml --set base.enabled=false
+  -f targets/srv0/k3s/values.yaml -f config/srv0/values.yaml --set base.enabled=false
 
 # Deploy compose
-docker compose --env-file secrets/VARS.<target>.env --env-file targets/<target>/compose/.env \
+docker compose --env-file config/<target>/compose.env --env-file targets/<target>/compose/.env \
   -f targets/<target>/compose/compose.yaml \
   [-f targets/<target>/compose/compose.private.yaml] up -d --remove-orphans
 

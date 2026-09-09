@@ -3,12 +3,12 @@
 set -euo pipefail
 source "$INFRA_ROOT/scripts/common.sh"
 
-# Universal VARS (dotenv, e.g. secrets/VARS.env — gitignored). Simple KEY="value"
+# Universal VARS (dotenv, config/VARS.env — gitignored). Simple KEY="value"
 # lines source fine in bash; set -a exports them.
 UNIVERSAL_VARS_FILE=""
-for _f in "$INFRA_ROOT/secrets/VARS.env" "$INFRA_ROOT/VARS.env"; do
-    if [ -f "$_f" ]; then UNIVERSAL_VARS_FILE="$_f"; break; fi
-done
+if [ -f "$INFRA_ROOT/config/VARS.env" ]; then
+    UNIVERSAL_VARS_FILE="$INFRA_ROOT/config/VARS.env"
+fi
 if [ -n "$UNIVERSAL_VARS_FILE" ]; then
     set -a
     # shellcheck disable=SC1090
@@ -18,7 +18,7 @@ fi
 
 if [ -z "${RENOVATE_GITHUB_TOKEN:-}" ]; then
     echo "Error: RENOVATE_GITHUB_TOKEN is not set." >&2
-    echo "Add it to $INFRA_ROOT/secrets/VARS.env (gitignored):" >&2
+    echo "Add it to $INFRA_ROOT/config/VARS.env (gitignored):" >&2
     echo "  RENOVATE_GITHUB_TOKEN=\"<github-pat-with-repo-scope>\"" >&2
     exit 1
 fi

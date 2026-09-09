@@ -1,0 +1,14 @@
+# ====== users_database.yml template for vps0 ======
+# Copy this file to config/vps0/authelia/users_database.yml and fill in real
+# values. Generate the password hash with:
+#   docker run -it authelia/authelia:latest authelia crypto hash generate argon2
+# Paste the hash verbatim (its $ signs are part of the value — do not quote
+# with $ interpolation in mind; this is a plain file, not dotenv).
+users:
+  admin:
+    disabled: false
+    displayname: "Admin"
+    password: "<argon2-hash-from-the-command-above>"
+    email: contact@example.org
+    groups:
+      - admins

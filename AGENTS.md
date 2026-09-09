@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Infra is an IaC repo for a multi-machine homelab. The user interacts with the cluster directly through the real tools — `helm`, `kubectl`, and `docker compose` — plus a small set of bash scripts for the steps no real tool covers (config validation, node provisioning, preboot, WireGuard, backups). Everything for a target lives in `targets/<t>/`; shared scripts sit in `scripts/`, secrets in the gitignored `secrets/`. No build step, no wrapper CLI: the target is **always explicit** — target-selecting scripts (`validate`, `compose-backup`) take it as their first argument, and nothing derives it from the machine's hostname. Ops divide into target-selecting ops (validate, compose-backup — they name a target) and machine-local ops (prereqs, renovate, preboot, wireguard, k3s provisioning — they act on the machine they run on and take no target). k3s applies go through plain Helm against the srv0 umbrella chart; compose consumes secrets natively (dotenv via `--env-file`, real files for certs); k3s node provisioning goes through the repo's own bash scripts wrapping the official get.k3s.io installer. Audience assumed to know Docker/Compose, Kubernetes, Traefik, bash.
+Infra is an IaC repo for a multi-machine homelab. The user interacts with the cluster directly through the real tools — `helm`, `kubectl`, and `docker compose` — plus a small set of bash scripts for the steps no real tool covers (config validation, node provisioning, preboot, WireGuard, backups). Everything for a target lives in `targets/<t>/`; shared scripts sit in `scripts/`, secrets in the gitignored `config/`. No build step, no wrapper CLI: the target is **always explicit** — target-selecting scripts (`validate`, `compose-backup`) take it as their first argument, and nothing derives it from the machine's hostname. Ops divide into target-selecting ops (validate, compose-backup — they name a target) and machine-local ops (prereqs, renovate, preboot, wireguard, k3s provisioning — they act on the machine they run on and take no target). k3s applies go through plain Helm against the srv0 umbrella chart; compose consumes secrets natively (dotenv via `--env-file`, real files for certs); k3s node provisioning goes through the repo's own bash scripts wrapping the official get.k3s.io installer. Audience assumed to know Docker/Compose, Kubernetes, Traefik, bash.
 
 ## Prerequisites
 
@@ -18,7 +18,7 @@ Bash 4+, Python 3, Docker Compose v2, kubectl (K3s targets), helm (srv0), yq, jq
 | `pc` | Compose | Desktop: socket-proxy, watchtower, syncthing |
 | `rpi` | Compose | Pi 400 webcam → authenticated RTSP (go2rtc), consumed by Frigate on srv0 |
 
-Each target dir: `VARS.template.yaml` or `VARS.template.env` (committed; documents every required variable + generation commands), optional `compose/` and/or `k3s/`, target root-level payloads (the retained `*.sh` scripts that must exist as files — e.g. the in-cluster pvc-backup CronJob calls `targets/srv0/pvc.sh` from a kubectl pod).
+Each target dir: `config_template/` (committed; documents every required variable + generation commands — copy to `config/<t>/`), optional `compose/` and/or `k3s/`, target root-level payloads (the retained `*.sh` scripts that must exist as files — e.g. the in-cluster pvc-backup CronJob calls `targets/srv0/pvc.sh` from a kubectl pod).
 Notable per-target facts:
 - **srv0** — `base` group: namespaces, nfs-server, host-volumes, csi-driver-nfs, cert-manager, longhorn, geoip, traefik, crowdsec, authelia, pvc-backup, ntfy, descheduler, system-upgrade, rustfs, monitoring, cdi-specs. `apps`: immich, logtfy, jellyfin, navidrome, mdscl, mosquitto, homeassistant, ollama, open-webui, nextcloud, freshrss, linkwarden, opodsync, dscpln, opencanary, flaresolverr, fmd, plik, syncthing, headlamp, frigate (see `templates/base/` + `templates/apps/`). Compose sidecar = frpc only. Ollama runs on the `bigpc` agent (RX 9070/ROCm); Open WebUI reaches it in-cluster only (no LAN exposure). Jellyfin/Immich ML/Frigate use srv0's Iris Xe iGPU; Frigate recordings stay on NFS deliberately so the pod can move nodes. Home Assistant integration auto-installs on every pod start (no HACS).
 - **bigpc** — K3s agent labelled `has-amdgpu=true`, tainted `scheduling-discouraged` (PreferNoSchedule), no Longhorn replicas (`create-default-disk=false`); Compose: dockerproxy_priv, watchtower (syncthing only), syncthing (host net).
@@ -36,19 +36,19 @@ bash scripts/validate.sh vps0                        # dotenv VARS check
 # k3s (srv0) — plain helm, no wrapper; run validate.sh first as the preflight:
 export KUBECONFIG="${KUBECONFIG:-/etc/rancher/k3s/k3s.yaml}"
 helm upgrade --install srv0-base targets/srv0/k3s -n base --create-namespace \
-  -f targets/srv0/k3s/values.yaml -f secrets/VARS.srv0.yaml --set apps.enabled=false
+  -f targets/srv0/k3s/values.yaml -f config/srv0/values.yaml --set apps.enabled=false
 helm upgrade --install srv0-apps targets/srv0/k3s -n apps --create-namespace \
-  -f targets/srv0/k3s/values.yaml -f secrets/VARS.srv0.yaml --set base.enabled=false
+  -f targets/srv0/k3s/values.yaml -f config/srv0/values.yaml --set base.enabled=false
 helm uninstall srv0-apps -n apps                     # delete: apps first, then srv0-base (PVCs retained)
 
 # compose — run ON the target machine, from the repo root:
-docker compose --env-file secrets/VARS.vps0.env --env-file targets/vps0/compose/.env \
+docker compose --env-file config/vps0/compose.env --env-file targets/vps0/compose/.env \
   -f targets/vps0/compose/compose.yaml -f targets/vps0/compose/compose.private.yaml \
   up -d --remove-orphans
-docker compose --env-file secrets/VARS.vps0.env --env-file targets/vps0/compose/.env \
+docker compose --env-file config/vps0/compose.env --env-file targets/vps0/compose/.env \
   -f targets/vps0/compose/compose.yaml -f targets/vps0/compose/compose.private.yaml \
   down <svc>   # then `up -d <svc>` to restart one service
-docker compose --env-file secrets/VARS.srv0.env --env-file targets/srv0/compose/.env \
+docker compose --env-file config/srv0/compose.env --env-file targets/srv0/compose/.env \
   -f targets/srv0/compose/compose.yaml up -d   # frpc sidecar
 # pc/bigpc/rpi: docker compose -f targets/<t>/compose/compose.yaml up -d
 #   (no --env-file — the project-dir machine-fact .env auto-loads)
@@ -70,7 +70,7 @@ bash scripts/k3s-join.sh <node_ip> <node_user> \
 
 # dev-only:
 shellcheck $(find scripts targets -name '*.sh' -not -path '*/plugins/*')
-yamllint -c .yamllint targets/*/VARS.template.yaml \
+yamllint -c .yamllint targets/*/config_template \
   targets/srv0/k3s/values.yaml targets/srv0/k3s/Chart.yaml targets/srv0/k3s/files
 ```
 
@@ -92,11 +92,11 @@ Retained bash scripts exist only where something must run **as a file**: the in-
 
 | Script | Selects | Acts on | Notes |
 |---|---|---|---|
-| `scripts/validate.sh <t>` | target | read-only, any machine | VARS completeness/placeholders + helm lint + both-scope template render (srv0); dotenv VARS check (vps0). Prints variable names only. |
+| `scripts/validate.sh <t>` | target | read-only, any machine | config_template→config completeness/placeholders + helm lint + both-scope template render (srv0); compose `../../../config/` mount check. Prints variable names only. |
 | `scripts/compose-backup.sh <t>` | target | ON the target (hostname asserted) | tars the compose state via an Alpine container; `-e backup_remote=user@host:path` streams the tar over SSH |
 | `scripts/prereqs.sh` | — | this machine | packages, pinned helm, Docker bootstrap, machine-fact `.env`, host bind dirs, acme seed |
-| `scripts/renovate.sh` | — | this machine (opens GitHub PRs) | needs `RENOVATE_GITHUB_TOKEN` in secrets/VARS.env |
-| `scripts/preboot.sh frpc\|crypt-ssh` | — | this machine | initramfs LUKS unlock; frpc certs from `secrets/<hostname>/frpc/` |
+| `scripts/renovate.sh` | — | this machine (opens GitHub PRs) | needs `RENOVATE_GITHUB_TOKEN` in config/VARS.env |
+| `scripts/preboot.sh frpc\|crypt-ssh` | — | this machine | initramfs LUKS unlock; frpc certs from `config/<hostname>/frpc/` |
 | `scripts/wireguard.sh <conf>` | — | this machine | deploys a provider wg0.conf (split-/1 routes, endpoint dead-loop route) |
 | `scripts/k3s-server.sh` | — | this machine (becomes the control plane) | node prep + installer + server config + labels |
 | `scripts/k3s-join.sh <ip> <user> [...]` | — | control plane + the joining node | token travels via stdin over ssh; labels/taint/Longhorn after Ready |
@@ -122,45 +122,46 @@ source "$INFRA_ROOT/scripts/common.sh"
 
 - Comments explain current behavior and non-obvious WHYs only — never history ("used to", "previously", "replaces the old X", "deleted"); past designs live in git history.
 - Keep comments minimal: file headers say what the file IS; don't restate the code or narrate steps.
-- No device names (srv0/vps0/bigpc/pc/rpi) in shared code (`scripts/`) — shared logic must stay generic (e.g. "the frpc preboot reads the certs from secrets/<hostname>/frpc/", not "from srv0's certs"). Per-device facts live in `targets/<t>/`; README.md and AGENTS.md are the only shared files that may name targets.
+- No device names (srv0/vps0/bigpc/pc/rpi) in shared code (`scripts/`) — shared logic must stay generic (e.g. "the frpc preboot reads the certs from config/<hostname>/frpc/", not "from srv0's certs"). Per-device facts live in `targets/<t>/`; README.md and AGENTS.md are the only shared files that may name targets.
 - Docs describe the current codebase only — migration guides and historical notes are deleted once the migration lands.
 - After editing, scan for this pattern: `grep -rniE 'the old|previously|formerly|replaces the old|is gone' scripts targets` should return nothing but legitimate current-behavior notes.
 
 ## Variables & secrets
 
-- **srv0 — split by consumer**: `secrets/VARS.srv0.yaml` (plain YAML, gitignored) feeds ONLY the k3s umbrella chart (`helm upgrade -f`). The compose sidecar (frpc) takes `secrets/VARS.srv0.env` (dotenv: `PROXY_HOST`, `TLS_SERVER_NAME` — passed with `docker compose --env-file`) and the mTLS certs as real 0600 files under `secrets/srv0/frpc/`. `targets/srv0/VARS.template.yaml` documents every YAML key + the env/cert layout (its FRP section).
-- **vps0 — dotenv only**: `secrets/VARS.vps0.env` (gitignored, template `targets/vps0/VARS.template.env`) is consumed natively by compose via `--env-file` — no conversion step, no render step. Multi-line secrets are NOT dotenv values: the Authelia users DB lives at `secrets/vps0/authelia/users_database.yml` and the frps certs at `secrets/vps0/frps/` (0600 files, mounted `:ro`). Machine facts (`MY_UID`/`DOCKER_GID`/`USER`) come from the prereqs-generated `targets/vps0/compose/.env`, passed as a second `--env-file` (later file wins).
-- **pc/bigpc/rpi — machine facts only**: no VARS file; `scripts/prereqs.sh` writes a gitignored `targets/<t>/compose/.env` with `MY_UID`/`DOCKER_GID`/`USER`. It is generated for **every** target (secrets envs never carry per-machine facts) — vps0/srv0 pass it as a second `--env-file`, pc/bigpc/rpi get it auto-loaded as the project-dir `.env`.
-- **No encryption** — all secrets files are plain text at rest (gitignored under `secrets/`). Create them by copying the template and filling every value literally.
-- **Format** — srv0 YAML: map `KEY: value`; multi-line values are literal block scalars (`|`), spliced verbatim by helm (`| indent "N"`); inline comments (` # ...`) work after single-line values; bare `$` and `#` are literal (write `$argon2id$...` unescaped). vps0 dotenv: `KEY=value`; single-quote values containing `$` (compose would interpolate them inside double quotes); multi-line values use `\n` escapes; inline comments work after single-line values.
-- **Validation** — `scripts/validate.sh <target>` asserts completeness against the template keys and rejects placeholder values (`change_me`/`changeme`/`abc`/`REPLACE_ME`/`<...>`); it prints variable names only (values never reach stdout/stderr) and — for srv0 — lints + templates the helm chart in both scopes (missing values surface as `<no value>` render failures). Run it before every `helm upgrade --install`.
-- **Universal VARS** — target-agnostic secrets live in `secrets/VARS.env` (fallback: root `VARS.env`), dotenv format. Loaded on demand by the commands that need them (`scripts/renovate.sh` requires `RENOVATE_GITHUB_TOKEN`; the in-cluster renovate CronJob does `set -a; . /repo/secrets/VARS.env`). Not template-validated — each command checks its own variables.
-- **mTLS certs** — generated with the documented copy-paste `openssl` commands in the FRP sections of `VARS.template.yaml`/`VARS.template.env` (per-pair CA, server/client certs, preboot client cert); PEMs live as real files under `secrets/<t>/frpc/`/`secrets/vps0/frps/`.
-- **`*_HASHED` (k3s authelia)** — precomputed hashes stored in the same YAML next to their `*_HASHABLE` plaintexts (`openssl passwd -6` or `authelia crypto hash generate pbkdf2`; the generation commands are in `VARS.template.yaml`).
+- **Layout** — every target's secret inputs are templated in `targets/<t>/config_template/` (committed): `values.yaml` (k3s helm values) and/or `compose.env` (compose dotenv) plus any additional files the target needs (mTLS certs, the Authelia users DB). The user copies the folder to `config/<t>/` (`cp -r targets/<t>/config_template config/<t>`) and fills every value — `config/<t>/` mirrors the template structure exactly and is gitignored. Where possible the template files carry comments with the generation command for each value (e.g. `openssl rand -hex 32`); `scripts/validate.sh` rejects any leftover placeholders.
+- **srv0 — split by consumer**: `config/srv0/values.yaml` (plain YAML, gitignored) feeds ONLY the k3s umbrella chart (`helm upgrade -f`). The compose sidecar (frpc) takes `config/srv0/compose.env` (dotenv: `PROXY_HOST`, `TLS_SERVER_NAME` — passed with `docker compose --env-file`) and the mTLS certs as real 0600 files under `config/srv0/frpc/`. `targets/srv0/config_template/values.yaml` documents every YAML key + the env/cert layout (its FRP section).
+- **vps0 — dotenv only**: `config/vps0/compose.env` (gitignored, template `targets/vps0/config_template/compose.env`) is consumed natively by compose via `--env-file` — no conversion step, no render step. Multi-line secrets are NOT dotenv values: the Authelia users DB lives at `config/vps0/authelia/users_database.yml` and the frps certs at `config/vps0/frps/` (0600 files, mounted `:ro`). Machine facts (`MY_UID`/`DOCKER_GID`/`USER`) come from the prereqs-generated `targets/vps0/compose/.env`, passed as a second `--env-file` (later file wins).
+- **pc/bigpc/rpi — machine facts only**: no `config_template/` (no secret variables); `scripts/prereqs.sh` writes a gitignored `targets/<t>/compose/.env` with `MY_UID`/`DOCKER_GID`/`USER`. It is generated for **every** target (config envs never carry per-machine facts) — vps0/srv0 pass it as a second `--env-file`, pc/bigpc/rpi get it auto-loaded as the project-dir `.env`.
+- **No encryption** — all secret values are plain text at rest (gitignored under `config/`). Create them by copying the template folder and filling every value literally.
+- **Format** — values.yaml: map `KEY: value`; multi-line values are literal block scalars (`|`), spliced verbatim by helm (`| indent "N"`); inline comments (` # ...`) work after single-line values; bare `$` and `#` are literal (write `$argon2id$...` unescaped). compose.env: `KEY=value`; single-quote values containing `$` (compose would interpolate them inside double quotes); multi-line values use `\n` escapes; inline comments work after single-line values.
+- **Validation** — `scripts/validate.sh <target>` asserts every `config_template/` file has a filled counterpart in `config/<target>/` (same relative path), rejects placeholder values (`change_me`/`changeme`/`abc`/`REPLACE_ME`/`<...>`), checks key completeness for values.yaml/compose.env, verifies compose `../../../config/` mounts exist, and — for srv0 — lints + templates the helm chart in both scopes (missing values surface as `<no value>` render failures). Variable names only are printed. Run it before every `helm upgrade --install`.
+- **Universal VARS** — target-agnostic secrets live in `config/VARS.env`, dotenv format. Loaded on demand by the commands that need them (`scripts/renovate.sh` requires `RENOVATE_GITHUB_TOKEN`; the in-cluster renovate CronJob does `set -a; . /repo/config/VARS.env`). Not template-validated — each command checks its own variables.
+- **mTLS certs** — generated with the documented copy-paste `openssl` commands in the FRP sections of `config_template/values.yaml`/`config_template/compose.env` (per-pair CA, server/client certs, preboot client cert); PEMs live as real files under `config/<t>/frpc/`/`config/vps0/frps/`.
+- **`*_HASHED` (k3s authelia)** — precomputed hashes stored in the same YAML next to their `*_HASHABLE` plaintexts (`openssl passwd -6` or `authelia crypto hash generate pbkdf2`; the generation commands are in `config_template/values.yaml`).
 - `PROXY_IP` is resolved from `PROXY_HOST` by `scripts/preboot.sh` (`getent hosts`) when generating the initramfs frpc config.
 
 ### Compose pipeline
 
-- Compose files: `targets/<t>/compose/compose.yaml` (+ optional gitignored `compose.private.yaml`, merged with `-f`). Interpolation is native docker compose: `$VAR` from `--env-file secrets/VARS.<t>.env` (vps0/srv0) or the auto-loaded project-dir `.env` (pc/bigpc/rpi). Project name = the `name: <t>` attribute in the compose file.
+- Compose files: `targets/<t>/compose/compose.yaml` (+ optional gitignored `compose.private.yaml`, merged with `-f`). Interpolation is native docker compose: `$VAR` from `--env-file config/<t>/compose.env` (vps0/srv0) or the auto-loaded project-dir `.env` (pc/bigpc/rpi). Project name = the `name: <t>` attribute in the compose file.
 - Inlined configs: every former template (frpc.toml, authelia configuration.yml, the traefik dynamic config, crowdsec notifications/whitelist, logtfy config.json) is a top-level `configs:` block — `content:` with `$VAR` interpolation (or an `environment: VARNAME` source) — granted to services via the `configs:` long syntax with `target:` and `mode:` (0400 for secret-bearing, 0440 otherwise). Verbatim files (frps.toml, crowdsec acquisitions/profiles, auth.py, clickhouse-config.xml, go2rtc.yaml) are committed under `targets/<t>/compose/files/` and mounted `:ro`.
 - State: `current_target/compose_live_state/` (gitignored) holds the runtime state only (acme.json, sqlite DBs, upload dirs). Compose files reference it with relative paths (`../../../current_target/compose_live_state/...` — resolved against the compose file's directory). `scripts/prereqs.sh` creates missing bind dirs owned by `$MY_UID` (Docker would create them as root — containers running as `$MY_UID` couldn't write) and seeds `traefik/acme.json` (`{}`, 0600, first run).
-- Deploy (from the repo root, ON the target machine): `docker compose --env-file secrets/VARS.<t>.env --env-file targets/<t>/compose/.env -f targets/<t>/compose/compose.yaml [-f targets/<t>/compose/compose.private.yaml] up -d --remove-orphans` (pc/bigpc/rpi: `docker compose -f targets/<t>/compose/compose.yaml up -d` — no `--env-file`, the project-dir `.env` auto-loads). Restart one service: `... down <svc>` then `... up -d <svc>` (re-reads config + env). Reboot survival = per-service `restart:` policies (no systemd wrapper).
+- Deploy (from the repo root, ON the target machine): `docker compose --env-file config/<t>/compose.env --env-file targets/<t>/compose/.env -f targets/<t>/compose/compose.yaml [-f targets/<t>/compose/compose.private.yaml] up -d --remove-orphans` (pc/bigpc/rpi: `docker compose -f targets/<t>/compose/compose.yaml up -d` — no `--env-file`, the project-dir `.env` auto-loads). Restart one service: `... down <svc>` then `... up -d <svc>` (re-reads config + env). Reboot survival = per-service `restart:` policies (no systemd wrapper).
 - Backup: `scripts/compose-backup.sh <t>` — local: tars `current_target/compose_live_state` via an Alpine container (skips FIFOs/sockets) and prunes to `$BACKUP_RETENTION` (default 1). Remote: `-e backup_remote=user@host:path` streams the tar back over SSH into `compose_state_backups/` (the remote runs docker directly — no scripts needed there).
 - The compose hostname guard: `scripts/compose-backup.sh` asserts `hostname == target` via `require_target_host`; plain `docker compose` runs are your own guard (deploy from the target's own checkout).
 
 ## K3s conventions
 
 Components live in the srv0 umbrella chart (`targets/srv0/k3s/`, the chart root itself):
-- `templates/base/` + `templates/apps/` — one file per component, native Helm templates (`{{ .Values.X }}` refs; secrets/config come from `secrets/VARS.srv0.yaml`), gated by `{{ if .Values.base.enabled }}` / `{{ if .Values.apps.enabled }}`. Secrets/configmaps live in `prereqs` sections of the component files, next to their Traefik `IngressRoute`s and `NetworkPolicy`s.
+- `templates/base/` + `templates/apps/` — one file per component, native Helm templates (`{{ .Values.X }}` refs; secrets/config come from `config/srv0/values.yaml`), gated by `{{ if .Values.base.enabled }}` / `{{ if .Values.apps.enabled }}`. Secrets/configmaps live in `prereqs` sections of the component files, next to their Traefik `IngressRoute`s and `NetworkPolicy`s.
 - `templates/hooks.yaml` — one seeding Job (`immich-seed`) as a Helm `post-install,post-upgrade` hook with `helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded`; RBAC via the `helm-hooks` ServiceAccount/Role. It skips when the admin already carries an OAuth identity (`immich-admin list-users`, no auth needed); on a fresh DB it creates the admin via the sign-up API and persists the generated password in the `immich-seed-admin` Secret (apps) so later runs authenticate via the API — no interactive `immich-admin` prompts. Other first-boot seeding is declarative: qBittorrent via a `qBittorrent.conf` ConfigMap + copy-once initContainer in `apps/qbittorrent.yaml`, the GeoLite2 DB via the geoip Deployment's `geoipupdate` initContainer (weekly CronJob keeps it current).
 
 **Apply pipeline** — plain helm commands, no wrapper (`scripts/validate.sh srv0` is the preflight):
 ```
 export KUBECONFIG="${KUBECONFIG:-/etc/rancher/k3s/k3s.yaml}"
 helm upgrade --install srv0-base targets/srv0/k3s -n base --create-namespace \
-  -f targets/srv0/k3s/values.yaml -f secrets/VARS.srv0.yaml --set apps.enabled=false
+  -f targets/srv0/k3s/values.yaml -f config/srv0/values.yaml --set apps.enabled=false
 helm upgrade --install srv0-apps targets/srv0/k3s -n apps --create-namespace \
-  -f targets/srv0/k3s/values.yaml -f secrets/VARS.srv0.yaml --set base.enabled=false
+  -f targets/srv0/k3s/values.yaml -f config/srv0/values.yaml --set base.enabled=false
 ```
 Two releases: `srv0-base` (scope base, `--set apps.enabled=false`) and `srv0-apps` (inverse); `base.enabled`/`apps.enabled` gate both the templates and the seeded Jobs. Preflights (apply only): the secret values file must exist and contain no placeholders, and the rendered chart must contain no `<no value>` (helm silently renders missing keys) — `scripts/validate.sh srv0` runs all three. Delete: `helm uninstall srv0-apps -n apps` then `srv0-base` (Helm retains PVCs). The chart contains: (a) all repo-owned components as Helm templates (secrets, configmaps, ingresses, PVCs, cronjobs, the traefik Middlewares/HelmChartConfig + WASM plugin ConfigMap via `.Files.Get`), (b) the 18 upstream-app **HelmChart CRs** — helm-controller still owns the app releases exactly as before (avoids release-name-derived resource naming), (c) vendored system-upgrade-controller manifests + Plans, (d) the immich seeding hook as a `post-install,post-upgrade` Job with scoped RBAC under the `helm-hooks` ServiceAccount.
 
@@ -206,13 +207,13 @@ helm rollback srv0-base <rev> -n base     # instant rollback to an earlier revis
 helm get values srv0-base -n base         # effective values
 helm status srv0-base -n base
 helm template srv0-base targets/srv0/k3s -n base -f targets/srv0/k3s/values.yaml \
-  -f secrets/VARS.srv0.yaml --set apps.enabled=false   # dry render
+  -f config/srv0/values.yaml --set apps.enabled=false   # dry render
 helm diff upgrade srv0-base targets/srv0/k3s --set apps.enabled=false   # preview (helm-diff plugin)
 helm uninstall srv0-apps -n apps          # delete a release; PVCs are retained by Helm default
 ```
 
 **Pitfalls learned the hard way:**
-- `helm lint`/`helm template` need the values files (`-f targets/srv0/k3s/values.yaml -f secrets/VARS.srv0.yaml`) — without them, `.Values.X` is nil and lint fails with 'invalid value; expected string'. Missing keys render as `<no value>` — `scripts/validate.sh` catches that.
+- `helm lint`/`helm template` need the values files (`-f targets/srv0/k3s/values.yaml -f config/srv0/values.yaml`) — without them, `.Values.X` is nil and lint fails with 'invalid value; expected string'. Missing keys render as `<no value>` — `scripts/validate.sh` catches that.
 - `.Files.Get` paths need the `files/` prefix (see above).
 - Literal `{{` in templates is interpreted by helm — the homeassistant CR's embedded Go templates are escaped as `{{ "{{" }}`.
 - Subchart resource names derive from `{{ .Release.Name }}` — that's why the app charts stay HelmChart CRs (helm-controller-managed) instead of umbrella dependencies.
@@ -233,13 +234,13 @@ helm uninstall srv0-apps -n apps          # delete a release; PVCs are retained 
 
 - **Traefik on srv0** — dual entrypoints: `websecure:443` (LAN, no proxy protocol) and `websecure-proxy:8443` (PROXY protocol v2, trustedIPs `127.0.0.1/32` + pod/service CIDRs — Klipper SNAT makes all traffic appear from those). Public routes listen on both; LAN-only (`*.home.local`) routes only on `websecure`. Middlewares: `geoblock` (allowlist plugin, self-hosted MaxMind GeoLite2 via the `geoip` component's `geoip-service`), `crowdsec-bouncer` (stream mode + AppSec on `:7422`), `forwardauth-authelia`, `lan-whitelist` (RFC1918), `cluster-only` (10.42/16), `basicauth-cluster`, `local-no-store`. HTTP → HTTPS redirect. readTimeout=0 on both secure entrypoints (streaming). Plugins are pinned in `additionalArguments` (regex-managed via `github-releases`).
 - **vps0 edge** — one Traefik routes by Host/SNI: vps0-local services via Docker labels (two zones, see Targets); `home.$SERVICES_DOMAIN` + wildcard goes through the file provider (the `traefik_dynamic` compose config) to `frps:8080` (HTTP) / `frps:8443` with `tls.passthrough` — vps0 never terminates srv0's TLS; cert-manager on srv0 owns the LE lifecycle. On srv0, cert-manager also runs a local chain (self-signed → `k3s-local-ca` → `ca-issuer`) for `*.home.local`/MQTT TLS; its `post.sh` waits for each chain step before proceeding (race-condition guard).
-- **FRP** — frps on vps0 (ports: 7000 control, 8887 preboot SSH, 8888 SSH; healthcheck on admin API :7500). frpc sidecar on srv0 (host network, `pgrep` healthcheck) proxies: ssh→8888, http→8080, https→8443 (local), qbittorrent peer 56881 tcp+udp. Mutual TLS with a per-pair CA (generated via the documented openssl commands in the FRP sections of the VARS templates; certs live as files under `secrets/<t>/frpc|frps/`); preboot frpc uses a separate client cert.
+- **FRP** — frps on vps0 (ports: 7000 control, 8887 preboot SSH, 8888 SSH; healthcheck on admin API :7500). frpc sidecar on srv0 (host network, `pgrep` healthcheck) proxies: ssh→8888, http→8080, https→8443 (local), qbittorrent peer 56881 tcp+udp. Mutual TLS with a per-pair CA (generated via the documented openssl commands in the FRP sections of the VARS templates; certs live as files under `config/<t>/frpc|frps/`); preboot frpc uses a separate client cert.
 - **WireGuard** (`scripts/wireguard.sh`, machine-local) — deploys a provider `wg0.conf`. The script parses the provider conf (PrivateKey/Address/DNS/MTU/PresharedKey/Endpoint — values never echoed), rewrites `AllowedIPs` to `0.0.0.0/1, 128.0.0.0/1` (split-tunnel: less specific than LAN routes, so K3s subnets and LAN stay direct), and adds PostUp/PreDown `/32` routes for the endpoint via the physical gateway (dead-loop fix). It installs `wireguard-tools`, writes the 0600 `/etc/wireguard/wg0.conf`, and enables the `wg-quick@wg0` systemd unit (config changes apply via `wg syncconf`).
-- **LUKS preboot** — `scripts/preboot.sh <frpc|crypt-ssh>`, run on the node. srv0 (frpc): reads the mTLS certs from `secrets/srv0/frpc/` and `PROXY_HOST`/`TLS_SERVER_NAME` from `secrets/VARS.srv0.env`, resolves `PROXY_IP` itself, generates the frpc-preboot config, and installs initramfs frpc tunnelling SSH via FRPS on port 8887. bigpc (crypt-ssh): dropbear patched to preboot_port for direct LAN unlock (ethernet only). After rotating preboot mTLS certs, re-run the script on srv0. When adding initramfs networking, verify with `lsinitrd` that firmware actually made it in (drivers don't retry firmware loads after pivot_root).
+- **LUKS preboot** — `scripts/preboot.sh <frpc|crypt-ssh>`, run on the node. srv0 (frpc): reads the mTLS certs from `config/srv0/frpc/` and `PROXY_HOST`/`TLS_SERVER_NAME` from `config/srv0/compose.env`, resolves `PROXY_IP` itself, generates the frpc-preboot config, and installs initramfs frpc tunnelling SSH via FRPS on port 8887. bigpc (crypt-ssh): dropbear patched to preboot_port for direct LAN unlock (ethernet only). After rotating preboot mTLS certs, re-run the script on srv0. When adding initramfs networking, verify with `lsinitrd` that firmware actually made it in (drivers don't retry firmware loads after pivot_root).
 
 ## Security
 
-- Secrets never touch git (`/secrets/`, `/VARS*.env`, `compose.private.yaml`, `targets/*/compose/.env` gitignored); `.secret`-style files are 0600 host files; Authelia SSO (forward-auth + basic-auth, 2FA); CrowdSec (srv0: Helm chart, agent/LAPI/AppSec + per-service postoverflow whitelists; vps0: single container, bouncer key auto-registered from `BOUNCER_KEY_TRAEFIK`); geoblock allowlist (CA/CN/CU); per-component NetworkPolicies plus baselines in the `namespaces` component (kube-system policy explicitly allows 80/443/8000/8443 to Traefik).
+- Secrets never touch git (`/config/`, `compose.private.yaml`, `targets/*/compose/.env` gitignored); `.secret`-style files are 0600 host files; Authelia SSO (forward-auth + basic-auth, 2FA); CrowdSec (srv0: Helm chart, agent/LAPI/AppSec + per-service postoverflow whitelists; vps0: single container, bouncer key auto-registered from `BOUNCER_KEY_TRAEFIK`); geoblock allowlist (CA/CN/CU); per-component NetworkPolicies plus baselines in the `namespaces` component (kube-system policy explicitly allows 80/443/8000/8443 to Traefik).
 - Docker socket via `wollomatic/socket-proxy`: `dockerproxy` (read-only, Traefik/monitoring); `dockerproxy_priv` (read-write, watchtower) exists only on pc/bigpc — `cap_drop: ALL`, `read_only: true`, `mem_limit: 512M`, user `65534:$DOCKER_GID`.
 - Known tradeoff: K3s `HelmChart` `valuesContent` (incl. DB passwords, JWKS, OIDC secrets) is readable by anyone with `get` on `helmcharts.helm.cattle.io` — fine for single-user, audit before granting namespace access. Reduced where charts support it: authelia (secret `path:` refs), crowdsec (`externalSecret`), grafana (`admin.existingSecret`), headlamp (`oidc.externalSecret`), rustfs (`secret.existingSecret`), immich/nextcloud/plik (plain-YAML `secretKeyRef`). Where the chart has no secret-ref support but the value is plain YAML, the component uses **`spec.valuesSecrets`** (k3s helm-controller): the secret values live in a namespaced Secret (now `targets/srv0/k3s/templates/apps/frigate.yaml` + `templates/base/monitoring.yaml`, key `values.yaml`) listed in the CR via `valuesSecrets: [{name, keys}]` — the controller projects it as a later `-f` values file, so the merge is plain Helm deep-merge and renders identically. Done this way: **frigate**'s `env` passwords (its `env` key only accepts plain strings — chart limitation) and **loki**'s S3 keys (the 7.x chart's config handling makes `existingSecretForConfig` too risky; the values merge sidesteps the chart). Remaining unavoidable plaintext: authelia's JWKS PEM (`value:` embedded — the chart generates a RANDOM key if the `CryptographicKey` secret isn't inline; verified the hard way). Also: freshrss stays a root container (official image hardcodes apache on :80 and its entrypoint runs as root — de-rooting needs a custom apache config); nextcloud stays a root container too (verified: the official entrypoint writes /etc/apache2 as root even with APACHE_PORT set — uid 33 crashes on `remoteip.conf` removal; the PVC is already www-data-owned so this is purely an entrypoint limitation).
 - **SELinux (Fedora nodes)** — Kubernetes assigns per-pod MCS categories; files carry their creator's categories forever. Pods sharing a hostPath tree (syncthing/mdscl/dscpln) and backup/restore pods must set **pod-level** `seLinuxOptions.level: s0` (container-level is ignored). `privileged: true` bypasses enforcement but new files are still labelled. Python/Node `io_uring` denials are audit spam with epoll fallback — fix with `PYTHON_IO_URING=0` / `UV_USE_IO_URING=0` rather than SELinux changes. `setroubleshootd` CPU pegged = denial backlog; fix the denials, don't mask.
@@ -263,7 +264,7 @@ Accepted tradeoffs and resolved audit findings — do not re-flag without readin
 - **vps0 Authelia `one_factor` rules are intentional** for ytdl/ikom/sale (family/guests); only the admin catch-all rule is `two_factor` (TOTP is Authelia's default second factor — no `default_second_factor_policy` needed).
 - **srv0 PROXY-protocol trustedIPs include pod/service CIDRs on purpose** (`targets/srv0/k3s/traefik/traefik.yaml`) — frpc connects to `127.0.0.1:8443`, but the port is served by a klipper-lb `svclb` pod (host network) which forwards to the Traefik Service; kube-proxy SNAT makes the Traefik pod see pod/service-CIDR sources, and the PROXY v2 header (emitted by vps0's Traefik `serversTransport frps-proxy`, in the `traefik_dynamic` config) rides inside the tunnel stream. Untrusted sources would leave the header unparsed and corrupt the TLS stream — narrowing below these CIDRs breaks `home.*`. Consequence accepted: any pod can spoof a PROXY header to the host port.
 - **CrowdSec bouncer `clientTrustedIPs` is a client bypass-whitelist, not an XFF/proxy setting** (per the plugin README: "List of client IPs to trust, they will bypass any check from the bouncer or cache"). XFF trust is `forwardedHeadersTrustedIPs` (both stacks: `127.0.0.1/32` only). vps0 removed its `clientTrustedIPs: 172.19.0.0/24` — docker-network callers are exempted from decisions at the crowdsec layer via the `s01-whitelist` postoverflow instead. Don't reintroduce `clientTrustedIPs` to "fix" internal traffic.
-- **Agents must never read `secrets/` or any VARS file** — secrets are private by design; audits check gitignore coverage and git history, not file contents.
+- **Agents must never read `config/` or any VARS file** — secrets are private by design; audits check gitignore coverage and git history, not file contents.
 
 ## Manual first-time setup (srv0 apps)
 
@@ -276,7 +277,7 @@ One-time web-UI setup steps for the apps that have no API seeding:
 
 ## Updates (Renovate)
 
-Renovate runs **automatically every day at 17:00 America/Toronto** as the `renovate` K3s CronJob on srv0 (base group, `targets/srv0/k3s/renovate/`) — the full `renovate/renovate` image (ships the Go toolchain, so the gomod manager works). The pod mounts only two files of the syncthing-synced repo (`secrets/VARS.env` and `.git/config`, read-only) to source `RENOVATE_GITHUB_TOKEN` (auto-rotates on sync) and to infer `RENOVATE_GIT_AUTHOR`; Renovate itself clones from GitHub. `bash scripts/renovate.sh [--dry-run]` is the manual/on-demand equivalent for other machines (needs Node/npm and `go` from prereqs for gomod updates; runs on the machine you're on, opening PRs directly on GitHub).
+Renovate runs **automatically every day at 17:00 America/Toronto** as the `renovate` K3s CronJob on srv0 (base group, `targets/srv0/k3s/renovate/`) — the full `renovate/renovate` image (ships the Go toolchain, so the gomod manager works). The pod mounts only two files of the syncthing-synced repo (`config/VARS.env` and `.git/config`, read-only) to source `RENOVATE_GITHUB_TOKEN` (auto-rotates on sync) and to infer `RENOVATE_GIT_AUTHOR`; Renovate itself clones from GitHub. `bash scripts/renovate.sh [--dry-run]` is the manual/on-demand equivalent for other machines (needs Node/npm and `go` from prereqs for gomod updates; runs on the machine you're on, opening PRs directly on GitHub).
 
 Review/apply flow (manual only for critical infra; automerge for everything else per scope below): fetch the PR branch (`git fetch origin pull/<n>/head:renovate/pr-<n>`, then `git checkout renovate/pr-<n>`), `bash scripts/validate.sh <target>`, then merge locally and `git push origin master`. Merges never happen in the platform UI — origin stays the source of truth. Renovate rebases its open PRs and auto-closes them once the change lands on `master` (next run).
 
@@ -313,26 +314,28 @@ Post-update: `git diff` → `bash scripts/validate.sh <target>` → deploy.
 ## Directory layout
 
 ```
-.gitignore                      # current_target/, backups, secrets/, targets/*/compose/{compose.private.yaml,.env}
-.yamllint                       # lint config for the VARS templates + k3s chart YAML
+.gitignore                      # current_target/, backups, config/, targets/*/compose/{compose.private.yaml,.env}
+.yamllint                       # lint config for the config templates + k3s chart YAML
 renovate.json                   # Renovate repo config
 scripts/                        # common.sh (env bootstrap + shared helpers) + the ops scripts:
                                 #   validate.sh, compose-backup.sh, prereqs.sh, renovate.sh,
                                 #   preboot.sh, wireguard.sh, k3s-server.sh, k3s-join.sh, k3s-node-prep.sh
-secrets/                        # VARS.<t>.yaml (srv0 — helm values), VARS.<t>.env (dotenv),
-                                #   VARS.env (universal), <t>/frpc|frps/ (mTLS cert files),
-                                #   vps0/authelia/users_database.yml — all gitignored
+config/                         # gitignored real values; mirrors targets/<t>/config_template/:
+                                #   VARS.env (universal), srv0/{values.yaml,compose.env,frpc/},
+                                #   vps0/{compose.env,frps/,authelia/users_database.yml}
 targets/<target>/
-  VARS.template.yaml|.env       # Documents every required variable + generation commands
+  config_template/              # Documents every required variable + generation commands;
+                                #   copy to config/<t>/ and fill in (values.yaml and/or
+                                #   compose.env plus extra files like certs/users DB)
   compose/compose.yaml          # $VARIABLE placeholders (docker-compose native interpolation)
   compose/compose.private.yaml  # Optional gitignored overlay, merged over compose.yaml
   compose/files/                # Verbatim config files mounted :ro
-  compose/.env                  # gitignored machine-fact env (pc/bigpc/rpi, written by prereqs.sh)
+  compose/.env                  # gitignored machine-fact env (written by prereqs.sh for every target)
   *.sh                          # Retained payload scripts (srv0: pvc.sh, update-node-ip.sh)
   k3s/                          # srv0 umbrella Helm chart: templates/ (repo-owned components +
                                 #   HelmChart CRs + hook Jobs), files/ (WASM plugin), plugins/ (WASM
                                 #   plugin source), values.yaml (committed defaults; secrets in
-                                #   secrets/VARS.srv0.yaml)
+                                #   config/srv0/values.yaml)
 current_target/compose_live_state/   # Runtime state (gitignored, ephemeral)
 compose_state_backups/ k3s_state_backups/   # Backup archives (gitignored)
 architecture.svg|.excalidraw        # Architecture diagram

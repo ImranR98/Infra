@@ -1,7 +1,7 @@
 #!/bin/bash
 # DESC: Install the preboot initramfs LUKS-unlock module (dracut-remote-luks-unlock).
 # frpc: initramfs frpc tunnels SSH via FRPS (mTLS certs from
-# secrets/<hostname>/frpc/, PROXY_HOST/TLS_SERVER_NAME from secrets/VARS.<hostname>.env,
+# config/<hostname>/frpc/, PROXY_HOST/TLS_SERVER_NAME from config/<hostname>/compose.env,
 # PROXY_IP resolved here). crypt-ssh: dropbear SSH directly on the LAN, patched
 # to the preboot port (ethernet only). Re-run frpc after rotating the preboot
 # mTLS certs. Run ON the node.
@@ -45,7 +45,7 @@ git clone --depth 1 https://github.com/ImranR98/dracut-remote-luks-unlock.git "$
 setup_args=(bash "$work_dir/setup.sh" --user "$(id -un)")
 
 if [ "$module" = frpc ]; then
-    env_file="$INFRA_ROOT/secrets/VARS.$target.env"
+    env_file="$INFRA_ROOT/config/$target/compose.env"
     [ -f "$env_file" ] || { echo "Error: $env_file not found" >&2; exit 1; }
     proxy_host=$(grep -E '^PROXY_HOST=' "$env_file" | head -1 | cut -d= -f2- | tr -d '"'"'"' ')
     tls_server_name=$(grep -E '^TLS_SERVER_NAME=' "$env_file" | head -1 | cut -d= -f2- | tr -d '"'"'"' ')
@@ -56,7 +56,7 @@ if [ "$module" = frpc ]; then
     proxy_ip=$(getent hosts "$proxy_host" | awk '{print $1; exit}')
     [ -n "$proxy_ip" ] || { echo "Error: cannot resolve PROXY_HOST '$proxy_host'" >&2; exit 1; }
 
-    certs_dir="$INFRA_ROOT/secrets/$target/frpc"
+    certs_dir="$INFRA_ROOT/config/$target/frpc"
     for f in ca.crt preboot-client.crt preboot-client.key; do
         [ -f "$certs_dir/$f" ] || { echo "Error: $certs_dir/$f not found" >&2; exit 1; }
     done
