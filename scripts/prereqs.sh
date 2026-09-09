@@ -70,7 +70,7 @@ if [ -d "$target_dir/compose" ] && [ -f "$target_dir/compose/compose.yaml" ]; th
 
     env_args=()
     # The machine-fact .env (uid/gid/user) is written for EVERY target —
-    # secrets envs never carry per-machine facts. Regenerated on every run so
+    # config envs never carry per-machine facts. Regenerated on every run so
     # uid/gid changes are picked up.
     docker_gid="$(getent group docker | cut -d: -f3)"
     {

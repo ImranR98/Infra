@@ -2,6 +2,10 @@
 # DESC: Update K3s node IP after a network change
 set -euo pipefail
 
+if [ -z "${INFRA_ROOT:-}" ]; then
+    INFRA_ROOT="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd)"
+    export INFRA_ROOT
+fi
 source "$INFRA_ROOT/scripts/common.sh"
 
 SU="$(get_sudo_cmd)"

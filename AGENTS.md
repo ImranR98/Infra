@@ -18,7 +18,7 @@ Bash 4+, Python 3, Docker Compose v2, kubectl (K3s targets), helm (srv0), yq, jq
 | `pc` | Compose | Desktop: socket-proxy, watchtower, syncthing |
 | `rpi` | Compose | Pi 400 webcam → authenticated RTSP (go2rtc), consumed by Frigate on srv0 |
 
-Each target dir: `config_template/` (committed; documents every required variable + generation commands — copy to `config/<t>/`), optional `compose/` and/or `k3s/`, target root-level payloads (the retained `*.sh` scripts that must exist as files — e.g. the in-cluster pvc-backup CronJob calls `targets/srv0/pvc.sh` from a kubectl pod).
+Each target dir: `config_template/` (committed; documents every required variable + generation commands — copy to `config/<t>/`), optional `compose/` and/or `k3s/`.
 Notable per-target facts:
 - **srv0** — `base` group: namespaces, nfs-server, host-volumes, csi-driver-nfs, cert-manager, longhorn, geoip, traefik, crowdsec, authelia, pvc-backup, ntfy, descheduler, system-upgrade, rustfs, monitoring, cdi-specs. `apps`: immich, logtfy, jellyfin, navidrome, mdscl, mosquitto, homeassistant, ollama, open-webui, nextcloud, freshrss, linkwarden, opodsync, dscpln, opencanary, flaresolverr, fmd, plik, syncthing, headlamp, frigate (see `templates/base/` + `templates/apps/`). Compose sidecar = frpc only. Ollama runs on the `bigpc` agent (RX 9070/ROCm); Open WebUI reaches it in-cluster only (no LAN exposure). Jellyfin/Immich ML/Frigate use srv0's Iris Xe iGPU; Frigate recordings stay on NFS deliberately so the pod can move nodes. Home Assistant integration auto-installs on every pod start (no HACS).
 - **bigpc** — K3s agent labelled `has-amdgpu=true`, tainted `scheduling-discouraged` (PreferNoSchedule), no Longhorn replicas (`create-default-disk=false`); Compose: dockerproxy_priv, watchtower (syncthing only), syncthing (host net).
@@ -30,8 +30,8 @@ Notable per-target facts:
 ```
 # everyday ops (scripts/ is reachable from anywhere — each script resolves the
 # repo root itself; the deploy commands themselves are plain helm/docker compose):
-bash scripts/validate.sh srv0                        # VARS + helm lint/template (values never echoed)
-bash scripts/validate.sh vps0                        # dotenv VARS check
+bash scripts/validate.sh srv0                        # config completeness/placeholders + helm lint/template
+bash scripts/validate.sh vps0                        # compose.env + file completeness/placeholder check
 
 # k3s (srv0) — plain helm, no wrapper; run validate.sh first as the preflight:
 export KUBECONFIG="${KUBECONFIG:-/etc/rancher/k3s/k3s.yaml}"
@@ -54,9 +54,9 @@ docker compose --env-file config/srv0/compose.env --env-file targets/srv0/compos
 #   (no --env-file — the project-dir machine-fact .env auto-loads)
 
 bash scripts/compose-backup.sh vps0                  # tar the compose state ([-e backup_remote=user@host:path])
-bash targets/srv0/pvc.sh backup --all -y             # PVC backup (or: pvc.sh backup <name>)
-bash targets/srv0/pvc.sh restore --all -y            # PVC restore (or: pvc.sh restore <name>)
-sudo bash targets/srv0/update-node-ip.sh [--ip X] [--force]   # K3s node IP change
+bash scripts/pvc.sh backup --all -y                   # PVC backup (or: pvc.sh backup <name>)
+bash scripts/pvc.sh restore --all -y                  # PVC restore (or: pvc.sh restore <name>)
+sudo bash scripts/update-node-ip.sh [--ip X] [--force]   # K3s node IP change
 
 # machine-local (act on the machine they run on, take no target):
 bash scripts/prereqs.sh
@@ -86,7 +86,7 @@ Ad-hoc diagnostics (no dedicated commands; run on the srv0 control plane):
 
 **Real tools are the CLI** — `helm`, `kubectl`, `docker compose` — fronted by no wrapper. `scripts/` holds only the steps that have no real-tool equivalent. Target-selecting scripts take `<target>` as their first argument (never inferred from the hostname); machine-local scripts act on the machine they run on and take none.
 
-Retained bash scripts exist only where something must run **as a file**: the in-cluster `pvc-backup` CronJob runs `targets/srv0/pvc.sh backup --all -y` from a kubectl pod (no repo checkout there beyond the hostPath mount), the node-IP update stays bash (`targets/srv0/update-node-ip.sh` — the etcdctl dance is not worth porting anywhere), and `scripts/renovate.sh` is the manual runner for Renovate (the in-cluster renovate CronJob inlines the same steps).
+All ops logic lives in `scripts/` (k3s-generic too — `pvc.sh` and `update-node-ip.sh` are cluster-generic and moved there from the target dir); nothing is Ansible-style inventory. Scripts must run **as a file** in two places: the in-cluster `pvc-backup` CronJob runs `scripts/pvc.sh backup --all -y` from a kubectl pod (the pod mounts `$INFRA_ROOT` hostPath — the whole repo is reachable), and the node-IP update stays bash (`scripts/update-node-ip.sh` — the etcdctl dance is not worth porting anywhere). `scripts/renovate.sh` is the manual runner for Renovate (the in-cluster renovate CronJob inlines the same steps).
 
 ### Script inventory
 
@@ -101,8 +101,8 @@ Retained bash scripts exist only where something must run **as a file**: the in-
 | `scripts/k3s-server.sh` | — | this machine (becomes the control plane) | node prep + installer + server config + labels |
 | `scripts/k3s-join.sh <ip> <user> [...]` | — | control plane + the joining node | token travels via stdin over ssh; labels/taint/Longhorn after Ready |
 | `scripts/k3s-node-prep.sh` | — | the node (root) | sysctls, CDI drop-in, firewall, kubectl group, pciutils — shared by server/join |
-| `targets/srv0/pvc.sh` | — | srv0 (or in-cluster pod) | PVC backup/restore |
-| `targets/srv0/update-node-ip.sh` | — | srv0 | K3s node IP change |
+| `scripts/pvc.sh` | — | the cluster (or in-cluster pod) | PVC backup/restore |
+| `scripts/update-node-ip.sh` | — | the node | K3s node IP change |
 
 ### Writing a new script
 
@@ -163,7 +163,7 @@ helm upgrade --install srv0-base targets/srv0/k3s -n base --create-namespace \
 helm upgrade --install srv0-apps targets/srv0/k3s -n apps --create-namespace \
   -f targets/srv0/k3s/values.yaml -f config/srv0/values.yaml --set base.enabled=false
 ```
-Two releases: `srv0-base` (scope base, `--set apps.enabled=false`) and `srv0-apps` (inverse); `base.enabled`/`apps.enabled` gate both the templates and the seeded Jobs. Preflights (apply only): the secret values file must exist and contain no placeholders, and the rendered chart must contain no `<no value>` (helm silently renders missing keys) — `scripts/validate.sh srv0` runs all three. Delete: `helm uninstall srv0-apps -n apps` then `srv0-base` (Helm retains PVCs). The chart contains: (a) all repo-owned components as Helm templates (secrets, configmaps, ingresses, PVCs, cronjobs, the traefik Middlewares/HelmChartConfig + WASM plugin ConfigMap via `.Files.Get`), (b) the 18 upstream-app **HelmChart CRs** — helm-controller still owns the app releases exactly as before (avoids release-name-derived resource naming), (c) vendored system-upgrade-controller manifests + Plans, (d) the immich seeding hook as a `post-install,post-upgrade` Job with scoped RBAC under the `helm-hooks` ServiceAccount.
+Two releases: `srv0-base` (scope base, `--set apps.enabled=false`) and `srv0-apps` (inverse); `base.enabled`/`apps.enabled` gate both the templates and the seeded Jobs. Preflights (apply only): the secret values file must exist and contain no placeholders, and the rendered chart must contain no `<no value>` (helm silently renders missing keys) — `scripts/validate.sh srv0` runs all three. Delete: `helm uninstall srv0-apps -n apps` then `srv0-base` (Helm retains PVCs). The chart contains: (a) all repo-owned components as Helm templates (secrets, configmaps, ingresses, PVCs, cronjobs, the traefik Middlewares/HelmChartConfig + WASM plugin ConfigMap via `.Files.Get`), (b) the 19 upstream-app **HelmChart CRs** (11 in base, 8 in apps) — helm-controller still owns the app releases exactly as before (avoids release-name-derived resource naming), (c) vendored system-upgrade-controller manifests + Plans, (d) the immich seeding hook as a `post-install,post-upgrade` Job with scoped RBAC under the `helm-hooks` ServiceAccount.
 
 Ops: `helm list/history/rollback`, `helm get values`, `helm template`, `helm diff upgrade` (helm-diff plugin).
 
@@ -175,9 +175,9 @@ Ops: `helm list/history/rollback`, `helm get values`, `helm template`, `helm dif
 
 Node provisioning is owned by `scripts/k3s-server.sh` and `scripts/k3s-join.sh` (the official `get.k3s.io` installer — no provisioning collection, no inventory anywhere). Cluster policy lives in the scripts themselves:
 
-- `k3s-server.sh` (no args, run ON the node): `k3s-node-prep.sh` (sysctls via `/etc/sysctl.d/90-k3s.conf`, the containerd CDI drop-in `enable-cdi.toml` — enables CDI so the `cdi-specs` component can grant host devices, firewall (firewalld/ufw; K3s ports incl. 51820–21/udp for flannel-wg), the `kubectl` group, pciutils) + the installer + `/etc/rancher/k3s/config.yaml` (`selinux: true`, `write-kubeconfig-mode: "0640"`, `flannel-backend: wireguard-native`, the flannel-iface regex, `cluster-init: true`, `node-ip`, labels `hostpath-main=true`, `hostpath-extra-storage=true`, `external-exposed=true`) + restart + waits for the server token and the API + labels the node (Longhorn default disk, `has-homeassistant-hardware`). K3s needs a fixed IP — if it changes, run `targets/srv0/update-node-ip.sh`.
+- `k3s-server.sh` (no args, run ON the node): `k3s-node-prep.sh` (sysctls via `/etc/sysctl.d/90-k3s.conf`, the containerd CDI drop-in `enable-cdi.toml` — enables CDI so the `cdi-specs` component can grant host devices, firewall (firewalld/ufw; K3s ports incl. 51820–21/udp for flannel-wg), the `kubectl` group, pciutils) + the installer + `/etc/rancher/k3s/config.yaml` (`selinux: true`, `write-kubeconfig-mode: "0640"`, `flannel-backend: wireguard-native`, the flannel-iface regex, `cluster-init: true`, `node-ip`, labels `hostpath-main=true`, `hostpath-extra-storage=true`, `external-exposed=true`) + restart + waits for the server token and the API + labels the node (Longhorn default disk, `has-homeassistant-hardware`). K3s needs a fixed IP — if it changes, run `scripts/update-node-ip.sh`.
 - `k3s-join.sh <node_ip> <node_user> [...]` (run ON the control plane; prompts for sudo on the control plane and the joining node separately — they may differ): reads the token from `/var/lib/rancher/k3s/server/token`, resolves the server IP, streams `k3s-node-prep.sh` + the installer to the node over SSH with the token appended on stdin (never argv; the token lands in the node's root-only `k3s-agent.service.env` for agents, or in `config.yaml` for joined servers), waits for the node to appear + become Ready, then applies labels/taint/Longhorn replica count. All join options are CLI flags: `--role agent|server`, `--amdgpu auto|yes|no` (lspci-based detection on the node — vendor `1002`, VGA class; drives ROCm/Ollama scheduling via the `has-amdgpu=true` label), `--scheduling-discouraged` (PreferNoSchedule taint), `--longhorn-replicas` (`create-default-disk=true` + auto-increment of `default-replica-count`, guarded by the label's actual change so re-runs don't double-count; without the flag → `create-default-disk=false`). The installer only runs when k3s is missing — re-provision never re-installs, so it can't fight system-upgrade-controller's ownership of versions. SSH host-key checking is left at the default (on) — the first join prompts to accept the fingerprint, same trust model as plain `ssh`.
-- `targets/srv0/update-node-ip.sh` (retained bash, run directly on srv0): sed-replaces `node-ip` in drop-ins, adds `50-node-ip.yaml`; **updates etcd member peer URLs before restarting k3s** (k3s is `Type=notify`; a synchronous restart deadlocks), restarts with `--no-block`, patches the node's flannel public-ip annotation + status addresses. Installs etcdctl on demand.
+- `scripts/update-node-ip.sh` (retained bash, run directly on the node): sed-replaces `node-ip` in drop-ins, adds `50-node-ip.yaml`; **updates etcd member peer URLs before restarting k3s** (k3s is `Type=notify`; a synchronous restart deadlocks), restarts with `--no-block`, patches the node's flannel public-ip annotation + status addresses. Installs etcdctl on demand.
 
 **system-upgrade** — system-upgrade-controller manifests are **vendored** in `templates/base/system-upgrade-controller.yaml` (downloaded from `releases/latest` of rancher/system-upgrade-controller at cutover; bump by re-downloading `crd.yaml` + `system-upgrade-controller.yaml` and replacing the template — the controller image inside is Renovate-managed via the kubernetes manager). `server-plan`/`agent-plan` versions are Renovate-managed (`vX.Y.Z+k3sN`, matched in the templates by the plan-version regex manager). After a bump: apply `srv0-base`, then `kubectl -n system-upgrade get plans,jobs`.
 
@@ -189,7 +189,7 @@ Node provisioning is owned by `scripts/k3s-server.sh` and `scripts/k3s-join.sh` 
 
 **Three layers of "helm" in this repo — do not conflate them:**
 1. **Our umbrella chart** (`targets/srv0/k3s/`, the chart root) → releases `srv0-base` + `srv0-apps`, applied by plain `helm upgrade --install` (see the Apply pipeline).
-2. **k3s's embedded helm-controller** → the 19 `HelmChart` CRs *inside* our chart. Our releases apply the CR objects; the controller then installs/upgrades the app releases (frigate, immich, …). `helm uninstall srv0-*` does NOT touch these; `kubectl delete helmchart` triggers THEIR uninstall (see cutover mechanics above).
+2. **k3s's embedded helm-controller** → the 19 `HelmChart` CRs *inside* our chart. Our releases apply the CR objects; the controller then installs/upgrades the app releases (frigate, immich, …). `helm uninstall srv0-*` does NOT touch these; `kubectl delete helmchart` triggers THEIR uninstall.
 3. **k3s bootstrap charts** (traefik + traefik-crd in kube-system) — not ours at all; we only customize traefik via the `HelmChartConfig` template.
 
 **Chart layout** (chart root = `targets/srv0/k3s/`):
@@ -219,14 +219,14 @@ helm uninstall srv0-apps -n apps          # delete a release; PVCs are retained 
 - Subchart resource names derive from `{{ .Release.Name }}` — that's why the app charts stay HelmChart CRs (helm-controller-managed) instead of umbrella dependencies.
 - Never `helm install --force` casually — it deletes/recreates resources; one accidental `--force` during the cutover re-released 4 HelmChart CRs.
 - `kubectl apply --dry-run=server` on rendered output gives false positives (e.g. the 256KiB `last-applied-configuration` limit that doesn't apply to Helm's merge) — use helm's own `--dry-run=server`.
-- Adoption: pre-existing objects must carry `app.kubernetes.io/managed-by: Helm` + `meta.helm.sh/release-name`/`release-namespace` annotations or helm refuses to install over them (see cutover mechanics above).
+- Adoption: pre-existing objects must carry `app.kubernetes.io/managed-by: Helm` + `meta.helm.sh/release-name`/`release-namespace` annotations or helm refuses to install over them.
 - Helm uninstall ignores live-object annotations entirely — `helm.sh/resource-policy: keep` only works from the *stored* manifest.
 - Helm doesn't auto-resolve k3s's kubeconfig the way k3s's kubectl does — set `KUBECONFIG` to `/etc/rancher/k3s/k3s.yaml` yourself.
 
 ## Storage & PVC backups
 
 - **Longhorn** is the default StorageClass and primary backend (replica count 1, best-effort locality, 2000% over-provisioning; chart version has `# PRESERVE_FULL` — sequential minor upgrades required). NFS (`nfs-server` + `csi-driver-nfs`) and static hostPath PV/PVC pairs (`host-volumes`, RWX, bound to `hostpath-main`/`hostpath-extra-storage` nodes) remain for shared host data.
-- **Backup** — `pvc-backup` (base group) is a nightly 3AM CronJob that runs `targets/srv0/pvc.sh backup --all -y` in-cluster (bitnami/kubectl:latest, hostPath mounts of `$INFRA_ROOT` + `$PVC_BACKUP_DIR`, nodeSelector `hostpath-main`). PVCs labelled `auto-backup: "true"` are archived; annotation `backup.infra/exclude` adds tar `--exclude` patterns. A temp pod (scheduled on the volume's node for RWO; tolerates `scheduling-discouraged`) tars the live PVC (no scale-down) to the shared `pvc-backup-dest` PVC — a static PV bound to the ROOT of the NFS backups share (= `$PVC_BACKUP_DIR`), so archives land directly at their final human-named path `<name>.tar.gz` (with `__backup_timestamp.txt` inside), overwritten each run, reachable from any node.
+- **Backup** — `pvc-backup` (base group) is a nightly 3AM CronJob that runs `scripts/pvc.sh backup --all -y` in-cluster (bitnami/kubectl:latest, hostPath mounts of `$INFRA_ROOT` + `$PVC_BACKUP_DIR`, nodeSelector `hostpath-main`). PVCs labelled `auto-backup: "true"` are archived; annotation `backup.infra/exclude` adds tar `--exclude` patterns. A temp pod (scheduled on the volume's node for RWO; tolerates `scheduling-discouraged`) tars the live PVC (no scale-down) to the shared `pvc-backup-dest` PVC — a static PV bound to the ROOT of the NFS backups share (= `$PVC_BACKUP_DIR`), so archives land directly at their final human-named path `<name>.tar.gz` (with `__backup_timestamp.txt` inside), overwritten each run, reachable from any node.
 - **Restore** — scales down all workloads using the PVC (Deployments/StatefulSets only; replica counts recorded), waits for pods, restores via a privileged temp pod, scales back up. `--all` does a bulk scale-down of everything first.
 - Both backup and restore pods set **pod-level** `seLinuxOptions.level: s0` (see SELinux below).
 
@@ -264,7 +264,7 @@ Accepted tradeoffs and resolved audit findings — do not re-flag without readin
 - **vps0 Authelia `one_factor` rules are intentional** for ytdl/ikom/sale (family/guests); only the admin catch-all rule is `two_factor` (TOTP is Authelia's default second factor — no `default_second_factor_policy` needed).
 - **srv0 PROXY-protocol trustedIPs include pod/service CIDRs on purpose** (`targets/srv0/k3s/traefik/traefik.yaml`) — frpc connects to `127.0.0.1:8443`, but the port is served by a klipper-lb `svclb` pod (host network) which forwards to the Traefik Service; kube-proxy SNAT makes the Traefik pod see pod/service-CIDR sources, and the PROXY v2 header (emitted by vps0's Traefik `serversTransport frps-proxy`, in the `traefik_dynamic` config) rides inside the tunnel stream. Untrusted sources would leave the header unparsed and corrupt the TLS stream — narrowing below these CIDRs breaks `home.*`. Consequence accepted: any pod can spoof a PROXY header to the host port.
 - **CrowdSec bouncer `clientTrustedIPs` is a client bypass-whitelist, not an XFF/proxy setting** (per the plugin README: "List of client IPs to trust, they will bypass any check from the bouncer or cache"). XFF trust is `forwardedHeadersTrustedIPs` (both stacks: `127.0.0.1/32` only). vps0 removed its `clientTrustedIPs: 172.19.0.0/24` — docker-network callers are exempted from decisions at the crowdsec layer via the `s01-whitelist` postoverflow instead. Don't reintroduce `clientTrustedIPs` to "fix" internal traffic.
-- **Agents must never read `config/` or any VARS file** — secrets are private by design; audits check gitignore coverage and git history, not file contents.
+- **Agents must never read `config/` or any of its files** — secrets are private by design; audits check gitignore coverage and git history, not file contents.
 
 ## Manual first-time setup (srv0 apps)
 
@@ -319,7 +319,8 @@ Post-update: `git diff` → `bash scripts/validate.sh <target>` → deploy.
 renovate.json                   # Renovate repo config
 scripts/                        # common.sh (env bootstrap + shared helpers) + the ops scripts:
                                 #   validate.sh, compose-backup.sh, prereqs.sh, renovate.sh,
-                                #   preboot.sh, wireguard.sh, k3s-server.sh, k3s-join.sh, k3s-node-prep.sh
+                                #   preboot.sh, wireguard.sh, k3s-server.sh, k3s-join.sh,
+                                #   k3s-node-prep.sh, pvc.sh, update-node-ip.sh
 config/                         # gitignored real values; mirrors targets/<t>/config_template/:
                                 #   VARS.env (universal), srv0/{values.yaml,compose.env,frpc/},
                                 #   vps0/{compose.env,frps/,authelia/users_database.yml}
@@ -331,7 +332,6 @@ targets/<target>/
   compose/compose.private.yaml  # Optional gitignored overlay, merged over compose.yaml
   compose/files/                # Verbatim config files mounted :ro
   compose/.env                  # gitignored machine-fact env (written by prereqs.sh for every target)
-  *.sh                          # Retained payload scripts (srv0: pvc.sh, update-node-ip.sh)
   k3s/                          # srv0 umbrella Helm chart: templates/ (repo-owned components +
                                 #   HelmChart CRs + hook Jobs), files/ (WASM plugin), plugins/ (WASM
                                 #   plugin source), values.yaml (committed defaults; secrets in
@@ -351,5 +351,5 @@ For the bash scripts: `$INFRA_ROOT` (repo root — self-computed by `scripts/com
 - **Apply through the real commands** — `helm upgrade --install` for k3s, `docker compose up -d` for compose (node labels/taints at join time go through `k3s-join.sh`). Direct inspection (logs, get, describe, curl) is fine.
 - **K3s node provisioning goes through `scripts/k3s-server.sh`/`k3s-join.sh` only** — never raw installers or ad-hoc joins; the scripts supply the installer and secret-handling setup. Dev-only lint (`yamllint`/`shellcheck`) touches nothing.
 - Never edit files under `current_target/` (runtime state).
-- Never commit secrets (VARS files, `compose.private.yaml`, `targets/*/compose/.env` are gitignored).
+- Never commit secrets (`config/`, `compose.private.yaml`, `targets/*/compose/.env` are gitignored).
 - New components must follow the sizing tiers and include NetworkPolicies.
