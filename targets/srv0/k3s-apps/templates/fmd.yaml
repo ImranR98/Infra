@@ -1,0 +1,127 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fmd
+  namespace: apps
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: fmd
+  template:
+    metadata:
+      labels:
+        app: fmd
+    spec:
+      securityContext:
+        fsGroup: {{ .Values.MY_UID }}
+      containers:
+        - name: fmd
+          image: registry.gitlab.com/fmd-foss/fmd-server:0.16.0
+          securityContext:
+            runAsUser: {{ .Values.MY_UID }}
+            runAsGroup: {{ .Values.MY_UID }}
+            allowPrivilegeEscalation: false
+          ports:
+            - containerPort: 8080
+          resources:
+            limits:
+              memory: 2Gi
+            requests:
+              memory: 128Mi
+          readinessProbe:
+            tcpSocket:
+              port: 8080
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+          env:
+            - name: FMD_REGISTRATIONTOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: fmd-secret
+                  key: FMD_REGISTRATIONTOKEN
+          volumeMounts:
+            - name: fmd-data
+              mountPath: /var/lib/fmd-server/db/
+      volumes:
+        - name: fmd-data
+          persistentVolumeClaim:
+            claimName: fmd-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: fmd
+  namespace: apps
+spec:
+  type: ClusterIP
+  selector:
+    app: fmd
+  ports:
+    - port: 8080
+      targetPort: 8080
+---
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: fmd-prod-tls
+  namespace: apps
+spec:
+  secretName: fmd-prod-tls
+  issuerRef:
+    name: letsencrypt-prod
+    kind: ClusterIssuer
+  dnsNames:
+    - fmd.{{ .Values.SERVICES_DOMAIN }}
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: fmd-ingress
+  namespace: apps
+spec:
+  entryPoints:
+    - websecure
+    - websecure-proxy
+  routes:
+    - match: Host(`fmd.{{ .Values.SERVICES_DOMAIN }}`)
+      kind: Rule
+      middlewares:
+        - name: geoblock
+          namespace: base
+        - name: crowdsec-bouncer
+          namespace: base
+      services:
+        - name: fmd
+          port: 8080
+  tls:
+    secretName: fmd-prod-tls
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: fmd-pvc
+  namespace: apps
+  labels:
+    auto-backup: "true"
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+  storageClassName: longhorn
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: fmd-secret
+  namespace: apps
+type: Opaque
+stringData:
+  FMD_REGISTRATIONTOKEN: "{{ .Values.FMD_REGISTRATIONTOKEN }}"

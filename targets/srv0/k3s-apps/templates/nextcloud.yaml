@@ -1,0 +1,316 @@
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: nextcloud-prod-tls
+  namespace: apps
+spec:
+  secretName: nextcloud-prod-tls
+  issuerRef:
+    name: letsencrypt-prod
+    kind: ClusterIssuer
+  dnsNames:
+    - nextcloud.{{ .Values.SERVICES_DOMAIN }}
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: nextcloud-ingress
+  namespace: apps
+spec:
+  entryPoints:
+    - websecure
+    - websecure-proxy
+  routes:
+    - match: Host(`nextcloud.{{ .Values.SERVICES_DOMAIN }}`) && PathPrefix(`/heartbeat`)
+      kind: Rule
+      middlewares:
+        - name: nextcloud-hsts
+          namespace: apps
+      services:
+        - name: nextcloud
+          port: 80
+    - match: Host(`nextcloud.{{ .Values.SERVICES_DOMAIN }}`)
+      kind: Rule
+      middlewares:
+        - name: nextcloud-hsts
+          namespace: apps
+        - name: geoblock
+          namespace: base
+        - name: crowdsec-bouncer
+          namespace: base
+        # No forwardauth-authelia: Nextcloud is fully bypassed in Authelia's
+        # access control, and apps like Floccus send Authorization headers
+        # that Authelia's regulation counts as failed 1FA attempts.
+      services:
+        - name: nextcloud
+          port: 80
+  tls:
+    secretName: nextcloud-prod-tls
+---
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: nextcloud-hsts
+  namespace: apps
+spec:
+  headers:
+    stsSeconds: 15552000
+---
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-nextcloud-db-ingress
+  namespace: apps
+spec:
+  podSelector:
+    matchLabels:
+      app: nextcloud-postgresql
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: nextcloud
+      ports:
+        - port: 5432
+  policyTypes:
+    - Ingress
+---
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nextcloud
+  namespace: apps
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: nextcloud
+  template:
+    metadata:
+      labels:
+        app: nextcloud
+    spec:
+      securityContext:
+        fsGroup: 33
+      containers:
+        - name: nextcloud
+          image: nextcloud:34.0.3
+          securityContext:
+            allowPrivilegeEscalation: false
+          ports:
+            - containerPort: 80
+          readinessProbe:
+            tcpSocket:
+              port: 80
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+            initialDelaySeconds: 15
+          env:
+            - name: NEXTCLOUD_ADMIN_USER
+              valueFrom:
+                secretKeyRef:
+                  name: nextcloud-admin-secret
+                  key: NEXTCLOUD_ADMIN_USER
+            - name: NEXTCLOUD_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: nextcloud-admin-secret
+                  key: NEXTCLOUD_ADMIN_PASSWORD
+            - name: POSTGRES_HOST
+              value: nextcloud-postgresql
+            - name: POSTGRES_DB
+              value: nextcloud
+            - name: POSTGRES_USER
+              value: nextcloud
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: nextcloud-db-secret
+                  key: password
+            - name: NEXTCLOUD_TRUSTED_DOMAINS
+              value: "nextcloud.{{ .Values.SERVICES_DOMAIN }}"
+            - name: APACHE_DISABLE_REWRITE_IP
+              value: "1"
+            - name: TRUSTED_PROXIES
+              value: "127.0.0.1 10.42.0.0/16 10.43.0.0/16 192.168.0.0/16"
+            - name: OVERWRITEPROTOCOL
+              value: "https"
+            - name: OVERWRITECLIURL
+              value: "http://localhost"
+            - name: NEXTCLOUD_MAINTENANCE_WINDOW_START
+              value: "1"
+          volumeMounts:
+            - name: nextcloud-data
+              mountPath: /var/www/html
+          resources:
+            limits:
+              memory: 2Gi
+            requests:
+              memory: 128Mi
+      volumes:
+        - name: nextcloud-data
+          persistentVolumeClaim:
+            claimName: nextcloud-data-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nextcloud
+  namespace: apps
+spec:
+  type: ClusterIP
+  selector:
+    app: nextcloud
+  ports:
+    - port: 80
+      targetPort: 80
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: nextcloud-admin-secret
+  namespace: apps
+type: Opaque
+stringData:
+  NEXTCLOUD_ADMIN_USER: "{{ .Values.NEXTCLOUD_ADMIN_USER }}"
+  NEXTCLOUD_ADMIN_PASSWORD: "{{ .Values.NEXTCLOUD_ADMIN_PASSWORD }}"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: nextcloud-db-secret
+  namespace: apps
+type: Opaque
+stringData:
+  password: "{{ .Values.NEXTCLOUD_DB_PASSWORD }}"
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: nextcloud-data-pvc
+  namespace: apps
+  labels:
+    auto-backup: "true"
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+  storageClassName: longhorn
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: nextcloud-db-pvc
+  namespace: apps
+  labels:
+    auto-backup: "true"
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+  storageClassName: longhorn
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nextcloud-postgresql
+  namespace: apps
+  labels:
+    app: nextcloud-postgresql
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: nextcloud-postgresql
+  template:
+    metadata:
+      labels:
+        app: nextcloud-postgresql
+    spec:
+      securityContext:
+        fsGroup: 999
+      initContainers:
+        - name: volume-permissions
+          image: postgres:17.11-alpine
+          command:
+            - sh
+            - -c
+            - |
+              rm -rf /var/lib/postgresql/data/lost+found
+              chown -R 999:999 /var/lib/postgresql/data
+          securityContext:
+            runAsUser: 0  # root required: chown on NFS-backed PVC for postgresql (uid 999)
+          resources:
+            limits:
+              memory: 2Gi
+            requests:
+              memory: 128Mi
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+      containers:
+        - name: postgresql
+          image: postgres:17.11-alpine
+          securityContext:
+            runAsUser: 999
+            runAsGroup: 999
+            allowPrivilegeEscalation: false
+          ports:
+            - containerPort: 5432
+          readinessProbe:
+            exec:
+              command:
+                - pg_isready
+                - -U
+                - nextcloud
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+            initialDelaySeconds: 15
+          env:
+            - name: POSTGRES_USER
+              value: nextcloud
+            - name: POSTGRES_DB
+              value: nextcloud
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: nextcloud-db-secret
+                  key: password
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+          resources:
+            limits:
+              memory: 2Gi
+            requests:
+              memory: 128Mi
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: nextcloud-db-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nextcloud-postgresql
+  namespace: apps
+spec:
+  selector:
+    app: nextcloud-postgresql
+  ports:
+    - protocol: TCP
+      port: 5432
+      targetPort: 5432

@@ -17,7 +17,7 @@
   },
   "kubernetes": {
     "managerFilePatterns": [
-      "/^targets\\/srv0\\/k3s\\/.*\\.ya?ml$/"
+      "/^targets\\/srv0\\/k3s-(base|apps)\\/.*\\.ya?ml$/"
     ]
   },
   "customManagers": [
@@ -25,7 +25,7 @@
       "customType": "regex",
       "description": "Images inside HelmChart valuesContent blocks (repository/tag pairs and single-line image refs)",
       "fileMatch": [
-        "targets/srv0/k3s/.+\\.ya?ml$"
+        "targets/srv0/k3s-(base|apps)/.+\\.ya?ml$"
       ],
       "matchStrings": [
         "repository:\\s*(?<depName>\\S+)\\s*\\n(?:[^\\n]*\\n){0,10}?\\s*tag:\\s*\"?(?<currentValue>[^\"\\s@#]+)(?:@sha256:\\S+)?\"?",
@@ -38,7 +38,7 @@
       "customType": "regex",
       "description": "helm.cattle.io HelmChart CR chart versions (oci:// — via docker datasource; the helm datasource has no OCI support)",
       "fileMatch": [
-        "targets/srv0/k3s/.+\\.ya?ml$"
+        "targets/srv0/k3s-(base|apps)/.+\\.ya?ml$"
       ],
       "matchStrings": [
         "chart:\\s*oci://(?<depName>\\S+)\\s*\\n(?:[^\\n]*\\n){0,5}?\\s*version:\\s*(?<currentValue>\\S+)"
@@ -50,7 +50,7 @@
       "customType": "regex",
       "description": "helm.cattle.io HelmChart CR chart versions (classic chart:+repo: form)",
       "fileMatch": [
-        "targets/srv0/k3s/.+\\.ya?ml$"
+        "targets/srv0/k3s-(base|apps)/.+\\.ya?ml$"
       ],
       "matchStrings": [
         "chart:\\s*(?<depName>\\S+)\\s*\\n(?:[^\\n]*\\n){0,5}?\\s*repo:\\s*(?<registryUrl>\\S+)\\s*\\n(?:[^\\n]*\\n){0,10}?\\s*version:\\s*(?<currentValue>\\S+)"
@@ -62,7 +62,7 @@
       "customType": "regex",
       "description": "upgrade.cattle.io Plan CR k3s versions",
       "fileMatch": [
-        "targets/srv0/k3s/.+\\.ya?ml$"
+        "targets/srv0/k3s-(base|apps)/.+\\.ya?ml$"
       ],
       "matchStrings": [
         "version:\\s*\"?v(?<currentValue>\\d+\\.\\d+\\.\\d+\\+k3s\\d+)\"?"
@@ -75,7 +75,7 @@
       "customType": "regex",
       "description": "Traefik plugin version pins in additionalArguments (k3s HelmChartConfig + compose)",
       "fileMatch": [
-        "targets/srv0/k3s/.+\\.ya?ml$",
+        "targets/srv0/k3s-(base|apps)/.+\\.ya?ml$",
         "targets/.+/compose/compose\\.ya?ml$"
       ],
       "matchStrings": [
@@ -100,7 +100,7 @@
     {
       "description": "Never automerge major updates to critical infra (base-namespace srv0 K3s group, public VPS edge vps0, srv0 frpc tunnel); minor/patch automerge normally",
       "matchFileNames": [
-        "targets/srv0/k3s/templates/base/**",
+        "targets/srv0/k3s-base/**",
         "targets/vps0/compose/**",
         "targets/srv0/compose/**"
       ],

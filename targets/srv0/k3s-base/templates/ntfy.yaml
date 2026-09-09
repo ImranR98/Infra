@@ -1,0 +1,206 @@
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: ntfy-prod-tls
+  namespace: base
+spec:
+  secretName: ntfy-prod-tls
+  issuerRef:
+    name: letsencrypt-prod
+    kind: ClusterIssuer
+  dnsNames:
+    - ntfy.{{ .Values.SERVICES_DOMAIN }}
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: ntfy-ingress
+  namespace: base
+spec:
+  entryPoints:
+    - websecure
+    - websecure-proxy
+  routes:
+    - match: Host(`ntfy.{{ .Values.SERVICES_DOMAIN }}`)
+      kind: Rule
+      middlewares:
+        - name: geoblock
+          namespace: base
+        - name: crowdsec-bouncer
+          namespace: base
+      services:
+        - name: ntfy
+          port: 3000
+  tls:
+    secretName: ntfy-prod-tls
+---
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-notification-ingress
+  namespace: base
+spec:
+  podSelector:
+    matchLabels:
+      app: ntfy
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              k8s-app: crowdsec
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: apps
+          podSelector:
+            matchLabels:
+              app: dscpln
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: apps
+          podSelector:
+            matchLabels:
+              app: logtfy
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: apps
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/component: mdscl
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: apps
+          podSelector:
+            matchLabels:
+              app: opencanary
+      ports:
+        - port: 3000
+  policyTypes:
+    - Ingress
+---
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ntfy
+  namespace: base
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: ntfy
+  template:
+    metadata:
+      labels:
+        app: ntfy
+    spec:
+      securityContext:
+        fsGroup: {{ .Values.MY_UID }}
+      containers:
+        - name: ntfy
+          image: binwiederhier/ntfy:v2.28.0
+          securityContext:
+            runAsUser: {{ .Values.MY_UID }}
+            runAsGroup: {{ .Values.MY_UID }}
+            allowPrivilegeEscalation: false
+          args: ["serve"]
+          env:
+            - name: NTFY_AUTH_USERS
+              valueFrom:
+                secretKeyRef:
+                  name: ntfy-auth
+                  key: auth-users
+            - name: NTFY_AUTH_TOKENS
+              valueFrom:
+                secretKeyRef:
+                  name: ntfy-auth
+                  key: auth-tokens
+            - name: NTFY_AUTH_ACCESS
+              valueFrom:
+                secretKeyRef:
+                  name: ntfy-auth
+                  key: auth-access
+          ports:
+            - containerPort: 3000
+          resources:
+            limits:
+              memory: 2Gi
+            requests:
+              memory: 128Mi
+          readinessProbe:
+            httpGet:
+              path: /v1/health
+              port: 3000
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+          volumeMounts:
+            - name: ntfy-data
+              mountPath: /home/ntfy
+            - name: ntfy-config
+              mountPath: /etc/ntfy
+              readOnly: true
+      volumes:
+        - name: ntfy-data
+          persistentVolumeClaim:
+            claimName: ntfy-pvc
+        - name: ntfy-config
+          secret:
+            secretName: ntfy-server-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ntfy
+  namespace: base
+spec:
+  selector:
+    app: ntfy
+  ports:
+    - protocol: TCP
+      port: 3000
+      targetPort: 3000
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: ntfy-pvc
+  namespace: base
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+  storageClassName: longhorn
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: ntfy-server-config
+  namespace: base
+type: Opaque
+stringData:
+  server.yml: |
+    base-url: "https://ntfy.{{ .Values.SERVICES_DOMAIN }}"
+    cache-file: "/home/ntfy/cache.db"
+    attachment-cache-dir: "/home/ntfy/attachments"
+    behind-proxy: true
+    listen-http: ":3000"
+    # auth-file required for auth-default-access to take effect.
+    auth-file: "/home/ntfy/user.db"
+    auth-default-access: deny-all
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: ntfy-auth
+  namespace: base
+type: Opaque
+stringData:
+  auth-users: "admin:{{ .Values.NTFY_ADMIN_PASSWORD_HASH }}:admin,service:{{ .Values.NTFY_WRITE_ONLY_ACCOUNT_PASSWORD_HASH }}:user"
+  auth-tokens: "service:{{ .Values.NTFY_WRITE_ONLY_ACCOUNT_TOKEN }}"
+  auth-access: "service:*:write-only"

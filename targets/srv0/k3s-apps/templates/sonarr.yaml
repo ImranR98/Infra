@@ -1,0 +1,159 @@
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: sonarr-prod-tls
+  namespace: apps
+spec:
+  secretName: sonarr-prod-tls
+  issuerRef:
+    name: letsencrypt-prod
+    kind: ClusterIssuer
+  dnsNames:
+    - sonarr.{{ .Values.SERVICES_DOMAIN }}
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: sonarr-ingress
+  namespace: apps
+spec:
+  entryPoints:
+    - websecure
+    - websecure-proxy
+  routes:
+    - match: Host(`sonarr.{{ .Values.SERVICES_DOMAIN }}`)
+      kind: Rule
+      middlewares:
+        - name: geoblock
+          namespace: base
+        - name: crowdsec-bouncer
+          namespace: base
+        - name: forwardauth-authelia
+          namespace: base
+      services:
+        - name: sonarr
+          port: 8989
+  tls:
+    secretName: sonarr-prod-tls
+---
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-sonarr-ingress
+  namespace: apps
+spec:
+  podSelector:
+    matchLabels:
+      app: sonarr
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: prowlarr
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/instance: seerr
+      ports:
+        - port: 8989
+  policyTypes:
+    - Ingress
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: sonarr-config-pvc
+  namespace: apps
+  labels:
+    auto-backup: "true"
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+  storageClassName: longhorn
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: sonarr-secret
+  namespace: apps
+type: Opaque
+stringData:
+  SONARR__AUTH__APIKEY: "{{ .Values.SONARR_API_KEY }}"
+---
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sonarr
+  namespace: apps
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: sonarr
+  template:
+    metadata:
+      labels:
+        app: sonarr
+    spec:
+      containers:
+        - name: sonarr
+          image: lscr.io/linuxserver/sonarr:latest@sha256:4d9df314875e1249ab7d6170c2b9b3dc1d8e6383f168ceb10dc9a5ad9b324739
+          securityContext:
+            allowPrivilegeEscalation: false
+          ports:
+            - containerPort: 8989
+          resources:
+            limits:
+              memory: 2Gi
+            requests:
+              memory: 128Mi
+          readinessProbe:
+            tcpSocket:
+              port: 8989
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+          env:
+            - name: PUID
+              value: "{{ .Values.MY_UID }}"
+            - name: PGID
+              value: "{{ .Values.MY_UID }}"
+            - name: TZ
+              value: "{{ .Values.TZ }}"
+            - name: SONARR__AUTH__APIKEY
+              valueFrom:
+                secretKeyRef:
+                  name: sonarr-secret
+                  key: SONARR__AUTH__APIKEY
+          volumeMounts:
+            - name: config
+              mountPath: /config
+            - name: data
+              mountPath: /data
+      volumes:
+        - name: config
+          persistentVolumeClaim:
+            claimName: sonarr-config-pvc
+        - name: data
+          persistentVolumeClaim:
+            claimName: arrstack-media-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: sonarr
+  namespace: apps
+spec:
+  type: ClusterIP
+  selector:
+    app: sonarr
+  ports:
+    - port: 8989
+      targetPort: 8989
