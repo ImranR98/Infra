@@ -16,8 +16,8 @@ source "$INFRA_ROOT/scripts/common.sh"
 usage() {
     echo "Usage: $(basename "$0") <frpc|crypt-ssh>   (run ON the node)"
     echo
-    echo "  frpc       initramfs frpc tunnels SSH via FRPS (needs the rendered mTLS"
-    echo "             certs and the compose env — see DESC header)"
+    echo "  frpc       initramfs frpc tunnels SSH via FRPS (needs the mTLS certs"
+    echo "             from config/<hostname>/frpc/ and the compose env — see DESC header)"
     echo "  crypt-ssh  dropbear SSH directly on the LAN (ethernet only)"
     exit 1
 }

@@ -1,8 +1,13 @@
 # shellcheck shell=bash
-# targets/srv0/pvc.sh — PVC backup/restore for the srv0 k3s cluster.
+# scripts/pvc.sh — PVC backup/restore for the K3s cluster.
 # Usage: pvc.sh backup <pvc-name> | backup --all [-y] | restore <pvc-name> | restore --all [-y]
 # The in-cluster pvc-backup CronJob runs `pvc.sh backup --all -y` (see
 # targets/srv0/k3s/templates/base/pvc-backup.yaml).
+
+if [ -z "${INFRA_ROOT:-}" ]; then
+    INFRA_ROOT="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd)"
+    export INFRA_ROOT
+fi
 source "$INFRA_ROOT/scripts/common.sh"
 
 # pvc_find_namespace <pvc-name> → namespace (stdout)
