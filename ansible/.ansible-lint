@@ -1,8 +1,0 @@
----
-# var-naming[no-role-prefix] is skipped on purpose: the k3s roles deliberately
-# share variables (k3s_role, k3s_amdgpu_mode, k3s_scheduling_discouraged,
-# k3s_longhorn_replicas, k3s_token) — they are the public interface of
-# k3s_server.yaml/k3s_join.yaml (extra vars) and the k3s_install/k3s_configure
-# roles.
-skip_list:
-  - var-naming[no-role-prefix]

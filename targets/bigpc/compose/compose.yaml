@@ -1,3 +1,5 @@
+name: bigpc
+
 x-logging: &logging
     options:
         max-size: 10m

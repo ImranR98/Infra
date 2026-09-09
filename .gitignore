@@ -10,6 +10,7 @@
 /temp
 /secrets/
 targets/*/compose/compose.private.yaml
+targets/*/compose/.env
 ~*
 **/__pycache__
 .venv/

@@ -17,7 +17,6 @@ The IaaC system for my homelab and other devices.
 ## Project Goals
 
 - **Infrastructure as Code**: Everything should be declarative and automated, using standard tooling wherever possible. Custom scripts should be minimal and only where necessary.
-- **Single CLI**: `infra` (a thin wrapper over `ansible-playbook`) is the entry point used for all deployment, update, and management tasks.
 - **Security**: As the codebase is public and the system runs public-facing services containing highly personal data, security must be taken seriously. To that end:
   - **[Authelia](https://www.authelia.com/) SSO** guards every service that needs it.
   - **[CrowdSec](https://www.crowdsec.net/) automated threat response** guards all public services.
@@ -32,23 +31,31 @@ The IaaC system for my homelab and other devices.
 ## Quick start
 
 ```bash
-# Install prerequisites (Docker, yq, jq, python3, go, ansible-core, helm)
-./infra prereqs
+# Install prerequisites (Docker, yq, jq, python3, go, helm)
+bash scripts/prereqs.sh
 
-# Create your variables file from the template (plain YAML, gitignored under secrets/ — no encryption)
-cp targets/<target>/VARS.template.yaml secrets/VARS.<target>.yaml   # then fill in real values
+# Create your variables from the template
+cp targets/<target>/VARS.template.yaml secrets/VARS.<target>.yaml # k3s targets
+cp targets/<target>/VARS.template.env secrets/VARS.<target>.env # compose targets
+# Other multi-line secrets + mTLS certs are real files under secrets/<target>/ (see the templates)
 
-# Validate your configuration (the target is explicit; <target> is e.g. srv0)
-./infra <target> validate
+# Validate your configuration
+bash scripts/validate.sh <target>
 
-# Deploy compose / k3s — compose ops must run ON the target machine;
-# helm ops target the machine whose k3s chart you mean
-./infra <target> compose-install
-./infra <target> helm base
-./infra <target> helm apps
+# Deploy k3s
+export KUBECONFIG="${KUBECONFIG:-/etc/rancher/k3s/k3s.yaml}" # helm doesn't find k3s's kubeconfig on its own
+helm upgrade --install srv0-base targets/srv0/k3s -n base --create-namespace \
+  -f targets/srv0/k3s/values.yaml -f secrets/VARS.srv0.yaml --set apps.enabled=false
+helm upgrade --install srv0-apps targets/srv0/k3s -n apps --create-namespace \
+  -f targets/srv0/k3s/values.yaml -f secrets/VARS.srv0.yaml --set base.enabled=false
+
+# Deploy compose
+docker compose --env-file secrets/VARS.<target>.env --env-file targets/<target>/compose/.env \
+  -f targets/<target>/compose/compose.yaml \
+  [-f targets/<target>/compose/compose.private.yaml] up -d --remove-orphans
 
 # Check for updates (opens Renovate PRs on GitHub) — machine-local
-./infra renovate
+bash scripts/renovate.sh
 ```
 
 ## More

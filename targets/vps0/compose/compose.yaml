@@ -1,3 +1,5 @@
+name: vps0
+
 x-logging: &logging
     options:
         max-size: 10m
@@ -20,6 +22,227 @@ x-socket-proxy: &socket-proxy
         retries: 2
     logging: *logging
 
+# Config files inlined so docker compose interpolates ${VARS} natively from
+# secrets/VARS.vps0.env (--env-file). Verbatim files live under ./files/,
+# mTLS certs as real 0600 files under ../../../secrets/vps0/frps/.
+configs:
+    authelia_configuration:
+        content: |
+            jwt_secret: '${AUTHELIA_JWT_SECRET}'
+
+            log:
+              level: debug
+
+            totp:
+              issuer: ${CLOUD_SERVICES_DOMAIN}
+
+            authentication_backend:
+              file:
+                path: /config/users_database.yml
+
+            access_control:
+              default_policy: 'deny'
+              # Admin catch-all below is two_factor (TOTP is Authelia's default second
+              # factor); explicit one_factor rules (ytdl/ikom/sale) intentionally stay 1FA.
+              rules:
+                - domain: auth.${CLOUD_SERVICES_DOMAIN}
+                  policy: bypass
+                - domain: ytdl.${CLOUD_SERVICES_DOMAIN}
+                  policy: one_factor
+                  subject:
+                  - 'group:family'
+                  - 'group:guests'
+                - domain: ikom.${CLOUD_SERVICES_DOMAIN}
+                  policy: one_factor
+                  subject:
+                  - 'group:family'
+                - domain: sale.${CLOUD_SERVICES_DOMAIN}
+                  policy: one_factor
+                  subject:
+                  - 'group:family'
+                - domain: '*.${CLOUD_SERVICES_DOMAIN}'
+                  policy: two_factor
+                  subject:
+                  - 'group:admins'
+
+            session:
+              secret: '${AUTHELIA_SESSION_SECRET}'
+              cookies:
+                - domain: ${CLOUD_SERVICES_DOMAIN}
+                  authelia_url: https://auth.${CLOUD_SERVICES_DOMAIN}
+
+              redis:
+                host: authelia-db
+                port: 6379
+
+            regulation:
+              max_retries: 3
+              find_time: 120
+              ban_time: 3600
+
+            storage:
+              encryption_key: '${AUTHELIA_DB_ENCRYPTION_KEY}'
+              local:
+                path: /config/db.sqlite3
+
+            notifier:
+              filesystem:
+                filename: /config/notification.txt
+
+    traefik_dynamic:
+        content: |
+            http:
+              middlewares:
+                authelia:
+                  forwardAuth:
+                    address: http://authelia:9091/api/verify?rd=https://auth.${CLOUD_SERVICES_DOMAIN}/
+                    maxResponseBodySize: 1048576
+                    trustForwardHeader: true
+                    authResponseHeaders:
+                      - Remote-User
+                      - Remote-Groups
+                      - Remote-Name
+                      - Remote-Email
+                geoblock:
+                  plugin:
+                    geoblock:
+                      silentStartUp: false
+                      allowLocalRequests: true
+                      logLocalRequests: false
+                      logAllowedRequests: true
+                      logApiRequests: true
+                      api: "https://get.geojs.io/v1/ip/country/{ip}"
+                      apiTimeoutMs: 750
+                      cacheSize: 15
+                      forceMonthlyUpdate: true
+                      allowUnknownCountries: false
+                      unknownCountryApiResponse: "nil"
+                      blackListMode: false
+                      countries:
+                        - CA
+                        - TZ
+                        - US
+                        - GB
+                crowdsec-bouncer:
+                  plugin:
+                    crowdsec-bouncer-traefik-plugin:
+                      enabled: true
+                      logLevel: INFO
+                      crowdsecMode: stream
+                      crowdsecLapiScheme: http
+                      crowdsecLapiHost: crowdsec:8080
+                      crowdsecLapiKey: ${CROWDSEC_BOUNCER_KEY}
+                      crowdsecappsecenabled: true
+                      crowdsecAppsecScheme: http
+                      crowdsecAppsecHost: crowdsec:7422
+                      crowdsecAppsecPath: "/"
+                      forwardedheaderstrustedips: "127.0.0.1/32"
+              routers:
+                http-to-frps:
+                  rule: "Host(`home.${BASE_SERVICES_DOMAIN}`) || Host(`*.home.${BASE_SERVICES_DOMAIN}`)"
+                  entryPoints: [web]
+                  service: http-frps
+                  priority: 100
+              services:
+                http-frps:
+                  loadBalancer:
+                    servers:
+                      - url: "http://frps:8080"
+
+            tcp:
+              serversTransports:
+                frps-proxy:
+                  proxyProtocol:
+                    version: 2
+              routers:
+                https-to-frps:
+                  rule: "HostSNI(`home.${BASE_SERVICES_DOMAIN}`) || HostSNI(`*.home.${BASE_SERVICES_DOMAIN}`)"
+                  entryPoints: [websecure]
+                  service: https-frps
+                  tls:
+                    passthrough: true
+              services:
+                https-frps:
+                  loadBalancer:
+                    serversTransport: frps-proxy
+                    servers:
+                      - address: "frps:8443"
+
+    crowdsec_http_notifications:
+        content: |
+            type: http
+            name: http_default
+            log_level: debug
+            format: |
+              {{.|toJson}}
+            url: https://ntfy.home.${BASE_SERVICES_DOMAIN}/${TARGET}_services_crowdsec
+            method: POST
+            headers:
+              Authorization: Bearer ${NTFY_WRITE_ONLY_ACCOUNT_TOKEN}
+              Title: CrowdSec on ${TARGET}
+              Priority: min
+
+    crowdsec_plausible_whitelist:
+        content: |
+            name: imranr/plausible
+            description: "Whitelist for Plausible"
+            whitelist:
+              reason: "Plausible is a SPA: the dashboard fetches the stats API in bursts, tripping crawl scenarios"
+              expression:
+                - evt.Meta.target_fqdn == 'plausible.${BASE_SERVICES_DOMAIN}'
+                - evt.Overflow.Alert.GetScenario() in ['crowdsecurity/http-probing', 'crowdsecurity/http-crawl-non_statics']
+                - evt.Meta.http_verb == 'GET'
+                - evt.Meta.http_path matches '^/api/.+'
+
+    logtfy_config:
+        content: |
+            {
+                "ntfyConfig": {
+                    "configs": [
+                        {
+                            "id": "ntfy_home",
+                            "host": "https://ntfy.home.${BASE_SERVICES_DOMAIN}",
+                            "authHeader": "Bearer ${NTFY_WRITE_ONLY_ACCOUNT_TOKEN}",
+                            "topicPrefix": "${TARGET}_services_"
+                        },
+                        {
+                            "id": "ntfy_official",
+                            "host": "https://ntfy.sh",
+                            "authHeader": null,
+                            "topicPrefix": "${NTFY_FALLBACK_TOPIC}"
+                        }
+                    ],
+                    "defaultConfig": "ntfy_home",
+                    "fallbackConfig": "ntfy_official"
+                },
+                "modulesEnabledByDefault": false,
+                "moduleCustomization": [
+                    {
+                        "module": "ssh_logins",
+                        "ntfyTopic": "logtfy",
+                        "enabled": true,
+                        "loggerArg": "ssh"
+                    },
+                    {
+                        "module": "authelia_logins",
+                        "ntfyTopic": "logtfy",
+                        "enabled": true
+                    },
+                    {
+                        "module": "generic_logs",
+                        "moduleInstances": [
+                            {
+                                "name": "frps_ssh_preboot",
+                                "enabled": true,
+                                "loggerArg": "frps stderr2stdout",
+                                "parserArg": "{\"regex\":\"\\\\[ssh-preboot\\\\] get a user connection\",\"title\":\"FRP: SSH preboot connection\",\"message\":\"New connection to the ssh-preboot tunnel:\"}",
+                                "ntfyTopic": "logtfy"
+                            }
+                        ]
+                    }
+                ]
+            }
+
 services:
     # FRP server - reverse proxy tunnel for home server
     frps:
@@ -27,10 +250,10 @@ services:
         container_name: frps
         restart: always
         volumes:
-          - $COMPOSE_STATE_DIR/frps/frps.toml:/frps.toml:ro
-          - $COMPOSE_STATE_DIR/frps/server.crt:/etc/frp/server.crt:ro
-          - $COMPOSE_STATE_DIR/frps/server.key:/etc/frp/server.key:ro
-          - $COMPOSE_STATE_DIR/frps/ca.crt:/etc/frp/ca.crt:ro
+          - ./files/frps/frps.toml:/frps.toml:ro
+          - ../../../secrets/vps0/frps/server.crt:/etc/frp/server.crt:ro
+          - ../../../secrets/vps0/frps/server.key:/etc/frp/server.key:ro
+          - ../../../secrets/vps0/frps/ca.crt:/etc/frp/ca.crt:ro
         ports:
             - "7000:7000"
             - "8887:8887"
@@ -75,7 +298,12 @@ services:
             authelia-db:
                 condition: service_healthy
         volumes:
-            - $COMPOSE_STATE_DIR/authelia/config:/config
+            - ../../../current_target/compose_live_state/authelia/config:/config
+            - ../../../secrets/vps0/authelia/users_database.yml:/config/users_database.yml:ro
+        configs:
+          - source: authelia_configuration
+            target: /config/configuration.yml
+            mode: 0400
         networks:
             - traefik
         labels:
@@ -102,7 +330,7 @@ services:
         container_name: authelia-db
         user: "$MY_UID:$MY_UID"
         volumes:
-            - $COMPOSE_STATE_DIR/authelia/db:/data
+            - ../../../current_target/compose_live_state/authelia/db:/data
         networks:
             - traefik
         expose:
@@ -157,10 +385,13 @@ services:
             - "443:443"
             - "1935:1935"
         volumes:
-            - $COMPOSE_STATE_DIR/traefik/acme:/acme
-            - $COMPOSE_STATE_DIR/traefik/dynamic-configuration.yaml:/etc/traefik/dynamic-configuration.yaml
-            - $COMPOSE_STATE_DIR/traefik/logs:/var/log/traefik/
+            - ../../../current_target/compose_live_state/traefik/acme:/acme
+            - ../../../current_target/compose_live_state/traefik/logs:/var/log/traefik/
             - dockerproxy:/socket/:ro
+        configs:
+          - source: traefik_dynamic
+            target: /etc/traefik/dynamic-configuration.yaml
+            mode: 0440
         labels:
             - "traefik.enable=true"
             - "traefik.http.routers.traefik-dashboard.rule=Host(`traefik.$CLOUD_SERVICES_DOMAIN`)"
@@ -197,14 +428,19 @@ services:
             - CUSTOM_HOSTNAME=crowdsec
             - BOUNCER_KEY_TRAEFIK=$CROWDSEC_BOUNCER_KEY
         volumes:
-            - $COMPOSE_STATE_DIR/crowdsec/config:/etc/crowdsec
-            - $COMPOSE_STATE_DIR/crowdsec/data:/var/lib/crowdsec/data
-            - $COMPOSE_STATE_DIR/traefik/logs:/var/log/traefik:ro
-            - $COMPOSE_STATE_DIR/crowdsec/acquis.yaml:/etc/crowdsec/acquis.yaml:ro
-            - $COMPOSE_STATE_DIR/crowdsec/profiles.yaml:/etc/crowdsec/profiles.yaml:ro
-            - $COMPOSE_STATE_DIR/crowdsec/notifications/http.yaml:/etc/crowdsec/notifications/http.yaml:ro
-            - $COMPOSE_STATE_DIR/crowdsec/postoverflows/s01-whitelist/internal.yaml:/etc/crowdsec/postoverflows/s01-whitelist/internal.yaml:ro
-            - $COMPOSE_STATE_DIR/crowdsec/postoverflows/s01-whitelist/plausible.yaml:/etc/crowdsec/postoverflows/s01-whitelist/plausible.yaml:ro
+            - ../../../current_target/compose_live_state/crowdsec/config:/etc/crowdsec
+            - ../../../current_target/compose_live_state/crowdsec/data:/var/lib/crowdsec/data
+            - ../../../current_target/compose_live_state/traefik/logs:/var/log/traefik:ro
+            - ./files/crowdsec/acquis.yaml:/etc/crowdsec/acquis.yaml:ro
+            - ./files/crowdsec/profiles.yaml:/etc/crowdsec/profiles.yaml:ro
+            - ./files/crowdsec/postoverflows/s01-whitelist/internal.yaml:/etc/crowdsec/postoverflows/s01-whitelist/internal.yaml:ro
+        configs:
+          - source: crowdsec_http_notifications
+            target: /etc/crowdsec/notifications/http.yaml
+            mode: 0400
+          - source: crowdsec_plausible_whitelist
+            target: /etc/crowdsec/postoverflows/s01-whitelist/plausible.yaml
+            mode: 0440
         logging: *logging
 
     # Plausible - Web Analytics
@@ -215,7 +451,7 @@ services:
         restart: unless-stopped
         mem_limit: 8G
         volumes:
-            - $COMPOSE_STATE_DIR/plausible/db:/var/lib/postgresql/data
+            - ../../../current_target/compose_live_state/plausible/db:/var/lib/postgresql/data
         environment:
             - POSTGRES_PASSWORD=$PLAUSIBLE_DB_PASSWORD
         healthcheck:
@@ -232,9 +468,9 @@ services:
         networks:
             - traefik
         volumes:
-            - $COMPOSE_STATE_DIR/plausible/event_data:/var/lib/clickhouse
-            - $COMPOSE_STATE_DIR/plausible/event_logs:/var/log/clickhouse-server
-            - $COMPOSE_STATE_DIR/plausible/config/clickhouse-config.xml:/etc/clickhouse-server/config.d/clickhouse-config.xml:ro
+            - ../../../current_target/compose_live_state/plausible/event_data:/var/lib/clickhouse
+            - ../../../current_target/compose_live_state/plausible/event_logs:/var/log/clickhouse-server
+            - ./files/plausible/clickhouse-config.xml:/etc/clickhouse-server/config.d/clickhouse-config.xml:ro
         environment:
             - CLICKHOUSE_SKIP_USER_SETUP=1
         ulimits:
@@ -261,7 +497,7 @@ services:
         security_opt:
             - no-new-privileges
         volumes:
-            - $COMPOSE_STATE_DIR/plausible/data:/var/lib/plausible
+            - ../../../current_target/compose_live_state/plausible/data:/var/lib/plausible
         command: chown -R 999:999 /var/lib/plausible
     plausible:
         image: ghcr.io/plausible/community-edition:v3
@@ -281,7 +517,7 @@ services:
         networks:
             - traefik
         volumes:
-            - $COMPOSE_STATE_DIR/plausible/data:/var/lib/plausible
+            - ../../../current_target/compose_live_state/plausible/data:/var/lib/plausible
         ulimits:
             nofile:
                 soft: 65535
@@ -353,7 +589,7 @@ services:
         image: ghcr.io/alexta69/metube:latest@sha256:397778fccf13d83adf9325fe813b260617a082d1772aff6d678c5b9256dd01fb
         container_name: metube
         volumes:
-            - $COMPOSE_STATE_DIR/metube:/downloads
+            - ../../../current_target/compose_live_state/metube:/downloads
         networks:
             - traefik
         depends_on:
@@ -413,7 +649,7 @@ services:
             - 'traefik.http.middlewares.ikom-redirect-rewrite.redirectregex.permanent=true'
             - "traefik.http.services.ikom.loadbalancer.server.port=3000"
         volumes:
-            - "$COMPOSE_STATE_DIR/ikom:/app/data"
+            - "../../../current_target/compose_live_state/ikom:/app/data"
         networks:
             - traefik
         restart: unless-stopped
@@ -429,7 +665,7 @@ services:
         depends_on:
             - traefik
         volumes:
-            - $COMPOSE_STATE_DIR/cct26:/app/data
+            - ../../../current_target/compose_live_state/cct26:/app/data
         environment:
             - REDDIT_COOKIE=$CCT26_REDDIT_COOKIE
             - LLM_BASE_URL=$CCT26_LLM_BASE_URL
@@ -458,7 +694,7 @@ services:
         depends_on:
             - traefik
         volumes:
-            - $COMPOSE_STATE_DIR/attentiongame:/app/stories/private
+            - ../../../current_target/compose_live_state/attentiongame:/app/stories/private
         labels:
             - "traefik.enable=true"
             - "traefik.http.routers.attentiongame.rule=Host(`attentiongame.$CLOUD_SERVICES_DOMAIN`)"
@@ -495,8 +731,8 @@ services:
             - PICKUP_TEXT=$MOVING_SALE_PICKUP_TEXT
             - PLAUSIBLE_SCRIPT=$MOVING_SALE_PLAUSIBLE_SCRIPT_URL
         volumes:
-            - $COMPOSE_STATE_DIR/moving-sale/data:/app/data
-            - $COMPOSE_STATE_DIR/moving-sale/uploads:/app/uploads
+            - ../../../current_target/compose_live_state/moving-sale/data:/app/data
+            - ../../../current_target/compose_live_state/moving-sale/uploads:/app/uploads
         networks:
             - traefik
         restart: unless-stopped
@@ -513,7 +749,7 @@ services:
         environment:
             - OWNCAST_ACCESS_TOKEN=$OWNCAST_ACCESS_TOKEN
         volumes:
-            - $COMPOSE_STATE_DIR/owncast-auth/auth.py:/app/auth.py:ro
+            - ./files/owncast-auth/auth.py:/app/auth.py:ro
         networks:
             - traefik
         logging: *logging
@@ -527,7 +763,7 @@ services:
         depends_on:
             - traefik
         volumes:
-            - $COMPOSE_STATE_DIR/owncast:/app/data
+            - ../../../current_target/compose_live_state/owncast:/app/data
         labels:
             - "traefik.enable=true"
             - "traefik.http.routers.owncast.rule=Host(`owncast.$CLOUD_SERVICES_DOMAIN`)"
@@ -557,9 +793,12 @@ services:
         depends_on:
             - dockerproxy
         volumes:
-            - $COMPOSE_STATE_DIR/logtfy/config.json:/logtfy/config.json:ro
             - /var/log/journal:/var/log/journal:ro
             - dockerproxy:/socket/:ro
+        configs:
+          - source: logtfy_config
+            target: /logtfy/config.json
+            mode: 0400
         environment:
             - DOCKER_HOST=unix:///socket/docker.sock
         logging: *logging
@@ -616,7 +855,7 @@ services:
         user: "$MY_UID:$MY_UID"
         mem_limit: 2G
         volumes:
-            - $COMPOSE_STATE_DIR/shlink/db:/var/lib/postgresql/data
+            - ../../../current_target/compose_live_state/shlink/db:/var/lib/postgresql/data
         environment:
             - POSTGRES_PASSWORD=$SHLINK_DB_PASSWORD
         healthcheck:
@@ -689,7 +928,7 @@ services:
             - PUID=$MY_UID
             - PGID=$MY_UID
         volumes:
-            - $COMPOSE_STATE_DIR/uptime:/app/data/
+            - ../../../current_target/compose_live_state/uptime:/app/data/
         labels:
             - "traefik.enable=true"
             - "traefik.http.routers.uptime.rule=Host(`uptime.$CLOUD_SERVICES_DOMAIN`)"

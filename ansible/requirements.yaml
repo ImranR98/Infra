@@ -1,9 +1,0 @@
----
-collections:
-  - name: ansible.posix
-    version: ">=1.5.0"
-  - name: community.general
-    version: ">=9.0.0"
-roles:
-  - name: githubixx.ansible_role_wireguard
-    version: 19.2.0
