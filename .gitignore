@@ -1,14 +1,10 @@
 /current_target/
 /compose_state_backups/
 /k3s_state_backups/
-/VARS.sh
-/VARS.*.sh
-/VARS.env
-/VARS.*.env
 /state/
 /vars/
 /temp
-/secrets/
+/config/
 targets/*/compose/compose.private.yaml
 targets/*/compose/.env
 ~*

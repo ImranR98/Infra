@@ -82,9 +82,9 @@ if [ -d "$target_dir/compose" ] && [ -f "$target_dir/compose/compose.yaml" ]; th
     chmod 600 "$target_dir/compose/.env"
     echo "==> Wrote machine-fact env: $target_dir/compose/.env"
     env_args+=(--env-file "$target_dir/compose/.env")
-    # VARS-driven targets take the shared secrets env too (later file wins —
+    # VARS-driven targets take the shared config env too (later file wins —
     # facts would override any collision, which is the point).
-    [ -f "$INFRA_ROOT/secrets/VARS.$local_target.env" ] && env_args=(--env-file "$INFRA_ROOT/secrets/VARS.$local_target.env" "${env_args[@]}")
+    [ -f "$INFRA_ROOT/config/$local_target/compose.env" ] && env_args=(--env-file "$INFRA_ROOT/config/$local_target/compose.env" "${env_args[@]}")
 
     echo "==> Resolving compose host bind dirs"
     # Host bind dirs come from `docker compose config` itself (the interpolated,

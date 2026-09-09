@@ -1,12 +1,13 @@
-# ====== VARS template for srv0 ======
+# ====== values.yaml template for srv0 ======
 # Documented variables + generation commands. The actual values live in ONE
 # gitignored file per target:
-#   - secrets/VARS.srv0.yaml — plain YAML consumed ONLY by the k3s umbrella
-#     chart (helm upgrade -f). Copy this template to secrets/, replace
-#     placeholders, done — no encryption, the file is gitignored (see AGENTS.md).
-#   - The compose sidecar (frpc) has its own inputs: secrets/VARS.srv0.env
-#     (dotenv) + the mTLS cert files under secrets/srv0/frpc/ — see the
-#     FRP section below.
+#   - config/srv0/values.yaml — plain YAML consumed ONLY by the k3s umbrella
+#     chart (helm upgrade -f). Copy this template folder
+#     (targets/srv0/config_template/) to config/srv0/, replace placeholders,
+#     done — no encryption, config/ is gitignored (see AGENTS.md).
+#   - The compose sidecar (frpc) has its own inputs in the same folder:
+#     compose.env (dotenv: PROXY_HOST, TLS_SERVER_NAME) + the mTLS cert files
+#     under config_template/frpc/ — see the FRP section below.
 # Placeholders (change_me / changeme / abc / REPLACE_ME / <...>) are rejected
 # on deploy. Multi-line values are literal block scalars (|); bare $ and #
 # inside scalars are literal; there are NO ${NAME} references (values are
@@ -270,17 +271,17 @@ NEXTCLOUD_ADMIN_PASSWORD: "change_me" # openssl rand -hex 16
 NEXTCLOUD_DB_PASSWORD: "change_me" # openssl rand -hex 16
 
 # ====== FRP ======
-# The FRP vars are NOT in this file anymore — they are compose-only (the k3s
-# chart never uses them):
-#   - secrets/VARS.srv0.env (dotenv, passed with `docker compose --env-file`):
+# The FRP vars are NOT in this file — they are compose-only (the k3s chart
+# never uses them). They live in this same template folder:
+#   - config_template/compose.env (dotenv, passed with `docker compose --env-file`):
 #       PROXY_HOST=<frps server hostname>
 #       TLS_SERVER_NAME=<frps TLS server name (matches its cert CN)>
-#   - secrets/srv0/frpc/ — the per-pair mTLS CA + client certs as real 0600
+#   - config_template/frpc/ — the per-pair mTLS CA + client certs as real 0600
 #     files (mounted read-only by the compose stack and read by scripts/preboot.sh):
 #     ca.crt, ca.key (rotation material, not mounted), client.crt, client.key,
 #     preboot-client.crt, preboot-client.key
 # Generate with openssl (once per pair, on either machine; save the output
-# directly into secrets/srv0/frpc/):
+# directly into config/srv0/frpc/):
 #   # CA
 #   openssl req -x509 -newkey rsa:4096 -keyout ca.key -out ca.crt -days 3650 -nodes -subj "/CN=infra-mtls-ca"
 #   # client (srv0)

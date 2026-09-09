@@ -23,8 +23,8 @@ x-socket-proxy: &socket-proxy
     logging: *logging
 
 # Config files inlined so docker compose interpolates ${VARS} natively from
-# secrets/VARS.vps0.env (--env-file). Verbatim files live under ./files/,
-# mTLS certs as real 0600 files under ../../../secrets/vps0/frps/.
+# config/vps0/compose.env (--env-file). Verbatim files live under ./files/,
+# mTLS certs as real 0600 files under ../../../config/vps0/frps/.
 configs:
     authelia_configuration:
         content: |
@@ -251,9 +251,9 @@ services:
         restart: always
         volumes:
           - ./files/frps/frps.toml:/frps.toml:ro
-          - ../../../secrets/vps0/frps/server.crt:/etc/frp/server.crt:ro
-          - ../../../secrets/vps0/frps/server.key:/etc/frp/server.key:ro
-          - ../../../secrets/vps0/frps/ca.crt:/etc/frp/ca.crt:ro
+          - ../../../config/vps0/frps/server.crt:/etc/frp/server.crt:ro
+          - ../../../config/vps0/frps/server.key:/etc/frp/server.key:ro
+          - ../../../config/vps0/frps/ca.crt:/etc/frp/ca.crt:ro
         ports:
             - "7000:7000"
             - "8887:8887"
@@ -299,7 +299,7 @@ services:
                 condition: service_healthy
         volumes:
             - ../../../current_target/compose_live_state/authelia/config:/config
-            - ../../../secrets/vps0/authelia/users_database.yml:/config/users_database.yml:ro
+            - ../../../config/vps0/authelia/users_database.yml:/config/users_database.yml:ro
         configs:
           - source: authelia_configuration
             target: /config/configuration.yml

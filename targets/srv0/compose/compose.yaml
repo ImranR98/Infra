@@ -6,8 +6,8 @@ x-logging: &logging
         max-file: 5
 
 # frpc.toml is inlined as a compose config so docker compose interpolates
-# ${PROXY_HOST}/${TLS_SERVER_NAME} natively (secrets/VARS.srv0.env via
-# --env-file). The mTLS certs are real 0600 files under secrets/srv0/frpc/.
+# ${PROXY_HOST}/${TLS_SERVER_NAME} natively (config/srv0/compose.env via
+# --env-file). The mTLS certs are real 0600 files under config/srv0/frpc/.
 configs:
     frpc_toml:
         content: |
@@ -65,9 +65,9 @@ services:
         container_name: frpc
         restart: always
         volumes:
-          - ../../../secrets/srv0/frpc/ca.crt:/etc/frp/ca.crt:ro
-          - ../../../secrets/srv0/frpc/client.crt:/etc/frp/client.crt:ro
-          - ../../../secrets/srv0/frpc/client.key:/etc/frp/client.key:ro
+          - ../../../config/srv0/frpc/ca.crt:/etc/frp/ca.crt:ro
+          - ../../../config/srv0/frpc/client.crt:/etc/frp/client.crt:ro
+          - ../../../config/srv0/frpc/client.key:/etc/frp/client.key:ro
         configs:
           - source: frpc_toml
             target: /frpc.toml
