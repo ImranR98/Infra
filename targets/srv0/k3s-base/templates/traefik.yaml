@@ -275,15 +275,16 @@ spec:
           kind: TraefikService
 ---
 # Local WASM plugin (authelia-header-gate), loaded via --experimental.localplugins.
-# Kustomize used configMapGenerator (binaryData for the wasm); Helm ships the
-# files via charts/srv0/files/ and .Files.Get. Keys keep their original names.
+# The manifest key MUST stay .traefik.yml: Traefik hardcodes that filename for
+# local plugins (app-contract, like authelia's configuration.yml) and aborts
+# startup on a missing manifest under --experimental.abortonpluginfailure.
 apiVersion: v1
 kind: ConfigMap
 metadata:
   name: traefik-local-plugins
   namespace: kube-system
 data:
-  .traefik.yaml: |
+  .traefik.yml: |
     {{- .Files.Get "files/traefik-plugin-config.yaml" | nindent 4 }}
 binaryData:
   plugin.wasm: {{ .Files.Get "files/plugin.wasm" | b64enc }}

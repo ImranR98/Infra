@@ -1,13 +1,13 @@
 #!/bin/bash
-# Regenerate plugin.wasm (and refresh targets/srv0/k3s/files/plugin.wasm +
+# Regenerate plugin.wasm (and refresh targets/srv0/k3s-base/files/plugin.wasm +
 # traefik-plugin-config.yaml, which the chart ships via .Files.Get).
 # Requires tinygo: https://tinygo.org/getting-started/install/
 set -euo pipefail
 
 PLUGIN_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
-INFRA_ROOT="${INFRA_ROOT:-$(cd "$PLUGIN_DIR/../../.." >/dev/null 2>&1 && pwd)}"
+INFRA_ROOT="${INFRA_ROOT:-$(cd "$PLUGIN_DIR/../../../../.." >/dev/null 2>&1 && pwd)}"
 
 cd "$PLUGIN_DIR"
 tinygo build -buildmode=c-shared -o plugin.wasm -scheduler=none --no-debug -target=wasi .
-cp plugin.wasm "$INFRA_ROOT/targets/srv0/k3s/files/plugin.wasm"
-cp .traefik.yaml "$INFRA_ROOT/targets/srv0/k3s/files/traefik-plugin-config.yaml"
+cp plugin.wasm "$INFRA_ROOT/targets/srv0/k3s-base/files/plugin.wasm"
+cp .traefik.yml "$INFRA_ROOT/targets/srv0/k3s-base/files/traefik-plugin-config.yaml"
