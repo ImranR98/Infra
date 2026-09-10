@@ -36,7 +36,7 @@ echo "==> Writing server config"
 $SU mkdir -p /etc/rancher/k3s
 $SU tee /etc/rancher/k3s/config.yaml >/dev/null <<EOF
 selinux: true
-write-kubeconfig-mode: "0640"
+write-kubeconfig-mode: "0600"
 flannel-backend: wireguard-native
 flannel-iface-regex: "^(eth|ens|enp|eno|enx|wlan|wlp|wlo|bond|ib)"
 cluster-init: true
@@ -58,16 +58,17 @@ for _ in $(seq 1 60); do
 done
 [ -f /var/lib/rancher/k3s/server/token ] || { echo "Error: k3s server token never appeared" >&2; exit 1; }
 
-export KUBECONFIG="${KUBECONFIG:-/etc/rancher/k3s/k3s.yaml}"
+# The kubeconfig is root-only — run the cluster calls as root.
+kubectl_bin="$(command -v kubectl)" || { echo "Error: kubectl not found" >&2; exit 1; }
 for _ in $(seq 1 24); do
-    kubectl get nodes >/dev/null 2>&1 && break
+    $SU "$kubectl_bin" get nodes >/dev/null 2>&1 && break
     sleep 5
 done
-kubectl get nodes >/dev/null 2>&1 || { echo "Error: Kubernetes API never became reachable" >&2; exit 1; }
+$SU "$kubectl_bin" get nodes >/dev/null 2>&1 || { echo "Error: Kubernetes API never became reachable" >&2; exit 1; }
 
 echo "==> Node labels"
-kubectl patch node "$(hostname)" --type=merge \
+$SU "$kubectl_bin" patch node "$(hostname)" --type=merge \
     -p '{"metadata":{"labels":{"node.longhorn.io/create-default-disk":"true"}}}'
-kubectl label node "$(hostname)" has-homeassistant-hardware=true --overwrite
+$SU "$kubectl_bin" label node "$(hostname)" has-homeassistant-hardware=true --overwrite
 
 echo "k3s-server: control plane ready."

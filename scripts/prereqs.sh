@@ -28,11 +28,11 @@ usage() {
 
 if command -v dnf >/dev/null 2>&1; then
     PKG_CMD=(dnf install -y)
-    PACKAGES=(yq jq curl python3 golang openssl shellcheck yamllint git)
+    PACKAGES=(yq jq curl python3 golang openssl shellcheck yamllint git acl)
 elif command -v apt-get >/dev/null 2>&1; then
     $SU apt-get update -y
     PKG_CMD=(apt-get install -y)
-    PACKAGES=(yq jq curl python3 golang-go openssl shellcheck yamllint git)
+    PACKAGES=(yq jq curl python3 golang-go openssl shellcheck yamllint git acl)
 else
     echo "Error: neither dnf nor apt-get found — cannot install packages" >&2
     exit 1
