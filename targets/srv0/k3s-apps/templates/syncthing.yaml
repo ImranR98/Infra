@@ -61,9 +61,10 @@ spec:
               value: "127.0.0.1:8384"
           resources:
             limits:
-              memory: 8Gi
+              memory: 4Gi
             requests:
-              memory: 128Mi
+              memory: 2Gi
+              cpu: 100m
           readinessProbe:
             # A TCP probe against the TLS listener made kubelet open and drop
             # a connection every 30s, which Syncthing logged as "Failed TLS

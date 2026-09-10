@@ -25,9 +25,10 @@ spec:
         value: {{ .Values.TZ }}
     resources:
       requests:
-        memory: 128Mi
+        memory: 256Mi
+        cpu: 20m
       limits:
-        memory: 2Gi
+        memory: 1Gi
     podSecurityContext:
       runAsUser: {{ .Values.MY_UID }}
       runAsGroup: {{ .Values.MY_UID }}

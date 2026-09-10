@@ -40,9 +40,9 @@ spec:
             initialDelaySeconds: 10
           resources:
             limits:
-              memory: 2Gi
-            requests:
               memory: 128Mi
+            requests:
+              memory: 32Mi
           volumeMounts:
             - name: mosquitto-data
               mountPath: /mosquitto/data

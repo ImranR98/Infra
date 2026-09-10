@@ -59,10 +59,11 @@ spec:
               # leaks into valkey/ML). The DRI grant is for VAAPI transcoding.
               resources:
                 limits:
-                  memory: 8Gi
+                  memory: 4Gi
                   infra.local/dri: "1"
                 requests:
-                  memory: 128Mi
+                  memory: 1.5Gi
+                  cpu: 20m
                   infra.local/dri: "1"
               env:
                 HWACCEL_VAAPI_ENABLED: "true"
@@ -86,10 +87,11 @@ spec:
                 allowPrivilegeEscalation: false
               resources:
                 limits:
-                  memory: 8Gi
+                  memory: 6Gi
                   infra.local/dri: "1"
                 requests:
-                  memory: 128Mi
+                  memory: 384Mi
+                  cpu: 20m
                   infra.local/dri: "1"
       defaultPodOptions:
         nodeSelector:
@@ -119,9 +121,9 @@ spec:
               # into valkey; override with the small tier (no device).
               resources:
                 limits:
-                  memory: 512Mi
+                  memory: 256Mi
                 requests:
-                  memory: 128Mi
+                  memory: 64Mi
       enabled: true
 ---
 ---

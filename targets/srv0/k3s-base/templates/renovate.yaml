@@ -36,7 +36,8 @@ spec:
                 limits:
                   memory: 2Gi
                 requests:
-                  memory: 128Mi
+                  memory: 768Mi
+                  cpu: 100m
               command:
                 - bash
                 - -c

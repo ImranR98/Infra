@@ -25,9 +25,9 @@ spec:
             - containerPort: 8191
           resources:
             limits:
-              memory: 2Gi
+              memory: 1.5Gi
             requests:
-              memory: 128Mi
+              memory: 256Mi
           readinessProbe:
             tcpSocket:
               port: 8191

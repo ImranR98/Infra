@@ -217,6 +217,12 @@ $tolerations
   containers:
   - name: backup
     image: debian:bookworm-slim
+    resources:
+      limits:
+        memory: 512Mi
+      requests:
+        memory: 128Mi
+        cpu: 50m
     command:
     - sh
     - -c
@@ -286,6 +292,12 @@ spec:
       seLinuxOptions:
         type: spc_t
         level: s0
+    resources:
+      limits:
+        memory: 512Mi
+      requests:
+        memory: 128Mi
+        cpu: 50m
     command:
     - sh
     - -c

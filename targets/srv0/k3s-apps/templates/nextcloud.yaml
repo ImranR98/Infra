@@ -150,9 +150,10 @@ spec:
               mountPath: /var/www/html
           resources:
             limits:
-              memory: 2Gi
+              memory: 1Gi
             requests:
-              memory: 128Mi
+              memory: 256Mi
+              cpu: 20m
       volumes:
         - name: nextcloud-data
           persistentVolumeClaim:
@@ -294,9 +295,9 @@ spec:
               mountPath: /var/lib/postgresql/data
           resources:
             limits:
-              memory: 2Gi
+              memory: 256Mi
             requests:
-              memory: 128Mi
+              memory: 64Mi
       volumes:
         - name: data
           persistentVolumeClaim:

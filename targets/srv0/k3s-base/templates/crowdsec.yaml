@@ -23,6 +23,13 @@ spec:
 
     appsec:
       enabled: true
+      resources:
+        limits:
+          memory: 256Mi
+          cpu: 500m
+        requests:
+          memory: 64Mi
+          cpu: 50m
       acquisitions:
         - source: appsec
           listen_addr: "0.0.0.0:7422"
@@ -51,9 +58,11 @@ spec:
     agent:
       resources:
         limits:
-          memory: 2Gi
+          memory: 1Gi
+          cpu: 500m
         requests:
-          memory: 128Mi
+          memory: 192Mi
+          cpu: 50m
       podSecurityContext:
         fsGroup: {{ .Values.MY_UID }}
         seLinuxOptions:
@@ -103,9 +112,11 @@ spec:
       replicas: 1
       resources:
         limits:
-          memory: 2Gi
+          memory: 512Mi
+          cpu: 500m
         requests:
           memory: 128Mi
+          cpu: 50m
       podSecurityContext:
         fsGroup: {{ .Values.MY_UID }}
       containerSecurityContext:

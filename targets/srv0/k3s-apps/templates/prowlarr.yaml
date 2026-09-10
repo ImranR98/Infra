@@ -111,9 +111,10 @@ spec:
             - containerPort: 9696
           resources:
             limits:
-              memory: 2Gi
+              memory: 1Gi
             requests:
-              memory: 128Mi
+              memory: 256Mi
+              cpu: 20m
           readinessProbe:
             tcpSocket:
               port: 9696

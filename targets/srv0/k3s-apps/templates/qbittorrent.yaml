@@ -151,9 +151,9 @@ spec:
               protocol: UDP
           resources:
             limits:
-              memory: 2Gi
+              memory: 256Mi
             requests:
-              memory: 128Mi
+              memory: 64Mi
           readinessProbe:
             tcpSocket:
               port: 8080

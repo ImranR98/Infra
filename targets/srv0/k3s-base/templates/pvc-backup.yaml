@@ -30,6 +30,12 @@ spec:
               image: bitnami/kubectl:latest@sha256:b29d8c1665b70817259ceecaea16ab27aab6368b48daf485d19436c809067492
               securityContext:
                 allowPrivilegeEscalation: false
+              resources:
+                limits:
+                  memory: 512Mi
+                requests:
+                  memory: 128Mi
+                  cpu: 20m
               env:
                 - name: INFRA_ROOT
                   value: "{{ .Values.INFRA_ROOT }}"

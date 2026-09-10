@@ -62,9 +62,9 @@ spec:
               drop: [ALL]
           resources:
             limits:
-              memory: 256Mi
-            requests:
               memory: 64Mi
+            requests:
+              memory: 16Mi
           ports:
             - name: health
               containerPort: 8080

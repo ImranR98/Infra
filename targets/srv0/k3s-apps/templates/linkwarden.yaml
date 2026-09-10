@@ -123,7 +123,8 @@ spec:
             limits:
               memory: 16Gi
             requests:
-              memory: 2Gi
+              memory: 512Mi
+              cpu: 20m
       volumes:
         - name: linkwarden-data
           persistentVolumeClaim:
@@ -216,9 +217,9 @@ spec:
               mountPath: /var/lib/postgresql/data
           resources:
             limits:
-              memory: 512Mi
+              memory: 256Mi
             requests:
-              memory: 128Mi
+              memory: 64Mi
       volumes:
         - name: data
           persistentVolumeClaim:
@@ -286,9 +287,9 @@ spec:
               mountPath: /meili_data
           resources:
             limits:
-              memory: 8Gi
+              memory: 512Mi
             requests:
-              memory: 2Gi
+              memory: 128Mi
       volumes:
         - name: meili-data
           persistentVolumeClaim:

@@ -32,18 +32,24 @@ spec:
         alloy:
           resources:
             requests:
-              memory: 128Mi
-            limits:
               memory: 512Mi
+            limits:
+              memory: 1Gi
       alloy-logs:
         enabled: true
         presets: [clustered]
         alloy:
           resources:
             requests:
-              memory: 128Mi
+              memory: 192Mi
             limits:
               memory: 512Mi
+    alloy-operator:
+      resources:
+        requests:
+          memory: 128Mi
+        limits:
+          memory: 512Mi
     clusterMetrics:
       enabled: true
       destinations: [prometheus]
@@ -184,9 +190,9 @@ spec:
       storageClassName: longhorn
     resources:
       requests:
-        memory: 128Mi
+        memory: 320Mi
       limits:
-        memory: 2Gi
+        memory: 1Gi
     grafana.ini:
       server:
         root_url: https://grafana.{{ .Values.SERVICES_DOMAIN }}
@@ -332,9 +338,9 @@ spec:
       replicas: 1
       resources:
         requests:
-          memory: 128Mi
+          memory: 256Mi
         limits:
-          memory: 2Gi
+          memory: 1Gi
     # Chart validation: scalable targets must stay at 0 replicas while
     # singleBinary.replicas > 0 (the defaults are non-zero).
     backend:
@@ -479,9 +485,9 @@ spec:
               mountPath: /data
           resources:
             requests:
-              memory: 128Mi
+              memory: 1Gi
             limits:
-              memory: 2Gi
+              memory: 3Gi
           readinessProbe:
             httpGet:
               path: /ready

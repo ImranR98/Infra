@@ -38,9 +38,9 @@ spec:
                   key: token
           resources:
             limits:
-              memory: 2Gi
-            requests:
               memory: 128Mi
+            requests:
+              memory: 32Mi
           volumeMounts:
             - name: mdscl-camera-src
               mountPath: /source
@@ -93,9 +93,9 @@ spec:
                   key: token
           resources:
             limits:
-              memory: 2Gi
-            requests:
               memory: 128Mi
+            requests:
+              memory: 32Mi
           volumeMounts:
             - name: mdscl-screenshots-src
               mountPath: /source
@@ -148,9 +148,9 @@ spec:
                   key: token
           resources:
             limits:
-              memory: 2Gi
-            requests:
               memory: 128Mi
+            requests:
+              memory: 32Mi
           volumeMounts:
             - name: mdscl-screenrecs-src
               mountPath: /source

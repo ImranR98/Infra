@@ -261,10 +261,11 @@ spec:
         readOnly: true
     resources:
       limits:
-        memory: 2Gi
+        memory: 1.5Gi
         infra.local/conbee: "1"
       requests:
-        memory: 128Mi
+        memory: 512Mi
+        cpu: 20m
         infra.local/conbee: "1"
 ---
 ---
