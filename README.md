@@ -41,15 +41,15 @@ cp -r targets/<target>/config_template config/<target>   # then fill in real val
 # Validate your configuration
 bash scripts/validate.sh <target>
 
-# Deploy k3s (the kubeconfig is root-only — unlock it in another terminal first)
-bash scripts/kubeconfig-unlock.sh   # Ctrl-C to lock
+# Deploy k3s
+bash scripts/kubeconfig-unlock.sh # unlock root-only kubeconfig; run in another terminal
 helm upgrade --install srv0-base targets/srv0/k3s-base -n base --create-namespace \
   -f targets/srv0/k3s-base/values.yaml -f config/srv0/values.yaml
 helm upgrade --install srv0-apps targets/srv0/k3s-apps -n apps --create-namespace \
   -f targets/srv0/k3s-apps/values.yaml -f config/srv0/values.yaml
 
-# Deploy compose
-docker compose --env-file config/<target>/compose.env --env-file targets/<target>/compose/.env \
+# Deploy compose (Docker needs sudo until your user is in the docker group)
+sudo docker compose --env-file config/<target>/compose.env --env-file targets/<target>/compose/.env \
   -f targets/<target>/compose/compose.yaml \
   [-f targets/<target>/compose/compose.private.yaml] up -d --remove-orphans
 
