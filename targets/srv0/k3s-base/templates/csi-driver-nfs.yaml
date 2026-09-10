@@ -13,6 +13,11 @@ spec:
   valuesContent: |-
     node:
       dnsPolicy: ClusterFirstWithHostNet
+    # Ships the snapshot.storage.k8s.io CRDs + snapshot-controller. The
+    # csi-snapshotter sidecars of both csi-driver-nfs and Longhorn watch those
+    # CRDs; without them they retry-list forever and log errors continuously.
+    externalSnapshotter:
+      enabled: true
 ---
 ---
 # RWX NFS-backed storage class for the shared PVC backup destination.
