@@ -1,0 +1,21 @@
+device:
+  - name: dri
+    groups:
+      - count: 32
+        paths:
+          - path: /dev/dri/renderD128
+  - name: conbee
+    groups:
+      - count: 32
+        paths:
+          - path: /dev/ttyACM0
+            optional: true
+  - name: amd
+    groups:
+      - count: 32
+        paths:
+          - path: /dev/kfd
+          - path: /dev/dri/card0
+            optional: true
+          - path: /dev/dri/renderD128
+            optional: true

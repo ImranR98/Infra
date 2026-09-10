@@ -1,0 +1,98 @@
+---
+# Generic device plugin (squat/generic-device-plugin): registers host devices
+# with kubelet so pods can request them as extended resources. It discovers
+# /dev directly and advertises stable path-derived IDs with a fixed count per
+# group, so the advertised device set never churns.
+#
+# Resources (domain infra.local; device config in
+# files/generic-device-plugin-config.yaml):
+#   infra.local/dri     -> /dev/dri/renderD128        (VAAPI, srv0 + bigpc)
+#   infra.local/conbee  -> /dev/ttyACM0 (optional)    (ConBee II, srv0 only)
+#   infra.local/amd     -> /dev/kfd + /dev/dri/*      (ROCm, bigpc only; the
+#                          required /dev/kfd means srv0 registers nothing)
+#
+# The plugin runs unprivileged: spc_t covers SELinux for the host /dev (read-
+# only) and the kubelet device-plugin socket dir, and no capabilities are
+# needed. Discovery happens at startup, so a config change rolls the DaemonSet
+# via the checksum annotation below (hardware changes: rolling restart).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: generic-device-plugin
+  namespace: base
+data:
+  config.yaml: |
+    {{- .Files.Get "files/generic-device-plugin-config.yaml" | nindent 4 }}
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: generic-device-plugin
+  namespace: base
+spec:
+  selector:
+    matchLabels:
+      app: generic-device-plugin
+  template:
+    metadata:
+      labels:
+        app: generic-device-plugin
+      annotations:
+        # Roll the DaemonSet when the device config changes (the plugin reads
+        # it only at startup).
+        checksum/config: {{ .Files.Get "files/generic-device-plugin-config.yaml" | sha256sum }}
+    spec:
+      # Run on every node, including tainted ones (bigpc's
+      # scheduling-discouraged taint) so the AMD resource is registered there.
+      tolerations:
+        - operator: Exists
+      securityContext:
+        seLinuxOptions:
+          type: spc_t
+      containers:
+        - name: plugin
+          image: squat/generic-device-plugin:0.2.0
+          args:
+            - --domain=infra.local
+            - --config=/etc/generic-device-plugin/config.yaml
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+          resources:
+            limits:
+              memory: 256Mi
+            requests:
+              memory: 64Mi
+          ports:
+            - name: health
+              containerPort: 8080
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: health
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          volumeMounts:
+            - name: device-plugins
+              mountPath: /var/lib/kubelet/device-plugins
+            # Host /dev view (read-only): the plugin globs/stats device nodes
+            # to discover them; kubelet/containerd does the actual mounting.
+            - name: dev
+              mountPath: /dev
+              readOnly: true
+            - name: config
+              mountPath: /etc/generic-device-plugin
+              readOnly: true
+      volumes:
+        - name: device-plugins
+          hostPath:
+            path: /var/lib/kubelet/device-plugins
+        - name: dev
+          hostPath:
+            path: /dev
+            type: Directory
+        - name: config
+          configMap:
+            name: generic-device-plugin

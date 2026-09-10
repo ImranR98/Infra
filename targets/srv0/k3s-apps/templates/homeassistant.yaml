@@ -80,7 +80,7 @@ spec:
     podSecurityContext:
       # spc_t (not privileged): SELinux blocks container_t from the host dbus
       # socket (Bluetooth integration -> host bluez) and the ConBee II device.
-      # The device itself is granted via CDI (see cdi-specs component).
+      # The device itself is granted via the generic-device-plugin.
       # level s0: keeps PVC files category-free so the pvc-backup temp pods
       # (also s0) can read the config volume (see syncthing for precedent).
       seLinuxOptions:
@@ -262,10 +262,10 @@ spec:
     resources:
       limits:
         memory: 2Gi
-        infra.local/devices-conbee: "1"
+        infra.local/conbee: "1"
       requests:
         memory: 128Mi
-        infra.local/devices-conbee: "1"
+        infra.local/conbee: "1"
 ---
 ---
 apiVersion: cert-manager.io/v1

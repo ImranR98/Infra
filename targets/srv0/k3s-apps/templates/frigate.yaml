@@ -25,7 +25,7 @@ spec:
     # the scheduler can still place the pod there (seen during rollout).
     nodeSelector:
       hostpath-main: "true"
-    # Device access via CDI (infra.local/devices-dri, see cdi-specs) — no
+    # Device access via the generic-device-plugin (infra.local/dri) — no
     # privileged. container_t + s0 (verified): SELinux allows the NFS media
     # PVC + config PVC writes and the /dev/dri grant; s0 keeps config-PVC
     # files category-free for the pvc-backup pods.
@@ -98,10 +98,10 @@ spec:
     resources:
       limits:
         memory: 2Gi
-        infra.local/devices-dri: "1"
+        infra.local/dri: "1"
       requests:
         memory: 128Mi
-        infra.local/devices-dri: "1"
+        infra.local/dri: "1"
 ---
 ---
 apiVersion: cert-manager.io/v1

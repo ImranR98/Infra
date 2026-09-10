@@ -46,10 +46,10 @@ spec:
     resources:
       limits:
         memory: 2Gi
-        infra.local/devices-dri: "1"
+        infra.local/dri: "1"
       requests:
         memory: 128Mi
-        infra.local/devices-dri: "1"
+        infra.local/dri: "1"
     podSecurityContext:
       runAsUser: {{ .Values.MY_UID }}
       runAsGroup: {{ .Values.MY_UID }}
@@ -58,12 +58,12 @@ spec:
       seLinuxOptions:
         level: s0
     securityContext:
-      # /dev/dri/renderD128 is granted via CDI (see cdi-specs component) —
+      # /dev/dri/renderD128 is granted via the generic-device-plugin —
       # container_t + uid 1000 works, no privileged needed (verified).
       allowPrivilegeEscalation: false
     # No node affinity: bigpc's scheduling-discouraged taint (PreferNoSchedule)
     # keeps non-tolerating pods on srv0; the descheduler evicts any drift.
-    # VAAPI transcode runs on srv0's Iris Xe iGPU (renderD128 via CDI).
+    # VAAPI transcode runs on srv0's Iris Xe iGPU (renderD128 via the device plugin).
 ---
 ---
 apiVersion: traefik.io/v1alpha1

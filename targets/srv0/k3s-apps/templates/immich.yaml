@@ -38,7 +38,7 @@ spec:
         runAsGroup: {{ .Values.MY_UID }}
         fsGroup: {{ .Values.MY_UID }}
         # container_t + s0 (verified): SELinux allows container_t the
-        # /dev/dri CDI grant, the external hostPath library read, and the
+        # /dev/dri device grant, the external hostPath library read, and the
         # library PVC; s0 keeps files category-free so server/ML and the
         # pvc-backup pods can share them.
         seLinuxOptions:
@@ -60,10 +60,10 @@ spec:
               resources:
                 limits:
                   memory: 8Gi
-                  infra.local/devices-dri: "1"
+                  infra.local/dri: "1"
                 requests:
                   memory: 128Mi
-                  infra.local/devices-dri: "1"
+                  infra.local/dri: "1"
               env:
                 HWACCEL_VAAPI_ENABLED: "true"
       persistence:
@@ -87,10 +87,10 @@ spec:
               resources:
                 limits:
                   memory: 8Gi
-                  infra.local/devices-dri: "1"
+                  infra.local/dri: "1"
                 requests:
                   memory: 128Mi
-                  infra.local/devices-dri: "1"
+                  infra.local/dri: "1"
       defaultPodOptions:
         nodeSelector:
           hostpath-main: "true"

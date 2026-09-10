@@ -1,5 +1,5 @@
 #!/bin/bash
-# DESC: Prepare a K3s node: sysctls, the containerd CDI drop-in, firewall
+# DESC: Prepare a K3s node: sysctls, firewall
 # ports/trusted CIDRs, the kubectl group, pciutils. Runs ON the node as root
 # (sudo). Shared by k3s-server.sh and k3s-join.sh.
 set -euo pipefail
@@ -25,14 +25,6 @@ fs.inotify.max_user_instances = 512
 user.max_user_namespaces = 28633
 EOF
 sysctl --system >/dev/null
-
-# ---- containerd CDI drop-in (grants host devices via the cdi-specs component) ----
-mkdir -p /var/lib/rancher/k3s/agent/etc/containerd/config-v3.toml.d
-cat >/var/lib/rancher/k3s/agent/etc/containerd/config-v3.toml.d/enable-cdi.toml <<'EOF'
-[plugins.'io.containerd.cri.v1.runtime']
-  enable_cdi = true
-  cdi_spec_dirs = ['/etc/cdi', '/var/run/cdi']
-EOF
 
 # ---- firewall (K3s ports + pod/service CIDRs) --------------------------------
 if command -v firewall-cmd >/dev/null 2>&1; then
