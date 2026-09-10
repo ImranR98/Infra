@@ -1,6 +1,6 @@
 #!/bin/bash
 # DESC: Prepare a K3s node: sysctls, firewall
-# ports/trusted CIDRs, the kubectl group, pciutils. Runs ON the node as root
+# ports/trusted CIDRs, pciutils. Runs ON the node as root
 # (sudo). Shared by k3s-server.sh and k3s-join.sh.
 set -euo pipefail
 
@@ -54,12 +54,7 @@ else
     apt-get install -y pciutils
 fi
 
-# ---- kubectl group (kubeconfig is 0640 kubectl-group) ------------------------
-groupadd -f kubectl
+# ---- K3s config dir ----------------------------------------------------------
 mkdir -p /etc/rancher/k3s
-chgrp -R kubectl /etc/rancher/k3s
-if [ -n "${SUDO_USER:-}" ] && [ "$SUDO_USER" != "root" ]; then
-    usermod -aG kubectl "$SUDO_USER"
-fi
 
 echo "k3s-node-prep: done."

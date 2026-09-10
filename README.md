@@ -41,8 +41,8 @@ cp -r targets/<target>/config_template config/<target>   # then fill in real val
 # Validate your configuration
 bash scripts/validate.sh <target>
 
-# Deploy k3s
-export KUBECONFIG="${KUBECONFIG:-/etc/rancher/k3s/k3s.yaml}" # helm doesn't find k3s's kubeconfig on its own
+# Deploy k3s (the kubeconfig is root-only — unlock it in another terminal first)
+bash scripts/kubeconfig-unlock.sh   # Ctrl-C to lock
 helm upgrade --install srv0-base targets/srv0/k3s-base -n base --create-namespace \
   -f targets/srv0/k3s-base/values.yaml -f config/srv0/values.yaml
 helm upgrade --install srv0-apps targets/srv0/k3s-apps -n apps --create-namespace \

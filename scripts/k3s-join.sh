@@ -12,6 +12,9 @@ if [ -z "${INFRA_ROOT:-}" ]; then
 fi
 source "$INFRA_ROOT/scripts/common.sh"
 
+SU="$(get_sudo_cmd)"
+kubectl_bin="$(command -v kubectl)" || { echo "Error: kubectl not found" >&2; exit 1; }
+
 usage() {
     cat <<EOF
 Usage: $(basename "$0") <node_ip> <node_user> [options]
@@ -53,7 +56,7 @@ done
 [[ "$amdgpu_mode" == auto || "$amdgpu_mode" == yes || "$amdgpu_mode" == no ]] || { echo "Error: --amdgpu must be auto, yes or no" >&2; exit 1; }
 
 echo "==> Reading the K3s server token (sudo on this machine)"
-token="$(sudo cat /var/lib/rancher/k3s/server/token)"
+token="$($SU cat /var/lib/rancher/k3s/server/token)"
 server_ip="$(get_node_ip)"
 [ -n "$server_ip" ] || { echo "Error: cannot determine the control plane's IP" >&2; exit 1; }
 
@@ -92,7 +95,7 @@ else
     install -d -m 755 /etc/rancher/k3s
     cat >/etc/rancher/k3s/config.yaml <<EOF2
 selinux: true
-write-kubeconfig-mode: "0640"
+write-kubeconfig-mode: "0600"
 flannel-backend: wireguard-native
 flannel-iface-regex: "^(eth|ens|enp|eno|enx|wlan|wlp|wlo|bond|ib)"
 node-ip: $K3S_NODE_IP
@@ -110,14 +113,13 @@ REMOTE_SCRIPT
 ssh -t "$node_user@$node_ip" "sudo bash -s" <<<"$remote_script"
 
 echo "==> Waiting for the node to register and become Ready"
-export KUBECONFIG="${KUBECONFIG:-/etc/rancher/k3s/k3s.yaml}"
 node_name=""
 for _ in $(seq 1 30); do
-    node_name=$(kubectl get nodes -o json 2>/dev/null |
+    node_name=$($SU "$kubectl_bin" get nodes -o json 2>/dev/null |
         jq -r --arg ip "$node_ip" '.items[] | select((.status.addresses // []) | any(.address == $ip)) | .metadata.name' |
         awk 'NR==1')
     [ -n "$node_name" ] || { sleep 5; continue; }
-    kubectl get node "$node_name" -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}' 2>/dev/null | grep -q True && break
+    $SU "$kubectl_bin" get node "$node_name" -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}' 2>/dev/null | grep -q True && break
     sleep 5
 done
 [ -n "$node_name" ] || { echo "Error: the joining node never registered" >&2; exit 1; }
@@ -126,24 +128,24 @@ echo "Node '$node_name' is Ready."
 # Longhorn default-disk label; bump the replica count only when newly enabled.
 longhorn_wanted=false
 [ "$longhorn_replicas" = true ] && longhorn_wanted=true
-current=$(kubectl get node "$node_name" -o json | jq -r '.metadata.labels["node.longhorn.io/create-default-disk"] // ""')
+current=$($SU "$kubectl_bin" get node "$node_name" -o json | jq -r '.metadata.labels["node.longhorn.io/create-default-disk"] // ""')
 if [ "$current" != "$longhorn_wanted" ]; then
-    kubectl label node "$node_name" "node.longhorn.io/create-default-disk=$longhorn_wanted" --overwrite
+    $SU "$kubectl_bin" label node "$node_name" "node.longhorn.io/create-default-disk=$longhorn_wanted" --overwrite
     if [ "$longhorn_wanted" = true ]; then
-        count=$(kubectl -n longhorn-system get setting.longhorn.io default-replica-count -o jsonpath='{.value}' 2>/dev/null || echo 0)
-        kubectl -n longhorn-system patch setting.longhorn.io default-replica-count \
+        count=$($SU "$kubectl_bin" -n longhorn-system get setting.longhorn.io default-replica-count -o jsonpath='{.value}' 2>/dev/null || echo 0)
+        $SU "$kubectl_bin" -n longhorn-system patch setting.longhorn.io default-replica-count \
             --type=merge -p "{\"value\":\"$((count + 1))\"}"
     fi
 fi
 
 if [ "$amdgpu_enabled" = true ]; then
-    kubectl patch node "$node_name" --type=merge -p '{"metadata":{"labels":{"has-amdgpu":"true"}}}'
+    $SU "$kubectl_bin" patch node "$node_name" --type=merge -p '{"metadata":{"labels":{"has-amdgpu":"true"}}}'
 fi
 
 if [ "$scheduling_discouraged" = true ]; then
-    taints=$(kubectl get node "$node_name" -o json | jq -r '(.spec.taints // []) | map(.key) | join(" ")')
+    taints=$($SU "$kubectl_bin" get node "$node_name" -o json | jq -r '(.spec.taints // []) | map(.key) | join(" ")')
     if [[ "$taints" != *scheduling-discouraged* ]]; then
-        kubectl taint node "$node_name" scheduling-discouraged=true:PreferNoSchedule --overwrite
+        $SU "$kubectl_bin" taint node "$node_name" scheduling-discouraged=true:PreferNoSchedule --overwrite
     fi
 fi
 

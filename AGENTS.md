@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Infra is an IaC repo for a multi-machine homelab. The user interacts with the cluster directly through the real tools — `helm`, `kubectl`, and `docker compose` — plus a small set of bash scripts for the steps no real tool covers (config validation, node provisioning, preboot, WireGuard, backups). Everything for a target lives in `targets/<t>/`; shared scripts sit in `scripts/`, secrets in the gitignored `config/`. No build step, no wrapper CLI: the target is **always explicit** — target-selecting scripts (`validate`, `compose-backup`) take it as their first argument, and nothing derives it from the machine's hostname. Ops divide into target-selecting ops (validate, compose-backup — they name a target) and machine-local ops (prereqs, renovate, preboot, wireguard, k3s provisioning — they act on the machine they run on and take no target). k3s applies go through plain Helm against the two srv0 charts (base + apps); compose consumes secrets natively (dotenv via `--env-file`, real files for certs); k3s node provisioning goes through the repo's own bash scripts wrapping the official get.k3s.io installer. Audience assumed to know Docker/Compose, Kubernetes, Traefik, bash.
+Infra is an IaC repo for a multi-machine homelab. The user interacts with the cluster directly through the real tools — `helm`, `kubectl`, and `docker compose` — plus a small set of bash scripts for the steps no real tool covers (config validation, node provisioning, preboot, WireGuard, backups). Everything for a target lives in `targets/<t>/`; shared scripts sit in `scripts/`, secrets in the gitignored `config/`. No build step, no wrapper CLI: the target is **always explicit** — target-selecting scripts (`validate`, `compose-backup`) take it as their first argument, and nothing derives it from the machine's hostname. Ops divide into target-selecting ops (validate, compose-backup — they name a target) and machine-local ops (prereqs, renovate, preboot, wireguard, kubeconfig unlock, k3s provisioning — they act on the machine they run on and take no target). k3s applies go through plain Helm against the two srv0 charts (base + apps); compose consumes secrets natively (dotenv via `--env-file`, real files for certs); k3s node provisioning goes through the repo's own bash scripts wrapping the official get.k3s.io installer. Audience assumed to know Docker/Compose, Kubernetes, Traefik, bash.
 
 ## Prerequisites
 
@@ -33,8 +33,10 @@ Notable per-target facts:
 bash scripts/validate.sh srv0                        # config completeness/placeholders + helm lint/template
 bash scripts/validate.sh vps0                        # compose.env + file completeness/placeholder check
 
-# k3s (srv0) — plain helm, no wrapper; run validate.sh first as the preflight:
-export KUBECONFIG="${KUBECONFIG:-/etc/rancher/k3s/k3s.yaml}"
+# k3s (srv0) — plain helm, no wrapper; run validate.sh first as the preflight.
+# The kubeconfig is root-only — unlock it in another terminal (kubectl reads the
+# k3s default path via the ACL, helm reads the ~/.kube/config symlink):
+bash scripts/kubeconfig-unlock.sh                     # Ctrl-C to lock
 helm upgrade --install srv0-base targets/srv0/k3s-base -n base --create-namespace \
   -f targets/srv0/k3s-base/values.yaml -f config/srv0/values.yaml
 helm upgrade --install srv0-apps targets/srv0/k3s-apps -n apps --create-namespace \
@@ -54,8 +56,8 @@ docker compose --env-file config/srv0/compose.env --env-file targets/srv0/compos
 #   (no --env-file — the project-dir machine-fact .env auto-loads)
 
 bash scripts/compose-backup.sh vps0                  # tar the compose state ([-e backup_remote=user@host:path])
-bash scripts/pvc.sh backup --all -y                   # PVC backup (or: pvc.sh backup <name>)
-bash scripts/pvc.sh restore --all -y                  # PVC restore (or: pvc.sh restore <name>)
+bash scripts/pvc.sh backup --all -y                   # PVC backup (or: pvc.sh backup <name>; run during an unlock)
+bash scripts/pvc.sh restore --all -y                  # PVC restore (or: pvc.sh restore <name>; run during an unlock)
 sudo bash scripts/update-node-ip.sh [--ip X] [--force]   # K3s node IP change
 
 # machine-local (act on the machine they run on, take no target):
@@ -63,6 +65,7 @@ bash scripts/prereqs.sh
 bash scripts/renovate.sh [--dry-run]                 # manual Renovate run (opens PRs on GitHub)
 bash scripts/preboot.sh frpc|crypt-ssh               # initramfs LUKS unlock
 bash scripts/wireguard.sh <path/to/wg0.conf>
+bash scripts/kubeconfig-unlock.sh [--lock]           # temp kubeconfig access for this user (Ctrl-C to lock)
 bash scripts/k3s-server.sh                           # bootstrap THIS machine as the control plane
 bash scripts/k3s-join.sh <node_ip> <node_user> \
   [--role agent|server] [--amdgpu auto|yes|no] \
@@ -96,12 +99,13 @@ All ops logic lives in `scripts/` (k3s-generic too — `pvc.sh` and `update-node
 | `scripts/validate.sh <t>` | target | read-only, any machine | config_template→config completeness/placeholders + helm lint + both-chart template render (srv0); compose `../../../config/` mount check. Prints variable names only. |
 | `scripts/compose-backup.sh <t>` | target | ON the target (hostname asserted) | tars the compose state via an Alpine container; `-e backup_remote=user@host:path` streams the tar over SSH |
 | `scripts/prereqs.sh` | — | this machine | packages, pinned helm, Docker bootstrap, machine-fact `.env`, host bind dirs, acme seed |
+| `scripts/kubeconfig-unlock.sh [--lock]` | — | this machine | grants this user a read ACL on the k3s kubeconfig + `~/.kube/config` symlink; holds until Ctrl-C; `--lock` cleans up |
 | `scripts/renovate.sh` | — | this machine (opens GitHub PRs) | needs `RENOVATE_GITHUB_TOKEN` in config/VARS.env |
 | `scripts/preboot.sh frpc\|crypt-ssh` | — | this machine | initramfs LUKS unlock; frpc certs from `config/<hostname>/frpc/` |
 | `scripts/wireguard.sh <conf>` | — | this machine | deploys a provider wg0.conf (split-/1 routes, endpoint dead-loop route) |
 | `scripts/k3s-server.sh` | — | this machine (becomes the control plane) | node prep + installer + server config + labels |
 | `scripts/k3s-join.sh <ip> <user> [...]` | — | control plane + the joining node | token travels via stdin over ssh; labels/taint/Longhorn after Ready |
-| `scripts/k3s-node-prep.sh` | — | the node (root) | sysctls, firewall, kubectl group, pciutils — shared by server/join |
+| `scripts/k3s-node-prep.sh` | — | the node (root) | sysctls, firewall, pciutils — shared by server/join |
 | `scripts/pvc.sh` | — | the cluster (or in-cluster pod) | PVC backup/restore |
 | `scripts/update-node-ip.sh` | — | the node | K3s node IP change |
 
@@ -159,7 +163,7 @@ Components live in two sibling charts — `targets/srv0/k3s-base/` and `targets/
 
 **Apply pipeline** — plain helm commands, no wrapper (`scripts/validate.sh srv0` is the preflight):
 ```
-export KUBECONFIG="${KUBECONFIG:-/etc/rancher/k3s/k3s.yaml}"
+bash scripts/kubeconfig-unlock.sh   # in another terminal; Ctrl-C to lock
 helm upgrade --install srv0-base targets/srv0/k3s-base -n base --create-namespace \
   -f targets/srv0/k3s-base/values.yaml -f config/srv0/values.yaml
 helm upgrade --install srv0-apps targets/srv0/k3s-apps -n apps --create-namespace \
@@ -173,11 +177,13 @@ Ops: `helm list/history/rollback`, `helm get values`, `helm template`, `helm dif
 
 **Groups** — apply both scopes in order (`base` then `apps`); delete in reverse (`srv0-apps` then `srv0-base`). Helm retains PVCs on uninstall.
 
+**Kubeconfig access** — `/etc/rancher/k3s/k3s.yaml` is `0600 root:root` (`write-kubeconfig-mode: "0600"`), so non-root users have no standing access. `scripts/kubeconfig-unlock.sh` grants the invoking user a temporary read ACL on it and symlinks `~/.kube/config` to it, then blocks until Ctrl-C removes both (`--lock` cleans up leftovers). k3s's bundled kubectl ignores `~/.kube/config` and reads the k3s default path — the ACL is what unlocks kubectl; helm (standard loading rules) uses the symlink. A k3s restart rewrites the kubeconfig and clears the ACL mask, so re-run the unlock afterwards. Host-side `pvc.sh` runs also belong inside an unlock session (the in-cluster CronJob uses its own ServiceAccount).
+
 **Node commands (bash — `scripts/`)**
 
 Node provisioning is owned by `scripts/k3s-server.sh` and `scripts/k3s-join.sh` (the official `get.k3s.io` installer — no provisioning collection, no inventory anywhere). Cluster policy lives in the scripts themselves:
 
-- `k3s-server.sh` (no args, run ON the node): `k3s-node-prep.sh` (sysctls via `/etc/sysctl.d/90-k3s.conf`, firewall (firewalld/ufw; K3s ports incl. 51820–21/udp for flannel-wg), the `kubectl` group, pciutils) + the installer + `/etc/rancher/k3s/config.yaml` (`selinux: true`, `write-kubeconfig-mode: "0640"`, `flannel-backend: wireguard-native`, the flannel-iface regex, `cluster-init: true`, `node-ip`, labels `hostpath-main=true`, `hostpath-extra-storage=true`, `external-exposed=true`) + restart + waits for the server token and the API + labels the node (Longhorn default disk, `has-homeassistant-hardware`). K3s needs a fixed IP — if it changes, run `scripts/update-node-ip.sh`.
+- `k3s-server.sh` (no args, run ON the node): `k3s-node-prep.sh` (sysctls via `/etc/sysctl.d/90-k3s.conf`, firewall (firewalld/ufw; K3s ports incl. 51820–21/udp for flannel-wg), pciutils) + the installer + `/etc/rancher/k3s/config.yaml` (`selinux: true`, `write-kubeconfig-mode: "0600"`, `flannel-backend: wireguard-native`, the flannel-iface regex, `cluster-init: true`, `node-ip`, labels `hostpath-main=true`, `hostpath-extra-storage=true`, `external-exposed=true`) + restart + waits for the server token and the API + labels the node (Longhorn default disk, `has-homeassistant-hardware`). K3s needs a fixed IP — if it changes, run `scripts/update-node-ip.sh`.
 - `k3s-join.sh <node_ip> <node_user> [...]` (run ON the control plane; prompts for sudo on the control plane and the joining node separately — they may differ): reads the token from `/var/lib/rancher/k3s/server/token`, resolves the server IP, streams `k3s-node-prep.sh` + the installer to the node over SSH with the token appended on stdin (never argv; the token lands in the node's root-only `k3s-agent.service.env` for agents, or in `config.yaml` for joined servers), waits for the node to appear + become Ready, then applies labels/taint/Longhorn replica count. All join options are CLI flags: `--role agent|server`, `--amdgpu auto|yes|no` (lspci-based detection on the node — vendor `1002`, VGA class; drives ROCm/Ollama scheduling via the `has-amdgpu=true` label), `--scheduling-discouraged` (PreferNoSchedule taint), `--longhorn-replicas` (`create-default-disk=true` + auto-increment of `default-replica-count`, guarded by the label's actual change so re-runs don't double-count; without the flag → `create-default-disk=false`). The installer only runs when k3s is missing — re-provision never re-installs, so it can't fight system-upgrade-controller's ownership of versions. SSH host-key checking is left at the default (on) — the first join prompts to accept the fingerprint, same trust model as plain `ssh`.
 - `scripts/update-node-ip.sh` (retained bash, run directly on the node): sed-replaces `node-ip` in drop-ins, adds `50-node-ip.yaml`; **updates etcd member peer URLs before restarting k3s** (k3s is `Type=notify`; a synchronous restart deadlocks), restarts with `--no-block`, patches the node's flannel public-ip annotation + status addresses. Installs etcdctl on demand.
 
@@ -223,7 +229,7 @@ helm uninstall srv0-apps -n apps          # delete a release; PVCs are retained 
 - `kubectl apply --dry-run=server` on rendered output gives false positives (e.g. the 256KiB `last-applied-configuration` limit that doesn't apply to Helm's merge) — use helm's own `--dry-run=server`.
 - Adoption: pre-existing objects must carry `app.kubernetes.io/managed-by: Helm` + `meta.helm.sh/release-name`/`release-namespace` annotations or helm refuses to install over them.
 - Helm uninstall ignores live-object annotations entirely — `helm.sh/resource-policy: keep` only works from the *stored* manifest.
-- Helm doesn't auto-resolve k3s's kubeconfig the way k3s's kubectl does — set `KUBECONFIG` to `/etc/rancher/k3s/k3s.yaml` yourself.
+- Helm doesn't auto-resolve k3s's kubeconfig the way k3s's kubectl does — it reads `~/.kube/config`, which `scripts/kubeconfig-unlock.sh` symlinks to the root-only kubeconfig during a dev session (k3s's kubectl instead reads the k3s default path, unlocked by the script's ACL).
 
 ## Storage & PVC backups
 
@@ -328,7 +334,8 @@ is the hard cap and gets the same peak-headroom treatment.
 renovate.json                   # Renovate repo config
 scripts/                        # common.sh (env bootstrap + shared helpers) + the ops scripts:
                                 #   validate.sh, compose-backup.sh, prereqs.sh, renovate.sh,
-                                #   preboot.sh, wireguard.sh, k3s-server.sh, k3s-join.sh,
+                                #   preboot.sh, wireguard.sh, kubeconfig-unlock.sh,
+                                #   k3s-server.sh, k3s-join.sh,
                                 #   k3s-node-prep.sh, pvc.sh, update-node-ip.sh
 config/                         # gitignored real values; mirrors targets/<t>/config_template/:
                                 #   VARS.env (universal), srv0/{values.yaml,compose.env,frpc/},
@@ -359,6 +366,7 @@ For the bash scripts: `$INFRA_ROOT` (repo root — self-computed by `scripts/com
 - **The target is always explicit** — target-selecting scripts (validate, compose-backup) take their target as the first argument; nothing infers it from the hostname.
 - **Apply through the real commands** — `helm upgrade --install` for k3s, `docker compose up -d` for compose (node labels/taints at join time go through `k3s-join.sh`). Direct inspection (logs, get, describe, curl) is fine.
 - **K3s node provisioning goes through `scripts/k3s-server.sh`/`k3s-join.sh` only** — never raw installers or ad-hoc joins; the scripts supply the installer and secret-handling setup. Dev-only lint (`yamllint`/`shellcheck`) touches nothing.
+- **Kubeconfig access goes through the unlock** — the k3s admin kubeconfig stays root-only (0600); use `scripts/kubeconfig-unlock.sh` for a dev session, never re-enable group/world access or set a standing `KUBECONFIG`.
 - Never edit files under `current_target/` (runtime state).
 - Never commit secrets (`config/`, `compose.private.yaml`, `targets/*/compose/.env` are gitignored).
 - New components start from a sizing tier, include NetworkPolicies, and are right-sized from observed usage once running.
