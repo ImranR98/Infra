@@ -118,7 +118,7 @@
       "pinDigests": true
     },
     {
-      "description": "No major bumps for infra images that previously carried PRESERVE_MAJOR annotations",
+      "description": "No major bumps for postgres, clickhouse/clickhouse-server, fedora (their majors need manual migrations)",
       "matchPackageNames": [
         "postgres",
         "clickhouse/clickhouse-server",

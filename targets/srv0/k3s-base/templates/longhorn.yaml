@@ -10,7 +10,7 @@ spec:
   failurePolicy: abort
   targetNamespace: longhorn-system
   createNamespace: true
-  version: 1.12.1 # PRESERVE_FULL - Longhorn requires sequential minor upgrades
+  version: 1.12.1
   valuesContent: |-
     defaultSettings:
       defaultReplicaCount: 1
