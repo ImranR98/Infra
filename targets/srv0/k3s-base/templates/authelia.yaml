@@ -20,9 +20,9 @@ spec:
           runAsGroup: {{ .Values.MY_UID }}
       resources:
         limits:
-          memory: 2Gi
+          memory: 512Mi
         requests:
-          memory: 128Mi
+          memory: 64Mi
       probes:
         startup:
           failureThreshold: 30
@@ -444,9 +444,9 @@ spec:
               mountPath: /bitnami/postgresql
           resources:
             limits:
-              memory: 2Gi
+              memory: 256Mi
             requests:
-              memory: 128Mi
+              memory: 64Mi
       volumes:
         - name: data
           persistentVolumeClaim:
@@ -501,9 +501,9 @@ spec:
               mountPath: /bitnami/redis/data
           resources:
             limits:
-              memory: 2Gi
-            requests:
               memory: 128Mi
+            requests:
+              memory: 32Mi
       volumes:
         - name: data
           persistentVolumeClaim:

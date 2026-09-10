@@ -46,9 +46,9 @@ spec:
       clusterRoleName: headlamp-readonly
     resources:
       limits:
-        memory: 512Mi
+        memory: 256Mi
       requests:
-        memory: 128Mi
+        memory: 64Mi
 ---
 ---
 apiVersion: cert-manager.io/v1

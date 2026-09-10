@@ -45,10 +45,11 @@ spec:
 
     resources:
       limits:
-        memory: 2Gi
+        memory: 1.5Gi
         infra.local/dri: "1"
       requests:
-        memory: 128Mi
+        memory: 512Mi
+        cpu: 20m
         infra.local/dri: "1"
     podSecurityContext:
       runAsUser: {{ .Values.MY_UID }}

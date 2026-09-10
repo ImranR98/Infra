@@ -88,9 +88,9 @@ spec:
               readOnly: true
           resources:
             limits:
-              memory: 512Mi
+              memory: 256Mi
             requests:
-              memory: 128Mi
+              memory: 64Mi
           env:
             - name: PLIKD_FEATURE_AUTHENTICATION
               value: "forced"

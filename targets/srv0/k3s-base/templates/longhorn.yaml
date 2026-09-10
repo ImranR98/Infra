@@ -20,6 +20,16 @@ spec:
       nodeDownPodDeletionPolicy: delete-both-statefulset-and-deployment-pod
       orphanAutoDeletion: true
       concurrentAutomaticEngineUpgradePerNodeLimit: 1
+      # Default 12% reserves 1.92 cores/node; observed instance-manager peak is
+      # ~1.4 cores (see Grafana), so 8% is the realistic guarantee.
+      guaranteedInstanceManagerCPU: 8
+    longhornManager:
+      resources:
+        limits:
+          memory: 512Mi
+        requests:
+          memory: 192Mi
+          cpu: 50m
     createDefaultDiskLabeledNodes: true
     persistence:
       defaultClass: true

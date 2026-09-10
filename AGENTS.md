@@ -298,13 +298,20 @@ Compose image ownership:
 
 Post-update: `git diff` → `bash scripts/validate.sh <target>` → deploy.
 
-## Resource sizing tiers (never ad-hoc)
+## Resource sizing
 
 | Tier | K8s limits/requests | Compose mem_limit |
 |---|---|---|
 | small | 512Mi / 128Mi | 512M |
 | medium | 2Gi / 128Mi | 2G |
 | large | 8Gi / 2Gi | 8G |
+
+The tiers are starting points for new components, not a constraint on existing
+ones: workloads are right-sized from observed usage — memory requests track
+typical (p95) usage, memory limits keep roughly 1.5–3x headroom over the
+observed peak, and CPU requests are set only where usage is meaningful (CPU
+limits stay off unless a chart sets them). Compose has no requests: `mem_limit`
+is the hard cap and gets the same peak-headroom treatment.
 
 | Storage tier | PVC size |
 |---|---|
@@ -354,4 +361,4 @@ For the bash scripts: `$INFRA_ROOT` (repo root — self-computed by `scripts/com
 - **K3s node provisioning goes through `scripts/k3s-server.sh`/`k3s-join.sh` only** — never raw installers or ad-hoc joins; the scripts supply the installer and secret-handling setup. Dev-only lint (`yamllint`/`shellcheck`) touches nothing.
 - Never edit files under `current_target/` (runtime state).
 - Never commit secrets (`config/`, `compose.private.yaml`, `targets/*/compose/.env` are gitignored).
-- New components must follow the sizing tiers and include NetworkPolicies.
+- New components start from a sizing tier, include NetworkPolicies, and are right-sized from observed usage once running.

@@ -27,9 +27,9 @@ spec:
             privileged: true
           resources:
             limits:
-              memory: 2Gi
-            requests:
               memory: 128Mi
+            requests:
+              memory: 32Mi
           volumeMounts:
             - mountPath: /lib/modules
               name: modules
@@ -57,9 +57,9 @@ spec:
             failureThreshold: 3
           resources:
             limits:
-              memory: 2Gi
-            requests:
               memory: 128Mi
+            requests:
+              memory: 32Mi
           volumeMounts:
             - mountPath: /exports
               name: exports-root

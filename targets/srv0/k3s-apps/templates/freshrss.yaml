@@ -34,9 +34,9 @@ spec:
             initialDelaySeconds: 10
           resources:
             limits:
-              memory: 2Gi
+              memory: 384Mi
             requests:
-              memory: 128Mi
+              memory: 64Mi
           env:
             - name: TZ
               value: "America/New_York"

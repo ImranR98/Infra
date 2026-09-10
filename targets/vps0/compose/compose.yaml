@@ -9,7 +9,7 @@ x-socket-proxy: &socket-proxy
     image: wollomatic/socket-proxy:1
     restart: unless-stopped
     read_only: true
-    mem_limit: 512M
+    mem_limit: 128M
     cap_drop:
         - ALL
     security_opt:
@@ -249,6 +249,7 @@ services:
         image: fatedier/frps:v0.71.0
         container_name: frps
         restart: always
+        mem_limit: 128M
         volumes:
           - ./files/frps/frps.toml:/frps.toml:ro
           - ../../../config/vps0/frps/server.crt:/etc/frp/server.crt:ro
@@ -318,7 +319,7 @@ services:
         expose:
             - 9091
         restart: unless-stopped
-        mem_limit: 2G
+        mem_limit: 256M
         healthcheck:
             test: ["CMD-SHELL", "wget --no-verbose --tries=1 -O - http://127.0.0.1:9091/api/health || exit 1"]
             interval: 30s
@@ -338,7 +339,7 @@ services:
         expose:
             - 6379
         restart: unless-stopped
-        mem_limit: 512M
+        mem_limit: 128M
         healthcheck:
             test: ["CMD-SHELL", "redis-cli ping || exit 1"]
             start_period: 1m
@@ -409,7 +410,7 @@ services:
             - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
             - "traefik.http.middlewares.redirect-to-https.redirectscheme.permanent=true"
         restart: unless-stopped
-        mem_limit: 2G
+        mem_limit: 384M
         networks:
             - traefik
         logging: *logging
@@ -419,7 +420,7 @@ services:
         image: crowdsecurity/crowdsec:latest@sha256:0f2523fa61ef507f15d953045cface490cc880670c62f2755ced17524107f71a
         container_name: crowdsec
         restart: unless-stopped
-        mem_limit: 2G
+        mem_limit: 512M
         networks:
             - traefik
         expose:
@@ -451,7 +452,7 @@ services:
         container_name: plausible_db
         user: "$MY_UID:$MY_UID"
         restart: unless-stopped
-        mem_limit: 8G
+        mem_limit: 512M
         volumes:
             - ../../../current_target/compose_live_state/plausible/db:/var/lib/postgresql/data
         environment:
@@ -465,7 +466,7 @@ services:
     plausible_events_db:
         image: clickhouse/clickhouse-server:24.12-alpine
         restart: unless-stopped
-        mem_limit: 8G
+        mem_limit: 3G
         container_name: plausible_events_db
         depends_on:
             state-fixperms:
@@ -513,7 +514,7 @@ services:
     plausible:
         image: ghcr.io/plausible/community-edition:v3
         restart: unless-stopped
-        mem_limit: 8G
+        mem_limit: 768M
         container_name: plausible
         command: sh -c "for i in \$(seq 1 30); do /entrypoint.sh db createdb 2>/dev/null && break; sleep 2; done && /entrypoint.sh db migrate && /entrypoint.sh run"
         depends_on:
@@ -552,7 +553,7 @@ services:
         container_name: pixelntfy
         image: imranrdev/pixel-ntfy:latest@sha256:b6facde3707bbacae686ac7de2b41ca9190fe52a0f828aa8fe8be0505d9118e3
         restart: unless-stopped
-        mem_limit: 512M
+        mem_limit: 128M
         depends_on:
             - traefik
         labels:
@@ -577,7 +578,7 @@ services:
         container_name: isbn-lookup
         image: imranrdev/isbn-lookup:latest@sha256:d3132424eeec7d432fead4adddd501f519d972110578bbc719a96c41d3097ba9
         restart: unless-stopped
-        mem_limit: 512M
+        mem_limit: 128M
         depends_on:
             - traefik
         labels:
@@ -606,7 +607,7 @@ services:
         depends_on:
             - traefik
         restart: unless-stopped
-        mem_limit: 2G
+        mem_limit: 384M
         labels:
             - "traefik.enable=true"
             - "traefik.http.routers.metube.rule=Host(`ytdl.$CLOUD_SERVICES_DOMAIN`)"
@@ -634,7 +635,7 @@ services:
         networks:
             - traefik
         restart: unless-stopped
-        mem_limit: 512M
+        mem_limit: 192M
         logging: *logging
 
     # IKOM - Kitchen order manager
@@ -664,7 +665,7 @@ services:
         networks:
             - traefik
         restart: unless-stopped
-        mem_limit: 2G
+        mem_limit: 128M
         logging: *logging
 
     # CCT26 - Reddit + LLM tool
@@ -672,7 +673,7 @@ services:
         container_name: cct26
         image: imranrdev/cct26:latest@sha256:a280a9651c9e43dd72e3df085c664be05ee8367d98e1b93e2d73947e484b65f1
         restart: unless-stopped
-        mem_limit: 2G
+        mem_limit: 128M
         depends_on:
             - traefik
         volumes:
@@ -717,7 +718,7 @@ services:
         networks:
             - traefik
         restart: unless-stopped
-        mem_limit: 512M
+        mem_limit: 128M
         logging: *logging
 
     # Moving Sale - Moving Sale 2027
@@ -747,7 +748,7 @@ services:
         networks:
             - traefik
         restart: unless-stopped
-        mem_limit: 512M
+        mem_limit: 128M
         logging: *logging
 
     # Owncast Auth - Token-based access control for Owncast viewer
@@ -770,7 +771,7 @@ services:
         image: owncast/owncast:0.3.0
         container_name: owncast
         restart: unless-stopped
-        mem_limit: 2G
+        mem_limit: 512M
         depends_on:
             - traefik
         volumes:
@@ -800,7 +801,7 @@ services:
         container_name: logtfy
         hostname: $TARGET
         restart: unless-stopped
-        mem_limit: 2G
+        mem_limit: 256M
         depends_on:
             - dockerproxy
         volumes:
@@ -819,7 +820,7 @@ services:
         image: syncthing/relaysrv:latest@sha256:04659c950fe54e02420dd1c5c9a1b496bebe46b23b6af4aed712b64272d5dd6d
         container_name: strelaysrv
         restart: unless-stopped
-        mem_limit: 2G
+        mem_limit: 128M
         volumes:
             - strelaysrv:/var/strelaysrv
         command:
@@ -849,7 +850,7 @@ services:
             - traefik
             - shlink_db
         restart: unless-stopped
-        mem_limit: 2G
+        mem_limit: 512M
         labels:
             - "traefik.enable=true"
             - "traefik.http.routers.shlink.rule=Host(`ln.$BASE_SERVICES_DOMAIN`)"
@@ -864,7 +865,7 @@ services:
         container_name: shlink_db
         restart: unless-stopped
         user: "$MY_UID:$MY_UID"
-        mem_limit: 2G
+        mem_limit: 256M
         volumes:
             - ../../../current_target/compose_live_state/shlink/db:/var/lib/postgresql/data
         environment:
@@ -888,7 +889,7 @@ services:
             - traefik
             - shlink
         restart: unless-stopped
-        mem_limit: 512M
+        mem_limit: 64M
         labels:
             - "traefik.enable=true"
             - "traefik.http.routers.shlink_web_client.rule=Host(`ui.ln.$CLOUD_SERVICES_DOMAIN`)"
@@ -906,7 +907,7 @@ services:
         image: amir20/dozzle:v10.10.0
         container_name: dozzle
         restart: unless-stopped
-        mem_limit: 512M
+        mem_limit: 128M
         depends_on:
             - dockerproxy
         environment:
@@ -932,7 +933,7 @@ services:
         image: louislam/uptime-kuma:2
         container_name: uptime
         restart: unless-stopped
-        mem_limit: 2G
+        mem_limit: 512M
         depends_on:
             - traefik
         environment:
