@@ -20,7 +20,7 @@ spec:
         fsGroup: 33
       containers:
         - name: freshrss
-          image: freshrss/freshrss:1.29.1
+          image: freshrss/freshrss:1.30.0
           securityContext:
             allowPrivilegeEscalation: false
           ports:
