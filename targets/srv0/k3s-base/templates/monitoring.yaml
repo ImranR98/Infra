@@ -162,6 +162,22 @@ spec:
       userKey: admin-user
       passwordKey: admin-password
     envFromSecret: grafana-oidc-secret
+    # Grafana creates grafana.db 0660 while its sqlstore expects 0640, warning
+    # on every start. The chart's init-chown-data only chowns, so chmod here
+    # (runs after it, as the file owner 472). A fresh PVC still warns once
+    # because Grafana creates the file after this runs.
+    extraInitContainers:
+      - name: fix-grafana-db-perms
+        image: busybox:1.38
+        command: ["sh", "-c", "[ -f /var/lib/grafana/grafana.db ] && chmod 640 /var/lib/grafana/grafana.db || true"]
+        securityContext:
+          runAsUser: 472
+          runAsGroup: 472
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+        volumeMounts:
+          - name: storage
+            mountPath: /var/lib/grafana
     persistence:
       enabled: true
       size: 5Gi
