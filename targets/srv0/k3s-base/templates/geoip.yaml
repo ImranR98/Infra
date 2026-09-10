@@ -187,7 +187,11 @@ metadata:
   namespace: base
 spec:
   accessModes:
-    - ReadWriteOnce
+    # Shared by the geoip Deployment and the weekly geoipupdate CronJob, which
+    # has no node pinning and can be scheduled on any node. RWO would deadlock
+    # on multi-attach whenever the job lands off the Deployment's node; Longhorn
+    # RWX serves the volume through a share-manager (NFS) instead.
+    - ReadWriteMany
   resources:
     requests:
       storage: 50Mi
