@@ -14,7 +14,7 @@ spec:
   valuesContent: |-
     image:
       repository: ollama/ollama
-      tag: "0.33.3-rocm"
+      tag: "0.34.0-rocm"
     volumes:
       - name: ollama-models
         hostPath:
