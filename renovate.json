@@ -36,6 +36,19 @@
     },
     {
       "customType": "regex",
+      "description": "immich-machine-learning: GHCR publishes 200k+ tags (per-commit/PR/variant builds), so the docker datasource's fetch-all-pages enumeration intermittently fails and Renovate skips the update with no-result. Look the version up from the immich GitHub releases instead (tiny list, authenticated by the platform token). currentValue captures only the base version, so the default replacement (replaceString.replace(currentValue, newValue)) preserves the -openvino suffix: v3.1.0-openvino -> v3.2.0-openvino.",
+      "fileMatch": [
+        "targets/srv0/k3s-apps/templates/immich.yaml"
+      ],
+      "matchStrings": [
+        "repository:\\s*(?<depName>ghcr\\.io/immich-app/immich-machine-learning)\\s*\\n\\s*tag:\\s*\"?(?<currentValue>v\\d+\\.\\d+\\.\\d+)(?:-openvino)?\"?"
+      ],
+      "packageNameTemplate": "immich-app/immich",
+      "datasourceTemplate": "github-releases",
+      "versioningTemplate": "semver"
+    },
+    {
+      "customType": "regex",
       "description": "helm.cattle.io HelmChart CR chart versions (oci:// — via docker datasource; the helm datasource has no OCI support)",
       "fileMatch": [
         "targets/srv0/k3s-(base|apps)/.+\\.ya?ml$"
@@ -139,6 +152,28 @@
         "ghcr.io/immich-app/postgres"
       ],
       "versioning": "regex:^(?<compatibility>\\d+)-vectorchord(?<major>\\d+)\\.(?<minor>\\d+)\\.(?<patch>\\d+)-pgvector(?<pv_major>\\d+)\\.(?<pv_minor>\\d+)\\.(?<pv_patch>\\d+)$"
+    },
+    {
+      "description": "immich-server: GHCR publishes ~30k tags, so the docker datasource's fetch-all-pages enumeration intermittently fails and Renovate skips the update with no-result. Look the version up from the immich GitHub releases instead (authenticated by the platform token).",
+      "matchDatasources": [
+        "docker"
+      ],
+      "matchPackageNames": [
+        "ghcr.io/immich-app/immich-server"
+      ],
+      "overrideDatasource": "github-releases",
+      "overridePackageName": "immich-app/immich",
+      "versioning": "semver"
+    },
+    {
+      "description": "immich-machine-learning is handled by the dedicated github-releases custom manager; disable the generic docker dep so it neither re-hits the 200k-tag GHCR lookup nor drops the -openvino suffix. Excluding it in the generic regex is impossible because Renovate's regex engine (RE2) has no lookahead.",
+      "matchDatasources": [
+        "docker"
+      ],
+      "matchPackageNames": [
+        "ghcr.io/immich-app/immich-machine-learning"
+      ],
+      "enabled": false
     }
   ]
 }
