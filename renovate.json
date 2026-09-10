@@ -7,7 +7,7 @@
   "prHourlyLimit": 20,
   "prConcurrentLimit": 20,
   "branchConcurrentLimit": 20,
-  "automerge": true,
+  "automerge": false,
   "ignoreTests": true,
   "labels": [
     "deps"
@@ -94,20 +94,7 @@
         "pinDigest",
         "digest"
       ],
-      "groupName": "docker digests",
-      "automerge": false
-    },
-    {
-      "description": "Never automerge major updates to critical infra (base-namespace srv0 K3s group, public VPS edge vps0, srv0 frpc tunnel); minor/patch automerge normally",
-      "matchFileNames": [
-        "targets/srv0/k3s-base/**",
-        "targets/vps0/compose/**",
-        "targets/srv0/compose/**"
-      ],
-      "matchUpdateTypes": [
-        "major"
-      ],
-      "automerge": false
+      "groupName": "docker digests"
     },
     {
       "description": "Pin floating tags to digests",
@@ -152,16 +139,6 @@
         "ghcr.io/immich-app/postgres"
       ],
       "versioning": "regex:^(?<compatibility>\\d+)-vectorchord(?<major>\\d+)\\.(?<minor>\\d+)\\.(?<patch>\\d+)-pgvector(?<pv_major>\\d+)\\.(?<pv_minor>\\d+)\\.(?<pv_patch>\\d+)$"
-    },
-    {
-      "description": "Longhorn requires sequential minor upgrades — minors are proposed but never automerged (patches automerge; majors already blocked by the critical-infra rule)",
-      "matchPackageNames": [
-        "longhorn"
-      ],
-      "matchUpdateTypes": [
-        "minor"
-      ],
-      "automerge": false
     }
   ]
 }
