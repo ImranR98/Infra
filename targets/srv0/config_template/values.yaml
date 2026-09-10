@@ -238,6 +238,11 @@ FRESHRSS_PASSWORD: "change_me" # openssl rand -base64 32
 # AUTHELIA_LINKWARDEN_CLIENT_SECRET_HASHABLE (above) must be the same random
 # password Linkwarden receives as its OIDC client secret.
 LINKWARDEN_NEXTAUTH_SECRET: "change_me" # openssl rand -base64 32
+# The postgres PVC stores this at first initdb; changing it here afterwards
+# requires updating the DB too (local socket is trust):
+#   kubectl -n apps exec -i linkwarden-postgresql-<pod> -c postgresql -- \
+#     psql -U postgres   # then: ALTER USER postgres PASSWORD '<new>'; \q
+# and restarting linkwarden, or it fails with Prisma P1000.
 LINKWARDEN_DB_PASSWORD: "change_me" # openssl rand -hex 16
 LINKWARDEN_MEILI_MASTER_KEY: "change_me" # openssl rand -base64 32
 # Links archived in parallel per batch (each spawns Chromium + monolith, ~1-2Gi
