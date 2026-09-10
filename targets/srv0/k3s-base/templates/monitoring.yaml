@@ -126,6 +126,23 @@ spec:
         deploy: true
       node-exporter:
         deploy: true
+        # The filesystem collector reads /host/proc/1/mountinfo; SELinux
+        # denies container_t that ptrace across mount namespaces (root +
+        # SYS_PTRACE alone do not pass the LSM hook), so the chart's 65534
+        # default drops all node_filesystem_* metrics. spc_t + root + SYS_PTRACE
+        # matches the repo's other host-access pods (pvc-backup/restore, HA);
+        # the container keeps read-onlyRootFilesystem + read-only host mounts.
+        securityContext:
+          runAsNonRoot: false
+          runAsUser: 0
+          runAsGroup: 0
+          fsGroup: 0
+          seLinuxOptions:
+            type: spc_t
+        containerSecurityContext:
+          readOnlyRootFilesystem: true
+          capabilities:
+            add: ["SYS_PTRACE"]
 ---
 apiVersion: helm.cattle.io/v1
 kind: HelmChart
@@ -527,6 +544,34 @@ spec:
               kubernetes.io/metadata.name: base
       ports:
         - port: 3100
+  policyTypes:
+    - Ingress
+---
+# Alloy clustering (ckit transport on 12345): without this the collectors can
+# never join the memberlist (deny-all-ingress blocks it), so every instance
+# scrapes all cluster-wide targets and Mimir rejects the duplicate samples as
+# out-of-order.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-alloy-cluster
+  namespace: base
+spec:
+  podSelector:
+    matchExpressions:
+      - key: app.kubernetes.io/name
+        operator: In
+        values: ["alloy-metrics", "alloy-logs"]
+  ingress:
+    - from:
+        - podSelector:
+            matchExpressions:
+              - key: app.kubernetes.io/name
+                operator: In
+                values: ["alloy-metrics", "alloy-logs"]
+      ports:
+        - port: 12345
+          protocol: TCP
   policyTypes:
     - Ingress
 ---
