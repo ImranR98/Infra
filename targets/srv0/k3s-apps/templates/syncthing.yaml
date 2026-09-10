@@ -65,8 +65,14 @@ spec:
             requests:
               memory: 128Mi
           readinessProbe:
-            tcpSocket:
-              port: 22000
+            # A TCP probe against the TLS listener made kubelet open and drop
+            # a connection every 30s, which Syncthing logged as "Failed TLS
+            # handshake: EOF". Use the unauthenticated API health endpoint;
+            # the GUI binds loopback (STGUIADDRESS), so probe 127.0.0.1.
+            httpGet:
+              path: /rest/noauth/health
+              port: 8384
+              host: 127.0.0.1
             periodSeconds: 30
             timeoutSeconds: 5
             failureThreshold: 3
