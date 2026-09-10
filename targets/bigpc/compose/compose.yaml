@@ -68,7 +68,7 @@ services:
             - PUID=$MY_UID
             - PGID=$MY_UID
         volumes:
-            - /home/$USER:/var/syncthing
+            - /home/$MY_USERNAME:/var/syncthing
             - /mnt/ssd2:/mnt/ssd2
         network_mode: host
         logging: *logging
