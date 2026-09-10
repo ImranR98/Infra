@@ -17,13 +17,6 @@ spec:
           main:
             securityContext:
               allowPrivilegeEscalation: false
-            resources:
-              limits:
-                memory: 8Gi
-                infra.local/devices-dri: "1"
-              requests:
-                memory: 128Mi
-                infra.local/devices-dri: "1"
             env:
               DB_HOSTNAME: "immich-postgresql"
               DB_USERNAME: "postgres"
@@ -61,6 +54,16 @@ spec:
                 tag: v3.1.0
               securityContext:
                 allowPrivilegeEscalation: false
+              # Resources are per-component (the top-level controllers.main is
+              # shared across all Immich components, so anything set there
+              # leaks into valkey/ML). The DRI grant is for VAAPI transcoding.
+              resources:
+                limits:
+                  memory: 8Gi
+                  infra.local/devices-dri: "1"
+                requests:
+                  memory: 128Mi
+                  infra.local/devices-dri: "1"
               env:
                 HWACCEL_VAAPI_ENABLED: "true"
       persistence:
@@ -111,6 +114,14 @@ spec:
               image:
                 repository: docker.io/valkey/valkey
                 tag: "9.1"
+              # The chart's top-level controllers.main is shared across all
+              # components, so the server's DRI grant + 8Gi limit would leak
+              # into valkey; override with the small tier (no device).
+              resources:
+                limits:
+                  memory: 512Mi
+                requests:
+                  memory: 128Mi
       enabled: true
 ---
 ---
