@@ -23,13 +23,13 @@
   "customManagers": [
     {
       "customType": "regex",
-      "description": "Images inside HelmChart valuesContent blocks (repository/tag pairs and single-line image refs)",
+      "description": "Images inside the k3s charts (repository/tag pairs and single-line image refs). currentDigest is captured so digest-pinned images are recognized as pinned and refreshed; without it Renovate re-pins them and the branch update fails verification.",
       "fileMatch": [
         "targets/srv0/k3s-(base|apps)/.+\\.ya?ml$"
       ],
       "matchStrings": [
-        "repository:\\s*(?<depName>\\S+)\\s*\\n(?:[^\\n]*\\n){0,10}?\\s*tag:\\s*\"?(?<currentValue>[^\"\\s@#]+)(?:@sha256:\\S+)?\"?",
-        "image:\\s*(?<depName>[^\\s@:\"']+):(?<currentValue>[^\\s@:\"'#]+)(?:@sha256:\\S+)?"
+        "repository:\\s*(?<depName>\\S+)\\s*\\n(?:[^\\n]*\\n){0,10}?\\s*tag:\\s*\"?(?<currentValue>[^\"\\s@#]+)(?:@(?<currentDigest>sha256:[a-f0-9]+))?\"?",
+        "image:\\s*(?<depName>[^\\s@:\"']+):(?<currentValue>[^\\s@:\"'#]+)(?:@(?<currentDigest>sha256:[a-f0-9]+))?"
       ],
       "datasourceTemplate": "docker",
       "versioningTemplate": "docker"
