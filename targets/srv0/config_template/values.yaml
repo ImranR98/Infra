@@ -93,6 +93,11 @@ AUTHELIA_HEADER_GATE_ENABLED: "false"
 # ====== Crowdsec ======
 CROWDSEC_BOUNCER_KEY: "change_me" # openssl rand -hex 32
 CROWDSEC_LAPI_SECRET: "change_me" # openssl rand -hex 32
+# LAPI machine password for the crowdsec-web-ui dashboard (see k3s-base/templates/crowdsec-web-ui.yaml).
+# Register the machine once after the first deploy (keep -f /dev/null so the
+# container's own credentials file is not overwritten):
+#   kubectl -n base exec deploy/crowdsec-lapi -- cscli machines add crowdsec-web-ui --password '<value>' -f /dev/null
+CROWDSEC_WEBUI_LAPI_PASSWORD: "change_me" # openssl rand -hex 32
 
 # ====== Localhost Basic Auth ======
 LOCALHOST_AUTH_USER: "admin"

@@ -27,18 +27,21 @@ EOF
 sysctl --system >/dev/null
 
 # ---- firewall (K3s ports + pod/service CIDRs + LAN exposure) -----------------
-# The FedoraWorkstation default zone ships 1025-65535 open. Keep the range
-# (desktop apps rely on it) but drop the cluster-internal ports from the LAN:
+# Open every port the stack needs explicitly, so this works regardless of the
+# zone's default range (FedoraWorkstation ships 1025-65535 open; minimal
+# installs don't): 80/443 Traefik, 6443 apiserver, 2379/2380 etcd,
+# 5001 k3s embedded registry, 8472 flannel VXLAN, 51820/51821 flannel-wireguard.
+# etcd stays open deliberately: it is mTLS-authenticated and a future second
+# server would need it between control-plane IPs.
+# Drop the cluster-internal ports from the LAN:
 #   9100   node-exporter   (unauthenticated; scraped by Alloy pods)
 #   10250  kubelet         (apiserver reaches kubelets via loopback/pod net)
-# etcd (2379/2380) stays open deliberately: it is mTLS-authenticated and a
-# future second server would need it between control-plane IPs.
 # Loopback bypasses firewalld and the pod CIDRs are in the trusted zone, so
 # plain drops are safe (no source allowlist needed). priority=-10 keeps the
-# drop in the zone's _pre chain, ahead of the open 1025-65535 ports.
+# drop in the zone's _pre chain, ahead of any open range.
 if command -v firewall-cmd >/dev/null 2>&1; then
     zone="$(firewall-cmd --get-default-zone)"
-    for port in 6443/tcp 2379/tcp 2380/tcp 5001/tcp 8472/udp 51820/udp 51821/udp; do
+    for port in 80/tcp 443/tcp 6443/tcp 2379/tcp 2380/tcp 5001/tcp 8472/udp 51820/udp 51821/udp; do
         firewall-cmd --permanent --add-port="$port" >/dev/null
     done
     # 10250 was opened individually before; the drop rule replaces it.
@@ -55,10 +58,15 @@ if command -v firewall-cmd >/dev/null 2>&1; then
 elif command -v ufw >/dev/null 2>&1; then
     ufw allow from 10.42.0.0/16
     ufw allow from 10.43.0.0/16
+    ufw allow 80/tcp
+    ufw allow 443/tcp
+    ufw allow 6443/tcp
+    ufw allow 2379/tcp
+    ufw allow 2380/tcp
+    ufw allow 5001/tcp
     ufw allow 8472/udp
     ufw allow 51820/udp
-    ufw allow 6443/tcp
-    ufw allow 443/tcp
+    ufw allow 51821/udp
     ufw deny 9100/tcp
     ufw deny 10250/tcp
 fi

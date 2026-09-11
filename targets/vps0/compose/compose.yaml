@@ -196,6 +196,18 @@ configs:
                 - evt.Meta.http_verb == 'GET'
                 - evt.Meta.http_path matches '^/api/.+'
 
+    crowdsec_webui_whitelist:
+        content: |
+            name: imranr/crowdsec-webui
+            description: "Whitelist for CrowdSec Web UI"
+            whitelist:
+              reason: "The web UI is a SPA: the dashboard fetches the API in bursts, tripping crawl scenarios"
+              expression:
+                - evt.Meta.target_fqdn == 'crowdsec.${CLOUD_SERVICES_DOMAIN}'
+                - evt.Overflow.Alert.GetScenario() in ['crowdsecurity/http-probing', 'crowdsecurity/http-crawl-non_statics']
+                - evt.Meta.http_verb == 'GET'
+                - evt.Meta.http_path matches '^/api/.+'
+
     logtfy_config:
         content: |
             {
@@ -431,6 +443,7 @@ services:
         expose:
             - 8080
             - 7422
+            - 6060
         environment:
             - COLLECTIONS=crowdsecurity/linux crowdsecurity/traefik crowdsecurity/appsec-virtual-patching crowdsecurity/appsec-generic-rules
             - CUSTOM_HOSTNAME=crowdsec
@@ -449,6 +462,39 @@ services:
           - source: crowdsec_plausible_whitelist
             target: /etc/crowdsec/postoverflows/s01-whitelist/plausible.yaml
             mode: 0440
+          - source: crowdsec_webui_whitelist
+            target: /etc/crowdsec/postoverflows/s01-whitelist/crowdsec-webui.yaml
+            mode: 0440
+        logging: *logging
+
+    # CrowdSec Web UI - dashboard for the local LAPI (machine password auth)
+    crowdsec_web_ui:
+        image: ghcr.io/theduffman85/crowdsec-web-ui:2026.8.3
+        container_name: crowdsec_web_ui
+        restart: unless-stopped
+        mem_limit: 512M
+        user: "$MY_UID:$MY_UID"
+        depends_on:
+            - crowdsec
+        environment:
+            - CONFIG_INSTANCE_LAPI_URL=http://crowdsec:8080
+            - CONFIG_INSTANCE_LAPI_AUTH_USERNAME=crowdsec-web-ui
+            - CONFIG_INSTANCE_LAPI_AUTH_PASSWORD=$CROWDSEC_WEBUI_LAPI_PASSWORD
+            - CONFIG_INSTANCE_METRICS_URL=http://crowdsec:6060/metrics
+        volumes:
+            - ../../../current_target/compose_live_state/crowdsec-web-ui/data:/app/data
+        labels:
+            - "traefik.enable=true"
+            - "traefik.http.routers.crowdsec_web_ui.rule=Host(`crowdsec.$CLOUD_SERVICES_DOMAIN`)"
+            - "traefik.http.routers.crowdsec_web_ui.entrypoints=websecure"
+            - "traefik.http.routers.crowdsec_web_ui.tls.certresolver=le"
+            - "traefik.http.routers.crowdsec_web_ui.tls=true"
+            - "traefik.http.routers.crowdsec_web_ui.middlewares=crowdsec-bouncer@file,authelia@file,geoblock@file"
+            - "traefik.http.services.crowdsec_web_ui.loadbalancer.server.port=3000"
+        expose:
+            - 3000
+        networks:
+            - traefik
         logging: *logging
 
     # Plausible - Web Analytics

@@ -1,0 +1,147 @@
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: crowdsec-web-ui-prod-tls
+  namespace: base
+spec:
+  secretName: crowdsec-web-ui-prod-tls
+  issuerRef:
+    name: letsencrypt-prod
+    kind: ClusterIssuer
+  dnsNames:
+    - crowdsec.{{ .Values.SERVICES_DOMAIN }}
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: crowdsec-web-ui-ingress
+  namespace: base
+spec:
+  entryPoints:
+    - websecure
+    - websecure-proxy
+  routes:
+    - match: Host(`crowdsec.{{ .Values.SERVICES_DOMAIN }}`)
+      kind: Rule
+      middlewares:
+        - name: geoblock
+          namespace: base
+        - name: crowdsec-bouncer
+          namespace: base
+        - name: forwardauth-authelia
+          namespace: base
+      services:
+        - name: crowdsec-web-ui
+          port: 3000
+  tls:
+    secretName: crowdsec-web-ui-prod-tls
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: crowdsec-web-ui
+  namespace: base
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: crowdsec-web-ui
+  template:
+    metadata:
+      labels:
+        app: crowdsec-web-ui
+    spec:
+      securityContext:
+        fsGroup: {{ .Values.MY_UID }}
+      containers:
+        - name: crowdsec-web-ui
+          image: ghcr.io/theduffman85/crowdsec-web-ui:2026.8.3
+          securityContext:
+            runAsUser: {{ .Values.MY_UID }}
+            runAsGroup: {{ .Values.MY_UID }}
+            allowPrivilegeEscalation: false
+          env:
+            # LAPI is TLS-only (chart-generated CA); the machine password is
+            # registered once with `cscli machines add` (see config_template).
+            - name: CONFIG_INSTANCE_LAPI_URL
+              value: https://crowdsec-service.base.svc.cluster.local:8080
+            - name: CONFIG_INSTANCE_LAPI_AUTH_USERNAME
+              value: crowdsec-web-ui
+            - name: CONFIG_INSTANCE_LAPI_AUTH_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: crowdsec-secrets
+                  key: webui-lapi-password
+            - name: CONFIG_INSTANCE_LAPI_TLS_CA_FILE
+              value: /etc/crowdsec-web-ui/ca.crt
+            - name: CONFIG_INSTANCE_METRICS_URL
+              value: http://crowdsec-service.base.svc.cluster.local:6060/metrics
+          ports:
+            - containerPort: 3000
+          resources:
+            limits:
+              memory: 512Mi
+            requests:
+              memory: 128Mi
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: 3000
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: 3000
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+          volumeMounts:
+            - name: crowdsec-web-ui-data
+              mountPath: /app/data
+            - name: crowdsec-web-ui-ca
+              mountPath: /etc/crowdsec-web-ui
+              readOnly: true
+      volumes:
+        - name: crowdsec-web-ui-data
+          persistentVolumeClaim:
+            claimName: crowdsec-web-ui-pvc
+        - name: crowdsec-web-ui-ca
+          secret:
+            secretName: crowdsec-root-secret
+            defaultMode: 0440
+            items:
+              - key: ca.crt
+                path: ca.crt
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: crowdsec-web-ui
+  namespace: base
+spec:
+  selector:
+    app: crowdsec-web-ui
+  ports:
+    - protocol: TCP
+      port: 3000
+      targetPort: 3000
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: crowdsec-web-ui-pvc
+  namespace: base
+  labels:
+    auto-backup: "true"
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+  storageClassName: longhorn

@@ -155,7 +155,9 @@ spec:
       app: nfs-server
   ingress:
     - from:
-        # hostNetwork CSI node plugin — traffic arrives from node IPs
+        # hostNetwork CSI node plugin — traffic arrives from node IPs.
+        # HARDCODED LAN SUBNET: change 192.168.8.0/24 to this cluster's LAN
+        # when bootstrapping elsewhere, or CSI NFS mounts are blocked.
         - ipBlock:
             cidr: 192.168.8.0/24
       ports:
