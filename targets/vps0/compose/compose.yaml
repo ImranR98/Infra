@@ -294,7 +294,7 @@ services:
 
     # Authelia - 2FA Authentication
     authelia:
-        image: authelia/authelia:latest@sha256:936134132eaf01bfa2faf85055afbc1e0cc1cc5ca4547e9c06408fd0dd784646
+        image: authelia/authelia:latest@sha256:a039d87fb842f0af4f83c03434f5fb6ec45d4b46e86b8b3ac571cc104bbe6e6d
         container_name: authelia
         user: "$MY_UID:$MY_UID"
         depends_on:
@@ -802,7 +802,7 @@ services:
 
     # Logtfy - Log Monitoring and ntfy Alerting
     logtfy:
-        image: imranrdev/logtfy:latest@sha256:c234a89fe4969806c28b972509c3575ff2595f77ba4b3f1def540a7a2b0b07bd
+        image: imranrdev/logtfy:latest@sha256:5c501d62c914d2082be2276fafdef48e664437d71e0e2c7b89bc009f86f8244c
         container_name: logtfy
         hostname: $TARGET
         restart: unless-stopped
@@ -822,7 +822,7 @@ services:
 
     # strelaysrv - Syncthing Relay Server
     strelaysrv:
-        image: syncthing/relaysrv:latest@sha256:04659c950fe54e02420dd1c5c9a1b496bebe46b23b6af4aed712b64272d5dd6d
+        image: syncthing/relaysrv:latest@sha256:a3fa4279ea2aec918817ff54152b8f5d936e1576d95b06be8ffbdc06fd68a815
         container_name: strelaysrv
         restart: unless-stopped
         mem_limit: 128M
