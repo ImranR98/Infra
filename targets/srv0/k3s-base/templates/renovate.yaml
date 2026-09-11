@@ -51,9 +51,11 @@ spec:
                   export RENOVATE_REPOSITORIES="ImranR98/Infra"
                   export LOG_LEVEL="info"
                   # Attribute commits to the repo's configured git identity
-                  # (synced .git/config; matches local runs).
-                  if git -C /repo config user.name >/dev/null 2>&1 && git -C /repo config user.email >/dev/null 2>&1; then
-                    export RENOVATE_GIT_AUTHOR="$(git -C /repo config user.name) <$(git -C /repo config user.email)>"
+                  # (synced .git/config; matches local runs). Read the file
+                  # directly: `git -C /repo` trips git's dubious-ownership check
+                  # (root-owned mount parents, unprivileged pod).
+                  if git config -f /repo/.git/config user.name >/dev/null 2>&1 && git config -f /repo/.git/config user.email >/dev/null 2>&1; then
+                    export RENOVATE_GIT_AUTHOR="$(git config -f /repo/.git/config user.name) <$(git config -f /repo/.git/config user.email)>"
                   fi
                   exec renovate
               volumeMounts:
