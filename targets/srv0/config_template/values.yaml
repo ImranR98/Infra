@@ -299,8 +299,6 @@ NEXTCLOUD_DB_PASSWORD: "change_me" # openssl rand -hex 16
 #   openssl x509 -req -in preboot-client.csr -CA ca.crt -CAkey ca.key -CAcreateserial -out preboot-client.crt -days 1825
 
 # ====== Observability ======
-RUSTFS_ACCESS_KEY: "change_me" # openssl rand -hex 16
-RUSTFS_SECRET_KEY: "change_me" # openssl rand -hex 32
 GRAFANA_ADMIN_PASSWORD: "change_me" # openssl rand -base64 32
 # Same convention as the other Authelia OIDC clients: the plaintext secret
 # Grafana presents as its OIDC client secret (the _HASHED form is mounted
