@@ -24,7 +24,7 @@ spec:
     # OpenVINO need the Iris Xe. PreferNoSchedule on bigpc is not enough —
     # the scheduler can still place the pod there (seen during rollout).
     nodeSelector:
-      hostpath-main: "true"
+      infra.local/hostpath-main: "true"
     # Device access via the generic-device-plugin (infra.local/dri) — no
     # privileged. container_t + s0 (verified): SELinux allows the NFS media
     # PVC + config PVC writes and the /dev/dri grant; s0 keeps config-PVC

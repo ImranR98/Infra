@@ -1,0 +1,44 @@
+---
+# Node Feature Discovery — applies the node-facts DaemonSet's local feature
+# files as node labels (hostpath-main, external-exposed). Hardware scheduling
+# is owned by the generic-device-plugin (infra.local/amd, infra.local/conbee);
+# NFD's built-in sources still publish their standard labels incidentally.
+apiVersion: helm.cattle.io/v1
+kind: HelmChart
+metadata:
+  name: node-feature-discovery
+  namespace: kube-system
+spec:
+  chart: node-feature-discovery
+  repo: https://kubernetes-sigs.github.io/node-feature-discovery/charts
+  failurePolicy: abort
+  targetNamespace: node-feature-discovery
+  createNamespace: true
+  version: 0.19.0
+  valuesContent: |-
+    master:
+      resources:
+        requests:
+          memory: 128Mi
+        limits:
+          memory: 512Mi
+    worker:
+      # Run on every node, including bigpc (scheduling-discouraged taint).
+      tolerations:
+        - operator: Exists
+      # spc_t: SELinux denies container_t reads of the host sysfs/proc trees
+      # the worker inspects (same profile as generic-device-plugin/node-exporter).
+      podSecurityContext:
+        seLinuxOptions:
+          type: spc_t
+      resources:
+        requests:
+          memory: 128Mi
+        limits:
+          memory: 512Mi
+    gc:
+      resources:
+        requests:
+          memory: 128Mi
+        limits:
+          memory: 512Mi

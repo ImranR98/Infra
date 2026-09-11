@@ -96,15 +96,6 @@ spec:
         add:
           - NET_ADMIN
           - NET_RAW
-    affinity:
-      nodeAffinity:
-        requiredDuringSchedulingIgnoredDuringExecution:
-          nodeSelectorTerms:
-            - matchExpressions:
-                - key: has-homeassistant-hardware
-                  operator: In
-                  values:
-                    - "true"
     persistence:
       enabled: true
       existingClaim: homeassistant-config-pvc

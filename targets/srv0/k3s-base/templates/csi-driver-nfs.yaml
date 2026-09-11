@@ -23,7 +23,7 @@ spec:
 # RWX NFS-backed storage class for the shared PVC backup destination.
 # No provisioner: the pvc-backup-dest PVC binds to the static PV
 # pvc-backup-dest-pv, which mounts the ROOT of the NFS backups share
-# (nfs-server pod, pinned to the hostpath-main node, exporting
+# (nfs-server pod, pinned to the infra.local/hostpath-main node, exporting
 # /exports/backups = hostPath {{ .Values.PVC_BACKUP_DIR }} on srv0). Nothing is
 # dynamically provisioned, so no pvc-* subdirs ever appear in the
 # backup directory.

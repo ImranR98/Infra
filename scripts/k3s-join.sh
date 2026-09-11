@@ -2,7 +2,7 @@
 # DESC: Join a node to the K3s cluster. Run ON the control plane: reads the
 # token there, streams node prep + the official installer to the joining node
 # over SSH (the token travels via stdin only — never argv), waits for Ready,
-# then applies labels/taint/Longhorn replica count. Prompts for sudo on both
+# then applies the taint/Longhorn replica count. Prompts for sudo on both
 # machines (they may differ).
 set -euo pipefail
 
@@ -20,7 +20,6 @@ usage() {
 Usage: $(basename "$0") <node_ip> <node_user> [options]
 
   --role agent|server          joining role (default: agent)
-  --amdgpu auto|yes|no         AMD GPU detection (lspci, vendor 1002; default: auto)
   --scheduling-discouraged     add the PreferNoSchedule taint
   --longhorn-replicas          enable the Longhorn default disk + bump replica count
 
@@ -36,13 +35,11 @@ node_user="$2"
 shift 2
 
 k3s_role=agent
-amdgpu_mode=auto
 scheduling_discouraged=false
 longhorn_replicas=false
 while [ $# -gt 0 ]; do
     case "$1" in
         --role) k3s_role="${2:?--role needs agent|server}"; shift 2 ;;
-        --amdgpu) amdgpu_mode="${2:?--amdgpu needs auto|yes|no}"; shift 2 ;;
         --scheduling-discouraged) scheduling_discouraged=true; shift ;;
         --longhorn-replicas) longhorn_replicas=true; shift ;;
         -h | --help) usage ;;
@@ -53,22 +50,11 @@ done
 [[ "$node_ip" =~ ^([0-9]{1,3}\.){3}[0-9]{1,3}$ ]] || { echo "Error: node_ip must be an IPv4 address" >&2; exit 1; }
 [[ "$node_user" =~ ^[a-zA-Z0-9_-]+$ ]] || { echo "Error: invalid node_user" >&2; exit 1; }
 [[ "$k3s_role" == agent || "$k3s_role" == server ]] || { echo "Error: --role must be agent or server" >&2; exit 1; }
-[[ "$amdgpu_mode" == auto || "$amdgpu_mode" == yes || "$amdgpu_mode" == no ]] || { echo "Error: --amdgpu must be auto, yes or no" >&2; exit 1; }
 
 echo "==> Reading the K3s server token (sudo on this machine)"
 token="$($SU cat /var/lib/rancher/k3s/server/token)"
 server_ip="$(get_node_ip)"
 [ -n "$server_ip" ] || { echo "Error: cannot determine the control plane's IP" >&2; exit 1; }
-
-# AMD GPU detection runs on the JOINING node (lspci — vendor 1002, VGA class).
-amdgpu_enabled=false
-if [ "$amdgpu_mode" = yes ]; then
-    amdgpu_enabled=true
-elif [ "$amdgpu_mode" = auto ]; then
-    if ssh -o ConnectTimeout=10 "$node_user@$node_ip" 'lspci -n 2>/dev/null | grep -qE "0300: 1002:"'; then
-        amdgpu_enabled=true
-    fi
-fi
 
 echo "==> Provisioning $node_ip over SSH (sudo on the node)"
 remote_script="$(
@@ -139,10 +125,6 @@ if [ "$current" != "$longhorn_wanted" ]; then
         $SU "$kubectl_bin" -n longhorn-system patch setting.longhorn.io default-replica-count \
             --type=merge -p "{\"value\":\"$((count + 1))\"}"
     fi
-fi
-
-if [ "$amdgpu_enabled" = true ]; then
-    $SU "$kubectl_bin" patch node "$node_name" --type=merge -p '{"metadata":{"labels":{"has-amdgpu":"true"}}}'
 fi
 
 if [ "$scheduling_discouraged" = true ]; then

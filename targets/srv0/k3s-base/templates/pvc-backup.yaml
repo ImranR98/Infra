@@ -16,7 +16,7 @@ spec:
           serviceAccountName: pvc-backup
           restartPolicy: Never
           nodeSelector:
-            hostpath-main: "true"
+            infra.local/hostpath-main: "true"
           securityContext:
             runAsUser: 0
             # spc_t + s0 (not privileged): spc_t covers the repo/backup-dir
@@ -171,7 +171,7 @@ subjects:
 ---
 # Static PV for the shared backup destination. Binds pvc-backup-dest
 # directly to the ROOT of the NFS backups share (nfs-server /exports/backups,
-# which is hostPath {{ .Values.PVC_BACKUP_DIR }} on the hostpath-main node). Backup pods
+# which is hostPath {{ .Values.PVC_BACKUP_DIR }} on the infra.local/hostpath-main node). Backup pods
 # therefore write human-named archives straight into the final destination
 # from any node — no dynamically provisioned pvc-* subdirs to go missing.
 apiVersion: v1

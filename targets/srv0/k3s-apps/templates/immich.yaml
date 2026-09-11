@@ -32,7 +32,7 @@ spec:
       # need the Iris Xe there. Without this, a RollingUpdate pod can land on
       # bigpc (PreferNoSchedule only discourages) and deadlock on the PVC.
       nodeSelector:
-        hostpath-main: "true"
+        infra.local/hostpath-main: "true"
       securityContext:
         runAsUser: {{ .Values.MY_UID }}
         runAsGroup: {{ .Values.MY_UID }}
@@ -95,7 +95,7 @@ spec:
                   infra.local/dri: "1"
       defaultPodOptions:
         nodeSelector:
-          hostpath-main: "true"
+          infra.local/hostpath-main: "true"
         securityContext:
           seLinuxOptions:
             level: s0
