@@ -136,7 +136,7 @@ spec:
     required:
       nodeSelectorTerms:
         - matchExpressions:
-            - key: hostpath-main
+            - key: infra.local/hostpath-main
               operator: In
               values:
                 - "true"

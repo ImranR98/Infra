@@ -19,14 +19,11 @@ spec:
     # 2 minutes, so the next run supersedes any failure — keep only the most
     # recent failed job (its pods' logs) for debugging.
     failedJobsHistoryLimit: 1
-    # Rebalances pods that drifted due to soft affinities / PreferNoSchedule
-    # taints being evaluated only at scheduling time:
+    # Rebalances pods that drifted due to the PreferNoSchedule taint being
+    # evaluated only at scheduling time:
     #   - RemovePodsViolatingNodeTaints: evicts pods on bigpc that do NOT
     #     tolerate its scheduling-discouraged taint (only if they fit
     #     elsewhere, i.e. srv0). Ollama tolerates it -> never touched.
-    #   - RemovePodsViolatingNodeAffinity: evicts pods whose PREFERRED node
-    #     (has-amdgpu=true) can now fit them; while bigpc is unavailable
-    #     there is no better node -> no eviction, so no thrash loop.
     deschedulerPolicy:
       maxNoOfPodsToEvictPerNode: 2
       maxNoOfPodsToEvictPerNamespace: 3
@@ -52,15 +49,10 @@ spec:
                 namespaces:
                   exclude:
                     - longhorn-system
-            - name: "RemovePodsViolatingNodeAffinity"
-              args:
-                nodeAffinityType:
-                  - preferredDuringSchedulingIgnoredDuringExecution
           plugins:
             deschedule:
               enabled:
                 - "RemovePodsViolatingNodeTaints"
-                - "RemovePodsViolatingNodeAffinity"
     resources:
       limits:
         memory: 128Mi

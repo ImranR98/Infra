@@ -1,0 +1,86 @@
+---
+# Host-fact detector feeding NFD's local feature source.
+#
+# NFD has no file/mount/process feature source, so this DaemonSet discovers the
+# facts NFD cannot and writes them as feature files into the shared host dir the
+# nfd-worker mounts. Facts are re-evaluated every 60s and written atomically;
+# an omitted line makes NFD remove the corresponding label.
+#
+#   hostpath-main     -> {{ .Values.MAIN_PARENT_DIR }}/Main exists
+#   external-exposed  -> an frpc process is running (FRP client container)
+#
+# Host root is reached through /host-proc/1/root (no host / mount): the pod
+# mounts only the host procfs and the features.d dir. spc_t + SYS_PTRACE cover
+# the ptrace LSM checks for /proc/<pid>/root and /proc/<pid>/comm; DAC_OVERRIDE
+# lets root traverse the 0700 home directory the data paths live under.
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: node-facts
+  namespace: base
+spec:
+  selector:
+    matchLabels:
+      app: node-facts
+  template:
+    metadata:
+      labels:
+        app: node-facts
+    spec:
+      # Run on every node, including bigpc (scheduling-discouraged taint).
+      tolerations:
+        - operator: Exists
+      automountServiceAccountToken: false
+      securityContext:
+        seLinuxOptions:
+          type: spc_t
+      containers:
+        - name: node-facts
+          image: busybox:1.38
+          command:
+            - sh
+            - -c
+            - |
+              while :; do
+                tmp=/features/.node-facts.tmp
+                out=/features/node-facts
+                : > "$tmp"
+                [ -d "/host-proc/1/root${MAIN_PATH}" ] && echo "infra.local/hostpath-main=true" >> "$tmp"
+                for c in /host-proc/[0-9]*/comm; do
+                  [ "$(cat "$c" 2>/dev/null)" = frpc ] && { echo "infra.local/external-exposed=true" >> "$tmp"; break; }
+                done
+                mv -f "$tmp" "$out"
+                sleep 60
+              done
+          env:
+            - name: MAIN_PATH
+              value: "{{ .Values.MAIN_PARENT_DIR }}/Main"
+          securityContext:
+            runAsUser: 0
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+              add:
+                - SYS_PTRACE
+                - DAC_OVERRIDE
+          resources:
+            limits:
+              memory: 64Mi
+            requests:
+              memory: 16Mi
+          volumeMounts:
+            - name: host-proc
+              mountPath: /host-proc
+              readOnly: true
+            - name: features
+              mountPath: /features
+      volumes:
+        - name: host-proc
+          hostPath:
+            path: /proc
+        - name: features
+          hostPath:
+            path: /etc/kubernetes/node-feature-discovery/features.d/
+            type: DirectoryOrCreate

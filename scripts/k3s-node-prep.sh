@@ -1,6 +1,6 @@
 #!/bin/bash
 # DESC: Prepare a K3s node: sysctls, firewall
-# ports/trusted CIDRs, pciutils. Runs ON the node as root
+# ports/trusted CIDRs. Runs ON the node as root
 # (sudo). Shared by k3s-server.sh and k3s-join.sh.
 set -euo pipefail
 
@@ -82,13 +82,6 @@ EOF
     systemctl daemon-reload
     systemctl set-property --runtime kubepods.slice IOAccounting=true IOWeight=10 2>/dev/null || true
     echo "k3s-node-prep: control-plane I/O protection applied (kubepods.slice IOWeight=10)"
-fi
-
-# ---- pciutils (AMD GPU detection at join time) -------------------------------
-if command -v dnf >/dev/null 2>&1; then
-    dnf install -y pciutils
-else
-    apt-get install -y pciutils
 fi
 
 # ---- K3s config dir ----------------------------------------------------------

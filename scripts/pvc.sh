@@ -136,7 +136,7 @@ pvc_node_ready() {
 # Ensures the shared RWX NFS PVC used as the backup destination exists and is
 # Bound in the given namespace. The PVC binds to the static PV
 # pvc-backup-dest-pv, which mounts the ROOT of the NFS backups share
-# ($PVC_BACKUP_DIR on the hostpath-main node) — archives are written directly
+# ($PVC_BACKUP_DIR on the infra.local/hostpath-main node) — archives are written directly
 # to their final human-named path, reachable from any node.
 pvc_ensure_backup_dest() {
     local ns="${1:?}"

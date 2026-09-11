@@ -1,8 +1,7 @@
 #!/bin/bash
 # DESC: Bootstrap THIS machine as the K3s control plane: node prep, the official
-# get.k3s.io installer, server config (cluster-init, flannel-wireguard,
-# node labels), and post-install node labels (Longhorn default disk, Home
-# Assistant hardware). Run ON the node — no args.
+# get.k3s.io installer, server config (cluster-init, flannel-wireguard), and
+# the post-install Longhorn default-disk label. Run ON the node — no args.
 set -euo pipefail
 
 if [ -z "${INFRA_ROOT:-}" ]; then
@@ -41,10 +40,6 @@ flannel-backend: wireguard-native
 flannel-iface-regex: "^(eth|ens|enp|eno|enx|wlan|wlp|wlo|bond|ib)"
 cluster-init: true
 node-ip: $node_ip
-node-label:
-  - hostpath-main=true
-  - hostpath-extra-storage=true
-  - external-exposed=true
 EOF
 
 echo "==> Starting K3s"
@@ -66,9 +61,8 @@ for _ in $(seq 1 24); do
 done
 $SU "$kubectl_bin" get nodes >/dev/null 2>&1 || { echo "Error: Kubernetes API never became reachable" >&2; exit 1; }
 
-echo "==> Node labels"
+echo "==> Longhorn default-disk label"
 $SU "$kubectl_bin" patch node "$(hostname)" --type=merge \
     -p '{"metadata":{"labels":{"node.longhorn.io/create-default-disk":"true"}}}'
-$SU "$kubectl_bin" label node "$(hostname)" has-homeassistant-hardware=true --overwrite
 
 echo "k3s-server: control plane ready."

@@ -21,7 +21,7 @@ spec:
     required:
       nodeSelectorTerms:
         - matchExpressions:
-            - key: hostpath-main
+            - key: infra.local/hostpath-main
               operator: In
               values:
                 - "true"
@@ -58,7 +58,7 @@ spec:
     required:
       nodeSelectorTerms:
         - matchExpressions:
-            - key: hostpath-main
+            - key: infra.local/hostpath-main
               operator: In
               values:
                 - "true"
@@ -95,7 +95,7 @@ spec:
     required:
       nodeSelectorTerms:
         - matchExpressions:
-            - key: external-exposed
+            - key: infra.local/external-exposed
               operator: In
               values:
                 - "true"
@@ -132,7 +132,7 @@ spec:
     required:
       nodeSelectorTerms:
         - matchExpressions:
-            - key: hostpath-main
+            - key: infra.local/hostpath-main
               operator: In
               values:
                 - "true"
@@ -169,7 +169,7 @@ spec:
     required:
       nodeSelectorTerms:
         - matchExpressions:
-            - key: hostpath-main
+            - key: infra.local/hostpath-main
               operator: In
               values:
                 - "true"
@@ -206,7 +206,7 @@ spec:
     required:
       nodeSelectorTerms:
         - matchExpressions:
-            - key: hostpath-main
+            - key: infra.local/hostpath-main
               operator: In
               values:
                 - "true"
@@ -243,7 +243,7 @@ spec:
     required:
       nodeSelectorTerms:
         - matchExpressions:
-            - key: hostpath-main
+            - key: infra.local/hostpath-main
               operator: In
               values:
                 - "true"
@@ -280,7 +280,7 @@ spec:
     required:
       nodeSelectorTerms:
         - matchExpressions:
-            - key: hostpath-main
+            - key: infra.local/hostpath-main
               operator: In
               values:
                 - "true"
@@ -317,7 +317,7 @@ spec:
     required:
       nodeSelectorTerms:
         - matchExpressions:
-            - key: hostpath-main
+            - key: infra.local/hostpath-main
               operator: In
               values:
                 - "true"

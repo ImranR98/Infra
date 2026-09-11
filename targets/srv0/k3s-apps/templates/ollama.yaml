@@ -73,16 +73,6 @@ spec:
         level: s0
     containerSecurityContext:
       allowPrivilegeEscalation: false
-    affinity:
-      nodeAffinity:
-        preferredDuringSchedulingIgnoredDuringExecution:
-          - weight: 100
-            preference:
-              matchExpressions:
-                - key: has-amdgpu
-                  operator: In
-                  values:
-                    - "true"
     tolerations:
       - key: scheduling-discouraged
         operator: Equal
