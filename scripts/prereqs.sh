@@ -1,8 +1,9 @@
 #!/bin/bash
-# DESC: Install system prerequisites on THIS machine: packages, the pinned helm
-# binary, Docker (official bootstrap), and the machine-fact .env + host bind
-# dirs for the local compose target (hostname == target). Idempotent — re-run
-# after repo changes that add compose bind dirs.
+# DESC: Install system prerequisites on THIS machine: packages (incl. the
+# Longhorn iSCSI/NFS dependencies), the pinned helm binary, Docker (official
+# bootstrap), and the machine-fact .env + host bind dirs for the local compose
+# target (hostname == target). Idempotent — re-run after repo changes that add
+# compose bind dirs.
 set -euo pipefail
 
 if [ -z "${INFRA_ROOT:-}" ]; then
@@ -18,9 +19,10 @@ HELM_VERSION="3.22.0"
 usage() {
     echo "Usage: $(basename "$0")"
     echo
-    echo "Machine-local (no target): installs packages, helm, Docker, then prepares"
-    echo "the compose state for this machine's target (hostname-matched): machine-fact"
-    echo ".env, host bind dirs owned by \$MY_UID, and the traefik acme.json seed."
+    echo "Machine-local (no target): installs packages (incl. the Longhorn"
+    echo "iSCSI/NFS deps), helm, Docker, then prepares the compose state for this"
+    echo "machine's target (hostname-matched): machine-fact .env, host bind dirs"
+    echo "owned by \$MY_UID, and the traefik acme.json seed."
     exit 1
 }
 
@@ -28,11 +30,11 @@ usage() {
 
 if command -v dnf >/dev/null 2>&1; then
     PKG_CMD=(dnf install -y)
-    PACKAGES=(yq jq curl python3 golang openssl shellcheck yamllint git acl)
+    PACKAGES=(yq jq curl python3 golang openssl shellcheck yamllint git acl iscsi-initiator-utils nfs-utils)
 elif command -v apt-get >/dev/null 2>&1; then
     $SU apt-get update -y
     PKG_CMD=(apt-get install -y)
-    PACKAGES=(yq jq curl python3 golang-go openssl shellcheck yamllint git acl)
+    PACKAGES=(yq jq curl python3 golang-go openssl shellcheck yamllint git acl open-iscsi nfs-common)
 else
     echo "Error: neither dnf nor apt-get found — cannot install packages" >&2
     exit 1
@@ -68,6 +70,10 @@ if ! command -v docker >/dev/null 2>&1 || ! docker compose version >/dev/null 2>
     rm -f /tmp/get-docker.sh
 fi
 $SU systemctl enable --now docker
+
+# Longhorn needs a running iSCSI initiator on every node (volume attach) and
+# NFS client tools for RWX volumes (nfs-utils/nfs-common installed above).
+$SU systemctl enable --now iscsid
 
 # ---- Local compose target prep (hostname-matched target only) ---------------
 local_target="$(hostname)"
@@ -157,6 +163,12 @@ if docker compose version >/dev/null 2>&1; then
     echo "  [OK] docker compose"
 else
     echo "  [MISSING] docker compose"
+    missing=1
+fi
+if systemctl is-active --quiet iscsid; then
+    echo "  [OK] iscsid"
+else
+    echo "  [MISSING] iscsid"
     missing=1
 fi
 exit $missing

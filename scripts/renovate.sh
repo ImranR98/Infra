@@ -8,8 +8,9 @@ if [ -z "${INFRA_ROOT:-}" ]; then
 fi
 source "$INFRA_ROOT/scripts/common.sh"
 
-# Universal VARS (dotenv, config/VARS.env — gitignored). Simple KEY="value"
-# lines source fine in bash; set -a exports them.
+# Universal VARS (dotenv, config/VARS.env — gitignored; template:
+# config_template/VARS.env). Simple KEY="value" lines source fine in bash;
+# set -a exports them.
 UNIVERSAL_VARS_FILE=""
 if [ -f "$INFRA_ROOT/config/VARS.env" ]; then
     UNIVERSAL_VARS_FILE="$INFRA_ROOT/config/VARS.env"
@@ -23,8 +24,9 @@ fi
 
 if [ -z "${RENOVATE_GITHUB_TOKEN:-}" ]; then
     echo "Error: RENOVATE_GITHUB_TOKEN is not set." >&2
-    echo "Add it to $INFRA_ROOT/config/VARS.env (gitignored):" >&2
-    echo "  RENOVATE_GITHUB_TOKEN=\"<github-pat-with-repo-scope>\"" >&2
+    echo "Create $INFRA_ROOT/config/VARS.env from the template:" >&2
+    echo "  cp $INFRA_ROOT/config_template/VARS.env $INFRA_ROOT/config/VARS.env" >&2
+    echo "then set RENOVATE_GITHUB_TOKEN=\"<github-pat-with-repo-scope>\"." >&2
     exit 1
 fi
 

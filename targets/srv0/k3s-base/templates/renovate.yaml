@@ -68,9 +68,9 @@ spec:
           volumes:
             - name: vars-file
               hostPath:
-                path: "{{ .Values.MAIN_PARENT_DIR }}/Main/Infra/config/VARS.env"
+                path: "{{ .Values.INFRA_ROOT }}/config/VARS.env"
                 type: File
             - name: git-config
               hostPath:
-                path: "{{ .Values.MAIN_PARENT_DIR }}/Main/Infra/.git/config"
+                path: "{{ .Values.INFRA_ROOT }}/.git/config"
                 type: File

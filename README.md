@@ -28,15 +28,16 @@ The IaaC system for my homelab and other devices.
   - **A Honeypot ([Opencanary](https://github.com/thinkst/opencanary))** is used to discover intruders. 
   - **Regular update checking** is done via [Renovate](https://www.mend.io/renovate/) (updates are applied manually to avoid unplanned changes).
 
-## Quick start
+## Usage examples
 
 ```bash
-# Install prerequisites (Docker, yq, jq, python3, go, helm)
+# Install prerequisites
 bash scripts/prereqs.sh
 
-# Create your configuration from the template (values.yaml for k3s, compose.env
+# Create your configuration from the templates (values.yaml for k3s, compose.env
 # for compose, plus extra files like certs and the Authelia users DB):
 cp -r targets/<target>/config_template config/<target>   # then fill in real values
+cp config_template/VARS.env config/VARS.env              # then fill in
 
 # Validate your configuration
 bash scripts/validate.sh <target>

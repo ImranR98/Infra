@@ -101,6 +101,9 @@ spec:
         - name: crowdsec-lapi-configs
           mountPath: /etc/crowdsec/postoverflows/s01-whitelist/fmd.yaml
           subPath: fmd.whitelist.yaml
+        - name: crowdsec-lapi-configs
+          mountPath: /etc/crowdsec/postoverflows/s01-whitelist/crowdsec-webui.yaml
+          subPath: crowdsec-webui.whitelist.yaml
       env:
         - name: COLLECTIONS
           value: "crowdsecurity/linux crowdsecurity/traefik"
@@ -159,6 +162,9 @@ spec:
         - name: crowdsec-lapi-configs
           mountPath: /etc/crowdsec/postoverflows/s01-whitelist/fmd.yaml
           subPath: fmd.whitelist.yaml
+        - name: crowdsec-lapi-configs
+          mountPath: /etc/crowdsec/postoverflows/s01-whitelist/crowdsec-webui.yaml
+          subPath: crowdsec-webui.whitelist.yaml
       persistentVolume:
         config:
           enabled: false
@@ -195,6 +201,13 @@ spec:
               type: appsec
       ports:
         - port: 8080
+    - from:
+        - podSelector:
+            matchLabels:
+              app: crowdsec-web-ui
+      ports:
+        - port: 8080
+        - port: 6060
   policyTypes:
     - Ingress
 ---
@@ -341,6 +354,16 @@ stringData:
         - evt.Overflow.Alert.GetScenario() in ['LePresidente/http-generic-401-bf', 'LePresidente/http-generic-403-bf']
         - evt.Meta.http_verb == 'POST'
         - evt.Meta.http_path matches '^/api/v1/location'
+  crowdsec-webui.whitelist.yaml: |
+    name: imranr/crowdsec-webui
+    description: "Whitelist for CrowdSec Web UI"
+    whitelist:
+      reason: "The web UI is a SPA: the dashboard fetches the API in bursts, tripping crawl scenarios"
+      expression:
+        - evt.Meta.target_fqdn == 'crowdsec.{{ .Values.SERVICES_DOMAIN }}'
+        - evt.Overflow.Alert.GetScenario() in ['crowdsecurity/http-probing', 'crowdsecurity/http-crawl-non_statics']
+        - evt.Meta.http_verb == 'GET'
+        - evt.Meta.http_path matches '^/api/.+'
 ---
 apiVersion: v1
 kind: Secret
@@ -351,3 +374,4 @@ type: Opaque
 stringData:
   bouncer-key: "{{ .Values.CROWDSEC_BOUNCER_KEY }}"
   csLapiSecret: "{{ .Values.CROWDSEC_LAPI_SECRET }}"
+  webui-lapi-password: "{{ .Values.CROWDSEC_WEBUI_LAPI_PASSWORD }}"

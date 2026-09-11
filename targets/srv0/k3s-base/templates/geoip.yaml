@@ -176,9 +176,8 @@ spec:
     - Ingress
 ---
 # --- prereqs.yaml ---
-# PVC only — the Secret is created in post.sh (kustomize strips quotes from
-# stringData values, turning numeric account IDs into bare integers that
-# Kubernetes rejects).
+# PVC + the MaxMind credential Secret (account-id is quoted in the template so
+# Kubernetes keeps the numeric value as a string).
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
