@@ -63,6 +63,27 @@ elif command -v ufw >/dev/null 2>&1; then
     ufw deny 10250/tcp
 fi
 
+# ---- control-plane I/O protection (server nodes only) ------------------------
+# etcd/apiserver/kubelet run in system.slice; pods run in kubepods.slice. A low
+# IOWeight on the pod slice gives the control plane a 10:1 I/O priority
+# advantage, so a pod burst (backup, image pull, migration) cannot stall etcd.
+# Agents don't run etcd, so this is server-only.
+role="${K3S_ROLE:-${K3S_JOIN_ROLE:-}}"
+if [ -z "$role" ] && { [ -d /var/lib/rancher/k3s/server ] || systemctl is-active --quiet k3s; }; then
+    role=server
+fi
+if [ "$role" = server ]; then
+    install -d -m 755 /etc/systemd/system/kubepods.slice.d
+    cat >/etc/systemd/system/kubepods.slice.d/io.conf <<'EOF'
+[Slice]
+IOAccounting=true
+IOWeight=10
+EOF
+    systemctl daemon-reload
+    systemctl set-property --runtime kubepods.slice IOAccounting=true IOWeight=10 2>/dev/null || true
+    echo "k3s-node-prep: control-plane I/O protection applied (kubepods.slice IOWeight=10)"
+fi
+
 # ---- pciutils (AMD GPU detection at join time) -------------------------------
 if command -v dnf >/dev/null 2>&1; then
     dnf install -y pciutils

@@ -1,0 +1,28 @@
+apiVersion: 1
+templates:
+  - orgId: 1
+    name: ntfy
+    template: |
+      {{ define "ntfy.body" -}}
+      {{- range .Alerts }}
+      {{ if eq .Status "firing" }}🔥 **Firing**{{ else }}✅ **Resolved**{{ end }} — **{{ .Labels.alertname }}**
+      {{- with .Annotations.summary }}
+      {{ . }}
+      {{- end }}
+      {{- with .Labels.severity }}
+      Severity: `{{ . }}`
+      {{- end }}
+      {{- with .Labels.volume }}
+      Volume: `{{ . }}`
+      {{- end }}
+      {{- with .Labels.node }}
+      Node: `{{ . }}`
+      {{- end }}
+      {{- with .Labels.pod }}
+      Pod: `{{ . }}`
+      {{- end }}
+      {{- with .Labels.cronjob }}
+      CronJob: `{{ . }}`
+      {{- end }}
+      {{- end }}
+      {{- end }}

@@ -127,6 +127,12 @@ spec:
       enabled: true
       destinations: [prometheus]
       collector: alloy-metrics
+    # Scrape Prometheus-Operator objects (the Longhorn chart's ServiceMonitor);
+    # the CRDs are already installed in the cluster.
+    prometheusOperatorObjects:
+      enabled: true
+      destinations: [prometheus]
+      collector: alloy-metrics
     telemetryServices:
       kube-state-metrics:
         deploy: true
@@ -233,6 +239,29 @@ spec:
             url: http://loki.base.svc.cluster.local:3100
             access: proxy
             isDefault: false
+    extraSecretMounts:
+      # ntfy contact point (holds the write-only token).
+      - name: alerting-contact
+        secretName: grafana-alerting-contact
+        mountPath: /etc/grafana/provisioning/alerting/contactpoints.yaml
+        subPath: contactpoints.yaml
+        readOnly: true
+    extraConfigmapMounts:
+      - name: alerting-rules
+        configMap: grafana-alerting-rules
+        mountPath: /etc/grafana/provisioning/alerting/rules.yaml
+        subPath: rules.yaml
+        readOnly: true
+      - name: alerting-policies
+        configMap: grafana-alerting-rules
+        mountPath: /etc/grafana/provisioning/alerting/policies.yaml
+        subPath: policies.yaml
+        readOnly: true
+      - name: alerting-templates
+        configMap: grafana-alerting-rules
+        mountPath: /etc/grafana/provisioning/alerting/templates.yaml
+        subPath: templates.yaml
+        readOnly: true
     dashboardProviders:
       dashboardproviders.yaml:
         apiVersion: 1
@@ -253,6 +282,14 @@ spec:
             editable: true
             options:
               path: /var/lib/grafana/dashboards/kubernetes-logs
+          - name: longhorn
+            orgId: 1
+            folder: ""
+            type: file
+            disableDeletion: true
+            editable: true
+            options:
+              path: /var/lib/grafana/dashboards/longhorn
     dashboards:
       dotdc:
         k8s-views-global:
@@ -269,6 +306,7 @@ spec:
           url: https://raw.githubusercontent.com/dotdc/grafana-dashboards-kubernetes/v3.0.6/dashboards/k8s-system-coredns.json
     dashboardsConfigMaps:
       kubernetes-logs: k8s-monitoring-kubernetes-logs-dashboard
+      longhorn: longhorn-dashboard
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -278,6 +316,15 @@ metadata:
 data:
   kubernetes-logs.json: |-
 {{ .Files.Get "files/dashboards/kubernetes-logs.json" | indent 4 }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: longhorn-dashboard
+  namespace: base
+data:
+  longhorn.json: |-
+{{ .Files.Get "files/dashboards/longhorn.json" | indent 4 }}
 ---
 apiVersion: cert-manager.io/v1
 kind: Certificate
@@ -614,3 +661,47 @@ stringData:
   admin-user: admin
   admin-password: "{{ .Values.GRAFANA_ADMIN_PASSWORD }}"
 
+---
+# Grafana alerting provisioning: ntfy contact point (token → Secret) and the
+# alert rules / notification policy tree (ConfigMap, file-backed so the YAML
+# stays readable).
+apiVersion: v1
+kind: Secret
+metadata:
+  name: grafana-alerting-contact
+  namespace: base
+type: Opaque
+stringData:
+  contactpoints.yaml: |
+    apiVersion: 1
+    contactPoints:
+      - orgId: 1
+        name: ntfy
+        receivers:
+          - uid: ntfy
+            type: webhook
+            settings:
+              # The URL is templated, so dynamic ntfy presentation rides as query
+              # params (Extra Headers are static): title = alertname, priority by
+              # state/severity, markdown body from the "ntfy.body" template.
+              # Title encoding order matters: % first, then spaces (otherwise the
+              # % of %20 gets re-escaped).
+              url: '{{ `http://ntfy.base.svc.cluster.local:3000/` }}{{ .Values.TARGET }}{{ `_services_grafana?markdown=yes&title={{ reReplaceAll " " "%20" (reReplaceAll "%" "%25" .CommonLabels.alertname) }}&priority={{ if eq .Status "resolved" }}low{{ else if eq .CommonLabels.severity "critical" }}urgent{{ else if eq .CommonLabels.severity "warning" }}high{{ else }}default{{ end }}` }}'
+              httpMethod: POST
+              authorization_scheme: Bearer
+              authorization_credentials: "{{ .Values.NTFY_WRITE_ONLY_ACCOUNT_TOKEN }}"
+              payload:
+                template: '{{ `{{ template "ntfy.body" . }}` }}'
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-alerting-rules
+  namespace: base
+data:
+  rules.yaml: |-
+{{ .Files.Get "files/alerting/rules.yaml" | indent 4 }}
+  policies.yaml: |-
+{{ .Files.Get "files/alerting/policies.yaml" | indent 4 }}
+  templates.yaml: |-
+{{ .Files.Get "files/alerting/templates.yaml" | indent 4 }}
