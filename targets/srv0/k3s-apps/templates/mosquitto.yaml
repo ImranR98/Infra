@@ -1,3 +1,22 @@
+{{- define "mosquitto.config" -}}
+persistence true
+persistence_location /mosquitto/data/
+allow_anonymous false
+password_file /mosquitto/config/password_file
+listener 1883
+listener 8883
+  cafile /mosquitto/certs/ca.crt
+  certfile /mosquitto/certs/tls.crt
+  keyfile /mosquitto/certs/tls.key
+  require_certificate false
+listener 9001
+  protocol websockets
+  cafile /mosquitto/certs/ca.crt
+  certfile /mosquitto/certs/tls.crt
+  keyfile /mosquitto/certs/tls.key
+  require_certificate false
+log_type error warning notice
+{{- end -}}
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -15,6 +34,10 @@ spec:
     metadata:
       labels:
         app: mosquitto
+      annotations:
+        # The config is a mounted ConfigMap, so without this a config change
+        # would never roll the pod and the old listeners stay live.
+        checksum/config: {{ include "mosquitto.config" . | sha256sum }}
     spec:
       securityContext:
         fsGroup: 1883
@@ -138,19 +161,7 @@ metadata:
   namespace: apps
 data:
   mosquitto.conf: |
-    persistence true
-    persistence_location /mosquitto/data/
-    allow_anonymous false
-    password_file /mosquitto/config/password_file
-    listener 1883
-    listener 8883
-      cafile /mosquitto/certs/ca.crt
-      certfile /mosquitto/certs/tls.crt
-      keyfile /mosquitto/certs/tls.key
-      require_certificate false
-    listener 9001
-      protocol websockets
-    log_type error warning notice
+{{ include "mosquitto.config" . | indent 4 }}
 ---
 apiVersion: v1
 kind: Secret

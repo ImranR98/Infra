@@ -93,6 +93,7 @@ if [ "$K3S_JOIN_ROLE" = agent ]; then
     systemctl enable --now k3s-agent
 else
     install -d -m 755 /etc/rancher/k3s
+    umask 077
     cat >/etc/rancher/k3s/config.yaml <<EOF2
 selinux: true
 write-kubeconfig-mode: "0600"

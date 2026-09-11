@@ -97,6 +97,32 @@
       "depNameTemplate": "{{owner}}/{{repo}}",
       "datasourceTemplate": "github-releases",
       "versioningTemplate": "semver"
+    },
+    {
+      "customType": "regex",
+      "description": "Home Assistant Frigate integration pinned version (no runtime GitHub API polling)",
+      "fileMatch": [
+        "targets/srv0/k3s-apps/templates/homeassistant.yaml"
+      ],
+      "matchStrings": [
+        "repo=blakeblackshear/frigate-hass-integration\\n(?:[^\\n]*\\n){0,10}?\\s*latest=\"v(?<currentValue>\\d+\\.\\d+\\.\\d+)\""
+      ],
+      "depNameTemplate": "blakeblackshear/frigate-hass-integration",
+      "datasourceTemplate": "github-releases",
+      "versioningTemplate": "semver"
+    },
+    {
+      "customType": "regex",
+      "description": "Advanced Camera Card pinned version (no runtime GitHub API polling)",
+      "fileMatch": [
+        "targets/srv0/k3s-apps/templates/homeassistant.yaml"
+      ],
+      "matchStrings": [
+        "card=dermotduffy/advanced-camera-card\\n(?:[^\\n]*\\n){0,10}?\\s*card_latest=\"v(?<currentValue>\\d+\\.\\d+\\.\\d+)\""
+      ],
+      "depNameTemplate": "dermotduffy/advanced-camera-card",
+      "datasourceTemplate": "github-releases",
+      "versioningTemplate": "semver"
     }
   ],
   "packageRules": [

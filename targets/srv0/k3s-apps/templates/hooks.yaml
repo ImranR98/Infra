@@ -36,6 +36,17 @@ subjects:
     name: helm-hooks
     namespace: apps
 ---
+# OIDC client secret for the Immich seed Job. Kept in a Secret so the
+# plaintext never lands in the Job spec (readable via `get jobs`).
+apiVersion: v1
+kind: Secret
+metadata:
+  name: immich-oidc-client-secret
+  namespace: apps
+type: Opaque
+stringData:
+  client-secret: "{{ .Values.AUTHELIA_IMMICH_CLIENT_SECRET_HASHABLE }}"
+---
 # Immich OAuth/password seeding. Skips when the admin already has an OAuth
 # identity (immich-admin list-users reads the DB in-container, no auth
 # needed); the admin password from the one-time sign-up is persisted in the
@@ -62,14 +73,18 @@ spec:
       restartPolicy: OnFailure
       containers:
         - name: seed
-          image: bitnami/kubectl:latest
+          # Digest-pinned (same image as the pvc-backup CronJob).
+          image: bitnami/kubectl:latest@sha256:b29d8c1665b70817259ceecaea16ab27aab6368b48daf485d19436c809067492
           env:
             - name: DOMAIN_OWNER_EMAIL
               value: "{{ .Values.DOMAIN_OWNER_EMAIL }}"
             - name: SERVICES_DOMAIN
               value: "{{ .Values.SERVICES_DOMAIN }}"
             - name: AUTHELIA_IMMICH_CLIENT_SECRET
-              value: "{{ .Values.AUTHELIA_IMMICH_CLIENT_SECRET_HASHABLE }}"
+              valueFrom:
+                secretKeyRef:
+                  name: immich-oidc-client-secret
+                  key: client-secret
           command: ["bash", "-c"]
           args:
             - |

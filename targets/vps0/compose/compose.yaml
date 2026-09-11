@@ -31,6 +31,7 @@ configs:
             jwt_secret: '${AUTHELIA_JWT_SECRET}'
 
             log:
+              # Deliberate: logtfy parses the Authelia log for login notifications.
               level: debug
 
             totp:
@@ -74,6 +75,7 @@ configs:
               redis:
                 host: authelia-db
                 port: 6379
+                password: '${AUTHELIA_REDIS_PASSWORD}'
 
             regulation:
               max_retries: 3
@@ -332,6 +334,9 @@ services:
         image: redis:alpine@sha256:becdda6c7f4b3fb42e42fd7f120bbf5c54c4caaaf16f26da24e4563d2c1f0576
         container_name: authelia-db
         user: "$MY_UID:$MY_UID"
+        environment:
+            - AUTHELIA_REDIS_PASSWORD=$AUTHELIA_REDIS_PASSWORD
+        command: sh -c 'exec redis-server --requirepass "$$AUTHELIA_REDIS_PASSWORD"'
         volumes:
             - ../../../current_target/compose_live_state/authelia/db:/data
         networks:
@@ -341,7 +346,7 @@ services:
         restart: unless-stopped
         mem_limit: 128M
         healthcheck:
-            test: ["CMD-SHELL", "redis-cli ping || exit 1"]
+            test: ["CMD-SHELL", "redis-cli -a \"$$AUTHELIA_REDIS_PASSWORD\" --no-auth-warning ping || exit 1"]
             start_period: 1m
         logging: *logging
 

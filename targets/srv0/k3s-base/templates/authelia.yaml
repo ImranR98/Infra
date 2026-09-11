@@ -230,6 +230,7 @@ spec:
             # basic-auth probing (immich uses the same mode successfully).
             token_endpoint_auth_method: 'client_secret_post'
       log:
+        # Deliberate: logtfy parses the Authelia log for login notifications.
         level: debug
       totp:
         issuer: {{ .Values.SERVICES_DOMAIN }}

@@ -1,3 +1,4 @@
+import hmac
 import os
 from http.cookies import SimpleCookie
 from http.server import HTTPServer, BaseHTTPRequestHandler
@@ -5,6 +6,8 @@ from urllib.parse import urlparse, parse_qs
 
 
 TOKEN = os.environ["OWNCAST_ACCESS_TOKEN"]
+if not TOKEN:
+    raise SystemExit("OWNCAST_ACCESS_TOKEN must be set and non-empty")
 COOKIE_NAME = "owncast_token"
 COOKIE_MAX_AGE = 60 * 60 * 24 * 365
 
@@ -12,7 +15,7 @@ COOKIE_MAX_AGE = 60 * 60 * 24 * 365
 class AuthHandler(BaseHTTPRequestHandler):
     def _validate(self):
         cookies = SimpleCookie(self.headers.get("Cookie", ""))
-        if COOKIE_NAME in cookies and cookies[COOKIE_NAME].value == TOKEN:
+        if COOKIE_NAME in cookies and hmac.compare_digest(cookies[COOKIE_NAME].value, TOKEN):
             return True
         return False
 
@@ -21,7 +24,7 @@ class AuthHandler(BaseHTTPRequestHandler):
         parsed = urlparse(forwarded_uri)
         params = parse_qs(parsed.query)
         token = params.get("token", [None])[0]
-        return token == TOKEN if token else False
+        return hmac.compare_digest(token, TOKEN) if token else False
 
     def _redirect_to_clean_url(self):
         forwarded_uri = self.headers.get("X-Forwarded-Uri", "/")

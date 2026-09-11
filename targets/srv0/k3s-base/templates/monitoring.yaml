@@ -448,6 +448,20 @@ spec:
       containers:
         - name: mimir
           image: grafana/mimir:3.2.0
+          # S3 keys via env (secretKeyRef) and $(VAR) expansion in args —
+          # kubelet expands env references at container start, so the
+          # Deployment spec never carries the key values.
+          env:
+            - name: RUSTFS_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: rustfs-secrets
+                  key: RUSTFS_ACCESS_KEY
+            - name: RUSTFS_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: rustfs-secrets
+                  key: RUSTFS_SECRET_KEY
           args:
             # Flags instead of a config file: any config change is a
             # Deployment change, so the pod rolls automatically on apply.
@@ -459,8 +473,8 @@ spec:
             - -common.storage.backend=s3
             - -common.storage.s3.endpoint=rustfs-svc.base.svc.cluster.local:9000
             - -common.storage.s3.insecure=true
-            - -common.storage.s3.access-key-id={{ .Values.RUSTFS_ACCESS_KEY }}
-            - -common.storage.s3.secret-access-key={{ .Values.RUSTFS_SECRET_KEY }}
+            - -common.storage.s3.access-key-id=$(RUSTFS_ACCESS_KEY)
+            - -common.storage.s3.secret-access-key=$(RUSTFS_SECRET_KEY)
             - -blocks-storage.s3.bucket-name=mimir-blocks
             - -blocks-storage.tsdb.dir=/data/tsdb
             - -blocks-storage.bucket-store.sync-dir=/data/tsdb-sync

@@ -1,6 +1,11 @@
 #!/bin/bash
 # DESC: Run Renovate against ImranR98/Infra — opens update PRs on GitHub (manual). The in-cluster renovate CronJob runs this automatically; use this for on-demand runs.
 set -euo pipefail
+
+if [ -z "${INFRA_ROOT:-}" ]; then
+    INFRA_ROOT="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd)"
+    export INFRA_ROOT
+fi
 source "$INFRA_ROOT/scripts/common.sh"
 
 # Universal VARS (dotenv, config/VARS.env — gitignored). Simple KEY="value"
@@ -45,11 +50,14 @@ fi
 # Renovate's auto-commits must not use the machine's personal git signing
 # setup (commit.gpgsign + gpg.format=ssh has no signingKey/agent available).
 # Renovate 44 has no signing-off option and simple-git blocks GIT_CONFIG_GLOBAL,
-# so point HOME at an empty dir: git then finds no global config at all.
-# Keep the npm cache reachable for fast npx startup.
-export npm_config_cache="${npm_config_cache:-$HOME/.npm}"
-export RENOVATE_CACHE_DIR="${RENOVATE_CACHE_DIR:-/tmp/infra-renovate-cache}"
-mkdir -p /tmp/infra-renovate-home "$RENOVATE_CACHE_DIR"
-export HOME="/tmp/infra-renovate-home"
+# so point HOME at a fresh temp dir: git then finds no global config at all.
+# Caches stay under the real home (user-owned, persistent) for fast npx runs.
+_orig_home="$HOME"
+export npm_config_cache="${npm_config_cache:-$_orig_home/.npm}"
+export RENOVATE_CACHE_DIR="${RENOVATE_CACHE_DIR:-$_orig_home/.cache/infra-renovate}"
+HOME="$(mktemp -d)"
+export HOME
+trap 'rm -rf "$HOME"' EXIT
+mkdir -p "$RENOVATE_CACHE_DIR"
 
-exec npx --yes -p renovate renovate "$@"
+npx --yes -p renovate renovate "$@"
