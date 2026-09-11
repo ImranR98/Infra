@@ -123,6 +123,44 @@
       "depNameTemplate": "dermotduffy/advanced-camera-card",
       "datasourceTemplate": "github-releases",
       "versioningTemplate": "semver"
+    },
+    {
+      "customType": "regex",
+      "description": "dotdc Grafana dashboard URLs in the k8s-monitoring values (all six dashboards share one version)",
+      "fileMatch": [
+        "targets/srv0/k3s-base/templates/monitoring\\.yaml$"
+      ],
+      "matchStrings": [
+        "raw\\.githubusercontent\\.com/dotdc/grafana-dashboards-kubernetes/v(?<currentValue>\\d+\\.\\d+\\.\\d+)/"
+      ],
+      "depNameTemplate": "dotdc/grafana-dashboards-kubernetes",
+      "datasourceTemplate": "github-releases",
+      "versioningTemplate": "semver"
+    },
+    {
+      "customType": "regex",
+      "description": "Images embedded in pvc.sh's generated backup/restore pod YAML",
+      "fileMatch": [
+        "scripts/pvc\\.sh$"
+      ],
+      "matchStrings": [
+        "image:\\s*(?<depName>[^\\s@:\"']+):(?<currentValue>[^\\s@:\"'#]+)"
+      ],
+      "datasourceTemplate": "docker",
+      "versioningTemplate": "docker"
+    },
+    {
+      "customType": "regex",
+      "description": "Pinned helm version in prereqs.sh",
+      "fileMatch": [
+        "scripts/prereqs\\.sh$"
+      ],
+      "matchStrings": [
+        "HELM_VERSION=\"(?<currentValue>\\d+\\.\\d+\\.\\d+)\""
+      ],
+      "depNameTemplate": "helm/helm",
+      "datasourceTemplate": "github-releases",
+      "versioningTemplate": "semver"
     }
   ],
   "packageRules": [
@@ -144,11 +182,12 @@
       "pinDigests": true
     },
     {
-      "description": "No major bumps for postgres, clickhouse/clickhouse-server, fedora (their majors need manual migrations)",
+      "description": "No major bumps for postgres, clickhouse/clickhouse-server, fedora, helm (their majors need manual migrations)",
       "matchPackageNames": [
         "postgres",
         "clickhouse/clickhouse-server",
-        "fedora"
+        "fedora",
+        "helm/helm"
       ],
       "matchUpdateTypes": [
         "major"
