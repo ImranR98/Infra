@@ -74,6 +74,10 @@ spec:
           podSelector:
             matchLabels:
               app: opencanary
+        # Grafana alert notifications.
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: grafana
       ports:
         - port: 3000
   policyTypes:

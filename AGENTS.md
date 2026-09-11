@@ -238,6 +238,12 @@ helm uninstall srv0-apps -n apps          # delete a release; PVCs are retained 
 - **Restore** — scales down all workloads using the PVC (Deployments/StatefulSets only; replica counts recorded), waits for pods, restores via a privileged temp pod, scales back up. `--all` does a bulk scale-down of everything first.
 - Both backup and restore pods set **pod-level** `seLinuxOptions.level: s0` (see SELinux below).
 
+## Alerting (Grafana → ntfy)
+
+- Grafana provisions one webhook contact point (`ntfy`, write-only token in the `grafana-alerting-contact` Secret from `NTFY_WRITE_ONLY_ACCOUNT_TOKEN`) plus file-backed alerting config from the `grafana-alerting-rules` ConfigMap: 15 rules (`files/alerting/rules.yaml`), the policy tree (`policies.yaml` — receiver ntfy, `group_by: alertname`, 12h repeat) and the markdown body template group (`templates.yaml`, `ntfy.body`). The Longhorn chart's ServiceMonitor is scraped via k8s-monitoring `prometheusOperatorObjects`; the additive `allow-monitoring-longhorn-manager` NetworkPolicy admits the collector on :9500.
+- Dynamic ntfy presentation rides in the templated webhook URL (Extra Headers are static): `title` = alertname, `priority` = low on resolved / high on warning / urgent on critical / default otherwise, `markdown=yes`. The body is the custom `ntfy.body` markdown (state + name, summary, the interesting labels) — no default-message `Value:`/`Labels:` noise.
+- Title URL-encoding order matters: replace `%`→`%25` first, then spaces→`%20` (the reverse re-escapes the `%` of `%20`).
+
 ## Networking
 
 - **Traefik on srv0** — dual entrypoints: `websecure:443` (LAN, no proxy protocol) and `websecure-proxy:8443` (PROXY protocol v2, trustedIPs `127.0.0.1/32` + pod/service CIDRs — Klipper SNAT makes all traffic appear from those). Public routes listen on both; LAN-only (`*.home.local`) routes only on `websecure`. Middlewares: `geoblock` (allowlist plugin, self-hosted MaxMind GeoLite2 via the `geoip` component's `geoip-service`), `crowdsec-bouncer` (stream mode + AppSec on `:7422`), `forwardauth-authelia`, `lan-whitelist` (RFC1918), `cluster-only` (10.42/16), `basicauth-cluster`, `local-no-store`. HTTP → HTTPS redirect. readTimeout=0 on both secure entrypoints (streaming). Plugins are pinned in `additionalArguments` (regex-managed via `github-releases`).
@@ -350,7 +356,7 @@ targets/<target>/
   compose/.env                  # gitignored machine-fact env (written by prereqs.sh for every target)
   k3s-base/ k3s-apps/            # srv0 Helm charts (base + apps scopes): templates/ (repo-owned
                                 #   components + HelmChart CRs + hook Jobs), k3s-base also: files/
-                                #   (WASM plugin), plugins/ (WASM plugin source), geoip-src/;
+                                #   (WASM plugin, alerting config, dashboards), plugins/ (WASM plugin source), geoip-src/;
                                 #   values.yaml = committed defaults; secrets in config/srv0/values.yaml
 current_target/compose_live_state/   # Runtime state (gitignored, ephemeral)
 compose_state_backups/ k3s_state_backups/   # Backup archives (gitignored)

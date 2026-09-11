@@ -72,11 +72,13 @@ fi
 
 echo "==> Provisioning $node_ip over SSH (sudo on the node)"
 remote_script="$(
-    cat "$INFRA_ROOT/scripts/k3s-node-prep.sh"
-    printf '\nK3S_JOIN_ROLE=%q\n' "$k3s_role"
+    # Role/connection vars first: k3s-node-prep.sh reads K3S_JOIN_ROLE to apply
+    # the control-plane I/O protection only on server nodes.
+    printf 'K3S_JOIN_ROLE=%q\n' "$k3s_role"
     printf 'K3S_JOIN_TOKEN=%q\n' "$token"
     printf 'K3S_SERVER_IP=%q\n' "$server_ip"
     printf 'K3S_NODE_IP=%q\n' "$node_ip"
+    cat "$INFRA_ROOT/scripts/k3s-node-prep.sh"
     cat <<'REMOTE_SCRIPT'
 
 # ---- K3s install (the official get.k3s.io installer — runs only when k3s is

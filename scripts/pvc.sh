@@ -227,8 +227,13 @@ $tolerations
     - sh
     - -c
     - |
+      # Low I/O priority: the nightly tar must not stall etcd/foreground apps.
+      IONICE=""
+      if command -v ionice >/dev/null 2>&1; then IONICE="ionice -c2 -n7"; fi
+      NICE=""
+      if command -v nice >/dev/null 2>&1; then NICE="nice -n19"; fi
       echo "$timestamp" > /data/__backup_timestamp.txt
-      if ! tar czf "/backup/.$dest_file.tmp" -C /data $excl_flags --sparse --warning=no-file-changed --warning=no-file-removed --ignore-failed-read .; then
+      if ! $IONICE $NICE tar czf "/backup/.$dest_file.tmp" -C /data $excl_flags --sparse --warning=no-file-changed --warning=no-file-removed --ignore-failed-read .; then
         echo "ERROR: tar archive creation failed" >&2
         rm -f "/backup/.$dest_file.tmp" /data/__backup_timestamp.txt
         exit 1
@@ -312,8 +317,10 @@ spec:
         echo "ERROR: archive contains unsafe paths; refusing to extract" >&2
         exit 1
       fi
-      find /data -mindepth 1 -delete
-      tar xzf /backup/"$src_file" -C /data
+      NICE=""
+      if command -v nice >/dev/null 2>&1; then NICE="nice -n19"; fi
+      $NICE find /data -mindepth 1 -delete
+      $NICE tar xzf /backup/"$src_file" -C /data
     volumeMounts:
     - name: data
       mountPath: /data

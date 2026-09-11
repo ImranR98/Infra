@@ -23,7 +23,7 @@ node_ip="$(get_node_ip)"
 [ -n "$node_ip" ] || { echo "Error: cannot determine this machine's IP" >&2; exit 1; }
 
 echo "==> Node prep"
-$SU bash "$INFRA_ROOT/scripts/k3s-node-prep.sh"
+$SU env K3S_ROLE=server bash "$INFRA_ROOT/scripts/k3s-node-prep.sh"
 
 # The installer only runs when k3s is missing — re-running never re-installs,
 # so it can't fight system-upgrade-controller's ownership of upgrades.

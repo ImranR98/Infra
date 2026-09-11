@@ -36,3 +36,51 @@ spec:
       defaultClassReplicaCount: 1
     longhornUI:
       replicas: 1
+    metrics:
+      serviceMonitor:
+        enabled: true
+---
+# Weekly filesystem trim for every volume in the `default` recurring-job group.
+# Without this nothing ever discards freed blocks, so Longhorn's actual size
+# only grows (snapshots/CoW keep old blocks). Snapshot removal stays off
+# (remove-snapshots-during-filesystem-trim=false), so this is reclaim-only.
+apiVersion: longhorn.io/v1beta2
+kind: RecurringJob
+metadata:
+  name: trim-filesystem
+  namespace: longhorn-system
+spec:
+  name: trim-filesystem
+  cron: "0 4 * * 0"
+  task: filesystem-trim
+  groups:
+    - default
+  concurrency: 1
+  labels:
+    infra: recurring
+---
+# Additive NetworkPolicy: Longhorn's own longhorn-manager policy only admits
+# Longhorn components, so the monitoring collector needs an explicit allowance
+# to scrape :9500 (both selectors must match — namespace + pod).
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-monitoring-longhorn-manager
+  namespace: longhorn-system
+spec:
+  podSelector:
+    matchLabels:
+      app: longhorn-manager
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: base
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: alloy-metrics
+      ports:
+        - protocol: TCP
+          port: 9500
