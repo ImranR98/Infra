@@ -284,7 +284,7 @@ spec:
   restartPolicy: Never
   containers:
   - name: restore
-    image: alpine:3.21
+    image: alpine:3.24
     securityContext:
       # Not privileged: deleting root-owned files inside the PVC needs
       # CAP_DAC_OVERRIDE/CAP_FOWNER (the pod runs as $MY_UID); spc_t covers
