@@ -13,7 +13,7 @@ source "$INFRA_ROOT/scripts/common.sh"
 set_my_uid
 
 SU="$(get_sudo_cmd)"
-HELM_VERSION="3.17.3"
+HELM_VERSION="3.22.0"
 
 usage() {
     echo "Usage: $(basename "$0")"
