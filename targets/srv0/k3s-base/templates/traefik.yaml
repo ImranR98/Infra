@@ -37,6 +37,8 @@ spec:
       crowdsecMode: stream
       crowdsecLapiScheme: https
       crowdsecLapiHost: crowdsec-service.base.svc.cluster.local:8080
+      # Deliberate: the LAPI serves a chart-generated self-signed cert and the
+      # connection is in-cluster. Do not "fix" without a CA rollout plan.
       crowdsecLapiTLSInsecureVerify: "true"
       crowdsecLapiKey: {{ .Values.CROWDSEC_BOUNCER_KEY }}
       crowdsecappsecenabled: true

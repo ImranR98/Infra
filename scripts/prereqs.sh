@@ -47,7 +47,15 @@ if [ ! -x /usr/local/bin/helm ]; then
         aarch64) arch=arm64 ;;
         *) arch=amd64 ;;
     esac
-    curl -fsSL "https://get.helm.sh/helm-v${HELM_VERSION}-linux-${arch}.tar.gz" -o /tmp/helm.tar.gz
+    helm_tgz="helm-v${HELM_VERSION}-linux-${arch}.tar.gz"
+    curl -fsSL "https://get.helm.sh/${helm_tgz}" -o /tmp/helm.tar.gz
+    expected=$(curl -fsSL "https://get.helm.sh/${helm_tgz}.sha256sum" | awk '{print $1}')
+    actual=$(sha256sum /tmp/helm.tar.gz | awk '{print $1}')
+    if [ -z "$expected" ] || [ "$expected" != "$actual" ]; then
+        echo "Error: helm tarball checksum verification failed" >&2
+        rm -f /tmp/helm.tar.gz
+        exit 1
+    fi
     tar -xzf /tmp/helm.tar.gz -C /tmp
     $SU install -m 0755 "/tmp/linux-${arch}/helm" /usr/local/bin/helm
     rm -rf /tmp/helm.tar.gz "/tmp/linux-${arch}"
@@ -87,6 +95,10 @@ if [ -d "$target_dir/compose" ] && [ -f "$target_dir/compose/compose.yaml" ]; th
     } >"$target_dir/compose/.env"
     chmod 600 "$target_dir/compose/.env"
     echo "==> Wrote machine-fact env: $target_dir/compose/.env"
+    # The private overlay can carry secrets; keep it owner-only.
+    if [ -f "$target_dir/compose/compose.private.yaml" ]; then
+        $SU chmod 600 "$target_dir/compose/compose.private.yaml"
+    fi
     env_args+=(--env-file "$target_dir/compose/.env")
     # VARS-driven targets take the shared config env too (later file wins —
     # facts would override any collision, which is the point).

@@ -96,9 +96,6 @@ spec:
           mountPath: /etc/crowdsec/postoverflows/s01-whitelist/plik.yaml
           subPath: plik.whitelist.yaml
         - name: crowdsec-lapi-configs
-          mountPath: /etc/crowdsec/postoverflows/s01-whitelist/chibisafe.yaml
-          subPath: chibisafe.whitelist.yaml
-        - name: crowdsec-lapi-configs
           mountPath: /etc/crowdsec/postoverflows/s01-whitelist/linkwarden.yaml
           subPath: linkwarden.whitelist.yaml
         - name: crowdsec-lapi-configs
@@ -156,9 +153,6 @@ spec:
         - name: crowdsec-lapi-configs
           mountPath: /etc/crowdsec/postoverflows/s01-whitelist/plik.yaml
           subPath: plik.whitelist.yaml
-        - name: crowdsec-lapi-configs
-          mountPath: /etc/crowdsec/postoverflows/s01-whitelist/chibisafe.yaml
-          subPath: chibisafe.whitelist.yaml
         - name: crowdsec-lapi-configs
           mountPath: /etc/crowdsec/postoverflows/s01-whitelist/linkwarden.yaml
           subPath: linkwarden.whitelist.yaml
@@ -325,13 +319,6 @@ stringData:
     description: "Whitelist for Plik"
     whitelist:
       reason: "Uploading/downloading files from Plik can cause false positives"
-      expression:
-        - evt.Meta.target_fqdn == 'send.{{ .Values.SERVICES_DOMAIN }}' && evt.Overflow.Alert.GetScenario() in ['LePresidente/http-generic-403-bf', 'crowdsecurity/http-probing', 'crowdsecurity/http-crawl-non_statics']
-  chibisafe.whitelist.yaml: |
-    name: imranr/chibisafe
-    description: "Whitelist for Chibisafe"
-    whitelist:
-      reason: "Uploading files to Chibisafe can cause false positives"
       expression:
         - evt.Meta.target_fqdn == 'send.{{ .Values.SERVICES_DOMAIN }}' && evt.Overflow.Alert.GetScenario() in ['LePresidente/http-generic-403-bf', 'crowdsecurity/http-probing', 'crowdsecurity/http-crawl-non_statics']
   linkwarden.whitelist.yaml: |

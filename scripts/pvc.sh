@@ -306,6 +306,12 @@ spec:
         echo "ERROR: PVC not mounted at /data" >&2
         exit 1
       fi
+      # Refuse absolute or ../ member paths: busybox tar would happily write
+      # through them (the archive comes from a PVC, which an app could poison).
+      if tar tzf /backup/"$src_file" | grep -Eq '(^/|(^|/)\.\.(/|$))'; then
+        echo "ERROR: archive contains unsafe paths; refusing to extract" >&2
+        exit 1
+      fi
       find /data -mindepth 1 -delete
       tar xzf /backup/"$src_file" -C /data
     volumeMounts:

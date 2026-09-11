@@ -177,11 +177,10 @@ spec:
         # UI config flow: Settings > Devices & Services > Add Integration >
         # Frigate > URL http://frigate:5000 (internal unauth port).
     initContainers:
-      # Keeps the Frigate integration installed + up to date in /config/custom_components.
-      # Checks the latest GitHub release on every pod start and re-extracts when newer
-      # (version marker: /config/custom_components/frigate/.installed-version).
-      # Network failures never block HA startup - the existing install is kept and a
-      # pinned fallback version is used for fresh installs.
+      # Keeps the Frigate integration installed in /config/custom_components.
+      # The version is pinned (Renovate-managed) and re-extracted only when the
+      # version marker (/config/custom_components/frigate/.installed-version)
+      # differs — no GitHub release API polling at pod start.
       - name: integration-update
         image: busybox:1.38
         command:
@@ -197,8 +196,8 @@ spec:
             mkdir -p "$comp" "$www"
             # HACS is not used anymore - clean up any previous install
             rm -rf "$comp/hacs"
-            latest="$(wget -qO- https://api.github.com/repos/$repo/releases/latest | sed -n 's/.*"tag_name": *"\([^"]*\)".*/\1/p' | head -1)" || true
-            [ -n "$latest" ] || latest="v5.15.4"
+            # Pinned (Renovate-managed); the GitHub release API is not polled.
+            latest="v5.15.6"
             if [ "$(cat "$comp/frigate/.installed-version" 2>/dev/null)" != "$latest" ]; then
               echo "installing frigate integration $latest"
               tmpdir=$(mktemp -d)
@@ -218,8 +217,8 @@ spec:
             card=dermotduffy/advanced-camera-card
             card_dir="$www/advanced-camera-card-2026"
             mkdir -p "$card_dir"
-            card_latest="$(wget -qO- https://api.github.com/repos/$card/releases/latest | sed -n 's/.*"tag_name": *"\([^"]*\)".*/\1/p' | head -1)" || true
-            [ -n "$card_latest" ] || card_latest="v7.27.4"
+            # Pinned (Renovate-managed); the GitHub release API is not polled.
+            card_latest="v8.1.0"
             # Layout token guards against stale installs (e.g. pre-zip layout) with the same version
             card_version="$card_latest+zip"
             if [ "$(cat "$card_dir/.installed-version" 2>/dev/null)" != "$card_version" ]; then

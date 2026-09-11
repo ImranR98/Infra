@@ -26,13 +26,30 @@ user.max_user_namespaces = 28633
 EOF
 sysctl --system >/dev/null
 
-# ---- firewall (K3s ports + pod/service CIDRs) --------------------------------
+# ---- firewall (K3s ports + pod/service CIDRs + LAN exposure) -----------------
+# The FedoraWorkstation default zone ships 1025-65535 open. Keep the range
+# (desktop apps rely on it) but drop the cluster-internal ports from the LAN:
+#   9100   node-exporter   (unauthenticated; scraped by Alloy pods)
+#   10250  kubelet         (apiserver reaches kubelets via loopback/pod net)
+# etcd (2379/2380) stays open deliberately: it is mTLS-authenticated and a
+# future second server would need it between control-plane IPs.
+# Loopback bypasses firewalld and the pod CIDRs are in the trusted zone, so
+# plain drops are safe (no source allowlist needed). priority=-10 keeps the
+# drop in the zone's _pre chain, ahead of the open 1025-65535 ports.
 if command -v firewall-cmd >/dev/null 2>&1; then
-    for port in 6443/tcp 2379/tcp 2380/tcp 5001/tcp 8472/udp 10250/tcp 51820/udp 51821/udp; do
-        firewall-cmd --permanent --add-port="$port"
+    zone="$(firewall-cmd --get-default-zone)"
+    for port in 6443/tcp 2379/tcp 2380/tcp 5001/tcp 8472/udp 51820/udp 51821/udp; do
+        firewall-cmd --permanent --add-port="$port" >/dev/null
     done
+    # 10250 was opened individually before; the drop rule replaces it.
+    firewall-cmd --permanent --zone="$zone" --remove-port=10250/tcp >/dev/null 2>&1 || true
     for src in 10.42.0.0/16 10.43.0.0/16; do
-        firewall-cmd --permanent --zone=trusted --add-source="$src"
+        firewall-cmd --permanent --zone=trusted --add-source="$src" >/dev/null
+    done
+    for port in 9100 10250; do
+        rule="rule priority=-10 family=ipv4 port port=$port protocol=tcp drop"
+        firewall-cmd --permanent --zone="$zone" --query-rich-rule="$rule" >/dev/null 2>&1 ||
+            firewall-cmd --permanent --zone="$zone" --add-rich-rule="$rule" >/dev/null
     done
     firewall-cmd --reload
 elif command -v ufw >/dev/null 2>&1; then
@@ -41,10 +58,9 @@ elif command -v ufw >/dev/null 2>&1; then
     ufw allow 8472/udp
     ufw allow 51820/udp
     ufw allow 6443/tcp
-    ufw allow 10250/tcp
-    ufw allow 2379/tcp
-    ufw allow 2380/tcp
     ufw allow 443/tcp
+    ufw deny 9100/tcp
+    ufw deny 10250/tcp
 fi
 
 # ---- pciutils (AMD GPU detection at join time) -------------------------------

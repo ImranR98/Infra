@@ -58,6 +58,26 @@ check_yaml_vars() {
         awk '{print "  " $0}' <<<"$placeholders" >&2
         ok=0
     fi
+
+    # Nested/block-scalar placeholders (JWKS PEM, Authelia users DB, mosquitto
+    # credentials, ...): scan every string scalar under each key, so an
+    # unfilled block scalar is caught even though its trim() is not an exact
+    # placeholder match. Key names only are printed.
+    local k nested=""
+    while IFS= read -r k; do
+        [ -n "$k" ] || continue
+        if KEY="$k" yq -e \
+            '.[strenv(KEY)] | .. | select(tag == "!!str") |
+             select(test("change_me|changeme|REPLACE_ME|<[A-Za-z]|p=abc"))' \
+            "$config_file" >/dev/null 2>&1; then
+            nested+="$k"$'\n'
+        fi
+    done < <(yq '. | keys | .[]' "$config_file")
+    if [ -n "$nested" ]; then
+        _err "ERROR: $config_file: these variables have placeholder values:"
+        awk 'NF {print "  " $0}' <<<"$nested" >&2
+        ok=0
+    fi
     [ "$ok" = 1 ]
 }
 
