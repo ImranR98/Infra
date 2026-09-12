@@ -306,7 +306,7 @@ services:
 
     # Authelia - 2FA Authentication
     authelia:
-        image: authelia/authelia:latest@sha256:a039d87fb842f0af4f83c03434f5fb6ec45d4b46e86b8b3ac571cc104bbe6e6d
+        image: authelia/authelia:latest@sha256:16b804fbf6704b456ffb6e474c8e9d2406f9544ca0fecfeca7b4dcbed647deb4
         container_name: authelia
         user: "$MY_UID:$MY_UID"
         depends_on:
