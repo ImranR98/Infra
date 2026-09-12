@@ -31,7 +31,7 @@ spec:
               level: s0
           containers:
             - name: renovate
-              image: renovate/renovate:44.82.0
+              image: renovate/renovate:44.82.4
               resources:
                 limits:
                   memory: 2Gi
