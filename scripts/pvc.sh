@@ -9,6 +9,7 @@ if [ -z "${INFRA_ROOT:-}" ]; then
     export INFRA_ROOT
 fi
 source "$INFRA_ROOT/scripts/common.sh"
+set_my_uid
 
 # pvc_find_namespace <pvc-name> → namespace (stdout)
 # Queries all namespaces. Returns empty if not found.

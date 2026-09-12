@@ -138,6 +138,11 @@ spec:
         deploy: true
       node-exporter:
         deploy: true
+        # Pod-network (not hostNetwork): clustered Alloy may assign a node's
+        # node-exporter target to the other node's collector, and hostNetwork
+        # targets are the node's LAN IP, where k3s-node-prep's 9100 drop applies
+        # to the SNAT'd cross-node scrape. Host mounts are unaffected.
+        hostNetwork: false
         # The filesystem collector reads /host/proc/1/mountinfo; SELinux
         # denies container_t that ptrace across mount namespaces (root +
         # SYS_PTRACE alone do not pass the LSM hook), so the chart's 65534
@@ -573,6 +578,27 @@ spec:
               kubernetes.io/metadata.name: base
       ports:
         - port: 8080
+  policyTypes:
+    - Ingress
+---
+# Node Exporter runs on the pod network (not hostNetwork), so the metrics
+# collector needs an explicit allowance to reach :9100 on every node.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-node-exporter-metrics-ingress
+  namespace: base
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: node-exporter
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: alloy-metrics
+      ports:
+        - port: 9100
   policyTypes:
     - Ingress
 ---
