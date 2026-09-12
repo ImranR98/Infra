@@ -10,7 +10,7 @@ spec:
   failurePolicy: abort
   targetNamespace: base
   createNamespace: false
-  version: 4.5.1
+  version: 4.5.2
   valuesContent: |-
     # Grafana's first-party Kubernetes observability chart: generates all Alloy
     # collector configs for cluster metrics (kubelet/cadvisor/ksm/api-server/
