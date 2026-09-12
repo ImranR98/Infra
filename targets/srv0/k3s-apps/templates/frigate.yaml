@@ -45,7 +45,7 @@ spec:
       # Standard build: decode runs on srv0's Iris Xe iGPU via VAAPI. The
       # ROCm build was only needed for bigpc's RX 9070 (RDNA4) — its bundled
       # Mesa hangs probing that GPU.
-      tag: 0.17.2
+      tag: 0.18.0
     config: |-
       mqtt:
         host: mosquitto
