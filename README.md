@@ -5,7 +5,7 @@ The IaaC system for my homelab and other devices.
 ## Architecture
 
 - `vps0` is a cloud VPS that uses Docker Compose to run public-facing services like [`apps.obtainium.imranr.dev`](https://apps.obtainium.imranr.dev/) and tunnel some requests through to `srv0`.
-- `srv0` is a lightweight home server that uses Kuberetes (K3s) to run personal services like [Immich](https://immich.app/).
+- `srv0` is a lightweight home server that uses Kubernetes (K3s) to run personal services like [Immich](https://immich.app/).
 - `bigpc` is a gaming PC that also serves as a Kubernetes worker node for GPU-accelerated workloads like [Ollama](https://ollama.com/).
 - `pc` is a laptop that runs [Syncthing](https://syncthing.net/) (via Docker Compose) to sync files to `srv0`.
 - `rpi` is an SBC that streams a live camera feed to [Frigate](https://frigate.video/) on `srv0`.
@@ -43,13 +43,13 @@ cp config_template/VARS.env config/VARS.env              # then fill in
 bash scripts/validate.sh <target>
 
 # Deploy k3s
-bash scripts/kubeconfig-unlock.sh # unlock root-only kubeconfig; run in another terminal
+bash scripts/kubeconfig-unlock.sh # unlock kubeconfig (so non-sudo can read it temporarily); run in another terminal
 helm upgrade --install srv0-base targets/srv0/k3s-base -n base --create-namespace \
   -f targets/srv0/k3s-base/values.yaml -f config/srv0/values.yaml
 helm upgrade --install srv0-apps targets/srv0/k3s-apps -n apps --create-namespace \
   -f targets/srv0/k3s-apps/values.yaml -f config/srv0/values.yaml
 
-# Deploy compose (Docker needs sudo until your user is in the docker group)
+# Deploy compose
 sudo docker compose --env-file config/<target>/compose.env --env-file targets/<target>/compose/.env \
   -f targets/<target>/compose/compose.yaml \
   [-f targets/<target>/compose/compose.private.yaml] up -d --remove-orphans
