@@ -32,14 +32,25 @@ if ! command -v k3s >/dev/null 2>&1; then
 fi
 
 echo "==> Writing server config"
+# Flannel selects the interface owning node-ip, so no flannel-iface is needed
+# to keep VPN interfaces out. The lease flags keep the in-process controller
+# manager and scheduler from exiting k3s when multi-second etcd write stalls
+# make them miss a lease renewal.
 $SU mkdir -p /etc/rancher/k3s
 $SU tee /etc/rancher/k3s/config.yaml >/dev/null <<EOF
 selinux: true
 write-kubeconfig-mode: "0600"
 flannel-backend: wireguard-native
-flannel-iface-regex: "^(eth|ens|enp|eno|enx|wlan|wlp|wlo|bond|ib)"
 cluster-init: true
 node-ip: $node_ip
+kube-controller-manager-arg:
+  - leader-elect-lease-duration=60s
+  - leader-elect-renew-deadline=40s
+  - leader-elect-retry-period=5s
+kube-scheduler-arg:
+  - leader-elect-lease-duration=60s
+  - leader-elect-renew-deadline=40s
+  - leader-elect-retry-period=5s
 EOF
 
 echo "==> Starting K3s"

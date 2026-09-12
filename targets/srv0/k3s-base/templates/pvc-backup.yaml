@@ -193,3 +193,32 @@ spec:
     volumeAttributes:
       server: nfs-server.base.svc.cluster.local
       share: /backups
+---
+# Second destination PV, for the base namespace. Backup/restore temp pods run
+# in the source PVC's namespace and mount pvc-backup-dest from there, so every
+# namespace holding auto-backup PVCs needs its own PVC/PV pair over the same
+# NFS backups root. claimRef pins this PV to base.
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: pvc-backup-dest-base-pv
+spec:
+  capacity:
+    storage: 5Gi
+  accessModes:
+    - ReadWriteMany
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: nfs-backup
+  mountOptions:
+    - nfsvers=4.2
+  claimRef:
+    apiVersion: v1
+    kind: PersistentVolumeClaim
+    name: pvc-backup-dest
+    namespace: base
+  csi:
+    driver: nfs.csi.k8s.io
+    volumeHandle: backups-root-base
+    volumeAttributes:
+      server: nfs-server.base.svc.cluster.local
+      share: /backups

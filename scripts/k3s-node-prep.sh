@@ -32,28 +32,25 @@ sysctl --system >/dev/null
 # installs don't): 80/443 Traefik, 6443 apiserver, 2379/2380 etcd,
 # 5001 k3s embedded registry, 8472 flannel VXLAN, 51820/51821 flannel-wireguard.
 # etcd stays open deliberately: it is mTLS-authenticated and a future second
-# server would need it between control-plane IPs.
-# Drop the cluster-internal ports from the LAN:
-#   9100   node-exporter   (unauthenticated; scraped by Alloy pods)
-#   10250  kubelet         (apiserver reaches kubelets via loopback/pod net)
-# Loopback bypasses firewalld and the pod CIDRs are in the trusted zone, so
-# plain drops are safe (no source allowlist needed). priority=-10 keeps the
-# drop in the zone's _pre chain, ahead of any open range.
+# server would need it between control-plane IPs. 10250 stays open because
+# clustered Alloy may scrape a node's kubelet from another node, and that
+# cross-node pod traffic is SNAT'd to the peer's LAN IP (pod-CIDR trust does
+# not apply); kubelet requires auth, so anonymous LAN access is a 401.
+# 9100 stays dropped: node-exporter is unauthenticated and Alloy scrapes it on
+# the pod network. Loopback bypasses firewalld and the pod CIDRs are in the
+# trusted zone, so the plain drop is safe (no source allowlist needed).
+# priority=-10 keeps it in the zone's _pre chain, ahead of any open range.
 if command -v firewall-cmd >/dev/null 2>&1; then
     zone="$(firewall-cmd --get-default-zone)"
-    for port in 80/tcp 443/tcp 6443/tcp 2379/tcp 2380/tcp 5001/tcp 8472/udp 51820/udp 51821/udp; do
+    for port in 80/tcp 443/tcp 6443/tcp 2379/tcp 2380/tcp 5001/tcp 8472/udp 51820/udp 51821/udp 10250/tcp; do
         firewall-cmd --permanent --add-port="$port" >/dev/null
     done
-    # 10250 was opened individually before; the drop rule replaces it.
-    firewall-cmd --permanent --zone="$zone" --remove-port=10250/tcp >/dev/null 2>&1 || true
     for src in 10.42.0.0/16 10.43.0.0/16; do
         firewall-cmd --permanent --zone=trusted --add-source="$src" >/dev/null
     done
-    for port in 9100 10250; do
-        rule="rule priority=-10 family=ipv4 port port=$port protocol=tcp drop"
-        firewall-cmd --permanent --zone="$zone" --query-rich-rule="$rule" >/dev/null 2>&1 ||
-            firewall-cmd --permanent --zone="$zone" --add-rich-rule="$rule" >/dev/null
-    done
+    rule="rule priority=-10 family=ipv4 port port=9100 protocol=tcp drop"
+    firewall-cmd --permanent --zone="$zone" --query-rich-rule="$rule" >/dev/null 2>&1 ||
+        firewall-cmd --permanent --zone="$zone" --add-rich-rule="$rule" >/dev/null
     firewall-cmd --reload
 elif command -v ufw >/dev/null 2>&1; then
     ufw allow from 10.42.0.0/16
@@ -67,8 +64,8 @@ elif command -v ufw >/dev/null 2>&1; then
     ufw allow 8472/udp
     ufw allow 51820/udp
     ufw allow 51821/udp
+    ufw allow 10250/tcp
     ufw deny 9100/tcp
-    ufw deny 10250/tcp
 fi
 
 # ---- control-plane I/O protection (server nodes only) ------------------------

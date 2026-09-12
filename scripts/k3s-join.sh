@@ -86,10 +86,17 @@ else
 selinux: true
 write-kubeconfig-mode: "0600"
 flannel-backend: wireguard-native
-flannel-iface-regex: "^(eth|ens|enp|eno|enx|wlan|wlp|wlo|bond|ib)"
 node-ip: $K3S_NODE_IP
 server: https://$K3S_SERVER_IP:6443
 token: $K3S_JOIN_TOKEN
+kube-controller-manager-arg:
+  - leader-elect-lease-duration=60s
+  - leader-elect-renew-deadline=40s
+  - leader-elect-retry-period=5s
+kube-scheduler-arg:
+  - leader-elect-lease-duration=60s
+  - leader-elect-renew-deadline=40s
+  - leader-elect-retry-period=5s
 EOF2
     if ! command -v k3s >/dev/null 2>&1; then
         curl -sfL https://get.k3s.io | INSTALL_K3S_SKIP_START=true INSTALL_K3S_VERSION=stable sh -
