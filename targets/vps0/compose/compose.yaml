@@ -306,7 +306,7 @@ services:
 
     # Authelia - 2FA Authentication
     authelia:
-        image: authelia/authelia:latest@sha256:a039d87fb842f0af4f83c03434f5fb6ec45d4b46e86b8b3ac571cc104bbe6e6d
+        image: authelia/authelia:latest@sha256:16b804fbf6704b456ffb6e474c8e9d2406f9544ca0fecfeca7b4dcbed647deb4
         container_name: authelia
         user: "$MY_UID:$MY_UID"
         depends_on:
@@ -672,7 +672,7 @@ services:
     # Obtainium Apps
     obtainium_apps:
         container_name: obtainium_apps
-        image: imranrdev/apps.obtainium.imranr.dev:latest@sha256:79d00e798ffad260b563d8341ca1e93709ae6ca4274b181852bdd017560a0cd8
+        image: imranrdev/apps.obtainium.imranr.dev:latest@sha256:4681198eca64533aaaf5c23df70758f42edb34b990b97138f29c775d1a5af6ba
         depends_on:
             - traefik
         labels:
