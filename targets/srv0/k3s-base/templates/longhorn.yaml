@@ -20,6 +20,9 @@ spec:
       nodeDownPodDeletionPolicy: delete-both-statefulset-and-deployment-pod
       orphanAutoDeletion: true
       concurrentAutomaticEngineUpgradePerNodeLimit: 1
+      # The 8s default faults every engine when the shared root disk stalls (a
+      # 16s stall auto-salvaged all volumes); 30s is Longhorn's maximum.
+      engineReplicaTimeout: 30
       # Default 12% reserves 1.92 cores/node; observed instance-manager peak is
       # ~1.4 cores (see Grafana), so 8% is the realistic guarantee.
       guaranteedInstanceManagerCPU: 8
@@ -51,7 +54,7 @@ metadata:
   namespace: longhorn-system
 spec:
   name: trim-filesystem
-  cron: "0 4 * * 0"
+  cron: "0 5 * * 0"
   task: filesystem-trim
   groups:
     - default
