@@ -78,6 +78,10 @@ spec:
         - podSelector:
             matchLabels:
               app.kubernetes.io/name: grafana
+        # Renovate PR notifications (CronJob pod).
+        - podSelector:
+            matchLabels:
+              app: renovate
       ports:
         - port: 3000
   policyTypes:

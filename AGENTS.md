@@ -137,6 +137,7 @@ Ad-hoc diagnostics (run on the srv0 control plane):
 | `prereqs.sh` | — | this machine | packages (Longhorn iSCSI/NFS + `iscsid`), pinned helm, Docker bootstrap, machine-fact `.env`, host bind dirs, acme seed |
 | `kubeconfig-unlock.sh [--lock]` | — | this machine | read ACL on the k3s kubeconfig + `~/.kube/config` symlink; holds until Ctrl-C; `--lock` cleans up |
 | `renovate.sh` | — | this machine (opens GitHub PRs) | needs `RENOVATE_GITHUB_TOKEN` in `config/VARS.env` |
+| `renovate-notify.sh` | — | this machine / in-cluster | posts newly opened `deps` PRs to ntfy; called by `renovate.sh` and the renovate CronJob |
 | `preboot.sh frpc\|crypt-ssh` | — | this machine | initramfs LUKS unlock; frpc certs from `config/<hostname>/frpc/` |
 | `wireguard.sh <conf>` | — | this machine | deploys a provider wg0.conf (split-/1 routes, endpoint dead-loop route) |
 | `k3s-server.sh` | — | this machine (becomes control plane) | node prep + installer + server config + Longhorn default-disk label |
@@ -311,6 +312,8 @@ One-time web-UI steps for apps with no API seeding:
 ## Updates (Renovate)
 
 Renovate runs daily at 17:00 America/Toronto as the `renovate` K3s CronJob on srv0 (base, `targets/srv0/k3s-base/templates/renovate.yaml`) using the full `renovate/renovate` image (it ships the Go toolchain, so the gomod manager works). The pod mounts only two files from the synced repo (`{{ INFRA_ROOT }}/config/VARS.env` and `{{ INFRA_ROOT }}/.git/config`, read-only) to source `RENOVATE_GITHUB_TOKEN` (auto-rotates on sync) and to infer `RENOVATE_GIT_AUTHOR` — the identity must be set **repo-locally** (`git config user.name/user.email`), since a global-only `~/.gitconfig` is invisible to the pod, and a default Renovate author makes the next run treat its own branches as foreign (autoclose skipped, rebases blocked). Renovate clones from GitHub itself. `bash scripts/renovate.sh [--dry-run]` is the manual equivalent for other machines (needs Node/npm + `go` from prereqs; runs on the current machine and opens PRs directly on GitHub).
+
+Both run paths publish a notification per PR the run opened or refreshed: `scripts/renovate-notify.sh` queries the GitHub API for open `deps`-labeled PRs created or updated after the run start and posts each to ntfy topic `srv0_services_renovate` (the run is the only actor touching these PRs, so an update means the run reopened it or force-pushed new content). The CronJob mounts `scripts/` read-only, gets `NTFY_URL`/`NTFY_TOPIC` from its env and the write token from the `renovate-ntfy-token` Secret, and its `app: renovate` pod label is admitted by ntfy's `allow-notification-ingress` policy; `renovate.sh` reads the ntfy settings from `config/srv0/values.yaml`. A notifier failure logs a warning without changing Renovate's exit code.
 
 Every PR is manual: `git fetch origin pull/<n>/head:renovate/pr-<n>`, `git checkout renovate/pr-<n>`, run `bash scripts/validate.sh <target>`, merge locally, then `git push origin master`. Never merge in the platform UI — origin remains the source of truth. Renovate rebases its own open PRs and closes them automatically once `master` contains the change (on its next run).
 

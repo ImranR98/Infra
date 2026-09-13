@@ -3,8 +3,10 @@
 # Runs the full renovate image (ships the Go toolchain, so the gomod manager
 # for the WASM plugin works here). Only two files of the synced repo are
 # mounted (read-only): config/VARS.env (the GitHub token) and .git/config
-# (author identity) — Renovate itself clones from GitHub. Minimizes what a
-# compromised Renovate image can read.
+# (author identity) — Renovate itself clones from GitHub. The PR notifier
+# also mounts scripts/ (public code) and takes the ntfy write token from the
+# renovate-ntfy-token Secret. Minimizes what a compromised Renovate image can
+# read.
 # Automerge policy lives in renovate.json (repo config).
 apiVersion: batch/v1
 kind: CronJob
@@ -21,6 +23,10 @@ spec:
     spec:
       backoffLimit: 2
       template:
+        metadata:
+          labels:
+            # Admitted by ntfy's allow-notification-ingress NetworkPolicy.
+            app: renovate
         spec:
           restartPolicy: Never
           securityContext:
@@ -32,6 +38,16 @@ spec:
           containers:
             - name: renovate
               image: renovate/renovate:44.83.0
+              env:
+                - name: NTFY_URL
+                  value: "http://ntfy.base.svc.cluster.local:3000"
+                - name: NTFY_TOPIC
+                  value: "{{ .Values.TARGET }}_services_renovate"
+                - name: NTFY_TOKEN
+                  valueFrom:
+                    secretKeyRef:
+                      name: renovate-ntfy-token
+                      key: token
               resources:
                 limits:
                   memory: 2Gi
@@ -43,6 +59,8 @@ spec:
                 - -c
                 - |
                   set -eu
+                  # Notifications only cover PRs opened after this timestamp.
+                  RUN_START="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
                   # VARS.env is dotenv: set -a exports the simple KEY="value" lines.
                   set -a
                   . /repo/config/VARS.env
@@ -57,13 +75,22 @@ spec:
                   if git config -f /repo/.git/config user.name >/dev/null 2>&1 && git config -f /repo/.git/config user.email >/dev/null 2>&1; then
                     export RENOVATE_GIT_AUTHOR="$(git config -f /repo/.git/config user.name) <$(git config -f /repo/.git/config user.email)>"
                   fi
-                  exec renovate
+                  rc=0
+                  renovate || rc=$?
+                  # Notify once for any PRs this run opened. A notification
+                  # failure must not change Renovate's exit code.
+                  bash /repo/scripts/renovate-notify.sh --since "$RUN_START" ||
+                    echo "Warning: Renovate notifier failed" >&2
+                  exit "$rc"
               volumeMounts:
                 - name: vars-file
                   mountPath: /repo/config/VARS.env
                   readOnly: true
                 - name: git-config
                   mountPath: /repo/.git/config
+                  readOnly: true
+                - name: scripts-dir
+                  mountPath: /repo/scripts
                   readOnly: true
           volumes:
             - name: vars-file
@@ -74,3 +101,18 @@ spec:
               hostPath:
                 path: "{{ .Values.INFRA_ROOT }}/.git/config"
                 type: File
+            - name: scripts-dir
+              hostPath:
+                path: "{{ .Values.INFRA_ROOT }}/scripts"
+                type: Directory
+---
+# Write-only ntfy token for the PR notifier (same value the Grafana contact
+# point uses).
+apiVersion: v1
+kind: Secret
+metadata:
+  name: renovate-ntfy-token
+  namespace: base
+type: Opaque
+stringData:
+  token: "{{ .Values.NTFY_WRITE_ONLY_ACCOUNT_TOKEN }}"

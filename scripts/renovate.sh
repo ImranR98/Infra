@@ -62,4 +62,41 @@ export HOME
 trap 'rm -rf "$HOME"' EXIT
 mkdir -p "$RENOVATE_CACHE_DIR"
 
+# Notifications only cover PRs opened after this timestamp.
+RUN_START="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+
 npx --yes -p renovate renovate "$@"
+
+# Publish a notification for each PR this run opened. Dry runs create none and
+# are skipped; a notification failure must not fail the run. The ntfy settings
+# live in config/srv0/values.yaml (srv0 owns the ntfy service) — machines
+# without that config skip with a warning.
+dry_run=false
+for arg in "$@"; do
+    case "$arg" in
+        --dry-run*) dry_run=true ;;
+    esac
+done
+if [ "$dry_run" = true ]; then
+    exit 0
+fi
+
+ntfy_values_file="$INFRA_ROOT/config/srv0/values.yaml"
+if [ ! -f "$ntfy_values_file" ] || ! command -v yq >/dev/null 2>&1; then
+    echo "Warning: $ntfy_values_file not readable (or yq missing) — skipping Renovate notifications." >&2
+    exit 0
+fi
+
+ntfy_token="$(yq -r '.NTFY_WRITE_ONLY_ACCOUNT_TOKEN // ""' "$ntfy_values_file")"
+ntfy_domain="$(yq -r '.SERVICES_DOMAIN // ""' "$ntfy_values_file")"
+ntfy_target="$(yq -r '.TARGET // ""' "$ntfy_values_file")"
+if [ -z "$ntfy_token" ] || [ -z "$ntfy_domain" ] || [ -z "$ntfy_target" ]; then
+    echo "Warning: ntfy settings incomplete in $ntfy_values_file — skipping Renovate notifications." >&2
+    exit 0
+fi
+
+NTFY_URL="https://ntfy.$ntfy_domain" \
+    NTFY_TOPIC="${ntfy_target}_services_renovate" \
+    NTFY_TOKEN="$ntfy_token" \
+    bash "$INFRA_ROOT/scripts/renovate-notify.sh" --since "$RUN_START" ||
+    echo "Warning: Renovate notifier failed." >&2
