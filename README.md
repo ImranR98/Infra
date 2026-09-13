@@ -1,6 +1,6 @@
 # Infra
 
-The IaaC system for my homelab and other devices.
+The IaC system for my homelab and other devices.
 
 ## Architecture
 
