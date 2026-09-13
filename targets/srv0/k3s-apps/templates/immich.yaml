@@ -37,6 +37,10 @@ spec:
         runAsUser: {{ .Values.MY_UID }}
         runAsGroup: {{ .Values.MY_UID }}
         fsGroup: {{ .Values.MY_UID }}
+        # The library PVC holds >120k files; the default recursive chown on
+        # every pod start is expensive and triggers VolumePermissionChange
+        # warnings. Root ownership already matches, so only check the root.
+        fsGroupChangePolicy: OnRootMismatch
         # container_t + s0 (verified): SELinux allows container_t the
         # /dev/dri device grant, the external hostPath library read, and the
         # library PVC; s0 keeps files category-free so server/ML and the
