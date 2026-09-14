@@ -84,9 +84,17 @@ if [ "$role" = server ]; then
 IOAccounting=true
 IOWeight=10
 EOF
+    # A weekly fstrim of the LUKS root can stall etcd's fdatasyncs for seconds;
+    # idle CPU and I/O priority keep the trim from starving the control plane.
+    install -d -m 755 /etc/systemd/system/fstrim.service.d
+    cat >/etc/systemd/system/fstrim.service.d/io-priority.conf <<'EOF'
+[Service]
+Nice=19
+IOSchedulingClass=idle
+EOF
     systemctl daemon-reload
     systemctl set-property --runtime kubepods.slice IOAccounting=true IOWeight=10 2>/dev/null || true
-    echo "k3s-node-prep: control-plane I/O protection applied (kubepods.slice IOWeight=10)"
+    echo "k3s-node-prep: control-plane I/O protection applied (kubepods.slice IOWeight=10, fstrim idle priority)"
 fi
 
 # ---- K3s config dir ----------------------------------------------------------

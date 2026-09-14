@@ -97,6 +97,10 @@ kube-scheduler-arg:
   - leader-elect-lease-duration=60s
   - leader-elect-renew-deadline=40s
   - leader-elect-retry-period=5s
+kube-cloud-controller-manager-arg:
+  - leader-elect-lease-duration=60s
+  - leader-elect-renew-deadline=40s
+  - leader-elect-retry-period=5s
 EOF2
     if ! command -v k3s >/dev/null 2>&1; then
         curl -sfL https://get.k3s.io | INSTALL_K3S_SKIP_START=true INSTALL_K3S_VERSION=stable sh -
