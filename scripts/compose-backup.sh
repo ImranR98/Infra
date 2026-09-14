@@ -1,9 +1,12 @@
 #!/bin/bash
 # DESC: Back up the compose runtime state of one target (tar via an Alpine
 # container — skips FIFOs/sockets, so no mknod errors), pruning to
-# BACKUP_RETENTION archives (default 1). With -e backup_remote=user@host:path
-# the tar streams back over SSH from the remote machine (the remote runs
-# docker directly — this script never runs there). Run ON the target.
+# BACKUP_RETENTION archives (default 1). Local mode tars this checkout's
+# current_target/compose_live_state and must run ON the target; it asserts
+# hostname == target. With -e backup_remote=user@host:path the tar instead
+# streams back over SSH from the remote checkout (the remote runs docker
+# directly — this script never runs there), so it can run from any machine;
+# a remote hostname that differs from <target> only warns.
 set -euo pipefail
 
 if [ -z "${INFRA_ROOT:-}" ]; then
@@ -17,34 +20,60 @@ usage() {
     echo
     echo "  <target>                  tars \$INFRA_ROOT/current_target/compose_live_state"
     echo "                            into compose_state_backups/<target>-backup-<ts>.tar"
+    echo "                            (run ON the target)"
     echo "  -e backup_remote=h:p      instead stream the tar over SSH from host h"
-    echo "                            (remote repo checkout at path p)"
+    echo "                            (remote repo checkout at path p) into this"
+    echo "                            machine's compose_state_backups/, named after"
+    echo "                            <target>; runs from any machine and only warns"
+    echo "                            when h's hostname differs from <target>"
     exit 1
 }
 
 backup_remote=""
+target_arg=""
+have_remote=false
 while [ $# -gt 0 ]; do
     case "$1" in
         -e)
-            backup_remote="${2:-}"
+            [ $# -ge 2 ] || usage
+            backup_remote="$2"
+            have_remote=true
             shift 2
             ;;
         -e*)
             backup_remote="${1#-e}"
-            backup_remote="${backup_remote#=}"
+            have_remote=true
             shift
             ;;
         -h | --help)
             usage
             ;;
+        -*)
+            echo "Error: unknown option '$1'" >&2
+            usage
+            ;;
         *)
-            break
+            [ -z "$target_arg" ] || usage
+            target_arg="$1"
+            shift
             ;;
     esac
 done
+if [ "$have_remote" = true ]; then
+    backup_remote="${backup_remote#=}"
+    backup_remote="${backup_remote#backup_remote=}"
+    if [[ "$backup_remote" != *:* ]]; then
+        echo "Error: -e backup_remote needs user@host:path" >&2
+        usage
+    fi
+fi
+[ -n "$target_arg" ] || usage
 
-[ $# -ge 1 ] || usage
-require_target_host "$1"
+if [ -n "$backup_remote" ]; then
+    require_target "$target_arg"
+else
+    require_target_host "$target_arg"
+fi
 
 retention="${BACKUP_RETENTION:-1}"
 backup_dir="$INFRA_ROOT/compose_state_backups"
@@ -57,6 +86,10 @@ if [ -n "$backup_remote" ]; then
     host="${backup_remote%%:*}"
     path="${backup_remote#*:}"
     out="$backup_dir/${TARGET}-backup-$(date +%Y%m%d_%H%M%S).tar"
+    remote_hostname="$(ssh -T "$host" hostname 2>/dev/null)" || remote_hostname=""
+    if [ -n "$remote_hostname" ] && [ "$remote_hostname" != "$TARGET" ]; then
+        echo "Warning: remote host '$host' is named '$remote_hostname', not target '$TARGET'; saving as $(basename "$out")" >&2
+    fi
     echo "Backing up compose state from $host (remote checkout at $path)..."
     ssh -T "$host" "cd '$path' && docker run --rm --log-driver none -v \$PWD/current_target/compose_live_state:/backup/state:ro alpine sh -c '$tar_cmd'" >"$out"
 else
