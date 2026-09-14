@@ -405,7 +405,7 @@ spec:
     spec:
       initContainers:
         - name: volume-permissions
-          image: docker.io/bitnami/postgresql:latest@sha256:65d7506622ce2649914947b698d822d56c208295ba7ee80c1b34e48b251ba0c1
+          image: docker.io/bitnami/postgresql:latest@sha256:b69d1fca390fb131639e86e820f248acfc5d911339dc884796f8009260c598d7
           command:
             - chown
             - -R
@@ -423,7 +423,7 @@ spec:
               mountPath: /bitnami/postgresql
       containers:
         - name: postgresql
-          image: docker.io/bitnami/postgresql:latest@sha256:65d7506622ce2649914947b698d822d56c208295ba7ee80c1b34e48b251ba0c1
+          image: docker.io/bitnami/postgresql:latest@sha256:b69d1fca390fb131639e86e820f248acfc5d911339dc884796f8009260c598d7
           ports:
             - name: tcp-postgresql
               containerPort: 5432
