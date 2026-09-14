@@ -4,11 +4,14 @@
 # changing mid-read is expected for live state and accepted), pruning to
 # BACKUP_RETENTION archives (default 1); a failed run removes its partial
 # archive. Local mode tars this checkout's current_target/compose_live_state
-# and must run ON the target; it asserts hostname == target. With
+# and must run ON the target; it asserts hostname == target. Docker is run via
+# sudo when this user can't reach the daemon (sudo prompts; SUDO_PASSWORD feeds
+# sudo -S for non-interactive runs). With
 # -e backup_remote=user@host:path the tar instead streams back over SSH from
 # the remote checkout (the remote runs docker directly — this script never
-# runs there), so it can run from any machine; a remote hostname that differs
-# from <target> only warns.
+# runs there), so it can run from any machine; remote sudo uses the supplied
+# password via -S, or passwordless -n, since a prompt can't share the tar
+# stream. A remote hostname that differs from <target> only warns.
 set -euo pipefail
 
 if [ -z "${INFRA_ROOT:-}" ]; then
@@ -28,11 +31,16 @@ usage() {
     echo "                            machine's compose_state_backups/, named after"
     echo "                            <target>; runs from any machine and only warns"
     echo "                            when h's hostname differs from <target>"
+    echo
+    echo "Set SUDO_PASSWORD to feed sudo -S without an interactive prompt; it is"
+    echo "not inherited by child processes."
     exit 1
 }
 
 backup_remote=""
 target_arg=""
+sudo_password="${SUDO_PASSWORD:-}"
+unset SUDO_PASSWORD  # don't leak it into child (docker/ssh) environments
 have_remote=false
 while [ $# -gt 0 ]; do
     case "$1" in
@@ -90,12 +98,45 @@ if [ -n "$backup_remote" ]; then
     host="${backup_remote%%:*}"
     path="${backup_remote#*:}"
     out="$backup_dir/${TARGET}-backup-$(date +%Y%m%d_%H%M%S).tar"
-    remote_hostname="$(ssh -T "$host" hostname 2>/dev/null)" || remote_hostname=""
-    if [ -n "$remote_hostname" ] && [ "$remote_hostname" != "$TARGET" ]; then
+    remote_hostname="$(ssh -T "$host" hostname)" || remote_hostname=""
+    if [ -z "$remote_hostname" ]; then
+        echo "Error: cannot SSH to '$host'." >&2
+        exit 1
+    fi
+    if [ "$remote_hostname" != "$TARGET" ]; then
         echo "Warning: remote host '$host' is named '$remote_hostname', not target '$TARGET'; saving as $(basename "$out")" >&2
     fi
+    # The tar stream leaves no tty for a sudo prompt: feed the supplied password
+    # to sudo -S over stdin, else fall back to passwordless sudo -n.
+    remote_docker="docker"
+    remote_sudo_password=false
+    if ! ssh -T "$host" "docker info >/dev/null 2>&1"; then
+        if [ -n "$sudo_password" ]; then
+            if printf '%s\n' "$sudo_password" | ssh -T "$host" "sudo -S -p '' docker info >/dev/null 2>&1"; then
+                remote_docker="sudo -S -p '' docker"
+                remote_sudo_password=true
+                echo "Remote docker needs elevated privileges; using 'sudo -S' with the supplied password on $host" >&2
+            else
+                echo "Error: docker on '$host' is not usable via sudo with the supplied password." >&2
+                exit 1
+            fi
+        elif ssh -T "$host" "sudo -n docker info >/dev/null 2>&1"; then
+            remote_docker="sudo -n docker"
+            echo "Remote docker needs elevated privileges; using 'sudo -n' on $host" >&2
+        else
+            echo "Error: docker on '$host' is not usable by the SSH user (needs root, the docker group, passwordless sudo, or SUDO_PASSWORD)." >&2
+            exit 1
+        fi
+    fi
     echo "Backing up compose state from $host (remote checkout at $path)..."
-    if ! ssh -T "$host" "cd '$path' && test -d current_target/compose_live_state && docker run --rm --log-driver none -v \$PWD/current_target/compose_live_state:/backup/state:ro alpine sh -c '$tar_cmd'" >"$out"; then
+    remote_tar="cd '$path' && test -d current_target/compose_live_state && $remote_docker run --rm --log-driver none -v \$PWD/current_target/compose_live_state:/backup/state:ro alpine sh -c '$tar_cmd'"
+    backup_rc=0
+    if [ "$remote_sudo_password" = true ]; then
+        printf '%s\n' "$sudo_password" | ssh -T "$host" "$remote_tar" >"$out" || backup_rc=$?
+    else
+        ssh -T "$host" "$remote_tar" >"$out" || backup_rc=$?
+    fi
+    if [ "$backup_rc" -ne 0 ]; then
         echo "Error: remote backup failed; removed partial archive $out" >&2
         rm -f "$out"
         exit 1
@@ -106,10 +147,39 @@ else
         echo "Error: state directory not found: $state_dir" >&2
         exit 1
     fi
+    docker_cmd=(docker)
+    need_sudo=false
+    docker_rc=0
+    docker_err="$(docker info 2>&1 >/dev/null)" || docker_rc=$?
+    if [ "$docker_rc" -ne 0 ]; then
+        if [[ "$docker_err" == *[Pp]ermission\ denied* ]]; then
+            need_sudo=true
+            if [ -n "$sudo_password" ]; then
+                if ! printf '%s\n' "$sudo_password" | "$(get_sudo_cmd)" -S -p '' docker info >/dev/null 2>&1; then
+                    echo "Error: docker is not usable via $(get_sudo_cmd) with the supplied password." >&2
+                    exit 1
+                fi
+                docker_cmd=("$(get_sudo_cmd)" -S -p '' docker)
+                echo "Docker needs elevated privileges; using 'sudo -S' with the supplied password" >&2
+            else
+                docker_cmd=("$(get_sudo_cmd)" docker)
+                echo "Docker needs elevated privileges; using ${docker_cmd[*]}" >&2
+            fi
+        else
+            echo "Error: docker is not usable: ${docker_err:-exit $docker_rc}" >&2
+            exit 1
+        fi
+    fi
     out="$backup_dir/${TARGET}-backup-$(date +%Y%m%d_%H%M%S).tar"
     echo "Backing up compose state at $state_dir..."
-    if ! docker run --rm --log-driver none -v "$state_dir":/backup/state:ro alpine \
-        sh -c "$tar_cmd" >"$out"; then
+    tar_run=("${docker_cmd[@]}" run --rm --log-driver none -v "$state_dir":/backup/state:ro alpine sh -c "$tar_cmd")
+    backup_rc=0
+    if [ "$need_sudo" = true ] && [ -n "$sudo_password" ]; then
+        printf '%s\n' "$sudo_password" | "${tar_run[@]}" >"$out" || backup_rc=$?
+    else
+        "${tar_run[@]}" >"$out" || backup_rc=$?
+    fi
+    if [ "$backup_rc" -ne 0 ]; then
         echo "Error: backup failed; removed partial archive $out" >&2
         rm -f "$out"
         exit 1
