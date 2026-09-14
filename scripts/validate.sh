@@ -4,9 +4,10 @@
 # in config/<target>/ (same relative path) with no leftover placeholders; the
 # helm values (values.yaml) and compose env (compose.env) additionally get
 # key-completeness checks against the template. Targets with a k3s chart get
-# helm lint + both-scope template renders ('<no value>' rejected); compose
-# mounts under ../../../config/ must exist. Variable NAMES and paths only are
-# printed — values never reach stdout/stderr. Runs from any machine.
+# helm lint + both-scope template renders ('<no value>' rejected) plus Gateway
+# certificateRef/ReferenceGrant checks; compose mounts under ../../../config/
+# must exist. Variable NAMES and paths only are printed — values never reach
+# stdout/stderr. Runs from any machine.
 set -euo pipefail
 
 if [ -z "${INFRA_ROOT:-}" ]; then
@@ -25,6 +26,8 @@ usage() {
     echo "  - compose.env: key completeness vs the template + placeholder values"
     echo "  - helm lint + helm template of each k3s chart (targets/<target>/k3s-base,"
     echo "    k3s-apps), rejecting '<no value>' renders"
+    echo "  - Gateway certificateRefs resolve to rendered Certificates and"
+    echo "    cross-namespace refs are covered by a ReferenceGrant"
     echo "  - compose mounts under ../../../config/ point at existing files"
     exit 1
 }
@@ -166,6 +169,55 @@ check_compose_mounts() {
     [ "$ok" = 1 ]
 }
 
+# check_gateway_certrefs <rendered-manifests> — every Gateway listener TLS
+# certificateRef must resolve to a Certificate secret in the same namespace, and
+# every cross-namespace ref must be covered by a ReferenceGrant from that
+# Gateway. Key names only are printed.
+check_gateway_certrefs() {
+    local rendered="$1"
+    local ok=1
+
+    local certs refs missing
+    certs=$(yq -N 'select(.kind == "Certificate") |
+        [(.metadata.namespace // "default"), (.spec.secretName // .metadata.name)] | join("/")' \
+        <<<"$rendered" | awk 'NF' | sort -u)
+    # shellcheck disable=SC2016  # $gns is a yq variable, not a shell one
+    refs=$(yq -N 'select(.kind == "Gateway") | .metadata.namespace as $gns |
+        .spec.listeners[] | .tls.certificateRefs[]? |
+        [(.namespace // $gns), .name] | join("/")' <<<"$rendered" | awk 'NF' | sort -u)
+    if [ -n "$refs" ]; then
+        missing=$(comm -23 <(printf '%s\n' "$refs") <(printf '%s\n' "$certs"))
+        if [ -n "$missing" ]; then
+            _err "ERROR: Gateway certificateRefs without a matching Certificate:"
+            awk 'NF {print "  " $0}' <<<"$missing" >&2
+            ok=0
+        fi
+    fi
+
+    local xrefs grants ungranted
+    # shellcheck disable=SC2016  # $gns is a yq variable, not a shell one
+    xrefs=$(yq -N 'select(.kind == "Gateway") | .metadata.namespace as $gns |
+        .spec.listeners[] | .tls.certificateRefs[]? |
+        select((.namespace // $gns) != $gns) | [.namespace, $gns] | join("/")' \
+        <<<"$rendered" | awk 'NF' | sort -u)
+    # shellcheck disable=SC2016  # $ns is a yq variable, not a shell one
+    grants=$(yq -N 'select(.kind == "ReferenceGrant") | .metadata.namespace as $ns |
+        select([.spec.to[]? | select((.group // "") == "" or (.group // "") == "core") |
+            select(.kind == "Secret")] | length > 0) |
+        .spec.from[] | select(.group == "gateway.networking.k8s.io" and .kind == "Gateway") |
+        [$ns, .namespace] | join("/")' <<<"$rendered" | awk 'NF' | sort -u)
+    if [ -n "$xrefs" ]; then
+        ungranted=$(comm -23 <(printf '%s\n' "$xrefs") <(printf '%s\n' "$grants"))
+        if [ -n "$ungranted" ]; then
+            _err "ERROR: cross-namespace Gateway certificateRefs without a ReferenceGrant (<secret-ns>/<gateway-ns>):"
+            awk 'NF {print "  " $0}' <<<"$ungranted" >&2
+            ok=0
+        fi
+    fi
+
+    [ "$ok" = 1 ]
+}
+
 # check_helm <target_dir> — lint + template render of each k3s chart
 # (targets/<t>/k3s-base → namespace/release base, k3s-apps → apps).
 check_helm() {
@@ -173,7 +225,7 @@ check_helm() {
     local config_file="$INFRA_ROOT/config/$TARGET/values.yaml"
     local ok=1
 
-    local chart_dir chart ns release vars_args out
+    local chart_dir chart ns release vars_args out all_out=""
     for chart_dir in "$target_dir"/k3s-base "$target_dir"/k3s-apps; do
         [ -d "$chart_dir" ] || continue
         chart="$(basename "$chart_dir")"
@@ -198,7 +250,10 @@ check_helm() {
             _err "ERROR: helm template ($chart) rendered missing values (<no value>)"
             ok=0
         fi
+        all_out+="$out"$'\n'
     done
+
+    check_gateway_certrefs "$all_out" || ok=0
     [ "$ok" = 1 ]
 }
 

@@ -71,7 +71,7 @@ apiVersion: traefik.io/v1alpha1
 kind: Middleware
 metadata:
   name: jellyfin-ratelimit
-  namespace: apps
+  namespace: base
 spec:
   rateLimit:
     average: 25
@@ -90,30 +90,44 @@ spec:
   dnsNames:
     - tv.{{ .Values.SERVICES_DOMAIN }}
 ---
-apiVersion: traefik.io/v1alpha1
-kind: IngressRoute
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
 metadata:
   name: jellyfin-ingress
-  namespace: apps
+  namespace: base
 spec:
-  entryPoints:
-    - websecure
-    - websecure-proxy
-  routes:
-    - match: Host(`tv.{{ .Values.SERVICES_DOMAIN }}`)
-      kind: Rule
-      middlewares:
-        - name: crowdsec-bouncer
-          namespace: base
-        - name: authelia-with-optional-header-gate
-          namespace: base
-        - name: jellyfin-ratelimit
-          namespace: apps
-      services:
+  parentRefs:
+    - name: srv0
+      sectionName: websecure
+    - name: srv0
+      sectionName: websecure-proxy
+  hostnames:
+    - tv.{{ .Values.SERVICES_DOMAIN }}
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      filters:
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: crowdsec-bouncer
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: authelia-with-optional-header-gate
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: jellyfin-ratelimit
+      backendRefs:
         - name: jellyfin
+          namespace: apps
           port: 8096
-  tls:
-    secretName: jellyfin-prod-tls
 ---
 # In initial mode, tv.{{ .Values.SERVICES_DOMAIN }} is protected by the Authelia header gate
 # while it is enabled. This breaks Jellyfin's first-time setup, so a LAN-only
@@ -123,24 +137,32 @@ spec:
 # router's local DNS to resolve *.home.local to the cluster IP.
 #
 # The LAN route is always direct and unauthenticated (lan-whitelist only).
-apiVersion: traefik.io/v1alpha1
-kind: IngressRoute
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
 metadata:
   name: jellyfin-ingress-local
-  namespace: apps
+  namespace: base
 spec:
-  entryPoints:
-    - websecure
-  routes:
-    - match: Host(`tv.home.local`)
-      kind: Rule
-      middlewares:
-        - name: lan-whitelist
-          namespace: base
-      services:
+  parentRefs:
+    - name: srv0
+      sectionName: websecure
+  hostnames:
+    - tv.home.local
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      filters:
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: lan-whitelist
+      backendRefs:
         - name: jellyfin
+          namespace: apps
           port: 8096
-  tls: {}
 ---
 ---
 apiVersion: networking.k8s.io/v1
