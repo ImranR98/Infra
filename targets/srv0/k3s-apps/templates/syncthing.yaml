@@ -37,7 +37,11 @@ spec:
       securityContext:
         runAsUser: {{ .Values.MY_UID }}
         runAsGroup: {{ .Values.MY_UID }}
+        # spc_t: the synced trees can contain files with foreign labels (e.g.
+        # moved in from /tmp keep user_tmp_t); s0 keeps written files
+        # category-free so the host and container_t readers can still open them.
         seLinuxOptions:
+          type: spc_t
           level: s0
       initContainers:
         - name: fix-perms

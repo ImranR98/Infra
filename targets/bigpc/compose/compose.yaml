@@ -64,6 +64,10 @@ services:
         container_name: syncthing
         restart: unless-stopped
         mem_limit: 2G
+        # spc_t so files moved into the synced tree with foreign labels stay
+        # readable; :Z would bulk-relabel the whole home and still miss later moves.
+        security_opt:
+            - label=type:spc_t
         environment:
             - PUID=$MY_UID
             - PGID=$MY_UID
