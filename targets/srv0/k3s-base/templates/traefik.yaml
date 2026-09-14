@@ -161,8 +161,14 @@ metadata:
   namespace: kube-system
 spec:
   valuesContent: |-
+    providers:
+      kubernetesGateway:
+        enabled: true
+    # The chart's default Gateway is a placeholder listener on :8000; the real
+    # edge is the srv0 Gateway in templates/gateway.yaml.
+    gateway:
+      enabled: false
     additionalArguments:
-      - "--providers.kubernetescrd.allowCrossNamespace=true"
       - "--api.dashboard=true"
       - "--global.sendAnonymousUsage=false"
       - "--global.checkNewVersion=true"
@@ -231,51 +237,76 @@ spec:
   dnsNames:
     - traefik.{{ .Values.SERVICES_DOMAIN }}
 ---
-apiVersion: traefik.io/v1alpha1
-kind: IngressRoute
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
 metadata:
   name: traefik-ingress
-  namespace: kube-system
+  namespace: base
 spec:
-  entryPoints:
-    - websecure
-    - websecure-proxy
-  tls:
-    secretName: traefik-prod-tls
-  routes:
-    - match: Host(`traefik.{{ .Values.SERVICES_DOMAIN }}`)
-      kind: Rule
-      middlewares:
-        - name: geoblock
-          namespace: base
-        - name: crowdsec-bouncer
-          namespace: base
-        - name: forwardauth-authelia
-          namespace: base
-      services:
-        - name: api@internal
+  parentRefs:
+    - name: srv0
+      sectionName: websecure
+    - name: srv0
+      sectionName: websecure-proxy
+  hostnames:
+    - traefik.{{ .Values.SERVICES_DOMAIN }}
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      filters:
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: geoblock
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: crowdsec-bouncer
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: forwardauth-authelia
+      backendRefs:
+        - group: traefik.io
           kind: TraefikService
+          name: api@internal
 ---
-apiVersion: traefik.io/v1alpha1
-kind: IngressRoute
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
 metadata:
   name: traefik-ingress-local
-  namespace: kube-system
+  namespace: base
 spec:
-  entryPoints:
-    - websecure
-  tls: {}
-  routes:
-    - match: Host(`traefik.home.local`)
-      kind: Rule
-      middlewares:
-        - name: cluster-only
-          namespace: base
-        - name: basicauth-cluster
-          namespace: base
-      services:
-        - name: api@internal
+  parentRefs:
+    - name: srv0
+      sectionName: websecure
+  hostnames:
+    - traefik.home.local
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      filters:
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: cluster-only
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: basicauth-cluster
+      backendRefs:
+        - group: traefik.io
           kind: TraefikService
+          name: api@internal
 ---
 # Local WASM plugin (authelia-header-gate), loaded via --experimental.localplugins.
 # The manifest key MUST stay .traefik.yml: Traefik hardcodes that filename for

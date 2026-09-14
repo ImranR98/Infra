@@ -12,28 +12,39 @@ spec:
   dnsNames:
     - gpt.{{ .Values.SERVICES_DOMAIN }}
 ---
-apiVersion: traefik.io/v1alpha1
-kind: IngressRoute
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
 metadata:
   name: openwebui-ingress
-  namespace: apps
+  namespace: base
 spec:
-  entryPoints:
-    - websecure
-    - websecure-proxy
-  routes:
-    - match: Host(`gpt.{{ .Values.SERVICES_DOMAIN }}`)
-      kind: Rule
-      middlewares:
-        - name: geoblock
-          namespace: base
-        - name: crowdsec-bouncer
-          namespace: base
-      services:
+  parentRefs:
+    - name: srv0
+      sectionName: websecure
+    - name: srv0
+      sectionName: websecure-proxy
+  hostnames:
+    - gpt.{{ .Values.SERVICES_DOMAIN }}
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      filters:
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: geoblock
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: crowdsec-bouncer
+      backendRefs:
         - name: open-webui
+          namespace: apps
           port: 80
-  tls:
-    secretName: openwebui-prod-tls
 ---
 ---
 apiVersion: networking.k8s.io/v1

@@ -12,30 +12,44 @@ spec:
   dnsNames:
     - links.{{ .Values.SERVICES_DOMAIN }}
 ---
-apiVersion: traefik.io/v1alpha1
-kind: IngressRoute
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
 metadata:
   name: linkwarden-ingress
-  namespace: apps
+  namespace: base
 spec:
-  entryPoints:
-    - websecure
-    - websecure-proxy
-  routes:
-    - match: Host(`links.{{ .Values.SERVICES_DOMAIN }}`)
-      kind: Rule
-      middlewares:
-        - name: geoblock
-          namespace: base
-        - name: crowdsec-bouncer
-          namespace: base
-        - name: authelia-with-optional-header-gate
-          namespace: base
-      services:
+  parentRefs:
+    - name: srv0
+      sectionName: websecure
+    - name: srv0
+      sectionName: websecure-proxy
+  hostnames:
+    - links.{{ .Values.SERVICES_DOMAIN }}
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      filters:
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: geoblock
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: crowdsec-bouncer
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: authelia-with-optional-header-gate
+      backendRefs:
         - name: linkwarden
+          namespace: apps
           port: 3000
-  tls:
-    secretName: linkwarden-prod-tls
 ---
 ---
 apiVersion: apps/v1

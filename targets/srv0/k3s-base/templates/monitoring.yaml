@@ -344,27 +344,43 @@ spec:
   dnsNames:
     - grafana.{{ .Values.SERVICES_DOMAIN }}
 ---
-apiVersion: traefik.io/v1alpha1
-kind: IngressRoute
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
 metadata:
   name: grafana-ingress
   namespace: base
 spec:
-  entryPoints:
-    - websecure
-    - websecure-proxy
-  routes:
-    - match: Host(`grafana.{{ .Values.SERVICES_DOMAIN }}`)
-      kind: Rule
-      middlewares:
-        - name: geoblock
-        - name: crowdsec-bouncer
-        - name: forwardauth-authelia
-      services:
+  parentRefs:
+    - name: srv0
+      sectionName: websecure
+    - name: srv0
+      sectionName: websecure-proxy
+  hostnames:
+    - grafana.{{ .Values.SERVICES_DOMAIN }}
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      filters:
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: geoblock
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: crowdsec-bouncer
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: forwardauth-authelia
+      backendRefs:
         - name: grafana
           port: 80
-  tls:
-    secretName: grafana-prod-tls
 ---
 apiVersion: helm.cattle.io/v1
 kind: HelmChart
