@@ -98,7 +98,8 @@ docker compose --env-file config/srv0/compose.env --env-file targets/srv0/compos
 #   (no --env-file; the project-dir machine-fact .env auto-loads)
 
 # Backups:
-bash scripts/compose-backup.sh vps0  # tar compose state; [-e backup_remote=user@host:path] streams over SSH
+bash scripts/compose-backup.sh vps0  # tar compose state (ON the target)
+bash scripts/compose-backup.sh vps0 -e backup_remote=user@host:path  # any machine: pull that checkout's state here, named vps0-backup-<ts>.tar
 bash scripts/pvc.sh backup --all -y  # PVC backup (or: backup <name>) — run during an unlock
 bash scripts/pvc.sh restore --all -y # PVC restore (or: restore <name>) — run during an unlock
 sudo bash scripts/update-node-ip.sh [--ip X] [--force]
@@ -133,7 +134,7 @@ Ad-hoc diagnostics (run on the srv0 control plane):
 | Script | Selects | Acts on | Notes |
 |---|---|---|---|
 | `validate.sh <t>` | target | read-only, any machine | config_template→config completeness/placeholders, helm lint + both-chart render (srv0), compose `../../../config/` mount check. Prints variable names only. |
-| `compose-backup.sh <t>` | target | ON the target (hostname asserted) | tars compose state via an Alpine container; `-e backup_remote=user@host:path` streams the tar over SSH |
+| `compose-backup.sh <t>` | target | ON the target (local) / any machine (`-e` remote) | tars compose state via an Alpine container; `-e backup_remote=user@host:path` pulls the remote checkout's state into this machine's `compose_state_backups/`, named `<t>-backup-<ts>.tar` (remote hostname mismatch warns) |
 | `prereqs.sh` | — | this machine | packages (Longhorn iSCSI/NFS + `iscsid`), pinned helm, Docker bootstrap, machine-fact `.env`, host bind dirs, acme seed |
 | `kubeconfig-unlock.sh [--lock]` | — | this machine | read ACL on the k3s kubeconfig + `~/.kube/config` symlink; holds until Ctrl-C; `--lock` cleans up |
 | `renovate.sh` | — | this machine (opens GitHub PRs) | needs `RENOVATE_GITHUB_TOKEN` in `config/VARS.env` |
@@ -188,7 +189,7 @@ The bootstrap self-computes the repo root but honors a pre-set `INFRA_ROOT` (the
 - **State** — `current_target/compose_live_state/` (gitignored) holds runtime state only (acme.json, sqlite DBs, upload dirs), referenced with relative paths (`../../../current_target/compose_live_state/...`, resolved against the compose file's directory). `prereqs.sh` creates missing bind dirs owned by `$MY_UID` (Docker would create them as root, unwritable by containers running as `$MY_UID`) and seeds `traefik/acme.json` (`{}`, 0600, first run).
 - **Ownership self-heal** — containers with a fixed non-`$MY_UID` user (ClickHouse 101, Plausible 999) have a one-shot `state-fixperms` init service (alpine, `cap_drop: ALL` + `CHOWN`/`FOWNER`/`DAC_OVERRIDE`) that chowns their state dirs before the apps start; dependents gate on it with `condition: service_completed_successfully`. It re-runs after `docker compose down <svc>`, so host-side chown drift is fixed on the next deploy.
 - **Deploy** — see Commands; reboot survival comes from per-service `restart:` policies (no systemd wrapper).
-- **Backup** — `compose-backup.sh <t>` tars the state locally via an Alpine container (skips FIFOs/sockets) and prunes to `$BACKUP_RETENTION` (default 1); with `-e backup_remote=user@host:path` it streams the tar over SSH into `compose_state_backups/` (the remote runs docker directly — no scripts needed there). It asserts `hostname == target` via `require_target_host`; plain `docker compose` runs are your own guard (deploy from the target's own checkout).
+- **Backup** — `compose-backup.sh <t>` tars the state locally via an Alpine container (skips FIFOs/sockets) and prunes to `$BACKUP_RETENTION` (default 1). Local mode asserts `hostname == target` via `require_target_host`; with `-e backup_remote=user@host:path` it instead streams the tar over SSH from that checkout's `current_target/compose_live_state` into this machine's `compose_state_backups/<target>-backup-<ts>.tar` (the remote runs docker directly — no scripts needed there), so it runs from any machine, and a remote hostname that differs from `<target>` only warns. Plain `docker compose` runs are your own guard (deploy from the target's own checkout).
 
 ## K3s & Helm
 
