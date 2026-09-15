@@ -34,10 +34,11 @@ fi
 echo "==> Writing server config"
 # Flannel selects the interface owning node-ip, so no flannel-iface is needed
 # to keep VPN interfaces out. The lease flags keep the in-process controller
-# manager, scheduler, and cloud-controller-manager from exiting k3s when
-# multi-second etcd write stalls make them miss a lease renewal. The
-# cloud-controller-manager needs its own key: the controller-manager args do
-# not reach it.
+# manager, scheduler, and cloud-controller-manager from exiting k3s when etcd
+# write stalls make them miss a lease renewal; observed stalls approach a
+# minute, so the renew deadline is 2x the worst. Dead-leader detection is
+# slower, which costs nothing on a single server. The cloud-controller-manager
+# needs its own key: the controller-manager args do not reach it.
 $SU mkdir -p /etc/rancher/k3s
 $SU tee /etc/rancher/k3s/config.yaml >/dev/null <<EOF
 selinux: true
@@ -46,17 +47,17 @@ flannel-backend: wireguard-native
 cluster-init: true
 node-ip: $node_ip
 kube-controller-manager-arg:
-  - leader-elect-lease-duration=60s
-  - leader-elect-renew-deadline=40s
-  - leader-elect-retry-period=5s
+  - leader-elect-lease-duration=3m
+  - leader-elect-renew-deadline=2m
+  - leader-elect-retry-period=10s
 kube-scheduler-arg:
-  - leader-elect-lease-duration=60s
-  - leader-elect-renew-deadline=40s
-  - leader-elect-retry-period=5s
+  - leader-elect-lease-duration=3m
+  - leader-elect-renew-deadline=2m
+  - leader-elect-retry-period=10s
 kube-cloud-controller-manager-arg:
-  - leader-elect-lease-duration=60s
-  - leader-elect-renew-deadline=40s
-  - leader-elect-retry-period=5s
+  - leader-elect-lease-duration=3m
+  - leader-elect-renew-deadline=2m
+  - leader-elect-retry-period=10s
 EOF
 
 echo "==> Starting K3s"

@@ -69,10 +69,11 @@ elif command -v ufw >/dev/null 2>&1; then
 fi
 
 # ---- control-plane I/O protection (server nodes only) ------------------------
-# etcd/apiserver/kubelet run in system.slice; pods run in kubepods.slice. A low
-# IOWeight on the pod slice gives the control plane a 10:1 I/O priority
-# advantage, so a pod burst (backup, image pull, migration) cannot stall etcd.
-# Agents don't run etcd, so this is server-only.
+# etcd/apiserver/kubelet run in system.slice; pods run in kubepods.slice. The
+# pod slice's IOWeight only binds on an elevator that honors weights (BFQ);
+# where the device runs `none` it is inert (this node's NVMe does), but it is
+# applied for the nodes/devices where it does bind. Agents don't run etcd, so
+# this is server-only.
 role="${K3S_ROLE:-${K3S_JOIN_ROLE:-}}"
 if [ -z "$role" ] && { [ -d /var/lib/rancher/k3s/server ] || systemctl is-active --quiet k3s; }; then
     role=server
@@ -85,7 +86,8 @@ IOAccounting=true
 IOWeight=10
 EOF
     # A weekly fstrim of the LUKS root can stall etcd's fdatasyncs for seconds;
-    # idle CPU and I/O priority keep the trim from starving the control plane.
+    # idle CPU priority keeps the trim from starving the control plane (the
+    # idle I/O class is inert while the device elevator is `none`).
     install -d -m 755 /etc/systemd/system/fstrim.service.d
     cat >/etc/systemd/system/fstrim.service.d/io-priority.conf <<'EOF'
 [Service]
