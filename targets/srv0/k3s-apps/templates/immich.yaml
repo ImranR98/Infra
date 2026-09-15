@@ -55,7 +55,7 @@ spec:
             main:
               image:
                 repository: ghcr.io/immich-app/immich-server
-                tag: v3.2.1
+                tag: v3.2.2
               securityContext:
                 allowPrivilegeEscalation: false
               # Resources are per-component (the top-level controllers.main is
