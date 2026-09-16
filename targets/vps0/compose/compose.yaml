@@ -306,7 +306,7 @@ services:
 
     # Authelia - 2FA Authentication
     authelia:
-        image: authelia/authelia:latest@sha256:16b804fbf6704b456ffb6e474c8e9d2406f9544ca0fecfeca7b4dcbed647deb4
+        image: authelia/authelia:latest@sha256:40005803cd4e2eaeea4418517e9e9c7f515b55b31071a02829341ca2e50ca7c0
         container_name: authelia
         user: "$MY_UID:$MY_UID"
         depends_on:
@@ -649,7 +649,7 @@ services:
 
     # MeTube - YouTube Downloader
     metube:
-        image: ghcr.io/alexta69/metube:latest@sha256:397778fccf13d83adf9325fe813b260617a082d1772aff6d678c5b9256dd01fb
+        image: ghcr.io/alexta69/metube:latest@sha256:5ebff7a547bf175e614c024053e5602a0b9193586a20c107dd47d571c391e635
         container_name: metube
         volumes:
             - ../../../current_target/compose_live_state/metube:/downloads
