@@ -23,6 +23,11 @@ cat >/etc/sysctl.d/90-k3s.conf <<'EOF'
 fs.inotify.max_user_watches = 6000000
 fs.inotify.max_user_instances = 512
 user.max_user_namespaces = 28633
+
+# Bound dirty writeback so a burst writer (backup/image pull) cannot queue
+# gigabytes behind etcd's fsyncs — a shallow queue keeps commit latency bounded.
+vm.dirty_bytes = 268435456
+vm.dirty_background_bytes = 67108864
 EOF
 sysctl --system >/dev/null
 
