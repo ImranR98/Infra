@@ -14,8 +14,9 @@ spec:
   valuesContent: |-
     # Grafana's first-party Kubernetes observability chart: generates all Alloy
     # collector configs for cluster metrics (kubelet/cadvisor/ksm/api-server/
-    # coredns), host metrics (node-exporter) and pod logs (streamed via the
-    # Kubernetes API - no host mounts), shipping to the in-cluster Mimir/Loki.
+    # coredns), host metrics (node-exporter) and pod logs (tail from the node's
+    # /var/log via a read-only host mount), shipping to the in-cluster
+    # Mimir/Loki.
     cluster:
       name: k3s
     destinations:
@@ -39,6 +40,14 @@ spec:
         enabled: true
         presets: [clustered]
         alloy:
+          # Tail from the node's /var/log; SELinux denies container_t (even as
+          # root) reads of host container_log_t files, so the collector runs
+          # under spc_t, matching node-exporter/node-facts.
+          mounts:
+            varlog: true
+          securityContext:
+            seLinuxOptions:
+              type: spc_t
           resources:
             requests:
               memory: 192Mi
@@ -83,7 +92,9 @@ spec:
         enabled: true
         metricsTuning:
           useDefaultAllowList: false
-    podLogsViaKubernetesApi:
+    # Filesystem tailing, not API streaming: each collector reads its node's
+    # /var/log directly, dropping the per-container pods/log API streams.
+    podLogsViaLoki:
       enabled: true
       destinations: [loki]
       collector: alloy-logs
