@@ -231,13 +231,16 @@ $tolerations
       # The checkpoint action caps tar's output at ~10 MB/s, bounding the
       # nightly burst so it cannot fill dirty pages and stall etcd. ionice/nice
       # are useless here: the NVMe runs the none elevator, which ignores
-      # priorities.
+      # priorities. Tar exit 1 (live files changed mid-read) is tolerated.
       echo "$timestamp" > /data/__backup_timestamp.txt
-      if ! tar czf "/backup/.$dest_file.tmp" -C /data $excl_flags --sparse --warning=no-file-changed --warning=no-file-removed --ignore-failed-read --checkpoint=1000 --checkpoint-action=sleep=1 .; then
-        echo "ERROR: tar archive creation failed" >&2
+      tar czf "/backup/.$dest_file.tmp" -C /data $excl_flags --sparse --warning=no-file-changed --warning=no-file-removed --ignore-failed-read --checkpoint=1000 --checkpoint-action=sleep=1 .
+      rc=\$?
+      if [ "\$rc" -gt 1 ]; then
+        echo "ERROR: tar archive creation failed (exit \$rc)" >&2
         rm -f "/backup/.$dest_file.tmp" /data/__backup_timestamp.txt
         exit 1
       fi
+      [ "\$rc" -eq 1 ] && echo "Note: some live files changed during the backup; the archive was still written" >&2
       if [ ! -s "/backup/.$dest_file.tmp" ]; then
         echo "ERROR: backup archive is empty" >&2
         rm -f "/backup/.$dest_file.tmp" /data/__backup_timestamp.txt
