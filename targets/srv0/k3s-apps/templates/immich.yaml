@@ -119,7 +119,7 @@ spec:
             main:
               image:
                 repository: docker.io/valkey/valkey
-                tag: "9.1"
+                tag: "9.2"
               # The chart's top-level controllers.main is shared across all
               # components, so the server's DRI grant + 8Gi limit would leak
               # into valkey; override with the small tier (no device).
