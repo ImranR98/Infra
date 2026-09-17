@@ -92,6 +92,25 @@ spec:
         enabled: true
         metricsTuning:
           useDefaultAllowList: false
+        # The chart sets instance to the node name but no node label, so
+        # node-exporter metrics are the odd ones out against KSM/cadvisor/
+        # kubelet. Add it (the disk alert selects node="srv0").
+        extraDiscoveryRules: |
+          rule {
+            source_labels = ["__meta_kubernetes_pod_node_name"]
+            target_label  = "node"
+          }
+        # node_uname_info.nodename is the pod hostname on the pod network, but
+        # the dotdc dashboards resolve their instance variable by matching
+        # nodename against the selected node, so rewrite it to the node name.
+        extraMetricProcessingRules: |
+          rule {
+            source_labels = ["__name__", "node"]
+            separator     = "@"
+            regex         = "node_uname_info@(.+)"
+            target_label  = "nodename"
+            replacement   = "$1"
+          }
     # Filesystem tailing, not API streaming: each collector reads its node's
     # /var/log directly, dropping the per-container pods/log API streams.
     podLogsViaLoki:
@@ -250,6 +269,10 @@ spec:
             url: http://mimir.base.svc.cluster.local:8080/prometheus
             access: proxy
             isDefault: true
+            jsonData:
+              # Alloy scrapes every 60s; without this Grafana assumes 15s and
+              # $__rate_interval (1m) is below two samples for rate()/increase().
+              timeInterval: 1m
           - name: Loki
             type: loki
             url: http://loki.base.svc.cluster.local:3100
@@ -554,6 +577,10 @@ spec:
             - -distributor.ingestion-rate-limit=1000000
             - -distributor.ingestion-burst-size=1000000
             - -ingester.max-global-series-per-user=1000000
+            # Query sharding turns one dashboard load into hundreds of
+            # subqueries, which overflow the 100-deep per-tenant scheduler
+            # queue and surface as 429s in panels.
+            - -query-scheduler.max-outstanding-requests-per-tenant=5000
           ports:
             - name: http
               containerPort: 8080
