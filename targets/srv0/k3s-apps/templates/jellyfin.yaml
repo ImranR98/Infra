@@ -22,6 +22,41 @@ spec:
       media:
         enabled: false
 
+    # Jellyfin applies X-Forwarded-For only when KnownProxies is non-empty —
+    # otherwise it reports the reverse proxy's pod IP. Traefik's pod IP is
+    # dynamic, so trust the k3s pod CIDR. Idempotent: patches an existing
+    # network.xml, seeds a minimal one on a fresh config volume.
+    extraInitContainers:
+      - name: known-proxies
+        image: busybox:1.38
+        command:
+          - sh
+          - -c
+          - |
+            set -eu
+            file=/config/config/network.xml
+            proxy=10.42.0.0/16
+            if [ ! -f "$file" ]; then
+              mkdir -p /config/config
+              printf '%s\n' \
+                '<?xml version="1.0" encoding="utf-8"?>' \
+                '<NetworkConfiguration>' \
+                "  <KnownProxies><string>$proxy</string></KnownProxies>" \
+                '</NetworkConfiguration>' > "$file"
+              exit 0
+            fi
+            if grep -q "<string>$proxy</string>" "$file"; then
+              exit 0
+            fi
+            if grep -q '<KnownProxies />' "$file"; then
+              sed -i "s#<KnownProxies />#<KnownProxies><string>$proxy</string></KnownProxies>#" "$file"
+            else
+              sed -i "s#<KnownProxies>#<KnownProxies><string>$proxy</string>#" "$file"
+            fi
+        volumeMounts:
+          - name: config
+            mountPath: /config
+
     volumes:
       - name: tv
         persistentVolumeClaim:
