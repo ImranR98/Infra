@@ -332,17 +332,17 @@ spec:
     dashboards:
       dotdc:
         k8s-views-global:
-          url: https://raw.githubusercontent.com/dotdc/grafana-dashboards-kubernetes/v3.0.7/dashboards/k8s-views-global.json
+          url: https://raw.githubusercontent.com/dotdc/grafana-dashboards-kubernetes/v3.0.8/dashboards/k8s-views-global.json
         k8s-views-namespaces:
-          url: https://raw.githubusercontent.com/dotdc/grafana-dashboards-kubernetes/v3.0.7/dashboards/k8s-views-namespaces.json
+          url: https://raw.githubusercontent.com/dotdc/grafana-dashboards-kubernetes/v3.0.8/dashboards/k8s-views-namespaces.json
         k8s-views-nodes:
-          url: https://raw.githubusercontent.com/dotdc/grafana-dashboards-kubernetes/v3.0.7/dashboards/k8s-views-nodes.json
+          url: https://raw.githubusercontent.com/dotdc/grafana-dashboards-kubernetes/v3.0.8/dashboards/k8s-views-nodes.json
         k8s-views-pods:
-          url: https://raw.githubusercontent.com/dotdc/grafana-dashboards-kubernetes/v3.0.7/dashboards/k8s-views-pods.json
+          url: https://raw.githubusercontent.com/dotdc/grafana-dashboards-kubernetes/v3.0.8/dashboards/k8s-views-pods.json
         k8s-system-api-server:
-          url: https://raw.githubusercontent.com/dotdc/grafana-dashboards-kubernetes/v3.0.7/dashboards/k8s-system-api-server.json
+          url: https://raw.githubusercontent.com/dotdc/grafana-dashboards-kubernetes/v3.0.8/dashboards/k8s-system-api-server.json
         k8s-system-coredns:
-          url: https://raw.githubusercontent.com/dotdc/grafana-dashboards-kubernetes/v3.0.7/dashboards/k8s-system-coredns.json
+          url: https://raw.githubusercontent.com/dotdc/grafana-dashboards-kubernetes/v3.0.8/dashboards/k8s-system-coredns.json
     dashboardsConfigMaps:
       kubernetes-logs: k8s-monitoring-kubernetes-logs-dashboard
       longhorn: longhorn-dashboard
