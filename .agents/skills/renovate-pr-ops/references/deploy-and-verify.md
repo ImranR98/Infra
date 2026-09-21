@@ -24,16 +24,20 @@ asynchronously via helm-controller — check its jobs/pods before declaring succ
 
 ## vps0 (Compose over SSH)
 
-The repo lives at `<repo path>` (verify once with `ls -d <repo path>`):
+Ask the user for the vps0 SSH target (`user@host`) and the repo path there on every
+run — never hardcode or assume them. Verify the checkout with `ls -d <repo path>`,
+then:
 
 ```bash
-ssh -A user@host 'set -e; cd <repo path> && git pull && docker compose \
+ssh -A <user@host> 'set -e; cd <repo path> && git pull && docker compose \
   --env-file config/vps0/compose.env --env-file targets/vps0/compose/.env \
   -f targets/vps0/compose/compose.yaml -f targets/vps0/compose/compose.private.yaml \
   up -d <services>'
 ```
 
-Then run `... ps <services>` to confirm health.
+Then run `... ps <services>` to confirm health. `-A` (agent forwarding) is only needed
+so the remote `git pull` can authenticate to the git host; a deploy key there removes
+the need for it.
 
 ## srv0 frpc sidecar (compose)
 

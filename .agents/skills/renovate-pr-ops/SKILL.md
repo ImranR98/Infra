@@ -48,16 +48,20 @@ Tier assignment (change magnitude × component criticality) is documented in
   restore with `git stash pop` when finished.
 - `hostname` (expect srv0) and `kubectl get nodes` — the admin kubeconfig is root-only,
   so the user must have an unlock session running (see deploy reference if it fails).
-- `ssh -A user@host hostname` to confirm access; the repo there is
-  `<repo path>` (verify, don't assume).
+- Ask the user for the vps0 SSH target (`user@host`) and the repo path there, then
+  `ssh -A <user@host> hostname` to confirm access and `ls -d <path>` to verify the
+  checkout. Never hardcode or assume either. Agent forwarding is only needed so the
+  remote `git pull` can authenticate to the git host; a deploy key there removes the
+  need for `-A`.
 - `git fetch origin` and confirm local `master` == `origin/master`.
 
 ## Phase 2 — Triage
 
 1. List PRs: `bash .agents/skills/renovate-pr-ops/scripts/list-prs.sh` (`--json` for raw).
-2. Fetch diffs directly: `curl -sL https://github.com/ImranR98/Infra/pull/<n>.diff`.
-   `gh` is not installed; raw diffs do not count against the anonymous API limit
-   (60 requests/hour, enough for listing plus checks; set `GITHUB_TOKEN` if needed).
+2. Diff locally: `git fetch origin pull/<n>/head:renovate/pr-<n>`, then
+   `git diff master...renovate/pr-<n>`. `gh` is not installed; fetching the PR ref
+   avoids the diff endpoint and the anonymous API limit (60 requests/hour, enough for
+   listing plus checks; set `GITHUB_TOKEN` if needed).
 3. Classify each PR with the risk reference. Record the branch name, affected targets,
    and couplings (immich server+ML move together; grouped digest batches; chart + CR pairs).
 
@@ -77,14 +81,14 @@ git fetch origin pull/<n>/head:renovate/pr-<n>
 git checkout renovate/pr-<n>
 bash scripts/validate.sh <target>        # every target the PR touches
 git checkout master
-git merge --no-ff -m "Merge pull request #<n> from ImranR98/<branch>" -m "<PR title>" renovate/pr-<n>
+git merge --no-ff -m "Merge pull request #<n> from <origin-owner>/<branch>" -m "<PR title>" renovate/pr-<n>
 git push origin master
 ```
 
-The `Merge pull request #N from ...` subject is what makes GitHub close the PR. Verify
-after pushing that the PR is no longer in
-`curl -s 'https://api.github.com/repos/ImranR98/Infra/pulls?state=open'`. Restore the
-stash once all merges are done.
+`<origin-owner>` is the account in `git remote get-url origin`. The
+`Merge pull request #N from ...` subject is what makes GitHub close the PR. Verify
+after pushing that the PR is no longer in `list-prs.sh` output (it reads the repo from
+`origin`, so nothing is hardcoded). Restore the stash once all merges are done.
 
 ## Phase 5 — Deploy (on consent)
 
