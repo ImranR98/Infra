@@ -24,6 +24,7 @@
         <partition_by>event_date</partition_by>
         <ttl>event_date + INTERVAL 30 DAY DELETE</ttl>
     </asynchronous_metric_log>
+    <processors_profile_log remove="remove" />
     <query_thread_log remove="remove" />
     <text_log remove="remove" />
     <trace_log remove="remove" />
