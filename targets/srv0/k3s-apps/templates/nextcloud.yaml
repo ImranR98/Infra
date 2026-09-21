@@ -262,6 +262,8 @@ spec:
     metadata:
       labels:
         app: nextcloud-postgresql
+      annotations:
+        checksum/nextcloud-db-password: {{ .Values.NEXTCLOUD_DB_PASSWORD | sha256sum }}
     spec:
       securityContext:
         fsGroup: 999
