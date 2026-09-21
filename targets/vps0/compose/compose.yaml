@@ -517,7 +517,7 @@ services:
     plausible_events_db:
         image: clickhouse/clickhouse-server:24.12-alpine
         restart: unless-stopped
-        mem_limit: 3G
+        mem_limit: 4G
         container_name: plausible_events_db
         depends_on:
             state-fixperms:
