@@ -15,6 +15,8 @@ spec:
     metadata:
       labels:
         app: fmd
+      annotations:
+        checksum/fmd-secret: {{ .Values.FMD_REGISTRATIONTOKEN | sha256sum }}
     spec:
       securityContext:
         fsGroup: {{ .Values.MY_UID }}

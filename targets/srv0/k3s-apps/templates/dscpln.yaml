@@ -15,6 +15,9 @@ spec:
     metadata:
       labels:
         app: dscpln
+      annotations:
+        # ntfy token is an env secretKeyRef; env values only refresh on restart.
+        checksum/dscpln-ntfy-token: {{ .Values.NTFY_WRITE_ONLY_ACCOUNT_TOKEN | sha256sum }}
     spec:
       securityContext:
         fsGroup: {{ .Values.MY_UID }}

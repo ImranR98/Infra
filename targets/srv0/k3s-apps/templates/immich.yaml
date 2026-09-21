@@ -28,6 +28,9 @@ spec:
                     key: password
 
     defaultPodOptions:
+      # The DB credentials Secret feeds env secretKeyRefs in both Immich pods.
+      annotations:
+        checksum/immich-db-credentials: {{ .Values.IMMICH_DB_PASSWORD | sha256sum }}
       # Pin everything to srv0: the library PVC is RWO and VAAPI/OpenVINO
       # need the Iris Xe there. Without this, a RollingUpdate pod can land on
       # bigpc (PreferNoSchedule only discourages) and deadlock on the PVC.
@@ -297,6 +300,8 @@ spec:
     metadata:
       labels:
         app: immich-postgresql
+      annotations:
+        checksum/immich-db-credentials: {{ .Values.IMMICH_DB_PASSWORD | sha256sum }}
     spec:
       securityContext:
         fsGroup: {{ .Values.MY_UID }}

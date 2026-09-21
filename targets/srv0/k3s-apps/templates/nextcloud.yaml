@@ -114,6 +114,9 @@ spec:
     metadata:
       labels:
         app: nextcloud
+      annotations:
+        # Admin + DB passwords arrive as env secretKeyRefs.
+        checksum/nextcloud-secrets: {{ printf "%s|%s|%s" .Values.NEXTCLOUD_ADMIN_USER .Values.NEXTCLOUD_ADMIN_PASSWORD .Values.NEXTCLOUD_DB_PASSWORD | sha256sum }}
     spec:
       securityContext:
         fsGroup: 33

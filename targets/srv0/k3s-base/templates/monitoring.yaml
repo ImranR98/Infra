@@ -1,3 +1,24 @@
+{{- define "grafana.alerting.contactpoints" -}}
+apiVersion: 1
+contactPoints:
+  - orgId: 1
+    name: ntfy
+    receivers:
+      - uid: ntfy
+        type: webhook
+        settings:
+          # The URL is templated, so dynamic ntfy presentation rides as query
+          # params (Extra Headers are static): title = alertname, priority by
+          # state/severity, markdown body from the "ntfy.body" template.
+          # Title encoding order matters: % first, then spaces (otherwise the
+          # % of %20 gets re-escaped).
+          url: '{{ `http://ntfy.base.svc.cluster.local:3000/` }}{{ .Values.TARGET }}{{ `_services_grafana?markdown=yes&title={{ reReplaceAll " " "%20" (reReplaceAll "%" "%25" .CommonLabels.alertname) }}&priority={{ if eq .Status "resolved" }}low{{ else if eq .CommonLabels.severity "critical" }}urgent{{ else if eq .CommonLabels.severity "warning" }}high{{ else }}default{{ end }}` }}'
+          httpMethod: POST
+          authorization_scheme: Bearer
+          authorization_credentials: "{{ .Values.NTFY_WRITE_ONLY_ACCOUNT_TOKEN }}"
+          payload:
+            template: '{{ `{{ template "ntfy.body" . }}` }}'
+{{- end -}}
 ---
 apiVersion: helm.cattle.io/v1
 kind: HelmChart
@@ -209,6 +230,14 @@ spec:
       userKey: admin-user
       passwordKey: admin-password
     envFromSecret: grafana-oidc-secret
+    # Restart Grafana when a provisioning input changes: alerting file
+    # provisioning is loaded at startup (upstream requires a restart or the
+    # admin reload API), and env-referenced Secrets never reach a running pod.
+    podAnnotations:
+      checksum/alerting-rules: {{ printf "%s%s%s" (.Files.Get "files/alerting/rules.yaml") (.Files.Get "files/alerting/policies.yaml") (.Files.Get "files/alerting/templates.yaml") | sha256sum }}
+      checksum/alerting-contact: {{ include "grafana.alerting.contactpoints" . | sha256sum }}
+      checksum/grafana-admin-secret: {{ printf "admin|%s" .Values.GRAFANA_ADMIN_PASSWORD | sha256sum }}
+      checksum/grafana-oidc-secret: {{ .Values.AUTHELIA_GRAFANA_CLIENT_SECRET_HASHABLE | sha256sum }}
     # Grafana creates grafana.db 0660 while its sqlstore expects 0640, warning
     # on every start. The chart's init-chown-data only chowns, so chmod here
     # (runs after it, as the file owner 472). A fresh PVC still warns once
@@ -753,25 +782,7 @@ metadata:
 type: Opaque
 stringData:
   contactpoints.yaml: |
-    apiVersion: 1
-    contactPoints:
-      - orgId: 1
-        name: ntfy
-        receivers:
-          - uid: ntfy
-            type: webhook
-            settings:
-              # The URL is templated, so dynamic ntfy presentation rides as query
-              # params (Extra Headers are static): title = alertname, priority by
-              # state/severity, markdown body from the "ntfy.body" template.
-              # Title encoding order matters: % first, then spaces (otherwise the
-              # % of %20 gets re-escaped).
-              url: '{{ `http://ntfy.base.svc.cluster.local:3000/` }}{{ .Values.TARGET }}{{ `_services_grafana?markdown=yes&title={{ reReplaceAll " " "%20" (reReplaceAll "%" "%25" .CommonLabels.alertname) }}&priority={{ if eq .Status "resolved" }}low{{ else if eq .CommonLabels.severity "critical" }}urgent{{ else if eq .CommonLabels.severity "warning" }}high{{ else }}default{{ end }}` }}'
-              httpMethod: POST
-              authorization_scheme: Bearer
-              authorization_credentials: "{{ .Values.NTFY_WRITE_ONLY_ACCOUNT_TOKEN }}"
-              payload:
-                template: '{{ `{{ template "ntfy.body" . }}` }}'
+{{ include "grafana.alerting.contactpoints" . | indent 4 }}
 ---
 apiVersion: v1
 kind: ConfigMap

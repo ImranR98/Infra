@@ -1,3 +1,12 @@
+{{- define "nfs.etab" -}}
+/exports *(rw,fsid=0,crossmnt,no_subtree_check,insecure,root_squash)
+/exports/music *(ro,fsid=1,no_subtree_check,insecure,root_squash)
+/exports/jellyfin-tv *(ro,fsid=2,no_subtree_check,insecure,root_squash)
+/exports/jellyfin-youtube *(ro,fsid=3,no_subtree_check,insecure,root_squash)
+/exports/arrstack-media *(rw,fsid=4,no_subtree_check,insecure,no_root_squash)
+/exports/frigate *(rw,fsid=6,no_subtree_check,insecure,no_root_squash)
+/exports/backups *(rw,fsid=5,no_subtree_check,insecure,no_root_squash)
+{{- end -}}
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -15,6 +24,9 @@ spec:
     metadata:
       labels:
         app: nfs-server
+      annotations:
+        # /var/lib/nfs/etab is mounted from a ConfigMap and read at startup.
+        checksum/exports: {{ include "nfs.etab" . | sha256sum }}
     spec:
       initContainers:
         - name: nfs-modules
@@ -131,13 +143,7 @@ metadata:
   namespace: base
 data:
   etab: |
-    /exports *(rw,fsid=0,crossmnt,no_subtree_check,insecure,root_squash)
-    /exports/music *(ro,fsid=1,no_subtree_check,insecure,root_squash)
-    /exports/jellyfin-tv *(ro,fsid=2,no_subtree_check,insecure,root_squash)
-    /exports/jellyfin-youtube *(ro,fsid=3,no_subtree_check,insecure,root_squash)
-    /exports/arrstack-media *(rw,fsid=4,no_subtree_check,insecure,no_root_squash)
-    /exports/frigate *(rw,fsid=6,no_subtree_check,insecure,no_root_squash)
-    /exports/backups *(rw,fsid=5,no_subtree_check,insecure,no_root_squash)
+{{ include "nfs.etab" . | indent 4 }}
 ---
 ---
 # NFS clients are exclusively the csi-nfs-node plugin (hostNetwork: true —

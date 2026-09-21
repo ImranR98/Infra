@@ -115,6 +115,8 @@ spec:
     metadata:
       labels:
         app: sonarr
+      annotations:
+        checksum/sonarr-secret: {{ .Values.SONARR_API_KEY | sha256sum }}
     spec:
       containers:
         - name: sonarr

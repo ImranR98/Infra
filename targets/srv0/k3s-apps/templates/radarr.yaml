@@ -115,6 +115,8 @@ spec:
     metadata:
       labels:
         app: radarr
+      annotations:
+        checksum/radarr-secret: {{ .Values.RADARR_API_KEY | sha256sum }}
     spec:
       containers:
         - name: radarr

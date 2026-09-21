@@ -68,6 +68,8 @@ spec:
     metadata:
       labels:
         app: linkwarden
+      annotations:
+        checksum/linkwarden-secrets: {{ printf "%s|%s" .Values.LINKWARDEN_NEXTAUTH_SECRET .Values.AUTHELIA_LINKWARDEN_CLIENT_SECRET_HASHABLE | sha256sum }}
     spec:
       containers:
         - name: linkwarden
@@ -175,6 +177,8 @@ spec:
     metadata:
       labels:
         app: linkwarden-postgresql
+      annotations:
+        checksum/linkwarden-db-password: {{ .Values.LINKWARDEN_DB_PASSWORD | sha256sum }}
     spec:
       securityContext:
         fsGroup: 999
@@ -270,6 +274,8 @@ spec:
     metadata:
       labels:
         app: linkwarden-meilisearch
+      annotations:
+        checksum/linkwarden-meili-key: {{ .Values.LINKWARDEN_MEILI_MASTER_KEY | sha256sum }}
     spec:
       containers:
         - name: meilisearch

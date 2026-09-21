@@ -1,3 +1,42 @@
+{{- define "homeassistant.dashboard" -}}
+views:
+  - title: Live
+    path: live
+    type: panel
+    cards:
+      - type: custom:advanced-camera-card
+        cameras:
+          - camera_entity: camera.rpi
+            go2rtc:
+              stream: rpi
+  - title: Timeline
+    path: timeline
+    type: panel
+    cards:
+      - type: custom:advanced-camera-card
+        view:
+          default: timeline
+        cameras:
+          - camera_entity: camera.rpi
+            go2rtc:
+              stream: rpi
+        timeline:
+          # 1-day default window; zoom/pan back through retained history
+          # (Frigate record.retain days, see FRIGATE_ADDITIONAL_CONFIG).
+          window_seconds: 86400
+          show_recordings: true
+  - title: Recordings
+    path: recordings
+    type: panel
+    cards:
+      - type: custom:advanced-camera-card
+        view:
+          default: recordings
+        cameras:
+          - camera_entity: camera.rpi
+            go2rtc:
+              stream: rpi
+{{- end -}}
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -18,43 +57,7 @@ data:
   # string". camera_entity is required for engine (Frigate) detection.
   # go2rtc stream "rpi" comes from go2rtc.streams in FRIGATE_ADDITIONAL_CONFIG.
   frigate.yaml: |
-    views:
-      - title: Live
-        path: live
-        type: panel
-        cards:
-          - type: custom:advanced-camera-card
-            cameras:
-              - camera_entity: camera.rpi
-                go2rtc:
-                  stream: rpi
-      - title: Timeline
-        path: timeline
-        type: panel
-        cards:
-          - type: custom:advanced-camera-card
-            view:
-              default: timeline
-            cameras:
-              - camera_entity: camera.rpi
-                go2rtc:
-                  stream: rpi
-            timeline:
-              # 1-day default window; zoom/pan back through retained history
-              # (Frigate record.retain days, see FRIGATE_ADDITIONAL_CONFIG).
-              window_seconds: 86400
-              show_recordings: true
-      - title: Recordings
-        path: recordings
-        type: panel
-        cards:
-          - type: custom:advanced-camera-card
-            view:
-              default: recordings
-            cameras:
-              - camera_entity: camera.rpi
-                go2rtc:
-                  stream: rpi
+{{ include "homeassistant.dashboard" . | indent 4 }}
 ---
 ---
 apiVersion: helm.cattle.io/v1
@@ -69,6 +72,10 @@ spec:
   createNamespace: false
   version: 0.3.82
   valuesContent: |-
+    # The dashboard ConfigMap is external to the chart values; hash it so a
+    # dashboard edit rolls HA.
+    podAnnotations:
+      checksum/ha-dashboards: {{ include "homeassistant.dashboard" . | sha256sum }}
     deploymentStrategy: Recreate
     controller:
       type: Deployment

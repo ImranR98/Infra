@@ -73,6 +73,9 @@ spec:
     metadata:
       labels:
         app: geoip-service
+      annotations:
+        # MaxMind credentials feed the init container via env; rotate-on-restart.
+        checksum/maxmind-secret: {{ printf "%s|%s" (.Values.GEOIPUPDATE_ACCOUNT_ID | toString) .Values.GEOIPUPDATE_LICENSE_KEY | sha256sum }}
     spec:
       securityContext:
         runAsUser: {{ .Values.MY_UID }}

@@ -195,6 +195,10 @@ spec:
         mountPath: /plugins-local/src/github.com/imranr/authelia-header-gate
         readOnly: true
     deployment:
+      # Local WASM plugins are read at startup; a rebuilt plugin.wasm or
+      # manifest change must roll the pod (the ConfigMap alone does not).
+      podAnnotations:
+        checksum/local-plugins: {{ printf "%s%s" (.Files.Get "files/traefik-plugin-config.yaml") (.Files.Get "files/plugin.wasm") | sha256sum }}
       additionalVolumes:
         - name: plugins
           emptyDir: {}

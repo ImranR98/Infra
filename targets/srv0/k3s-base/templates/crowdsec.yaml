@@ -56,6 +56,10 @@ spec:
         on_success: break
 
     agent:
+      # Whitelists and the notification config are volume-mounted from a
+      # Secret; the pods only read them at startup (no SIGHUP is sent).
+      podAnnotations:
+        checksum/lapi-configs: {{ printf "%s|%s|%s" .Values.TARGET .Values.NTFY_WRITE_ONLY_ACCOUNT_TOKEN .Values.SERVICES_DOMAIN | sha256sum }}
       resources:
         limits:
           memory: 1Gi
@@ -110,6 +114,9 @@ spec:
 
     lapi:
       replicas: 1
+      podAnnotations:
+        checksum/lapi-configs: {{ printf "%s|%s|%s" .Values.TARGET .Values.NTFY_WRITE_ONLY_ACCOUNT_TOKEN .Values.SERVICES_DOMAIN | sha256sum }}
+        checksum/crowdsec-secrets: {{ printf "%s|%s|%s" .Values.CROWDSEC_BOUNCER_KEY .Values.CROWDSEC_LAPI_SECRET .Values.CROWDSEC_WEBUI_LAPI_PASSWORD | sha256sum }}
       resources:
         limits:
           memory: 512Mi

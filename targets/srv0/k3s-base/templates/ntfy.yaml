@@ -1,3 +1,18 @@
+{{- define "ntfy.server.config" -}}
+base-url: "https://ntfy.{{ .Values.SERVICES_DOMAIN }}"
+cache-file: "/home/ntfy/cache.db"
+attachment-cache-dir: "/home/ntfy/attachments"
+behind-proxy: true
+listen-http: ":3000"
+# auth-file required for auth-default-access to take effect.
+auth-file: "/home/ntfy/user.db"
+auth-default-access: deny-all
+{{- end -}}
+{{- define "ntfy.auth" -}}
+auth-users: "admin:{{ .Values.NTFY_ADMIN_PASSWORD_HASH }}:admin,service:{{ .Values.NTFY_WRITE_ONLY_ACCOUNT_PASSWORD_HASH }}:user"
+auth-tokens: "service:{{ .Values.NTFY_WRITE_ONLY_ACCOUNT_TOKEN }}"
+auth-access: "service:*:write-only"
+{{- end -}}
 ---
 apiVersion: cert-manager.io/v1
 kind: Certificate
@@ -114,6 +129,10 @@ spec:
     metadata:
       labels:
         app: ntfy
+      annotations:
+        # server.yml and the auth file are read once at startup.
+        checksum/server-config: {{ include "ntfy.server.config" . | sha256sum }}
+        checksum/ntfy-auth: {{ include "ntfy.auth" . | sha256sum }}
     spec:
       securityContext:
         fsGroup: {{ .Values.MY_UID }}
@@ -203,14 +222,7 @@ metadata:
 type: Opaque
 stringData:
   server.yml: |
-    base-url: "https://ntfy.{{ .Values.SERVICES_DOMAIN }}"
-    cache-file: "/home/ntfy/cache.db"
-    attachment-cache-dir: "/home/ntfy/attachments"
-    behind-proxy: true
-    listen-http: ":3000"
-    # auth-file required for auth-default-access to take effect.
-    auth-file: "/home/ntfy/user.db"
-    auth-default-access: deny-all
+{{ include "ntfy.server.config" . | indent 4 }}
 ---
 apiVersion: v1
 kind: Secret
@@ -219,6 +231,4 @@ metadata:
   namespace: base
 type: Opaque
 stringData:
-  auth-users: "admin:{{ .Values.NTFY_ADMIN_PASSWORD_HASH }}:admin,service:{{ .Values.NTFY_WRITE_ONLY_ACCOUNT_PASSWORD_HASH }}:user"
-  auth-tokens: "service:{{ .Values.NTFY_WRITE_ONLY_ACCOUNT_TOKEN }}"
-  auth-access: "service:*:write-only"
+{{ include "ntfy.auth" . | indent 2 }}

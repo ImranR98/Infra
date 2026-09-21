@@ -99,6 +99,9 @@ spec:
   failurePolicy: abort
   version: 16.6.0
   valuesContent: |-
+    # OIDC client secret is an env secretKeyRef inside the chart values.
+    podAnnotations:
+      checksum/openwebui-oidc: {{ .Values.AUTHELIA_OPENWEBUI_CLIENT_SECRET_HASHABLE | sha256sum }}
     ollama:
       enabled: false
     ollamaUrls:

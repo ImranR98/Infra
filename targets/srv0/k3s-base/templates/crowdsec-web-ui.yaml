@@ -66,6 +66,9 @@ spec:
     metadata:
       labels:
         app: crowdsec-web-ui
+      annotations:
+        # LAPI password is an env secretKeyRef; env values only refresh on restart.
+        checksum/crowdsec-secrets: {{ printf "%s|%s|%s" .Values.CROWDSEC_BOUNCER_KEY .Values.CROWDSEC_LAPI_SECRET .Values.CROWDSEC_WEBUI_LAPI_PASSWORD | sha256sum }}
     spec:
       securityContext:
         fsGroup: {{ .Values.MY_UID }}

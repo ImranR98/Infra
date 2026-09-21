@@ -38,6 +38,9 @@ spec:
         # The config is a mounted ConfigMap, so without this a config change
         # would never roll the pod and the old listeners stay live.
         checksum/config: {{ include "mosquitto.config" . | sha256sum }}
+        # Password file is read at startup; cert-manager rotations still need
+        # a manual restart (the cert content can't be hashed at render time).
+        checksum/mosquitto-credentials: {{ .Values.MOSQUITTO_CREDENTIALS | sha256sum }}
     spec:
       securityContext:
         fsGroup: 1883

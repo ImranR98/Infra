@@ -12,6 +12,9 @@ spec:
   createNamespace: false
   version: 0.45.0
   valuesContent: |-
+    # The OIDC secret is an external Secret consumed via envFrom; rotate-on-restart.
+    podAnnotations:
+      checksum/headlamp-oidc: {{ .Values.AUTHELIA_HEADLAMP_CLIENT_SECRET_HASHABLE | sha256sum }}
     config:
       inCluster: true
       # Per-user OIDC identity is NOT enabled: the kube-apiserver has no OIDC

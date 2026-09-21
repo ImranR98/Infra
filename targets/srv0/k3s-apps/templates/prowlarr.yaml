@@ -115,6 +115,8 @@ spec:
     metadata:
       labels:
         app: prowlarr
+      annotations:
+        checksum/prowlarr-secret: {{ .Values.PROWLARR_API_KEY | sha256sum }}
     spec:
       containers:
         - name: prowlarr
