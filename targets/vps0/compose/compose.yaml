@@ -343,7 +343,7 @@ services:
         logging: *logging
 
     authelia-db:
-        image: redis:alpine@sha256:bd999b5cfee25fb24b8320a31fddbd69f462df44c8138c66e369582937beebc0
+        image: redis:alpine@sha256:ba6e394f6acc2a695ef1b6944f161b9ca813711739be68319fa0db3470673f1d
         container_name: authelia-db
         user: "$MY_UID:$MY_UID"
         environment:
@@ -884,7 +884,7 @@ services:
 
     # Shlink - URL Shortener
     shlink:
-        image: shlinkio/shlink:stable@sha256:666cc24edf7290cca17019d2ef654c301695a646e2db82d4d116c3cd954d8232
+        image: shlinkio/shlink:stable@sha256:844e1f2b6455331c5b49207bad3a2455ccd65e62bb9daa09a6c57afff26bd9c8
         container_name: shlink
         environment:
             - SHORT_DOMAIN_HOST=ln.$BASE_SERVICES_DOMAIN
