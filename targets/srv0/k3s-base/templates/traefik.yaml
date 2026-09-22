@@ -199,6 +199,25 @@ spec:
       # manifest change must roll the pod (the ConfigMap alone does not).
       podAnnotations:
         checksum/local-plugins: {{ printf "%s%s" (.Files.Get "files/traefik-plugin-config.yaml") (.Files.Get "files/plugin.wasm") | sha256sum }}
+      # Geoblock fails closed while geoip-service is unreachable, so hold
+      # Traefik's start until the service answers readyz — bounded, then start
+      # anyway. The image is the chart's own and carries busybox wget.
+      initContainers:
+        - name: wait-for-geoip
+          image: rancher/mirrored-library-traefik:3.7.13
+          command:
+            - sh
+            - -c
+            - |
+              i=0
+              until wget -q -O /dev/null http://geoip-service.base.svc.cluster.local:8080/readyz; do
+                i=$((i+1))
+                [ "$i" -ge 150 ] && break
+                sleep 2
+              done
+              exit 0
+          securityContext:
+            allowPrivilegeEscalation: false
       additionalVolumes:
         - name: plugins
           emptyDir: {}

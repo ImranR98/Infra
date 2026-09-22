@@ -1,8 +1,12 @@
 ---
+# Weekly GeoLite2 refresh. The DB lives on the pod's emptyDir (no Longhorn),
+# and only the pod's own init container can write it, so freshness comes from
+# a surge rollout: the replacement downloads the DB before the old pod is
+# removed, keeping geoblock's backend continuously available.
 apiVersion: batch/v1
 kind: CronJob
 metadata:
-  name: geoipupdate
+  name: geoip-refresh
   namespace: base
 spec:
   schedule: "0 2 * * 0"
@@ -14,43 +18,57 @@ spec:
       backoffLimit: 2
       template:
         spec:
-          securityContext:
-            runAsUser: {{ .Values.MY_UID }}
-            runAsGroup: {{ .Values.MY_UID }}
-            fsGroup: {{ .Values.MY_UID }}
-            runAsNonRoot: true
-            # Shared with the geoip service pod via the geoip PVC: pods
-            # writing/reading the same volume must share MCS category s0
-            # (pod-level; container-level is ignored), otherwise files carry
-            # their creator's random category and readers get EACCES.
-            seLinuxOptions:
-              level: s0
+          serviceAccountName: geoip-refresh
           restartPolicy: Never
           containers:
-            - name: geoipupdate
-              image: maxmindinc/geoipupdate:latest@sha256:51e70dd6f16cd3e4d845ac02d09940b10772a75b9d741427d235a78570923c1d
-              env:
-                - name: GEOIPUPDATE_ACCOUNT_ID
-                  valueFrom:
-                    secretKeyRef:
-                      name: geoipupdate-secret
-                      key: account-id
-                - name: GEOIPUPDATE_LICENSE_KEY
-                  valueFrom:
-                    secretKeyRef:
-                      name: geoipupdate-secret
-                      key: license-key
-                - name: GEOIPUPDATE_EDITION_IDS
-                  value: "GeoLite2-Country"
-                - name: GEOIPUPDATE_DB_DIR
-                  value: "/data"
-              volumeMounts:
-                - name: geoip-data
-                  mountPath: /data
-          volumes:
-            - name: geoip-data
-              persistentVolumeClaim:
-                claimName: geoip-pvc
+            - name: rollout
+              image: bitnami/kubectl:latest@sha256:6e9c5284a0dac06e84de9f4d97852d2e6513442ee7ec3a66d35009eec86e1e62
+              securityContext:
+                allowPrivilegeEscalation: false
+              resources:
+                limits:
+                  memory: 64Mi
+                requests:
+                  memory: 32Mi
+                  cpu: 10m
+              command:
+                - kubectl
+                - -n
+                - base
+                - rollout
+                - restart
+                - deployment/geoip
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: geoip-refresh
+  namespace: base
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: geoip-refresh
+  namespace: base
+rules:
+  - apiGroups: ["apps"]
+    resources: ["deployments"]
+    resourceNames: ["geoip"]
+    verbs: ["get", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: geoip-refresh
+  namespace: base
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: geoip-refresh
+subjects:
+  - kind: ServiceAccount
+    name: geoip-refresh
+    namespace: base
 ---
 ---
 apiVersion: apps/v1
@@ -62,10 +80,14 @@ metadata:
     app: geoip-service
 spec:
   replicas: 1
-  # Recreate: the geoip PVC is RWO Longhorn - RollingUpdate deadlocks on the
-  # volume (new pod can't attach while the old pod holds it).
+  # Surge rollout: the replacement downloads the DB into its own emptyDir
+  # before the old pod is removed, so the Service always keeps a ready
+  # endpoint (geoblock fails closed when it has none).
   strategy:
-    type: Recreate
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
   selector:
     matchLabels:
       app: geoip-service
@@ -81,13 +103,8 @@ spec:
         runAsUser: {{ .Values.MY_UID }}
         runAsGroup: {{ .Values.MY_UID }}
         runAsNonRoot: true
-        # Shared with the geoipupdate pod via the geoip PVC: both must use MCS
-        # category s0 (pod-level; container-level is ignored) or DB files
-        # written by one pod are unreadable by the other (EACCES on startup).
-        seLinuxOptions:
-          level: s0
-      # Seed/refresh the GeoLite2 DB on every start so the service pod becomes
-      # ready immediately on a fresh install; the weekly CronJob keeps it current.
+      # Seed/refresh the GeoLite2 DB on every start; the weekly geoip-refresh
+      # CronJob rolls the deployment so a new DB is picked up without downtime.
       initContainers:
         - name: geoipupdate
           image: maxmindinc/geoipupdate:latest@sha256:51e70dd6f16cd3e4d845ac02d09940b10772a75b9d741427d235a78570923c1d
@@ -140,8 +157,7 @@ spec:
               readOnly: true
       volumes:
         - name: geoip-data
-          persistentVolumeClaim:
-            claimName: geoip-pvc
+          emptyDir: {}
 ---
 apiVersion: v1
 kind: Service
@@ -179,25 +195,8 @@ spec:
     - Ingress
 ---
 # --- prereqs.yaml ---
-# PVC + the MaxMind credential Secret (account-id is quoted in the template so
+# The MaxMind credential Secret (account-id is quoted in the template so
 # Kubernetes keeps the numeric value as a string).
----
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: geoip-pvc
-  namespace: base
-spec:
-  accessModes:
-    # Shared by the geoip Deployment and the weekly geoipupdate CronJob, which
-    # has no node pinning and can be scheduled on any node. RWO would deadlock
-    # on multi-attach whenever the job lands off the Deployment's node; Longhorn
-    # RWX serves the volume through a share-manager (NFS) instead.
-    - ReadWriteMany
-  resources:
-    requests:
-      storage: 50Mi
-  storageClassName: longhorn
 ---
 # geoipupdate credentials (MaxMind GeoLite2).
 apiVersion: v1
