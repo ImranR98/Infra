@@ -74,7 +74,7 @@ spec:
         runAsGroup: {{ .Values.MY_UID }}
       containers:
         - name: navidrome
-          image: deluan/navidrome:0.64.0
+          image: deluan/navidrome:0.64.1
           securityContext:
             allowPrivilegeEscalation: false
           ports:
