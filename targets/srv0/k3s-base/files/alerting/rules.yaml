@@ -101,6 +101,105 @@ groups:
         labels:
           severity: warning
 
+      # Disk stalls on srv0 spike etcd/API latency; lease renewals fail next and
+      # every leader-elected controller (including k3s) restarts. These two page
+      # on that leading indicator instead of waiting for the restart spike below.
+      - uid: etcd-latency-srv0
+        title: etcd request latency high
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange: {from: 900, to: 0}
+            datasourceUid: prometheus
+            model:
+              editorMode: code
+              expr: histogram_quantile(0.99, sum by (le) (rate(etcd_request_duration_seconds_bucket[5m])))
+              instant: true
+              intervalMs: 1000
+              maxDataPoints: 43200
+              range: false
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              datasource: {type: __expr__, uid: __expr__}
+              expression: A
+              intervalMs: 1000
+              maxDataPoints: 43200
+              reducer: last
+              refId: B
+              type: reduce
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator: {params: [5], type: gt}
+                  operator: {type: and}
+                  query: {params: [C]}
+                  reducer: {type: last}
+                  type: query
+              datasource: {type: __expr__, uid: __expr__}
+              expression: B
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: C
+              type: threshold
+        noDataState: OK
+        execErrState: Alerting
+        for: 5m
+        annotations:
+          summary: etcd request p99 is over 5s — lease renewals fail next, taking controllers down with them
+        labels:
+          severity: warning
+
+      - uid: apiserver-latency-srv0
+        title: API server request latency high
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange: {from: 900, to: 0}
+            datasourceUid: prometheus
+            model:
+              editorMode: code
+              expr: histogram_quantile(0.99, sum by (le) (rate(apiserver_request_sli_duration_seconds_bucket[5m])))
+              instant: true
+              intervalMs: 1000
+              maxDataPoints: 43200
+              range: false
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              datasource: {type: __expr__, uid: __expr__}
+              expression: A
+              intervalMs: 1000
+              maxDataPoints: 43200
+              reducer: last
+              refId: B
+              type: reduce
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator: {params: [5], type: gt}
+                  operator: {type: and}
+                  query: {params: [C]}
+                  reducer: {type: last}
+                  type: query
+              datasource: {type: __expr__, uid: __expr__}
+              expression: B
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: C
+              type: threshold
+        noDataState: OK
+        execErrState: Alerting
+        for: 5m
+        annotations:
+          summary: API server p99 is over 5s — the cluster is in an I/O stall and controllers may restart
+        labels:
+          severity: warning
+
       - uid: disk-space-low
         title: Filesystem space low
         condition: C

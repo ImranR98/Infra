@@ -26,8 +26,10 @@ user.max_user_namespaces = 28633
 
 # Bound dirty writeback so a burst writer (backup/image pull) cannot queue
 # gigabytes behind etcd's fsyncs — a shallow queue keeps commit latency bounded.
-vm.dirty_bytes = 268435456
-vm.dirty_background_bytes = 67108864
+# 64M/16M, not 256M/64M: a slow root device shows fsync stalls of 50-290ms
+# once bursts queue, and etcd's commit latency scales with the queued depth.
+vm.dirty_bytes = 67108864
+vm.dirty_background_bytes = 16777216
 EOF
 sysctl --system >/dev/null
 
