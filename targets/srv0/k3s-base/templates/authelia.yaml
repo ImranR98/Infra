@@ -412,7 +412,7 @@ spec:
     spec:
       initContainers:
         - name: volume-permissions
-          image: docker.io/bitnami/postgresql:latest@sha256:21b97a850d7417940e58d929b8d0ebb0fc9b9f44bc1b6cd8f128d1b4ce6988e5
+          image: docker.io/bitnami/postgresql:latest@sha256:7045d816bdf7e704f0f662fabf243f3c0a975aa380e73e4e881ee94740f60d4f
           command:
             - chown
             - -R
@@ -430,7 +430,7 @@ spec:
               mountPath: /bitnami/postgresql
       containers:
         - name: postgresql
-          image: docker.io/bitnami/postgresql:latest@sha256:21b97a850d7417940e58d929b8d0ebb0fc9b9f44bc1b6cd8f128d1b4ce6988e5
+          image: docker.io/bitnami/postgresql:latest@sha256:7045d816bdf7e704f0f662fabf243f3c0a975aa380e73e4e881ee94740f60d4f
           ports:
             - name: tcp-postgresql
               containerPort: 5432
@@ -494,7 +494,7 @@ spec:
         fsGroup: 1001
       containers:
         - name: redis
-          image: docker.io/bitnami/redis:latest@sha256:ef8442c1ec2e28cef662999f348a4369c22343dc0c86c3bc23041fad22f13ca1
+          image: docker.io/bitnami/redis:latest@sha256:33a5a129cadcc5dfa294e5a1fe622efcbe3774a8b85c731ac14d0532877b7d16
           ports:
             - name: tcp-redis
               containerPort: 6379
