@@ -1,0 +1,92 @@
+---
+# Cert-manager renews the CrowdSec PKI in place (~60 days), and every consumer
+# reads the CA/certs once at startup, so the running pods keep the old PKI while
+# the Secrets hold the new one. This job hashes the mounted TLS Secrets and
+# stamps the hash onto each pod template: a rotation changes the annotation and
+# rolls the whole stack together (rolling LAPI alone strands agents/appsec on
+# the old CA).
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: crowdsec-cert-roll
+  namespace: base
+spec:
+  schedule: "23 * * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      template:
+        spec:
+          serviceAccountName: crowdsec-cert-roll
+          restartPolicy: Never
+          containers:
+            - name: roll
+              image: bitnami/kubectl:latest@sha256:ab90e1058e5a658cc94b4e7eb6d48e5758cfd6d77b5dd1869513aec3a3054673
+              securityContext:
+                allowPrivilegeEscalation: false
+              resources:
+                limits:
+                  memory: 64Mi
+                requests:
+                  memory: 32Mi
+                  cpu: 10m
+              command:
+                - bash
+                - -c
+                - |
+                  set -eu
+                  hash="$(for s in crowdsec-root-secret crowdsec-lapi-tls crowdsec-agent-tls \
+                               crowdsec-appsec-client-tls crowdsec-appsec-server-tls; do
+                    kubectl -n base get secret "$s" -o jsonpath='{.data.ca\.crt}{.data.tls\.crt}{.data.tls\.key}'
+                  done | sha256sum | cut -d' ' -f1)"
+                  for target in deployment/crowdsec-lapi deployment/crowdsec-appsec deployment/crowdsec-web-ui daemonset/crowdsec-agent; do
+                    kubectl -n base patch "$target" --type merge \
+                      -p "{\"spec\":{\"template\":{\"metadata\":{\"annotations\":{\"checksum/crowdsec-pki\":\"$hash\"}}}}}"
+                  done
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: crowdsec-cert-roll
+  namespace: base
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: crowdsec-cert-roll
+  namespace: base
+rules:
+  - apiGroups: [""]
+    resources: ["secrets"]
+    resourceNames:
+      - crowdsec-root-secret
+      - crowdsec-lapi-tls
+      - crowdsec-agent-tls
+      - crowdsec-appsec-client-tls
+      - crowdsec-appsec-server-tls
+    verbs: ["get"]
+  - apiGroups: ["apps"]
+    resources: ["deployments"]
+    resourceNames: ["crowdsec-lapi", "crowdsec-appsec", "crowdsec-web-ui"]
+    verbs: ["get", "patch"]
+  - apiGroups: ["apps"]
+    resources: ["daemonsets"]
+    resourceNames: ["crowdsec-agent"]
+    verbs: ["get", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: crowdsec-cert-roll
+  namespace: base
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: crowdsec-cert-roll
+subjects:
+  - kind: ServiceAccount
+    name: crowdsec-cert-roll
+    namespace: base
