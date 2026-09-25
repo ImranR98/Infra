@@ -469,7 +469,7 @@ services:
 
     # CrowdSec Web UI - dashboard for the local LAPI (machine password auth)
     crowdsec_web_ui:
-        image: ghcr.io/theduffman85/crowdsec-web-ui:2026.8.3
+        image: ghcr.io/theduffman85/crowdsec-web-ui:2026.9.1
         container_name: crowdsec_web_ui
         restart: unless-stopped
         mem_limit: 512M
