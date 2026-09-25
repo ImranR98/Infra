@@ -343,7 +343,7 @@ services:
         logging: *logging
 
     authelia-db:
-        image: redis:alpine@sha256:ba6e394f6acc2a695ef1b6944f161b9ca813711739be68319fa0db3470673f1d
+        image: redis:alpine@sha256:3811787313eba226a2ef38658c6ccb91cd5e110edc89c37767de373120a0e5a0
         container_name: authelia-db
         user: "$MY_UID:$MY_UID"
         environment:
@@ -649,7 +649,7 @@ services:
 
     # MeTube - YouTube Downloader
     metube:
-        image: ghcr.io/alexta69/metube:latest@sha256:fdc49cbebf04e72e298043b927a0c1e2aa9df1992258e63013eebba58b25b26e
+        image: ghcr.io/alexta69/metube:latest@sha256:549f4b0eeb13b01ecae2a20b50153d17481b1d59b517de5ae0dddee03e058745
         container_name: metube
         volumes:
             - ../../../current_target/compose_live_state/metube:/downloads
