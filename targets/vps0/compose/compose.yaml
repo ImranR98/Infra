@@ -44,7 +44,9 @@ configs:
             access_control:
               default_policy: 'deny'
               # Admin catch-all below is two_factor (TOTP is Authelia's default second
-              # factor); explicit one_factor rules (ytdl/ikom/sale) intentionally stay 1FA.
+              # factor); explicit one_factor rules (ytdl/ikom) intentionally stay 1FA.
+              # Moving sale: public sale page bypasses Authelia; only /admin + /api/admin
+              # require a login (any Authelia user).
               rules:
                 - domain: auth.${CLOUD_SERVICES_DOMAIN}
                   policy: bypass
@@ -58,9 +60,12 @@ configs:
                   subject:
                   - 'group:family'
                 - domain: sale.${CLOUD_SERVICES_DOMAIN}
+                  resources:
+                  - '^/admin([/?].*)?$'
+                  - '^/api/admin([/?].*)?$'
                   policy: one_factor
-                  subject:
-                  - 'group:family'
+                - domain: sale.${CLOUD_SERVICES_DOMAIN}
+                  policy: bypass
                 - domain: '*.${CLOUD_SERVICES_DOMAIN}'
                   policy: two_factor
                   subject:
