@@ -792,6 +792,7 @@ services:
             - NTFY_URL=https://ntfy.home.$BASE_SERVICES_DOMAIN/moving_sale_2027
             - NTFY_AUTH=Bearer $NTFY_WRITE_ONLY_ACCOUNT_TOKEN
             - PICKUP_TEXT=$MOVING_SALE_PICKUP_TEXT
+            - SITE_NAME=$MOVING_SALE_SITE_NAME
             - PLAUSIBLE_SCRIPT=$MOVING_SALE_PLAUSIBLE_SCRIPT_URL
         volumes:
             - ../../../current_target/compose_live_state/moving-sale/data:/app/data
