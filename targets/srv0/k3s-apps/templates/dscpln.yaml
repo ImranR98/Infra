@@ -25,7 +25,7 @@ spec:
           level: s0
       containers:
         - name: dscpln
-          image: imranrdev/dscpln:latest@sha256:89ad11f983d92606caf4b1f742857793f1f9b4718934cbc9511e4ae3ad424e80
+          image: imranrdev/dscpln:latest@sha256:b5651192aee9ef9ae2e6f167f53b39bc136ae5f31ac426974534e826ec0b544c
           securityContext:
             # runs as root: imranrdev image breaks with non-root uid
             allowPrivilegeEscalation: false
