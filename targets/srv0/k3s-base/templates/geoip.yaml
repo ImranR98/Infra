@@ -128,7 +128,7 @@ spec:
               mountPath: /data
       containers:
         - name: geoip
-          image: imranrdev/geoip-service:latest@sha256:15b8cd7c219b881da64cb902fb2a1c1ac3947397ef1c29883b24412601e7d411
+          image: imranrdev/geoip-service:latest@sha256:f2bf625934698e504a42056b309915c9beda12561d5c76cd2450193c8ef41a51
           imagePullPolicy: Always
           ports:
             - containerPort: 8080

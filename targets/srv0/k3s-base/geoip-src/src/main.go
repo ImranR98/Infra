@@ -2,13 +2,13 @@ package main
 
 import (
 	"log"
-	"net"
 	"net/http"
+	"net/netip"
 	"os"
 	"sync"
 	"time"
 
-	"github.com/oschwald/maxminddb-golang"
+	"github.com/oschwald/maxminddb-golang/v2"
 )
 
 var (
@@ -78,8 +78,8 @@ func countryHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ip := net.ParseIP(ipStr)
-	if ip == nil {
+	ip, err := netip.ParseAddr(ipStr)
+	if err != nil {
 		http.Error(w, "invalid IP", http.StatusBadRequest)
 		return
 	}
@@ -95,7 +95,7 @@ func countryHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var record countryRecord
-	if err := d.Lookup(ip, &record); err != nil {
+	if err := d.Lookup(ip).Decode(&record); err != nil {
 		w.Header().Set("Content-Type", "text/plain")
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("nil"))
