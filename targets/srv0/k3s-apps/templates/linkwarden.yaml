@@ -279,7 +279,7 @@ spec:
     spec:
       containers:
         - name: meilisearch
-          image: getmeili/meilisearch:v1.54.2
+          image: getmeili/meilisearch:v1.54.3
           securityContext:
             allowPrivilegeEscalation: false
           ports:
