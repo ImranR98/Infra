@@ -78,12 +78,14 @@ AUTHELIA_IMMICH_CLIENT_SECRET_HASHABLE: "change_me" # docker run authelia/authel
 AUTHELIA_OPENWEBUI_CLIENT_SECRET_HASHABLE: "change_me" # docker run authelia/authelia:latest authelia crypto hash generate pbkdf2 --variant sha512 --random --random.length 72 --random.charset rfc3986
 AUTHELIA_HEADLAMP_CLIENT_SECRET_HASHABLE: "change_me" # docker run authelia/authelia:latest authelia crypto hash generate pbkdf2 --variant sha512 --random --random.length 72 --random.charset rfc3986
 AUTHELIA_LINKWARDEN_CLIENT_SECRET_HASHABLE: "change_me" # docker run authelia/authelia:latest authelia crypto hash generate pbkdf2 --variant sha512 --random --random.length 72 --random.charset rfc3986
+AUTHELIA_FILEBROWSER_CLIENT_SECRET_HASHABLE: "change_me" # also FileBrowser's OIDC client secret; hash it with: authelia crypto hash generate pbkdf2 --variant sha512 --password '<value>'
 # The precomputed hashes of the *_HASHABLE values above (k3s-chart-only; the
 # chart mounts these into Authelia's OIDC client definitions).
 AUTHELIA_IMMICH_CLIENT_SECRET_HASHED: "change_me"
 AUTHELIA_OPENWEBUI_CLIENT_SECRET_HASHED: "change_me"
 AUTHELIA_HEADLAMP_CLIENT_SECRET_HASHED: "change_me"
 AUTHELIA_LINKWARDEN_CLIENT_SECRET_HASHED: "change_me"
+AUTHELIA_FILEBROWSER_CLIENT_SECRET_HASHED: "change_me" # hash of the filebrowser plaintext above
 
 # ====== Authelia header gate ======
 # Set to "true" to force the gate on (blocking all requests without a valid
@@ -256,6 +258,11 @@ LINKWARDEN_ARCHIVE_TAKE_COUNT: "1"
 
 # ====== Plik ======
 PLIK_ADMIN_PASSWORD: "change_me" # openssl rand -hex 16
+
+# ====== FileBrowser ======
+# Session signing key (FILEBROWSER_JWT_TOKEN_SECRET). OIDC is the only login
+# method; the client secret is AUTHELIA_FILEBROWSER_CLIENT_SECRET_HASHABLE.
+FILEBROWSER_JWT_TOKEN_SECRET: "change_me" # openssl rand -base64 32
 
 # ====== D$CPLN ======
 DSCPLN_DATA_FILE: "Acc 2026.md" # format: Acc $(date +%Y).md

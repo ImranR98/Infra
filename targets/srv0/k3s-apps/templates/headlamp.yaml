@@ -74,9 +74,10 @@ metadata:
   namespace: base
 spec:
   parentRefs:
-    # VPN/LAN-only: not attached to websecure-proxy (the public FRP listener).
     - name: srv0
       sectionName: websecure
+    - name: srv0
+      sectionName: websecure-proxy
   hostnames:
     - k8s.{{ .Values.SERVICES_DOMAIN }}
   rules:

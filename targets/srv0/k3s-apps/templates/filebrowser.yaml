@@ -1,0 +1,205 @@
+{{- define "filebrowser.config" -}}
+server:
+  port: 80
+  cacheDir: /home/filebrowser/data/cache
+  sources:
+    - path: /main
+      config:
+        defaultEnabled: true
+http:
+  trustedHeaders:
+    - X-Forwarded-Proto
+    - X-Forwarded-Host
+    - X-Forwarded-For
+    - X-Real-IP
+auth:
+  methods:
+    password:
+      enabled: false
+    oidc:
+      enabled: true
+      clientId: "filebrowser"
+      issuerUrl: "https://auth.{{ .Values.SERVICES_DOMAIN }}"
+      scopes: "openid profile email groups"
+      userIdentifier: "preferred_username"
+      adminGroup: "admins"
+{{- end -}}
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: filebrowser-prod-tls
+  namespace: apps
+spec:
+  secretName: filebrowser-prod-tls
+  issuerRef:
+    name: letsencrypt-prod
+    kind: ClusterIssuer
+  dnsNames:
+    - files.{{ .Values.SERVICES_DOMAIN }}
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: filebrowser-ingress
+  namespace: base
+spec:
+  parentRefs:
+    # VPN/LAN-only: not attached to websecure-proxy (the public FRP listener).
+    - name: srv0
+      sectionName: websecure
+  hostnames:
+    - files.{{ .Values.SERVICES_DOMAIN }}
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - name: filebrowser
+          namespace: apps
+          port: 80
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: filebrowser-config
+  namespace: apps
+data:
+  config.yaml: |
+    {{- include "filebrowser.config" . | nindent 4 }}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: filebrowser-secrets
+  namespace: apps
+type: Opaque
+stringData:
+  oidc-client-secret: "{{ .Values.AUTHELIA_FILEBROWSER_CLIENT_SECRET_HASHABLE }}"
+  jwt-token-secret: "{{ .Values.FILEBROWSER_JWT_TOKEN_SECRET }}"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: filebrowser
+  namespace: apps
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: filebrowser
+  template:
+    metadata:
+      labels:
+        app: filebrowser
+      annotations:
+        checksum/config: {{ printf "%s%s" (include "filebrowser.config" .) .Values.AUTHELIA_FILEBROWSER_CLIENT_SECRET_HASHABLE | sha256sum }}
+    spec:
+      securityContext:
+        runAsUser: {{ .Values.MY_UID }}
+        runAsGroup: {{ .Values.MY_UID }}
+        # spc_t: the Main tree is shared with syncthing and can carry files with
+        # foreign labels; s0 keeps written files category-free for the host.
+        seLinuxOptions:
+          type: spc_t
+          level: s0
+      initContainers:
+        - name: fix-perms
+          image: busybox:1.38
+          command: ["sh", "-c", "chown -R {{ .Values.MY_UID }}:{{ .Values.MY_UID }} /home/filebrowser/data"]
+          securityContext:
+            runAsUser: 0
+          volumeMounts:
+            - name: filebrowser-data
+              mountPath: /home/filebrowser/data
+      containers:
+        - name: filebrowser
+          image: gtstef/filebrowser:stable@sha256:7c5d7ac8ffda31294d278063cf9d2e04303b39e6dce1f4c691342240ca7703b8
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+              add:
+                # The image runs as UID 1000 but binds :80.
+                - NET_BIND_SERVICE
+          env:
+            # The image bakes FILEBROWSER_CONFIG; point it at our ConfigMap.
+            - name: FILEBROWSER_CONFIG
+              value: "/config/config.yaml"
+            - name: FILEBROWSER_OIDC_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: filebrowser-secrets
+                  key: oidc-client-secret
+            - name: FILEBROWSER_JWT_TOKEN_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: filebrowser-secrets
+                  key: jwt-token-secret
+          ports:
+            - containerPort: 80
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 80
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+            initialDelaySeconds: 10
+          resources:
+            limits:
+              memory: 1Gi
+            requests:
+              memory: 256Mi
+              cpu: 50m
+          volumeMounts:
+            - name: config
+              mountPath: /config
+              readOnly: true
+            - name: host-maindir
+              mountPath: /main
+            - name: filebrowser-data
+              mountPath: /home/filebrowser/data
+      volumes:
+        - name: config
+          configMap:
+            name: filebrowser-config
+        - name: host-maindir
+          persistentVolumeClaim:
+            claimName: hostpath-main-node-main-pvc
+        - name: filebrowser-data
+          persistentVolumeClaim:
+            claimName: filebrowser-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: filebrowser
+  namespace: apps
+spec:
+  selector:
+    app: filebrowser
+  ports:
+    - port: 80
+      targetPort: 80
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: filebrowser-pvc
+  namespace: apps
+  labels:
+    auto-backup: "true"
+  annotations:
+    backup.infra/exclude: "cache"
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: longhorn
+  resources:
+    requests:
+      storage: 10Gi

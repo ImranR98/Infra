@@ -39,6 +39,7 @@ spec:
         mode: Terminate
         certificateRefs:
           - {name: dscpln-prod-tls, namespace: apps}
+          - {name: filebrowser-prod-tls, namespace: apps}
           - {name: fmd-prod-tls, namespace: apps}
           - {name: freshrss-prod-tls, namespace: apps}
           - {name: frigate-prod-tls, namespace: apps}

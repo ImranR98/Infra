@@ -234,6 +234,27 @@ spec:
             # params-based auth after Authelia's token endpoint rejects
             # basic-auth probing (immich uses the same mode successfully).
             token_endpoint_auth_method: 'client_secret_post'
+          - client_id: 'filebrowser'
+            client_name: 'FileBrowser'
+            client_secret:
+               path: '/secrets/oidc/oidc.filebrowser.client-secret'
+            public: false
+            authorization_policy: 'two_factor'
+            redirect_uris:
+              - 'https://files.{{ .Values.SERVICES_DOMAIN }}/api/auth/oidc/callback'
+            scopes:
+              - 'openid'
+              - 'profile'
+              - 'groups'
+              - 'email'
+            response_types:
+              - 'code'
+            grant_types:
+              - 'authorization_code'
+            access_token_signed_response_alg: 'none'
+            userinfo_signed_response_alg: 'none'
+            # FileBrowser's Go OIDC client auto-detects (basic first).
+            token_endpoint_auth_method: 'client_secret_basic'
       log:
         # Deliberate: logtfy parses the Authelia log for login notifications.
         level: debug
@@ -572,6 +593,7 @@ stringData:
   oidc.headlamp.client-secret: "{{ .Values.AUTHELIA_HEADLAMP_CLIENT_SECRET_HASHED }}"
   oidc.linkwarden.client-secret: "{{ .Values.AUTHELIA_LINKWARDEN_CLIENT_SECRET_HASHED }}"
   oidc.grafana.client-secret: "{{ .Values.AUTHELIA_GRAFANA_CLIENT_SECRET_HASHED }}"
+  oidc.filebrowser.client-secret: "{{ .Values.AUTHELIA_FILEBROWSER_CLIENT_SECRET_HASHED }}"
 ---
 apiVersion: v1
 kind: Secret
