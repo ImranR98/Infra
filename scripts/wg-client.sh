@@ -1,5 +1,5 @@
 #!/bin/bash
-# DESC: Fetch a generated WireGuard client profile from the wireguard pod's
+# DESC: Fetch a generated AmneziaWG client profile from the wireguard pod's
 # PVC. Run ON any machine with an unlocked kubeconfig (scripts/kubeconfig-unlock.sh).
 # The profile is written to config/$(hostname)/wg/<client>.conf (0600) by
 # default; --stdout prints it.

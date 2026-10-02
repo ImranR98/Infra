@@ -303,12 +303,13 @@ NEXTCLOUD_DB_PASSWORD: "change_me" # openssl rand -hex 16
 #   openssl req -new -key preboot-client.key -out preboot-client.csr -subj "/CN=srv0-preboot"
 #   openssl x509 -req -in preboot-client.csr -CA ca.crt -CAkey ca.key -CAcreateserial -out preboot-client.crt -days 1825
 
-# ====== WireGuard VPN ======
-# No secrets live here: the server and client keys are generated in-cluster by
-# the wireguard pod's keygen init container and persisted on wireguard-pvc
-# (auto-backup: "true"). WG_ENDPOINT/WG_CLIENTS are committed defaults in
-# targets/srv0/k3s-base/values.yaml. Fetch a client profile on an unlocked host
-# with: bash scripts/wg-client.sh <client>
+# ====== AmneziaWG VPN ======
+# No secrets live here: the server and client keys plus the AWG obfuscation
+# parameters are generated in-cluster by the wireguard pod's keygen init
+# container and persisted on wireguard-pvc (auto-backup: "true"). WG_ENDPOINT/
+# WG_CLIENTS are committed defaults in targets/srv0/k3s-base/values.yaml. Fetch
+# a client profile on an unlocked host with: bash scripts/wg-client.sh <client>
+# (clients must support AmneziaWG; vanilla WireGuard apps cannot connect).
 
 # ====== Observability ======
 GRAFANA_ADMIN_PASSWORD: "change_me" # openssl rand -base64 32

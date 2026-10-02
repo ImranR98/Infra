@@ -18,11 +18,12 @@ ns  IN  A   10.100.0.1
 *   IN  A   10.100.0.1
 {{- end -}}
 ---
-# WireGuard VPN server: hostNetwork so it can create wg0 in the host netns for
-# the frpc sidecar to tunnel, pinned to the frpc node via the NFD
-# external-exposed label (same for vpn-dns). Keys are generated once by the
-# keygen init container into wireguard-pvc (auto-backup); profiles are fetched
-# with scripts/wg-client.sh.
+# AmneziaWG VPN server: hostNetwork so it can create awg0 in the host netns
+# for the frpc sidecar to tunnel, pinned to the frpc node via the NFD
+# external-exposed label (same for vpn-dns). Keys and obfuscation parameters
+# are generated once by the keygen init container into wireguard-pvc
+# (auto-backup); profiles are fetched with scripts/wg-client.sh. conn-notify
+# alerts ntfy when a peer comes online.
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -47,6 +48,17 @@ data:
     {{- .Files.Get "files/wireguard-start.sh" | nindent 4 }}
   keygen.sh: |
     {{- .Files.Get "files/wireguard-keygen.sh" | nindent 4 }}
+  notify.sh: |
+    {{- .Files.Get "files/wireguard-notify.sh" | nindent 4 }}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: wireguard-ntfy-token
+  namespace: base
+type: Opaque
+stringData:
+  token: "{{ .Values.NTFY_WRITE_ONLY_ACCOUNT_TOKEN }}"
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -67,10 +79,11 @@ spec:
       labels:
         app: wireguard
       annotations:
-        checksum/config: {{ printf "%s%s%s%s" (.Files.Get "files/wireguard-keygen.sh") (.Files.Get "files/wireguard-start.sh") .Values.WG_ENDPOINT .Values.WG_CLIENTS | sha256sum }}
+        checksum/config: {{ printf "%s%s%s%s%s" (.Files.Get "files/wireguard-keygen.sh") (.Files.Get "files/wireguard-start.sh") (.Files.Get "files/wireguard-notify.sh") .Values.WG_ENDPOINT .Values.WG_CLIENTS | sha256sum }}
     spec:
       hostNetwork: true
-      dnsPolicy: Default
+      # ClusterFirstWithHostNet so conn-notify can resolve the ntfy Service.
+      dnsPolicy: ClusterFirstWithHostNet
       automountServiceAccountToken: false
       nodeSelector:
         infra.local/external-exposed: "true"
@@ -82,7 +95,7 @@ spec:
           level: s0
       initContainers:
         - name: keygen
-          image: linuxserver/wireguard:latest@sha256:216ca1ce9da7bfe26fb752111d952487804bd18933bbd4794970d424bf8adfe9
+          image: amneziavpn/amneziawg-go:3.1.20260828@sha256:cbafc02b8373a83f428272db6d8001b37bc02e6211cbd8c0cb4e2e3759b12b72
           command:
             - /bin/bash
             - /scripts/keygen.sh
@@ -109,9 +122,7 @@ spec:
               readOnly: true
       containers:
         - name: wireguard
-          image: linuxserver/wireguard:latest@sha256:216ca1ce9da7bfe26fb752111d952487804bd18933bbd4794970d424bf8adfe9
-          # Bypass the image's s6 init: we bring up wg0 ourselves and the
-          # interface must live in the host netns, not a container overlay.
+          image: amneziavpn/amneziawg-go:3.1.20260828@sha256:cbafc02b8373a83f428272db6d8001b37bc02e6211cbd8c0cb4e2e3759b12b72
           command:
             - /bin/bash
             - /scripts/start.sh
@@ -134,6 +145,46 @@ spec:
             - name: scripts
               mountPath: /scripts
               readOnly: true
+            - name: awg-run
+              mountPath: /var/run/amneziawg
+            - name: tun
+              mountPath: /dev/net/tun
+        # Watches handshakes over the shared userspace UAPI socket and alerts
+        # ntfy when a peer comes online.
+        - name: conn-notify
+          image: amneziavpn/amneziawg-go:3.1.20260828@sha256:cbafc02b8373a83f428272db6d8001b37bc02e6211cbd8c0cb4e2e3759b12b72
+          command:
+            - /bin/bash
+            - /scripts/notify.sh
+          env:
+            - name: NTFY_URL
+              value: "http://ntfy.base.svc.cluster.local:3000"
+            - name: NTFY_TOPIC
+              value: "srv0_services_vpn"
+            - name: NTFY_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: wireguard-ntfy-token
+                  key: token
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+          resources:
+            limits:
+              memory: 32Mi
+            requests:
+              memory: 8Mi
+          volumeMounts:
+            - name: config
+              mountPath: /wg
+              readOnly: true
+            - name: scripts
+              mountPath: /scripts
+              readOnly: true
+            - name: awg-run
+              mountPath: /var/run/amneziawg
       volumes:
         - name: config
           persistentVolumeClaim:
@@ -142,6 +193,12 @@ spec:
           configMap:
             name: wireguard-scripts
             defaultMode: 0555
+        - name: awg-run
+          emptyDir: {}
+        - name: tun
+          hostPath:
+            path: /dev/net/tun
+            type: CharDevice
 ---
 # DNS for VPN clients only: bound to 10.100.0.1:53 (wg0), so LAN/public can't
 # reach it. Answers *.$SERVICES_DOMAIN with the VPN address; forwards the rest
@@ -188,7 +245,7 @@ spec:
           command:
             - sh
             - -c
-            - until ip -4 addr show wg0 2>/dev/null | grep -q '10.100.0.1'; do sleep 2; done
+            - until ip -4 addr show awg0 2>/dev/null | grep -q '10.100.0.1'; do sleep 2; done
           securityContext:
             allowPrivilegeEscalation: false
             capabilities:
