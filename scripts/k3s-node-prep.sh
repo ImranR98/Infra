@@ -46,13 +46,15 @@ sysctl --system >/dev/null
 # 9100 stays dropped: node-exporter is unauthenticated and Alloy scrapes it on
 # the pod network. Loopback bypasses firewalld and the pod CIDRs are in the
 # trusted zone, so the plain drop is safe (no source allowlist needed).
+# The VPN subnet gets the same trust as the pod CIDRs: wg0 appears at runtime,
+# so firewalld never binds it to a zone.
 # priority=-10 keeps it in the zone's _pre chain, ahead of any open range.
 if command -v firewall-cmd >/dev/null 2>&1; then
     zone="$(firewall-cmd --get-default-zone)"
     for port in 80/tcp 443/tcp 6443/tcp 2379/tcp 2380/tcp 5001/tcp 8472/udp 51820/udp 51821/udp 10250/tcp; do
         firewall-cmd --permanent --add-port="$port" >/dev/null
     done
-    for src in 10.42.0.0/16 10.43.0.0/16; do
+    for src in 10.42.0.0/16 10.43.0.0/16 10.100.0.0/24; do
         firewall-cmd --permanent --zone=trusted --add-source="$src" >/dev/null
     done
     rule="rule priority=-10 family=ipv4 port port=9100 protocol=tcp drop"
@@ -62,6 +64,7 @@ if command -v firewall-cmd >/dev/null 2>&1; then
 elif command -v ufw >/dev/null 2>&1; then
     ufw allow from 10.42.0.0/16
     ufw allow from 10.43.0.0/16
+    ufw allow from 10.100.0.0/24
     ufw allow 80/tcp
     ufw allow 443/tcp
     ufw allow 6443/tcp

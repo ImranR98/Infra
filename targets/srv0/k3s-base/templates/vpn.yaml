@@ -1,0 +1,249 @@
+{{- define "vpn-dns.corefile" -}}
+.:53 {
+    bind 10.100.0.1
+    file /etc/coredns/zone.db {{ .Values.SERVICES_DOMAIN }}
+    forward . 127.0.0.53
+    cache 60
+    errors
+}
+{{- end -}}
+
+{{- define "vpn-dns.zone" -}}
+$ORIGIN {{ .Values.SERVICES_DOMAIN }}.
+$TTL 60
+@   IN  SOA ns.{{ .Values.SERVICES_DOMAIN }}. hostmaster.{{ .Values.SERVICES_DOMAIN }}. 1 3600 600 86400 60
+@   IN  NS  ns.{{ .Values.SERVICES_DOMAIN }}.
+ns  IN  A   10.100.0.1
+@   IN  A   10.100.0.1
+*   IN  A   10.100.0.1
+{{- end -}}
+---
+# WireGuard VPN server: hostNetwork so it can create wg0 in the host netns for
+# the frpc sidecar to tunnel, pinned to the frpc node via the NFD
+# external-exposed label (same for vpn-dns). Keys are generated once by the
+# keygen init container into wireguard-pvc (auto-backup); profiles are fetched
+# with scripts/wg-client.sh.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: wireguard-pvc
+  namespace: base
+  labels:
+    auto-backup: "true"
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 16Mi
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: wireguard-scripts
+  namespace: base
+data:
+  start.sh: |
+    {{- .Files.Get "files/wireguard-start.sh" | nindent 4 }}
+  keygen.sh: |
+    {{- .Files.Get "files/wireguard-keygen.sh" | nindent 4 }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: wireguard
+  namespace: base
+spec:
+  replicas: 1
+  # Two hostNetwork pods on one node cannot own wg0 at the same time, so never
+  # overlap old and new during a rollout.
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: wireguard
+  template:
+    metadata:
+      labels:
+        app: wireguard
+      annotations:
+        checksum/config: {{ printf "%s%s%s%s" (.Files.Get "files/wireguard-keygen.sh") (.Files.Get "files/wireguard-start.sh") .Values.WG_ENDPOINT .Values.WG_CLIENTS | sha256sum }}
+    spec:
+      hostNetwork: true
+      dnsPolicy: Default
+      automountServiceAccountToken: false
+      nodeSelector:
+        infra.local/external-exposed: "true"
+      securityContext:
+        # spc_t for host-netns objects (container_t is denied); s0 stops kubelet
+        # MCS-relabeling the Longhorn volume (labels from Longhorn's own mounts).
+        seLinuxOptions:
+          type: spc_t
+          level: s0
+      initContainers:
+        - name: keygen
+          image: linuxserver/wireguard:latest@sha256:216ca1ce9da7bfe26fb752111d952487804bd18933bbd4794970d424bf8adfe9
+          command:
+            - /bin/bash
+            - /scripts/keygen.sh
+          env:
+            - name: WG_ENDPOINT
+              value: "{{ .Values.WG_ENDPOINT }}"
+            - name: WG_CLIENTS
+              value: "{{ .Values.WG_CLIENTS }}"
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+          resources:
+            limits:
+              memory: 64Mi
+            requests:
+              memory: 16Mi
+          volumeMounts:
+            - name: config
+              mountPath: /wg
+            - name: scripts
+              mountPath: /scripts
+              readOnly: true
+      containers:
+        - name: wireguard
+          image: linuxserver/wireguard:latest@sha256:216ca1ce9da7bfe26fb752111d952487804bd18933bbd4794970d424bf8adfe9
+          # Bypass the image's s6 init: we bring up wg0 ourselves and the
+          # interface must live in the host netns, not a container overlay.
+          command:
+            - /bin/bash
+            - /scripts/start.sh
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+              add:
+                - NET_ADMIN
+          resources:
+            limits:
+              memory: 128Mi
+            requests:
+              memory: 16Mi
+          volumeMounts:
+            - name: config
+              mountPath: /wg
+              readOnly: true
+            - name: scripts
+              mountPath: /scripts
+              readOnly: true
+      volumes:
+        - name: config
+          persistentVolumeClaim:
+            claimName: wireguard-pvc
+        - name: scripts
+          configMap:
+            name: wireguard-scripts
+            defaultMode: 0555
+---
+# DNS for VPN clients only: bound to 10.100.0.1:53 (wg0), so LAN/public can't
+# reach it. Answers *.$SERVICES_DOMAIN with the VPN address; forwards the rest
+# to 127.0.0.53 (systemd-resolved's stub; hostNetwork keeps the host's live
+# resolver config). The init container waits for wg0 to exist.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: vpn-dns
+  namespace: base
+data:
+  Corefile: |
+    {{- include "vpn-dns.corefile" . | nindent 4 }}
+  zone.db: |
+    {{- include "vpn-dns.zone" . | nindent 4 }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vpn-dns
+  namespace: base
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: vpn-dns
+  template:
+    metadata:
+      labels:
+        app: vpn-dns
+      annotations:
+        checksum/config: {{ printf "%s%s" (include "vpn-dns.corefile" .) (include "vpn-dns.zone" .) | sha256sum }}
+    spec:
+      hostNetwork: true
+      dnsPolicy: Default
+      automountServiceAccountToken: false
+      nodeSelector:
+        infra.local/external-exposed: "true"
+      initContainers:
+        - name: wait-for-wireguard
+          image: busybox:1.38
+          command:
+            - sh
+            - -c
+            - until ip -4 addr show wg0 2>/dev/null | grep -q '10.100.0.1'; do sleep 2; done
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+          resources:
+            limits:
+              memory: 16Mi
+            requests:
+              memory: 8Mi
+      containers:
+        - name: coredns
+          image: coredns/coredns:1.14.7@sha256:7efd3c635b03efd68c4e8398fc45f0d993d0e9ab016f72c1cefb0fd6d01aa286
+          args:
+            - -conf
+            - /etc/coredns/Corefile
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+              add:
+                - NET_BIND_SERVICE
+          resources:
+            limits:
+              memory: 64Mi
+            requests:
+              memory: 16Mi
+          volumeMounts:
+            - name: dns-config
+              mountPath: /etc/coredns
+              readOnly: true
+      volumes:
+        - name: dns-config
+          configMap:
+            name: vpn-dns
+            defaultMode: 0444
+---
+# kube-router's per-pod policy chain rejects non-pod sources to the svclb pods,
+# so VPN clients need this allow on the Traefik HTTPS hostPort.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-vpn-traefik
+  namespace: kube-system
+spec:
+  podSelector:
+    matchLabels:
+      svccontroller.k3s.cattle.io/svcname: traefik
+  ingress:
+    - from:
+        - ipBlock:
+            cidr: 10.100.0.0/24
+      ports:
+        - protocol: TCP
+          port: 443
+  policyTypes:
+    - Ingress

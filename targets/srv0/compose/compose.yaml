@@ -58,6 +58,14 @@ configs:
             localPort = 31581
             remotePort = 56881
 
+            # WireGuard server (51830: flannel-wireguard owns 51820).
+            [[proxies]]
+            name = "wireguard"
+            type = "udp"
+            localIP = "127.0.0.1"
+            localPort = 51830
+            remotePort = 51820
+
 services:
 
     frpc:

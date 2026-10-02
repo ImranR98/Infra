@@ -2,3 +2,6 @@
 # and target-specific config live in the gitignored config/srv0/values.yaml
 # (passed as a later -f, so it wins on conflicts).
 MY_UID: 1000
+
+WG_ENDPOINT: "vps0.imranr.dev:51820"
+WG_CLIENTS: "client1 client2"
