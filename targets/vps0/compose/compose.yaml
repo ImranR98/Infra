@@ -802,7 +802,7 @@ services:
         environment:
             - ADMIN_PASSWORD=$TECH_SALE_ADMIN_PASSWORD
             - CONTACT_EMAIL=$DOMAIN_OWNER_EMAIL
-            - NTFY_URL=https://ntfy.home.$BASE_SERVICES_DOMAIN/tech_sale
+            - NTFY_URL=https://ntfy.home.$BASE_SERVICES_DOMAIN/moving_sale_2027
             - NTFY_AUTH=Bearer $NTFY_WRITE_ONLY_ACCOUNT_TOKEN
             - PICKUP_TEXT=$TECH_SALE_PICKUP_TEXT
             - SITE_NAME=$TECH_SALE_SITE_NAME
@@ -833,7 +833,7 @@ services:
         environment:
             - ADMIN_PASSWORD=$HOME_SALE_ADMIN_PASSWORD
             - CONTACT_EMAIL=$DOMAIN_OWNER_EMAIL
-            - NTFY_URL=https://ntfy.home.$BASE_SERVICES_DOMAIN/home_sale
+            - NTFY_URL=https://ntfy.home.$BASE_SERVICES_DOMAIN/moving_sale_2027
             - NTFY_AUTH=Bearer $NTFY_WRITE_ONLY_ACCOUNT_TOKEN
             - PICKUP_TEXT=$HOME_SALE_PICKUP_TEXT
             - SITE_NAME=$HOME_SALE_SITE_NAME
