@@ -335,3 +335,40 @@ spec:
     requests:
       storage: 4096Gi
   volumeName: hostpath-main-node-media-screenrecs-pv
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: hostpath-main-node-wa-txt-pv
+spec:
+  capacity:
+    storage: 4096Gi
+  volumeMode: Filesystem
+  accessModes:
+    - ReadWriteMany
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: hostpath
+  local:
+    path: {{ .Values.WA_TXT_PATH }}
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - key: infra.local/hostpath-main
+              operator: In
+              values:
+                - "true"
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: hostpath-main-node-wa-txt-pvc
+  namespace: apps
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: hostpath
+  resources:
+    requests:
+      storage: 4096Gi
+  volumeName: hostpath-main-node-wa-txt-pv

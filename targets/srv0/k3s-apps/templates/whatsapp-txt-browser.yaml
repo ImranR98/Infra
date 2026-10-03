@@ -1,0 +1,122 @@
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: watxt-prod-tls
+  namespace: apps
+spec:
+  secretName: watxt-prod-tls
+  issuerRef:
+    name: letsencrypt-prod
+    kind: ClusterIssuer
+  dnsNames:
+    - watxt.{{ .Values.SERVICES_DOMAIN }}
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: watxt-ingress
+  namespace: base
+spec:
+  parentRefs:
+    - name: srv0
+      sectionName: websecure
+    - name: srv0
+      sectionName: websecure-proxy
+  hostnames:
+    - watxt.{{ .Values.SERVICES_DOMAIN }}
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      filters:
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: geoblock
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: crowdsec-bouncer
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: forwardauth-authelia
+      backendRefs:
+        - name: whatsapp-txt-browser
+          namespace: apps
+          port: 8787
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: whatsapp-txt-browser
+  namespace: apps
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: whatsapp-txt-browser
+  template:
+    metadata:
+      labels:
+        app: whatsapp-txt-browser
+    spec:
+      securityContext:
+        runAsUser: {{ .Values.MY_UID }}
+        runAsGroup: {{ .Values.MY_UID }}
+        # spc_t: the Main tree is shared with the host and can carry foreign
+        # labels; s0 keeps written files category-free for the host.
+        seLinuxOptions:
+          type: spc_t
+          level: s0
+      containers:
+        - name: whatsapp-txt-browser
+          image: imranrdev/whatsapp-txt-browser:latest@sha256:2fd1d9408abb8648ea9de570314c2b1577352dfed3284b4bd9333f7d9bf7f0ee
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+          ports:
+            - containerPort: 8787
+          readinessProbe:
+            tcpSocket:
+              port: 8787
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+            initialDelaySeconds: 10
+          resources:
+            limits:
+              memory: 256Mi
+            requests:
+              memory: 32Mi
+              cpu: 10m
+          volumeMounts:
+            - name: data
+              mountPath: /data
+              readOnly: true
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: hostpath-main-node-wa-txt-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: whatsapp-txt-browser
+  namespace: apps
+spec:
+  type: ClusterIP
+  selector:
+    app: whatsapp-txt-browser
+  ports:
+    - port: 8787
+      targetPort: 8787

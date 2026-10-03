@@ -47,6 +47,7 @@ GEOIPUPDATE_LICENSE_KEY: "change_me"
 # Ensure these exist before starting services
 MAIN_PARENT_DIR: "/path/to/data"
 MEDIA_DIR_PATH: "/path/to/data/Main/Media"
+WA_TXT_PATH: "/path/to/data/Main/Backups/WhatsApp TXT"
 DSCPLN_TRANSACTIONS_PATH: "/path/to/data/Main/Notes/Transactions"
 MDSCL_DEVICE_SYNC_PATH: "/path/to/data/deviceSync"
 SECONDARY_STORAGE_PATH: "/mnt/k3s_extra_storage"

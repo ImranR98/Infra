@@ -58,6 +58,7 @@ spec:
           - {name: radarr-prod-tls, namespace: apps}
           - {name: seerr-prod-tls, namespace: apps}
           - {name: sonarr-prod-tls, namespace: apps}
+          - {name: watxt-prod-tls, namespace: apps}
           - {name: authelia-prod-tls}
           - {name: crowdsec-web-ui-prod-tls}
           - {name: grafana-prod-tls}
@@ -92,6 +93,7 @@ spec:
           - {name: radarr-prod-tls, namespace: apps}
           - {name: seerr-prod-tls, namespace: apps}
           - {name: sonarr-prod-tls, namespace: apps}
+          - {name: watxt-prod-tls, namespace: apps}
           - {name: authelia-prod-tls}
           - {name: crowdsec-web-ui-prod-tls}
           - {name: grafana-prod-tls}
