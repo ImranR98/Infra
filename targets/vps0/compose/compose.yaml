@@ -45,7 +45,7 @@ configs:
               default_policy: 'deny'
               # Admin catch-all below is two_factor (TOTP is Authelia's default second
               # factor); explicit one_factor rules (ytdl/ikom) intentionally stay 1FA.
-              # Moving sale: public sale page bypasses Authelia; only /admin + /api/admin
+              # Sale sites: public sale pages bypass Authelia; only /admin + /api/admin
               # require a login (any Authelia user).
               rules:
                 - domain: auth.${CLOUD_SERVICES_DOMAIN}
@@ -59,12 +59,19 @@ configs:
                   policy: one_factor
                   subject:
                   - 'group:family'
-                - domain: sale.${CLOUD_SERVICES_DOMAIN}
+                - domain: tech.sale.${CLOUD_SERVICES_DOMAIN}
                   resources:
                   - '^/admin([/?].*)?$'
                   - '^/api/admin([/?].*)?$'
                   policy: one_factor
-                - domain: sale.${CLOUD_SERVICES_DOMAIN}
+                - domain: tech.sale.${CLOUD_SERVICES_DOMAIN}
+                  policy: bypass
+                - domain: home.sale.${CLOUD_SERVICES_DOMAIN}
+                  resources:
+                  - '^/admin([/?].*)?$'
+                  - '^/api/admin([/?].*)?$'
+                  policy: one_factor
+                - domain: home.sale.${CLOUD_SERVICES_DOMAIN}
                   policy: bypass
                 - domain: '*.${CLOUD_SERVICES_DOMAIN}'
                   policy: two_factor
@@ -778,31 +785,62 @@ services:
         mem_limit: 128M
         logging: *logging
 
-    # Moving Sale - Moving Sale 2027
-    moving-sale:
-        container_name: moving-sale
+    # Tech Sale - sale site for tech items
+    tech-sale:
+        container_name: tech-sale
         image: imranrdev/moving-sale-2027
         depends_on:
             - traefik
         labels:
             - "traefik.enable=true"
-            - "traefik.http.routers.moving-sale.rule=Host(`sale.$CLOUD_SERVICES_DOMAIN`)"
-            - "traefik.http.routers.moving-sale.entrypoints=websecure"
-            - "traefik.http.routers.moving-sale.tls.certresolver=le"
-            - "traefik.http.routers.moving-sale.tls=true"
-            - "traefik.http.routers.moving-sale.middlewares=crowdsec-bouncer@file,authelia@file,geoblock@file"
-            - "traefik.http.services.moving-sale.loadbalancer.server.port=3000"
+            - "traefik.http.routers.tech-sale.rule=Host(`tech.sale.$CLOUD_SERVICES_DOMAIN`)"
+            - "traefik.http.routers.tech-sale.entrypoints=websecure"
+            - "traefik.http.routers.tech-sale.tls.certresolver=le"
+            - "traefik.http.routers.tech-sale.tls=true"
+            - "traefik.http.routers.tech-sale.middlewares=crowdsec-bouncer@file,authelia@file,geoblock@file"
+            - "traefik.http.services.tech-sale.loadbalancer.server.port=3000"
         environment:
-            - ADMIN_PASSWORD=$MOVING_SALE_ADMIN_PASSWORD
+            - ADMIN_PASSWORD=$TECH_SALE_ADMIN_PASSWORD
             - CONTACT_EMAIL=$DOMAIN_OWNER_EMAIL
-            - NTFY_URL=https://ntfy.home.$BASE_SERVICES_DOMAIN/moving_sale_2027
+            - NTFY_URL=https://ntfy.home.$BASE_SERVICES_DOMAIN/tech_sale
             - NTFY_AUTH=Bearer $NTFY_WRITE_ONLY_ACCOUNT_TOKEN
-            - PICKUP_TEXT=$MOVING_SALE_PICKUP_TEXT
-            - SITE_NAME=$MOVING_SALE_SITE_NAME
-            - PLAUSIBLE_SCRIPT=$MOVING_SALE_PLAUSIBLE_SCRIPT_URL
+            - PICKUP_TEXT=$TECH_SALE_PICKUP_TEXT
+            - SITE_NAME=$TECH_SALE_SITE_NAME
+            - PLAUSIBLE_SCRIPT=$TECH_SALE_PLAUSIBLE_SCRIPT_URL
         volumes:
-            - ../../../current_target/compose_live_state/moving-sale/data:/app/data
-            - ../../../current_target/compose_live_state/moving-sale/uploads:/app/uploads
+            - ../../../current_target/compose_live_state/tech-sale/data:/app/data
+            - ../../../current_target/compose_live_state/tech-sale/uploads:/app/uploads
+        networks:
+            - traefik
+        restart: unless-stopped
+        mem_limit: 512M
+        logging: *logging
+
+    # Home Sale - sale site for household items
+    home-sale:
+        container_name: home-sale
+        image: imranrdev/moving-sale-2027
+        depends_on:
+            - traefik
+        labels:
+            - "traefik.enable=true"
+            - "traefik.http.routers.home-sale.rule=Host(`home.sale.$CLOUD_SERVICES_DOMAIN`)"
+            - "traefik.http.routers.home-sale.entrypoints=websecure"
+            - "traefik.http.routers.home-sale.tls.certresolver=le"
+            - "traefik.http.routers.home-sale.tls=true"
+            - "traefik.http.routers.home-sale.middlewares=crowdsec-bouncer@file,authelia@file,geoblock@file"
+            - "traefik.http.services.home-sale.loadbalancer.server.port=3000"
+        environment:
+            - ADMIN_PASSWORD=$HOME_SALE_ADMIN_PASSWORD
+            - CONTACT_EMAIL=$DOMAIN_OWNER_EMAIL
+            - NTFY_URL=https://ntfy.home.$BASE_SERVICES_DOMAIN/home_sale
+            - NTFY_AUTH=Bearer $NTFY_WRITE_ONLY_ACCOUNT_TOKEN
+            - PICKUP_TEXT=$HOME_SALE_PICKUP_TEXT
+            - SITE_NAME=$HOME_SALE_SITE_NAME
+            - PLAUSIBLE_SCRIPT=$HOME_SALE_PLAUSIBLE_SCRIPT_URL
+        volumes:
+            - ../../../current_target/compose_live_state/home-sale/data:/app/data
+            - ../../../current_target/compose_live_state/home-sale/uploads:/app/uploads
         networks:
             - traefik
         restart: unless-stopped

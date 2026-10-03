@@ -25,7 +25,7 @@ headlamp, navidrome, linkwarden, freshrss, opencanary.
 
 **Standard** — self-contained tools with small blast radius:
 dozzle, metube, uptime-kuma, plausible, shlink, owncast, isbn-lookup, pixelntfy,
-logtfy, opodsync, syncthing, watchtower, socket proxies, cct26, moving-sale, strelaysrv.
+logtfy, opodsync, syncthing, watchtower, socket proxies, cct26, tech-sale/home-sale, strelaysrv.
 
 ## Tier rules
 

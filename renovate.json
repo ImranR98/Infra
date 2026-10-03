@@ -205,7 +205,7 @@
       "enabled": false
     },
     {
-      "description": "moving-sale is a frozen one-off site (untagged image, no digest pins)",
+      "description": "the sale sites (tech-sale/home-sale) use a frozen one-off image (untagged, no digest pins)",
       "matchPackageNames": [
         "imranrdev/moving-sale-2027"
       ],
