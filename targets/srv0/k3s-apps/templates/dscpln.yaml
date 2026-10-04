@@ -52,10 +52,12 @@ spec:
           ports:
             - containerPort: 3300
           resources:
+            # ExcelJS loads the whole workbook (including the hidden sheets),
+            # so the app needs well over the usual Node baseline.
             limits:
-              memory: 256Mi
+              memory: 1Gi
             requests:
-              memory: 64Mi
+              memory: 128Mi
           readinessProbe:
             tcpSocket:
               port: 3300
@@ -66,6 +68,8 @@ spec:
             # Silence Node/libuv io_uring SELinux denials on Fedora nodes.
             - name: UV_USE_IO_URING
               value: "0"
+            - name: NODE_OPTIONS
+              value: "--max-old-space-size=768"
           volumeMounts:
             - name: config
               mountPath: /app/config.json
