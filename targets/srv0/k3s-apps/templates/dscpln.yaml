@@ -55,9 +55,9 @@ spec:
             # ExcelJS loads the whole workbook (including the hidden sheets),
             # so the app needs well over the usual Node baseline.
             limits:
-              memory: 1Gi
+              memory: 2Gi
             requests:
-              memory: 128Mi
+              memory: 256Mi
           readinessProbe:
             tcpSocket:
               port: 3300
@@ -69,7 +69,7 @@ spec:
             - name: UV_USE_IO_URING
               value: "0"
             - name: NODE_OPTIONS
-              value: "--max-old-space-size=768"
+              value: "--max-old-space-size=1536"
           volumeMounts:
             - name: config
               mountPath: /app/config.json
