@@ -905,7 +905,7 @@ services:
 
     # Logtfy - Log Monitoring and ntfy Alerting
     logtfy:
-        image: imranrdev/logtfy:latest@sha256:5c501d62c914d2082be2276fafdef48e664437d71e0e2c7b89bc009f86f8244c
+        image: imranrdev/logtfy:latest@sha256:1ff68c631abbc78e6518a1cd61b030dd8c95bb940b838813799f016749be3524
         container_name: logtfy
         hostname: $TARGET
         restart: unless-stopped
