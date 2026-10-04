@@ -1,18 +1,16 @@
 {{- define "dscpln.config" -}}
 {
   "port": 3300,
-  "dataProvider": "textFileDataProvider",
+  "dataProvider": "excelDataProvider",
   "providers": {
-    "textFileDataProvider": {
-      "dataFile": "/data/{{ .Values.DSCPLN_DATA_FILE }}",
-      "budgetFile": "/data/budget.txt",
-      "monthlyBudgetInit": {{ .Values.DSCPLN_BUDGET_INIT_AMT | quote }},
-      "firstDayBiasInit": {{ .Values.DSCPLN_FIRST_DAY_BIAS_INIT_AMT | quote }}
+    "excelDataProvider": {
+      "workbookFile": "{{ .Values.DSCPLN_LEDGER_PATH }}/{{ .Values.DSCPLN_WORKBOOK_FILE }}",
+      "transactionsSheet": "Transactions",
+      "constantsSheet": "Constants"
     }
   },
   "notifications": {
     "monthlyLimitUrl": "http://ntfy.base.svc.cluster.local:3000/{{ .Values.TARGET }}_services_dscpln",
-    "weeklyLimitUrl": "http://ntfy.base.svc.cluster.local:3000/{{ .Values.TARGET }}_services_dscpln",
     "ntfyToken": {{ .Values.NTFY_WRITE_ONLY_ACCOUNT_TOKEN | quote }},
     "checkIntervalMinutes": 30,
     "onlyWarnOnce": false
@@ -73,15 +71,17 @@ spec:
               mountPath: /app/config.json
               subPath: config.json
               readOnly: true
-            - name: dscpln-data
-              mountPath: /data
+            # The git-tracked ledger repo is mounted at its host path so the
+            # app can read Balance.xlsx and commit changes to it.
+            - name: dscpln-ledger
+              mountPath: {{ .Values.DSCPLN_LEDGER_PATH }}
       volumes:
         - name: config
           secret:
             secretName: dscpln-config
-        - name: dscpln-data
+        - name: dscpln-ledger
           persistentVolumeClaim:
-            claimName: dscpln-data-pvc
+            claimName: dscpln-ledger-pvc
 ---
 apiVersion: v1
 kind: Service
@@ -152,17 +152,17 @@ spec:
 apiVersion: v1
 kind: PersistentVolume
 metadata:
-  name: dscpln-data-pv
+  name: dscpln-ledger-pv
 spec:
   capacity:
-    storage: 5Mi
+    storage: 100Mi
   volumeMode: Filesystem
   accessModes:
     - ReadWriteMany
   persistentVolumeReclaimPolicy: Retain
   storageClassName: hostpath
   local:
-    path: {{ .Values.DSCPLN_TRANSACTIONS_PATH }}
+    path: {{ .Values.DSCPLN_LEDGER_PATH }}
   nodeAffinity:
     required:
       nodeSelectorTerms:
@@ -175,7 +175,7 @@ spec:
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: dscpln-data-pvc
+  name: dscpln-ledger-pvc
   namespace: apps
 spec:
   accessModes:
@@ -183,8 +183,8 @@ spec:
   storageClassName: hostpath
   resources:
     requests:
-      storage: 5Mi
-  volumeName: dscpln-data-pv
+      storage: 100Mi
+  volumeName: dscpln-ledger-pv
 ---
 apiVersion: v1
 kind: Secret

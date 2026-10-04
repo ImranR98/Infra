@@ -48,7 +48,6 @@ GEOIPUPDATE_LICENSE_KEY: "change_me"
 MAIN_PARENT_DIR: "/path/to/data"
 MEDIA_DIR_PATH: "/path/to/data/Main/Media"
 WA_TXT_PATH: "/path/to/data/Main/Backups/WhatsApp TXT"
-DSCPLN_TRANSACTIONS_PATH: "/path/to/data/Main/Notes/Transactions"
 MDSCL_DEVICE_SYNC_PATH: "/path/to/data/deviceSync"
 SECONDARY_STORAGE_PATH: "/mnt/k3s_extra_storage"
 
@@ -266,11 +265,10 @@ PLIK_ADMIN_PASSWORD: "change_me" # openssl rand -hex 16
 FILEBROWSER_JWT_TOKEN_SECRET: "change_me" # openssl rand -base64 32
 
 # ====== D$CPLN ======
-# In-cluster, transactions are read from DSCPLN_TRANSACTIONS_PATH and the
-# budget file (initialized below, then edited via the UI) is /data/budget.txt.
-DSCPLN_DATA_FILE: "Acc 2026.md" # format: Acc $(date +%Y).md
-DSCPLN_BUDGET_INIT_AMT: "2400"
-DSCPLN_FIRST_DAY_BIAS_INIT_AMT: "1400"
+# Directory of the git-tracked Excel ledger (mounted at the same path in the
+# pod so the app can read the workbook and commit its changes).
+DSCPLN_LEDGER_PATH: "/path/to/data/Main/Documents/Balance"
+DSCPLN_WORKBOOK_FILE: "Balance.xlsx"
 
 # ====== FMD ======
 FMD_REGISTRATIONTOKEN: "change_me" # openssl rand -base64 32
