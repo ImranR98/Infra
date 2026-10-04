@@ -1,3 +1,24 @@
+{{- define "dscpln.config" -}}
+{
+  "port": 3300,
+  "dataProvider": "textFileDataProvider",
+  "providers": {
+    "textFileDataProvider": {
+      "dataFile": "/data/{{ .Values.DSCPLN_DATA_FILE }}",
+      "budgetFile": "/data/budget.txt",
+      "monthlyBudgetInit": {{ .Values.DSCPLN_BUDGET_INIT_AMT | quote }},
+      "firstDayBiasInit": {{ .Values.DSCPLN_FIRST_DAY_BIAS_INIT_AMT | quote }}
+    }
+  },
+  "notifications": {
+    "monthlyLimitUrl": "http://ntfy.base.svc.cluster.local:3000/{{ .Values.TARGET }}_services_dscpln",
+    "weeklyLimitUrl": "http://ntfy.base.svc.cluster.local:3000/{{ .Values.TARGET }}_services_dscpln",
+    "ntfyToken": {{ .Values.NTFY_WRITE_ONLY_ACCOUNT_TOKEN | quote }},
+    "checkIntervalMinutes": 30,
+    "onlyWarnOnce": false
+  }
+}
+{{- end }}
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -16,8 +37,8 @@ spec:
       labels:
         app: dscpln
       annotations:
-        # ntfy token is an env secretKeyRef; env values only refresh on restart.
-        checksum/dscpln-ntfy-token: {{ .Values.NTFY_WRITE_ONLY_ACCOUNT_TOKEN | sha256sum }}
+        # Mounted Secret contents only refresh on restart.
+        checksum/dscpln-config: {{ include "dscpln.config" . | sha256sum }}
     spec:
       securityContext:
         fsGroup: {{ .Values.MY_UID }}
@@ -25,9 +46,10 @@ spec:
           level: s0
       containers:
         - name: dscpln
-          image: imranrdev/dscpln:latest@sha256:b5651192aee9ef9ae2e6f167f53b39bc136ae5f31ac426974534e826ec0b544c
+          image: imranrdev/dscpln:latest@sha256:9ec717746f4640136d51f6fbd9e50ed3cb23494034899e48200f8f8526fb8ebe
           securityContext:
-            # runs as root: imranrdev image breaks with non-root uid
+            runAsUser: {{ .Values.MY_UID }}
+            runAsGroup: {{ .Values.MY_UID }}
             allowPrivilegeEscalation: false
           ports:
             - containerPort: 3300
@@ -43,28 +65,20 @@ spec:
             timeoutSeconds: 5
             failureThreshold: 3
           env:
+            # Silence Node/libuv io_uring SELinux denials on Fedora nodes.
             - name: UV_USE_IO_URING
               value: "0"
-            - name: TEXTFILE_DATA_PROVIDER_DATA_PATH
-              value: "/data/{{ .Values.DSCPLN_DATA_FILE }}"
-            - name: MONTHLY_LIMIT_NTFY_URL
-              value: "http://ntfy.base.svc.cluster.local:3000/{{ .Values.TARGET }}_services_dscpln"
-            - name: WEEKLY_LIMIT_NTFY_URL
-              value: "http://ntfy.base.svc.cluster.local:3000/{{ .Values.TARGET }}_services_dscpln"
-            - name: NTFY_TOKEN
-              valueFrom:
-                secretKeyRef:
-                  name: dscpln-ntfy-token
-                  key: token
-            - name: TEXTFILE_BUDGET_INIT_AMT
-              value: "{{ .Values.DSCPLN_BUDGET_INIT_AMT }}"
-            - name: TEXTFILE_FIRST_WEEK_BIAS_INIT_AMT
-              value: "{{ .Values.DSCPLN_FIRST_WEEK_BIAS_INIT_AMT }}"
           volumeMounts:
+            - name: config
+              mountPath: /app/config.json
+              subPath: config.json
+              readOnly: true
             - name: dscpln-data
               mountPath: /data
-              readOnly: true
       volumes:
+        - name: config
+          secret:
+            secretName: dscpln-config
         - name: dscpln-data
           persistentVolumeClaim:
             claimName: dscpln-data-pvc
@@ -175,8 +189,8 @@ spec:
 apiVersion: v1
 kind: Secret
 metadata:
-  name: dscpln-ntfy-token
+  name: dscpln-config
   namespace: apps
 type: Opaque
 stringData:
-  token: "{{ .Values.NTFY_WRITE_ONLY_ACCOUNT_TOKEN }}"
+  config.json: {{ include "dscpln.config" . | quote }}
