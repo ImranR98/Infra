@@ -54,7 +54,7 @@ spec:
               mountPath: /var/syncthing/config
       containers:
         - name: syncthing
-          image: syncthing/syncthing:2.1.5
+          image: syncthing/syncthing:2.1.6
           args:
             - "--home"
             - "/var/syncthing/config"
