@@ -89,7 +89,7 @@ spec:
             main:
               image:
                 repository: ghcr.io/immich-app/immich-machine-learning
-                tag: v3.2.4-openvino
+                tag: v3.3.0-openvino
               securityContext:
                 allowPrivilegeEscalation: false
               resources:
