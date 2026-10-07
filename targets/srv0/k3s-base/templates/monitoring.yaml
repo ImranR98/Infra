@@ -581,7 +581,7 @@ spec:
           level: s0
       containers:
         - name: mimir
-          image: grafana/mimir:3.2.1
+          image: grafana/mimir:3.2.2
           args:
             # Flags instead of a config file: any config change is a
             # Deployment change, so the pod rolls automatically on apply.
