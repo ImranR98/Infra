@@ -14,6 +14,9 @@
     "ntfyToken": {{ .Values.NTFY_WRITE_ONLY_ACCOUNT_TOKEN | quote }},
     "checkIntervalMinutes": 30,
     "onlyWarnOnce": false
+  },
+  "api": {
+    "stateFile": "{{ .Values.DSCPLN_LEDGER_PATH }}/.dscpln-api-state.json"
   }
 }
 {{- end }}
@@ -128,6 +131,29 @@ spec:
   hostnames:
     - dscpln.{{ .Values.SERVICES_DOMAIN }}
   rules:
+    # The external API is deliberately unauthenticated at the proxy: it is
+    # token-protected by the app and called by scripts, not browsers. geoblock
+    # and CrowdSec still apply; Authelia does not (the token lives on /settings,
+    # which stays behind the catch-all rule below).
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /api/
+      filters:
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: geoblock
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: crowdsec-bouncer
+      backendRefs:
+        - name: dscpln
+          namespace: apps
+          port: 3300
     - matches:
         - path:
             type: PathPrefix
