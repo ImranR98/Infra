@@ -9,7 +9,7 @@ spec:
   failurePolicy: abort
   targetNamespace: apps
   createNamespace: false
-  version: 0.13.3
+  version: 0.13.4
   valuesContent: |-
     controllers:
       main:
