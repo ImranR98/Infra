@@ -204,7 +204,7 @@ spec:
       # anyway. The image is the chart's own and carries busybox wget.
       initContainers:
         - name: wait-for-geoip
-          image: rancher/mirrored-library-traefik:3.7.13
+          image: rancher/mirrored-library-traefik:3.7.14
           command:
             - sh
             - -c
