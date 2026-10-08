@@ -1,0 +1,14 @@
+<!-- Profile overrides for the shared 4-vCPU VPS: bound per-query threads so
+     public-dashboard bursts cannot saturate every core.
+     https://github.com/plausible/community-edition/blob/master/clickhouse/default-profile-low-resources-overrides.xml -->
+<clickhouse>
+    <profiles>
+        <default>
+            <max_threads>2</max_threads>
+            <max_block_size>8192</max_block_size>
+            <max_download_threads>1</max_download_threads>
+            <input_format_parallel_parsing>0</input_format_parallel_parsing>
+            <output_format_parallel_formatting>0</output_format_parallel_formatting>
+        </default>
+    </profiles>
+</clickhouse>

@@ -441,6 +441,7 @@ services:
             - "traefik.http.middlewares.redirect-to-https.redirectscheme.permanent=true"
         restart: unless-stopped
         mem_limit: 384M
+        cpus: 1.5
         networks:
             - traefik
         logging: *logging
@@ -543,6 +544,7 @@ services:
         image: clickhouse/clickhouse-server:24.12-alpine
         restart: unless-stopped
         mem_limit: 4G
+        cpus: 2.0
         container_name: plausible_events_db
         depends_on:
             state-fixperms:
@@ -553,6 +555,7 @@ services:
             - ../../../current_target/compose_live_state/plausible/event_data:/var/lib/clickhouse
             - ../../../current_target/compose_live_state/plausible/event_logs:/var/log/clickhouse-server
             - ./files/plausible/clickhouse-config.xml:/etc/clickhouse-server/config.d/clickhouse-config.xml:ro
+            - ./files/plausible/clickhouse-low-resources.xml:/etc/clickhouse-server/users.d/low-resources.xml:ro
         environment:
             - CLICKHOUSE_SKIP_USER_SETUP=1
         ulimits:
@@ -591,6 +594,7 @@ services:
         image: ghcr.io/plausible/community-edition:v3
         restart: unless-stopped
         mem_limit: 768M
+        cpus: 1.0
         container_name: plausible
         command: sh -c "for i in \$(seq 1 30); do /entrypoint.sh db createdb 2>/dev/null && break; sleep 2; done && /entrypoint.sh db migrate && /entrypoint.sh run"
         depends_on:
@@ -616,7 +620,7 @@ services:
             - TOTP_VAULT_KEY=$PLAUSIBLE_TOTP_VAULT_KEY
         labels:
             - "traefik.enable=true"
-            - "traefik.http.routers.plausible.rule=Host(`plausible.$BASE_SERVICES_DOMAIN`)"
+            - "traefik.http.routers.plausible.rule=Host(`plausible.$BASE_SERVICES_DOMAIN`) && !PathRegexp(`^/[^/]+/export`)"
             - "traefik.http.routers.plausible.entrypoints=websecure"
             - "traefik.http.routers.plausible.tls.certresolver=le"
             - "traefik.http.routers.plausible.tls=true"

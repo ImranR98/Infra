@@ -1,5 +1,6 @@
 <clickhouse>
     <listen_host>0.0.0.0</listen_host>
+    <max_concurrent_queries>8</max_concurrent_queries>
     <logger>
         <level>warning</level>
         <console>true</console>
