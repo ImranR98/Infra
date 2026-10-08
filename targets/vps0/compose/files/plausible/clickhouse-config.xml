@@ -25,28 +25,8 @@
             SETTINGS ttl_only_drop_parts=1
         </engine>
     </query_log>
-    <metric_log replace="1">
-        <database>system</database>
-        <table>metric_log</table>
-        <engine>
-            ENGINE = MergeTree
-            PARTITION BY event_date
-            ORDER BY (event_date, event_time)
-            TTL event_date + INTERVAL 30 DAY DELETE
-            SETTINGS ttl_only_drop_parts=1
-        </engine>
-    </metric_log>
-    <asynchronous_metric_log replace="1">
-        <database>system</database>
-        <table>asynchronous_metric_log</table>
-        <engine>
-            ENGINE = MergeTree
-            PARTITION BY event_date
-            ORDER BY (metric, event_date, event_time)
-            TTL event_date + INTERVAL 30 DAY DELETE
-            SETTINGS ttl_only_drop_parts=1
-        </engine>
-    </asynchronous_metric_log>
+    <metric_log remove="remove" />
+    <asynchronous_metric_log remove="remove" />
     <processors_profile_log remove="remove" />
     <query_metric_log remove="remove" />
     <asynchronous_insert_log remove="remove" />
