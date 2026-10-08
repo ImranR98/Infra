@@ -10,6 +10,7 @@ x-socket-proxy: &socket-proxy
     restart: unless-stopped
     read_only: true
     mem_limit: 128M
+    cpus: 0.5
     cap_drop:
         - ALL
     security_opt:
@@ -276,6 +277,7 @@ services:
         container_name: frps
         restart: always
         mem_limit: 128M
+        cpus: 1.0
         volumes:
           - ./files/frps/frps.toml:/frps.toml:ro
           - ../../../config/vps0/frps/server.crt:/etc/frp/server.crt:ro
@@ -347,6 +349,7 @@ services:
             - 9091
         restart: unless-stopped
         mem_limit: 256M
+        cpus: 1.0
         healthcheck:
             test: ["CMD-SHELL", "wget --no-verbose --tries=1 -O - http://127.0.0.1:9091/api/health || exit 1"]
             interval: 30s
@@ -370,6 +373,7 @@ services:
             - 6379
         restart: unless-stopped
         mem_limit: 128M
+        cpus: 0.5
         healthcheck:
             test: ["CMD-SHELL", "redis-cli -a \"$$AUTHELIA_REDIS_PASSWORD\" --no-auth-warning ping || exit 1"]
             start_period: 1m
@@ -441,7 +445,7 @@ services:
             - "traefik.http.middlewares.redirect-to-https.redirectscheme.permanent=true"
         restart: unless-stopped
         mem_limit: 384M
-        cpus: 1.5
+        cpus: 2.0
         networks:
             - traefik
         logging: *logging
@@ -453,6 +457,7 @@ services:
         user: "$MY_UID:$MY_UID"
         restart: unless-stopped
         mem_limit: 64M
+        cpus: 0.25
         volumes:
             - ../../../current_target/compose_live_state/traefik/logs:/var/log/traefik
             - ./files/logrotate/traefik-access.conf:/vt/logrotate.conf:ro
@@ -464,6 +469,7 @@ services:
         container_name: crowdsec
         restart: unless-stopped
         mem_limit: 512M
+        cpus: 1.0
         networks:
             - traefik
         expose:
@@ -499,6 +505,7 @@ services:
         container_name: crowdsec_web_ui
         restart: unless-stopped
         mem_limit: 512M
+        cpus: 0.5
         user: "$MY_UID:$MY_UID"
         depends_on:
             - crowdsec
@@ -530,6 +537,7 @@ services:
         user: "$MY_UID:$MY_UID"
         restart: unless-stopped
         mem_limit: 512M
+        cpus: 1.0
         volumes:
             - ../../../current_target/compose_live_state/plausible/db:/var/lib/postgresql/data
         environment:
@@ -634,6 +642,7 @@ services:
         image: imranrdev/pixel-ntfy:latest@sha256:b6facde3707bbacae686ac7de2b41ca9190fe52a0f828aa8fe8be0505d9118e3
         restart: unless-stopped
         mem_limit: 128M
+        cpus: 0.25
         depends_on:
             - traefik
         labels:
@@ -659,6 +668,7 @@ services:
         image: imranrdev/isbn-lookup:latest@sha256:d3132424eeec7d432fead4adddd501f519d972110578bbc719a96c41d3097ba9
         restart: unless-stopped
         mem_limit: 128M
+        cpus: 0.25
         depends_on:
             - traefik
         labels:
@@ -688,6 +698,7 @@ services:
             - traefik
         restart: unless-stopped
         mem_limit: 384M
+        cpus: 1.0
         labels:
             - "traefik.enable=true"
             - "traefik.http.routers.metube.rule=Host(`ytdl.$CLOUD_SERVICES_DOMAIN`)"
@@ -716,6 +727,7 @@ services:
             - traefik
         restart: unless-stopped
         mem_limit: 192M
+        cpus: 0.5
         logging: *logging
 
     # IKOM - Kitchen order manager
@@ -746,6 +758,7 @@ services:
             - traefik
         restart: unless-stopped
         mem_limit: 128M
+        cpus: 0.5
         logging: *logging
 
     # CCT26 - Reddit + LLM tool
@@ -754,6 +767,7 @@ services:
         image: imranrdev/cct26:latest@sha256:a280a9651c9e43dd72e3df085c664be05ee8367d98e1b93e2d73947e484b65f1
         restart: unless-stopped
         mem_limit: 128M
+        cpus: 0.5
         depends_on:
             - traefik
         volumes:
@@ -799,6 +813,7 @@ services:
             - traefik
         restart: unless-stopped
         mem_limit: 128M
+        cpus: 0.25
         logging: *logging
 
     # Tech Sale - sale site for tech items
@@ -830,6 +845,7 @@ services:
             - traefik
         restart: unless-stopped
         mem_limit: 512M
+        cpus: 0.5
         logging: *logging
 
     # Home Sale - sale site for household items
@@ -861,6 +877,7 @@ services:
             - traefik
         restart: unless-stopped
         mem_limit: 512M
+        cpus: 0.5
         logging: *logging
 
     # Owncast Auth - Token-based access control for Owncast viewer
@@ -869,6 +886,7 @@ services:
         container_name: owncast-auth
         restart: unless-stopped
         mem_limit: 64M
+        cpus: 0.25
         command: python3 /app/auth.py
         environment:
             - OWNCAST_ACCESS_TOKEN=$OWNCAST_ACCESS_TOKEN
@@ -884,6 +902,7 @@ services:
         container_name: owncast
         restart: unless-stopped
         mem_limit: 512M
+        cpus: 1.0
         depends_on:
             - traefik
         volumes:
@@ -914,6 +933,7 @@ services:
         hostname: $TARGET
         restart: unless-stopped
         mem_limit: 256M
+        cpus: 0.5
         depends_on:
             - dockerproxy
         volumes:
@@ -933,6 +953,7 @@ services:
         container_name: strelaysrv
         restart: unless-stopped
         mem_limit: 128M
+        cpus: 0.5
         volumes:
             - strelaysrv:/var/strelaysrv
         command:
@@ -963,6 +984,7 @@ services:
             - shlink_db
         restart: unless-stopped
         mem_limit: 512M
+        cpus: 0.5
         labels:
             - "traefik.enable=true"
             - "traefik.http.routers.shlink.rule=Host(`ln.$BASE_SERVICES_DOMAIN`)"
@@ -978,6 +1000,7 @@ services:
         restart: unless-stopped
         user: "$MY_UID:$MY_UID"
         mem_limit: 256M
+        cpus: 0.5
         volumes:
             - ../../../current_target/compose_live_state/shlink/db:/var/lib/postgresql/data
         environment:
@@ -1002,6 +1025,7 @@ services:
             - shlink
         restart: unless-stopped
         mem_limit: 64M
+        cpus: 0.25
         labels:
             - "traefik.enable=true"
             - "traefik.http.routers.shlink_web_client.rule=Host(`ui.ln.$CLOUD_SERVICES_DOMAIN`)"
@@ -1020,6 +1044,7 @@ services:
         container_name: dozzle
         restart: unless-stopped
         mem_limit: 128M
+        cpus: 0.25
         depends_on:
             - dockerproxy
         environment:
@@ -1046,6 +1071,7 @@ services:
         container_name: uptime
         restart: unless-stopped
         mem_limit: 512M
+        cpus: 0.5
         depends_on:
             - traefik
         environment:
