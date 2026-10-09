@@ -10,12 +10,16 @@ set -euo pipefail
 WG_IF=awg0
 WG_CONF=/wg/awg0.conf
 WG_SUBNET=10.100.0.0/24
+POD_CIDR=10.42.0.0/16
+SERVICE_CIDR=10.43.0.0/16
 
 cleanup() {
     awg-quick down "$WG_CONF" 2>/dev/null || true
     ip link del "$WG_IF" 2>/dev/null || true
     rm -f "/var/run/amneziawg/$WG_IF.sock" 2>/dev/null || true
     while iptables -t nat -D POSTROUTING -s "$WG_SUBNET" ! -o "$WG_IF" -j MASQUERADE 2>/dev/null; do :; done
+    while iptables -t nat -D POSTROUTING -s "$WG_SUBNET" -d "$POD_CIDR" -j RETURN 2>/dev/null; do :; done
+    while iptables -t nat -D POSTROUTING -s "$WG_SUBNET" -d "$SERVICE_CIDR" -j RETURN 2>/dev/null; do :; done
     while iptables -D FORWARD -s "$WG_SUBNET" -j ACCEPT 2>/dev/null; do :; done
     while iptables -D FORWARD -d "$WG_SUBNET" -j ACCEPT 2>/dev/null; do :; done
 }
@@ -25,11 +29,15 @@ cleanup
 
 WG_QUICK_USERSPACE_IMPLEMENTATION=amneziawg-go awg-quick up "$WG_CONF"
 
+# Keep the real client source for cluster-destined traffic (NetworkPolicies
+# and the edge see the true 10.100.0.x client); masquerade everything else
+# (LAN/WAN) so replies come back through the tunnel.
+iptables -t nat -A POSTROUTING -s "$WG_SUBNET" -d "$POD_CIDR" -j RETURN
+iptables -t nat -A POSTROUTING -s "$WG_SUBNET" -d "$SERVICE_CIDR" -j RETURN
 iptables -t nat -A POSTROUTING -s "$WG_SUBNET" ! -o "$WG_IF" -j MASQUERADE
 
 # Docker sets FORWARD to DROP and kube-router only accepts pod traffic, so
-# non-pod forwarding (LAN/WAN) needs subnet-scoped accepts; pod-destined
-# traffic is admitted by the allow-vpn-traefik NetworkPolicy.
+# non-pod forwarding (LAN/WAN) needs subnet-scoped accepts.
 iptables -I FORWARD 1 -s "$WG_SUBNET" -j ACCEPT
 iptables -I FORWARD 1 -d "$WG_SUBNET" -j ACCEPT
 

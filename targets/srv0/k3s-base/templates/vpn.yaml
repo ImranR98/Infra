@@ -283,24 +283,3 @@ spec:
           configMap:
             name: vpn-dns
             defaultMode: 0444
----
-# kube-router's per-pod policy chain rejects non-pod sources to the svclb pods,
-# so VPN clients need this allow on the Traefik HTTPS hostPort.
-apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
-metadata:
-  name: allow-vpn-traefik
-  namespace: kube-system
-spec:
-  podSelector:
-    matchLabels:
-      svccontroller.k3s.cattle.io/svcname: traefik
-  ingress:
-    - from:
-        - ipBlock:
-            cidr: 10.100.0.0/24
-      ports:
-        - protocol: TCP
-          port: 443
-  policyTypes:
-    - Ingress

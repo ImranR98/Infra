@@ -5,19 +5,6 @@
 # The certificateRefs list is the platform's edge TLS inventory: one entry per
 # component Certificate. scripts/validate.sh checks every ref against the
 # rendered Certificates.
-apiVersion: cert-manager.io/v1
-kind: Certificate
-metadata:
-  name: home-local-tls
-  namespace: base
-spec:
-  secretName: home-local-tls
-  issuerRef:
-    name: ca-issuer
-    kind: ClusterIssuer
-  dnsNames:
-    - "*.home.local"
----
 apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
 metadata:
@@ -63,8 +50,8 @@ spec:
           - {name: crowdsec-web-ui-prod-tls}
           - {name: grafana-prod-tls}
           - {name: ntfy-prod-tls}
+          - {name: opencode-prod-tls}
           - {name: traefik-prod-tls, namespace: kube-system}
-          - {name: home-local-tls}
       allowedRoutes:
         namespaces:
           from: Same

@@ -45,7 +45,8 @@ metadata:
   namespace: base
 spec:
   parentRefs:
-    # VPN/LAN-only: not attached to websecure-proxy (the public FRP listener).
+    # LAN/VPN-only: not attached to websecure-proxy (the public FRP listener),
+    # so it is unreachable from the internet.
     - name: srv0
       sectionName: websecure
   hostnames:

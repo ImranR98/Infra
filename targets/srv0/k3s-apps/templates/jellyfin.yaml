@@ -164,42 +164,6 @@ spec:
           namespace: apps
           port: 8096
 ---
-# In initial mode, tv.{{ .Values.SERVICES_DOMAIN }} is protected by the Authelia header gate
-# while it is enabled. This breaks Jellyfin's first-time setup, so a LAN-only
-# route (defined below) provides unauthenticated access from private IPs.
-#
-# Add <cluster-ip> tv.home.local to /etc/hosts, or configure your
-# router's local DNS to resolve *.home.local to the cluster IP.
-#
-# The LAN route is always direct and unauthenticated (lan-whitelist only).
-apiVersion: gateway.networking.k8s.io/v1
-kind: HTTPRoute
-metadata:
-  name: jellyfin-ingress-local
-  namespace: base
-spec:
-  parentRefs:
-    - name: srv0
-      sectionName: websecure
-  hostnames:
-    - tv.home.local
-  rules:
-    - matches:
-        - path:
-            type: PathPrefix
-            value: /
-      filters:
-        - type: ExtensionRef
-          extensionRef:
-            group: traefik.io
-            kind: Middleware
-            name: lan-whitelist
-      backendRefs:
-        - name: jellyfin
-          namespace: apps
-          port: 8096
----
----
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:

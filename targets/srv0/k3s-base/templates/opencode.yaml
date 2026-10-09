@@ -1,0 +1,87 @@
+# Edge glue for the host-run `opencode serve` process (no pod in the cluster).
+# The selectorless Service + hand-written EndpointSlice route Traefik to srv0's
+# flannel bridge gateway, where the process binds: reachable from Traefik pods
+# on any node, invisible to the LAN/public. Traefik resolves backends from
+# EndpointSlices indexed by the kubernetes.io/service-name label and matches the
+# port by the Service port's name.
+#
+# VPN+LAN, never public: the HTTPRoute attaches to `websecure` only (never
+# websecure-proxy), so the public FRP path has no route and no certificate for
+# the hostname. LAN and VPN clients reach it with their real source IPs through
+# the Traefik hostPorts; Authelia SSO is the app-level gate. The backend port
+# itself is bound to the bridge, so it is not LAN-reachable.
+apiVersion: v1
+kind: Service
+metadata:
+  name: opencode
+  namespace: base
+spec:
+  ports:
+    - name: http
+      port: 4096
+      targetPort: 4096
+      protocol: TCP
+---
+apiVersion: discovery.k8s.io/v1
+kind: EndpointSlice
+metadata:
+  name: opencode
+  namespace: base
+  labels:
+    kubernetes.io/service-name: opencode
+addressType: IPv4
+ports:
+  - name: http
+    port: 4096
+    protocol: TCP
+endpoints:
+  - addresses:
+      - 10.42.0.1
+    # Traefik's Gateway provider requires an explicit ready condition on
+    # EndpointSlice endpoints (nil means not ready there, unlike pod-backed
+    # slices where the endpointslice controller sets it).
+    conditions:
+      ready: true
+      serving: true
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: opencode-prod-tls
+  namespace: base
+spec:
+  secretName: opencode-prod-tls
+  issuerRef:
+    name: letsencrypt-prod
+    kind: ClusterIssuer
+  dnsNames:
+    - opencode.{{ .Values.SERVICES_DOMAIN }}
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: opencode-ingress
+  namespace: base
+spec:
+  parentRefs:
+    # VPN + LAN, never public (websecure-proxy not attached).
+    - name: srv0
+      sectionName: websecure
+  hostnames:
+    - opencode.{{ .Values.SERVICES_DOMAIN }}
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      filters:
+        # Access is governed by the wildcard `*=admins, two_factor` rule in
+        # authelia.yaml; no per-host Authelia rule is needed.
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: forwardauth-authelia
+      backendRefs:
+        - name: opencode
+          port: 4096

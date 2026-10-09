@@ -101,10 +101,6 @@ CROWDSEC_LAPI_SECRET: "change_me" # openssl rand -hex 32
 #   kubectl -n base exec deploy/crowdsec-lapi -- cscli machines add crowdsec-web-ui --password '<value>' -f /dev/null
 CROWDSEC_WEBUI_LAPI_PASSWORD: "change_me" # openssl rand -hex 32
 
-# ====== Localhost Basic Auth ======
-LOCALHOST_AUTH_USER: "admin"
-LOCALHOST_AUTH_PASSWORD_HASH: "change_me" # openssl passwd -6 'password'
-
 # ====== Immich ======
 IMMICH_DB_PASSWORD: "change_me" # openssl rand -hex 16
 

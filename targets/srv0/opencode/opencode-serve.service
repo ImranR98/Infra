@@ -1,0 +1,18 @@
+[Unit]
+Description=opencode headless server (host process; VPN+LAN via K3s Traefik)
+StartLimitIntervalSec=0
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+# Login shell so the service sees the user's PATH (fnm, ~/.opencode/bin).
+# 10.42.0.1 is srv0's flannel bridge gateway: it only exists once k3s is up,
+# so the first attempts may fail and Restart=always retries.
+ExecStart=/bin/bash -lc 'exec %h/.opencode/bin/opencode serve --port 4096 --hostname 10.42.0.1'
+Restart=always
+RestartSec=10
+WorkingDirectory=%h
+
+[Install]
+WantedBy=default.target
