@@ -51,6 +51,7 @@ spec:
           - {name: grafana-prod-tls}
           - {name: ntfy-prod-tls}
           - {name: opencode-prod-tls}
+          - {name: longhorn-prod-tls}
           - {name: traefik-prod-tls, namespace: kube-system}
       allowedRoutes:
         namespaces:

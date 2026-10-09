@@ -89,3 +89,84 @@ spec:
       ports:
         - protocol: TCP
           port: 9500
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: longhorn-prod-tls
+  namespace: base
+spec:
+  secretName: longhorn-prod-tls
+  issuerRef:
+    name: letsencrypt-prod
+    kind: ClusterIssuer
+  dnsNames:
+    - longhorn.{{ .Values.SERVICES_DOMAIN }}
+---
+# Lets the base-namespace HTTPRoute reach the Longhorn UI Service.
+apiVersion: gateway.networking.k8s.io/v1
+kind: ReferenceGrant
+metadata:
+  name: allow-edge-from-base
+  namespace: longhorn-system
+spec:
+  from:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      namespace: base
+  to:
+    - group: ""
+      kind: Service
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: longhorn-ingress
+  namespace: base
+spec:
+  parentRefs:
+    # LAN/VPN-only: not attached to websecure-proxy (the public FRP listener).
+    - name: srv0
+      sectionName: websecure
+  hostnames:
+    - longhorn.{{ .Values.SERVICES_DOMAIN }}
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      filters:
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: forwardauth-authelia
+      backendRefs:
+        - name: longhorn-frontend
+          namespace: longhorn-system
+          port: 80
+---
+# The UI pod has no policy of its own (Longhorn's chart only covers the
+# manager/engine pods), so restrict it to the edge.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-longhorn-ui-from-traefik
+  namespace: longhorn-system
+spec:
+  podSelector:
+    matchLabels:
+      app: longhorn-ui
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: traefik
+      ports:
+        - protocol: TCP
+          port: 8000
