@@ -46,7 +46,7 @@ spec:
           - sh
           - -c
           - |
-            chown -R 1000:1000 /var/lib/ollama
+            chown -R {{ .Values.MY_UID }}:{{ .Values.MY_UID }} /var/lib/ollama
             chcon -R -t container_file_t /var/lib/ollama
         securityContext:
           runAsUser: 0
@@ -71,8 +71,6 @@ spec:
       # container_file_t-labelled /var/lib/ollama are both container_t-accessible.
       seLinuxOptions:
         level: s0
-    containerSecurityContext:
-      allowPrivilegeEscalation: false
     tolerations:
       - key: scheduling-discouraged
         operator: Equal

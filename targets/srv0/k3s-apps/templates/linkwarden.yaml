@@ -69,7 +69,7 @@ spec:
       labels:
         app: linkwarden
       annotations:
-        checksum/linkwarden-secrets: {{ printf "%s|%s" .Values.LINKWARDEN_NEXTAUTH_SECRET .Values.AUTHELIA_LINKWARDEN_CLIENT_SECRET_HASHABLE | sha256sum }}
+        checksum/linkwarden-secrets: {{ printf "%s|%s|%s|%s" .Values.LINKWARDEN_NEXTAUTH_SECRET .Values.AUTHELIA_LINKWARDEN_CLIENT_SECRET_HASHABLE .Values.LINKWARDEN_DB_PASSWORD .Values.LINKWARDEN_MEILI_MASTER_KEY | sha256sum }}
     spec:
       containers:
         - name: linkwarden

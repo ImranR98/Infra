@@ -154,7 +154,7 @@ spec:
           lifecycle:
             postStart:
               exec:
-                command: ["sh", "-c", "mkdir -p /data/downloads/incomplete /data/Movies /data/TV && chown -R 1000:1000 /data/downloads /data/Movies /data/TV"]
+                command: ["sh", "-c", "mkdir -p /data/downloads/incomplete /data/Movies /data/TV && chown -R {{ .Values.MY_UID }}:{{ .Values.MY_UID }} /data/downloads /data/Movies /data/TV"]
           securityContext:
             allowPrivilegeEscalation: false
           ports:

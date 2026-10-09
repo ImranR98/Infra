@@ -97,7 +97,7 @@ spec:
       labels:
         app: filebrowser
       annotations:
-        checksum/config: {{ printf "%s%s" (include "filebrowser.config" .) .Values.AUTHELIA_FILEBROWSER_CLIENT_SECRET_HASHABLE | sha256sum }}
+        checksum/config: {{ printf "%s%s%s" (include "filebrowser.config" .) .Values.AUTHELIA_FILEBROWSER_CLIENT_SECRET_HASHABLE .Values.FILEBROWSER_JWT_TOKEN_SECRET | sha256sum }}
     spec:
       securityContext:
         runAsUser: {{ .Values.MY_UID }}

@@ -4,7 +4,6 @@ import (
 	"log"
 	"net/http"
 	"net/netip"
-	"os"
 	"sync"
 	"time"
 
@@ -36,24 +35,6 @@ func loadDB() error {
 	dbMu.Unlock()
 	log.Println("database loaded")
 	return nil
-}
-
-func dbWatcher() {
-	var lastMod time.Time
-	for {
-		time.Sleep(10 * time.Second)
-		fi, err := os.Stat(dbPath)
-		if err != nil {
-			continue
-		}
-		if fi.ModTime().After(lastMod) {
-			lastMod = fi.ModTime()
-			if err := loadDB(); err != nil {
-				log.Printf("failed to reload database: %v", err)
-				lastMod = time.Time{}
-			}
-		}
-	}
 }
 
 func healthz(w http.ResponseWriter, r *http.Request) {
@@ -113,7 +94,6 @@ func main() {
 	if err := loadDB(); err != nil {
 		log.Printf("startup: could not load database (%v), starting without", err)
 	}
-	go dbWatcher()
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /healthz", healthz)

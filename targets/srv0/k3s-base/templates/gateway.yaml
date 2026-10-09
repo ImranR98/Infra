@@ -2,9 +2,39 @@
 # because Traefik resolves Middleware ExtensionRefs only in the route's
 # namespace (and the shared Middlewares live there).
 #
-# The certificateRefs list is the platform's edge TLS inventory: one entry per
-# component Certificate. scripts/validate.sh checks every ref against the
-# rendered Certificates.
+# `gateway.certRefs` is the platform's edge TLS inventory — one entry per
+# component Certificate exposed on both secure listeners. scripts/validate.sh
+# checks every ref against the rendered Certificates; add a new app's certRef
+# only after its Certificate is Ready. The `websecure`-only certs (LAN/VPN apps
+# that must never be reachable through the public FRP tunnel) are appended
+# explicitly next to the include.
+{{- define "gateway.certRefs" -}}
+- {name: dscpln-prod-tls, namespace: apps}
+- {name: fmd-prod-tls, namespace: apps}
+- {name: freshrss-prod-tls, namespace: apps}
+- {name: frigate-prod-tls, namespace: apps}
+- {name: headlamp-prod-tls, namespace: apps}
+- {name: homeassistant-prod-tls, namespace: apps}
+- {name: immich-prod-tls, namespace: apps}
+- {name: jellyfin-prod-tls, namespace: apps}
+- {name: linkwarden-prod-tls, namespace: apps}
+- {name: navidrome-prod-tls, namespace: apps}
+- {name: nextcloud-prod-tls, namespace: apps}
+- {name: openwebui-prod-tls, namespace: apps}
+- {name: opodsync-prod-tls, namespace: apps}
+- {name: plik-prod-tls, namespace: apps}
+- {name: prowlarr-prod-tls, namespace: apps}
+- {name: qbittorrent-prod-tls, namespace: apps}
+- {name: radarr-prod-tls, namespace: apps}
+- {name: seerr-prod-tls, namespace: apps}
+- {name: sonarr-prod-tls, namespace: apps}
+- {name: watxt-prod-tls, namespace: apps}
+- {name: authelia-prod-tls}
+- {name: crowdsec-web-ui-prod-tls}
+- {name: grafana-prod-tls}
+- {name: ntfy-prod-tls}
+- {name: traefik-prod-tls, namespace: kube-system}
+{{- end }}
 apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
 metadata:
@@ -24,35 +54,12 @@ spec:
       port: 443
       tls:
         mode: Terminate
-        certificateRefs:
-          - {name: dscpln-prod-tls, namespace: apps}
+        certificateRefs:{{ include "gateway.certRefs" . | nindent 10 }}
+          # LAN/VPN-only: not attached to websecure-proxy, so unreachable
+          # through the public FRP tunnel.
           - {name: filebrowser-prod-tls, namespace: apps}
-          - {name: fmd-prod-tls, namespace: apps}
-          - {name: freshrss-prod-tls, namespace: apps}
-          - {name: frigate-prod-tls, namespace: apps}
-          - {name: headlamp-prod-tls, namespace: apps}
-          - {name: homeassistant-prod-tls, namespace: apps}
-          - {name: immich-prod-tls, namespace: apps}
-          - {name: jellyfin-prod-tls, namespace: apps}
-          - {name: linkwarden-prod-tls, namespace: apps}
-          - {name: navidrome-prod-tls, namespace: apps}
-          - {name: nextcloud-prod-tls, namespace: apps}
-          - {name: openwebui-prod-tls, namespace: apps}
-          - {name: opodsync-prod-tls, namespace: apps}
-          - {name: plik-prod-tls, namespace: apps}
-          - {name: prowlarr-prod-tls, namespace: apps}
-          - {name: qbittorrent-prod-tls, namespace: apps}
-          - {name: radarr-prod-tls, namespace: apps}
-          - {name: seerr-prod-tls, namespace: apps}
-          - {name: sonarr-prod-tls, namespace: apps}
-          - {name: watxt-prod-tls, namespace: apps}
-          - {name: authelia-prod-tls}
-          - {name: crowdsec-web-ui-prod-tls}
-          - {name: grafana-prod-tls}
-          - {name: ntfy-prod-tls}
           - {name: opencode-prod-tls}
           - {name: longhorn-prod-tls}
-          - {name: traefik-prod-tls, namespace: kube-system}
       allowedRoutes:
         namespaces:
           from: Same
@@ -61,32 +68,7 @@ spec:
       port: 8443
       tls:
         mode: Terminate
-        certificateRefs:
-          - {name: dscpln-prod-tls, namespace: apps}
-          - {name: fmd-prod-tls, namespace: apps}
-          - {name: freshrss-prod-tls, namespace: apps}
-          - {name: frigate-prod-tls, namespace: apps}
-          - {name: headlamp-prod-tls, namespace: apps}
-          - {name: homeassistant-prod-tls, namespace: apps}
-          - {name: immich-prod-tls, namespace: apps}
-          - {name: jellyfin-prod-tls, namespace: apps}
-          - {name: linkwarden-prod-tls, namespace: apps}
-          - {name: navidrome-prod-tls, namespace: apps}
-          - {name: nextcloud-prod-tls, namespace: apps}
-          - {name: openwebui-prod-tls, namespace: apps}
-          - {name: opodsync-prod-tls, namespace: apps}
-          - {name: plik-prod-tls, namespace: apps}
-          - {name: prowlarr-prod-tls, namespace: apps}
-          - {name: qbittorrent-prod-tls, namespace: apps}
-          - {name: radarr-prod-tls, namespace: apps}
-          - {name: seerr-prod-tls, namespace: apps}
-          - {name: sonarr-prod-tls, namespace: apps}
-          - {name: watxt-prod-tls, namespace: apps}
-          - {name: authelia-prod-tls}
-          - {name: crowdsec-web-ui-prod-tls}
-          - {name: grafana-prod-tls}
-          - {name: ntfy-prod-tls}
-          - {name: traefik-prod-tls, namespace: kube-system}
+        certificateRefs:{{ include "gateway.certRefs" . | nindent 10 }}
       allowedRoutes:
         namespaces:
           from: Same

@@ -18,7 +18,7 @@ spec:
       # passwords, encryption key) are read at startup; a Secret-only change
       # doesn't touch the HelmChart CR, so hash the inputs into the pod.
       annotations:
-        checksum/authelia-secrets: {{ printf "%s|%s|%s|%s|%s|%s|%s|%s|%s|%s" .Values.AUTHELIA_USERS_DATABASE .Values.AUTHELIA_DB_PASSWORD .Values.AUTHELIA_REDIS_PASSWORD .Values.AUTHELIA_JWKS_KEY .Values.AUTHELIA_IMMICH_CLIENT_SECRET_HASHED .Values.AUTHELIA_OPENWEBUI_CLIENT_SECRET_HASHED .Values.AUTHELIA_HEADLAMP_CLIENT_SECRET_HASHED .Values.AUTHELIA_LINKWARDEN_CLIENT_SECRET_HASHED .Values.AUTHELIA_GRAFANA_CLIENT_SECRET_HASHED .Values.AUTHELIA_DB_ENCRYPTION_KEY | sha256sum }}
+        checksum/authelia-secrets: {{ printf "%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s" .Values.AUTHELIA_USERS_DATABASE .Values.AUTHELIA_DB_PASSWORD .Values.AUTHELIA_REDIS_PASSWORD .Values.AUTHELIA_JWKS_KEY .Values.AUTHELIA_IMMICH_CLIENT_SECRET_HASHED .Values.AUTHELIA_OPENWEBUI_CLIENT_SECRET_HASHED .Values.AUTHELIA_HEADLAMP_CLIENT_SECRET_HASHED .Values.AUTHELIA_LINKWARDEN_CLIENT_SECRET_HASHED .Values.AUTHELIA_GRAFANA_CLIENT_SECRET_HASHED .Values.AUTHELIA_FILEBROWSER_CLIENT_SECRET_HASHED .Values.AUTHELIA_OIDC_HMAC_SECRET .Values.AUTHELIA_DB_ENCRYPTION_KEY | sha256sum }}
       securityContext:
         container:
           runAsUser: {{ .Values.MY_UID }}
@@ -586,8 +586,6 @@ metadata:
   namespace: base
 type: Opaque
 stringData:
-  jwks.private-key.pem: |
-{{ .Values.AUTHELIA_JWKS_KEY | indent 4 }}
   oidc.immich.client-secret: "{{ .Values.AUTHELIA_IMMICH_CLIENT_SECRET_HASHED }}"
   oidc.openwebui.client-secret: "{{ .Values.AUTHELIA_OPENWEBUI_CLIENT_SECRET_HASHED }}"
   oidc.headlamp.client-secret: "{{ .Values.AUTHELIA_HEADLAMP_CLIENT_SECRET_HASHED }}"

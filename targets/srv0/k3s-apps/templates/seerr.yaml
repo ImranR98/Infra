@@ -16,10 +16,8 @@ spec:
       persistence:
         # existingClaim is used instead of inline PVC because the seerr Helm
         # chart does not support PVC labels — we need auto-backup: "true" on
-        # the PVC, so we create it ourselves in prereqs.yaml.
+        # the PVC, so we create it ourselves below.
         existingClaim: seerr-config
-        size: 5Gi
-        storageClass: longhorn
     extraEnv:
       - name: TZ
         value: {{ .Values.TZ }}

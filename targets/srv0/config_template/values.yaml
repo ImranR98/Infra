@@ -15,7 +15,7 @@
 # NOTE: the *_HASHABLE keys are consumed pre-hashed: the *_HASHED key (same
 # file) holds the output of `openssl passwd -6` (or `authelia crypto hash
 # generate pbkdf2 ...`); the *_HASHABLE plaintext stays for reference.
-# NOTE: keys below the first ====== line are machine/env paths (INFRA_ROOT,
+# NOTE: the final "Infra paths" section holds machine/env paths (INFRA_ROOT,
 # TARGET, PVC_BACKUP_DIR) — k3s-chart-only.
 
 # ====== Domain ======
@@ -30,7 +30,7 @@ NTFY_ADMIN_PASSWORD_HASH: "change_me" # docker run --rm -it binwiederhier/ntfy u
 NTFY_WRITE_ONLY_ACCOUNT_PASSWORD_HASH: "change_me" # docker run --rm -it binwiederhier/ntfy user hash
 
 # ====== Geoblock (Traefik middleware) ======
-# Indentation matters — must match spec.plugin.geoblock level in middlewares.yaml (6 spaces).
+# Indentation matters — must match spec.plugin.geoblock level in traefik.yaml (6 spaces).
 GEOBLOCK_CONFIG_SUBSET: |
   blackListMode: false
   countries:
@@ -122,7 +122,7 @@ FRIGATE_MQTT_PASSWORD: "change_me" # openssl rand -hex 16 (also add `frigate` us
 HA_MQTT_PASSWORD: "change_me" # openssl rand -hex 16 (also add `homeassistant` user to MOSQUITTO_CREDENTIALS)
 # The rpi go2rtc host's LAN IP is written literally into FRIGATE_ADDITIONAL_CONFIG below.
 # Deployment-specific Frigate config (go2rtc streams, cameras) appended to the
-# hardcoded section in frigate/helmchart.yaml.
+# hardcoded section in targets/srv0/k3s-apps/templates/frigate.yaml.
 # Multi-line YAML block scalar. {FRIGATE_*}
 # tokens are substituted by Frigate at runtime. GUI config-editor changes
 # don't survive restarts - scrape them back into here.
@@ -130,7 +130,7 @@ FRIGATE_ADDITIONAL_CONFIG: |
   go2rtc:
       streams:
         rpi: rtsp://admin:{FRIGATE_RTSP_PASSWORD}@192.168.8.XX:8554/rpi#timeout=5
-    cameras:
+  cameras:
       # Default camera: rpi go2rtc webcam stream (targets/rpi)
       rpi:
         ffmpeg:
@@ -200,8 +200,9 @@ FRIGATE_ADDITIONAL_CONFIG: |
       #         retain:
       #           days: 7
       # Example 2: USB camera plugged into the frigate node itself.
-      #   Path is the V4L2 device inside the container (the pod is privileged,
-      #   so all /dev/video* nodes of the node are visible).
+      #   Frigate is unprivileged and only gets the /dev/dri render node from
+      #   the generic-device-plugin, so a V4L2 camera needs its /dev/video*
+      #   node added to the plugin config and requested as a resource first.
       #   local_usb:
       #     ffmpeg:
       #       inputs:
@@ -319,7 +320,7 @@ NEXTCLOUD_DB_PASSWORD: "change_me" # openssl rand -hex 16
 GRAFANA_ADMIN_PASSWORD: "change_me" # openssl rand -base64 32
 # Same convention as the other Authelia OIDC clients: the plaintext secret
 # Grafana presents as its OIDC client secret (the _HASHED form is mounted
-# into Authelia via authelia/prereqs.yaml).
+# into Authelia via authelia.yaml).
 AUTHELIA_GRAFANA_CLIENT_SECRET_HASHABLE: "change_me" # docker run authelia/authelia:latest authelia crypto hash generate pbkdf2 --variant sha512 --random --random.length 72 --random.charset rfc3986
 AUTHELIA_GRAFANA_CLIENT_SECRET_HASHED: "change_me"
 

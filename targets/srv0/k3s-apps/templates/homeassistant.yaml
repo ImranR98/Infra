@@ -44,8 +44,9 @@ metadata:
   name: ha-dashboards
   namespace: apps
 data:
-  # YAML-mode Lovelace dashboard, mounted at /config/dashboards (see
-  # helmchart.yaml additionalMounts) and registered in configuration.yaml via
+  # YAML-mode Lovelace dashboard, mounted at /config/dashboards (see the
+  # Home Assistant HelmChart CR in this file for additionalMounts) and
+  # registered in configuration.yaml via
   # lovelace.dashboards.frigate-nvr. Uses the Advanced Camera Card
   # (auto-installed by the integration-update init container into
   # /config/www/community and registered via frontend.extra_module_url).
@@ -137,7 +138,8 @@ spec:
           # Advanced Camera Card (dashboard live view + timeline scrub);
           # installed by the integration-update init container (zip layout:
           # dist/). Served via /local, which is exempt from the session-
-          # dependent ingress middlewares (see ingress.yaml). The versioned
+          # dependent ingress middlewares (see the homeassistant HTTPRoute in
+          # this file). The versioned
           # path forces a cache miss on clients whose service worker holds
           # stale/poisoned copies of the old path.
           extra_module_url:

@@ -41,7 +41,7 @@ spec:
               memory: 64Mi
           env:
             - name: TZ
-              value: "America/New_York"
+              value: "{{ .Values.TZ }}"
             - name: CRON_MIN
               value: "2,32"
             - name: FRESHRSS_PASSWORD

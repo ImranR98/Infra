@@ -1,5 +1,5 @@
 # Baseline network policies for all user namespaces.
-# Component-specific rules in each component's network-policy.yaml.
+# Component-specific rules live in each component's template.
 #
 # POLICY MODEL (per namespace):
 #   deny-all-ingress      — block all ingress by default
@@ -159,7 +159,7 @@ spec:
   ingress:
     - from:
         - namespaceSelector: {}
-    - ports:
+      ports:
         - protocol: TCP
           port: 80
         - protocol: TCP

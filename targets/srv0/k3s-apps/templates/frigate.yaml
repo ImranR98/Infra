@@ -11,9 +11,9 @@ spec:
   targetNamespace: apps
   createNamespace: false
   version: 7.8.0
-  # Secret values (env passwords) live in apps/frigate-values via
-  # values-secret.yaml — merged as a later values file, so this CR stays
-  # free of plaintext secrets.
+  # Secret values (env passwords) live in the apps/frigate-values Secret at
+  # the bottom of this file — listed under valuesSecrets and merged as a later
+  # values file, so this CR stays free of plaintext secrets.
   valuesSecrets:
     - name: frigate-values
       keys:

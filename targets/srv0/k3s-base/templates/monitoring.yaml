@@ -281,7 +281,6 @@ spec:
         api_url: https://auth.{{ .Values.SERVICES_DOMAIN }}/api/oidc/userinfo
         use_pkce: true
         allow_sign_up: true
-        role_attribute_path: "contains(groups[*], 'admins') && 'Admin' || email == '{{ .Values.DOMAIN_OWNER_EMAIL }}' && 'Admin' || 'Viewer'"
         # Authelia's ID token carries no email/groups claims and Grafana never
         # merges the userinfo claims into role mapping, so mapping-based roles
         # always land on Viewer. Roles are therefore assigned once (the

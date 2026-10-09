@@ -21,21 +21,8 @@ MaxFileSizeStr      = "10GB"
 DefaultTTLStr       = "30d"
 MaxTTLStr           = "30d"
 
-feature_authentication = "forced"
-no_anonymous_uploads   = true
-feature_local_login     = "enabled"
 DefaultAdminLogin    = "admin"
 DefaultAdminPassword = "{{ .Values.PLIK_ADMIN_PASSWORD }}"
-
-feature_one_shot        = "enabled"
-feature_removable      = "enabled"
-feature_stream         = "enabled"
-feature_password       = "enabled"
-feature_comments       = "enabled"
-feature_set_ttl         = "enabled"
-feature_api_tokens      = "enabled"
-feature_e2ee           = "enabled"
-feature_text           = "enabled"
 {{- end -}}
 ---
 apiVersion: cert-manager.io/v1

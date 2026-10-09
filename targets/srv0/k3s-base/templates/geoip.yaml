@@ -129,7 +129,6 @@ spec:
       containers:
         - name: geoip
           image: imranrdev/geoip-service:latest@sha256:f2bf625934698e504a42056b309915c9beda12561d5c76cd2450193c8ef41a51
-          imagePullPolicy: Always
           ports:
             - containerPort: 8080
           securityContext:
@@ -171,33 +170,8 @@ spec:
     - port: 8080
       targetPort: 8080
 ---
----
-apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
-metadata:
-  name: allow-geoip-from-traefik
-  namespace: base
-spec:
-  podSelector:
-    matchLabels:
-      app: geoip-service
-  ingress:
-    - from:
-        - namespaceSelector:
-            matchLabels:
-              kubernetes.io/metadata.name: kube-system
-          podSelector:
-            matchLabels:
-              app.kubernetes.io/name: traefik
-      ports:
-        - port: 8080
-  policyTypes:
-    - Ingress
----
-# --- prereqs.yaml ---
 # The MaxMind credential Secret (account-id is quoted in the template so
 # Kubernetes keeps the numeric value as a string).
----
 # geoipupdate credentials (MaxMind GeoLite2).
 apiVersion: v1
 kind: Secret

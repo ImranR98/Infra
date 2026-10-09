@@ -166,8 +166,6 @@ spec:
               value: "https"
             - name: OVERWRITECLIURL
               value: "http://localhost"
-            - name: NEXTCLOUD_MAINTENANCE_WINDOW_START
-              value: "1"
           volumeMounts:
             - name: nextcloud-data
               mountPath: /var/www/html
