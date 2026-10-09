@@ -37,7 +37,7 @@ services:
     # go2rtc - RTSP/WebRTC media server for the USB webcam
     # Host /dev/video0 (webcam) is remapped to /dev/video2 in the container.
     # The webcam's UVC metadata node (/dev/video1) is deliberately not mapped.
-    # The Pi's hardware H.264 encoder (/dev/video11) is NOT mapped anymore:
+    # The Pi's hardware H.264 encoder (/dev/video11) is deliberately not mapped:
     # h264_v4l2m2m wedges at the driver level (see go2rtc.yaml comment), so
     # encoding is software x264.
     go2rtc:
