@@ -12,7 +12,7 @@ if [ -z "${INFRA_ROOT:-}" ]; then
 fi
 source "$INFRA_ROOT/scripts/common.sh"
 
-SU="$(get_sudo_cmd)"
+SU="sudo"
 kubectl_bin="$(command -v kubectl)" || { echo "Error: kubectl not found" >&2; exit 1; }
 
 usage() {
@@ -83,32 +83,24 @@ else
     install -d -m 755 /etc/rancher/k3s
     umask 077
     cat >/etc/rancher/k3s/config.yaml <<EOF2
-selinux: true
-write-kubeconfig-mode: "0600"
-flannel-backend: wireguard-native
 node-ip: $K3S_NODE_IP
 server: https://$K3S_SERVER_IP:6443
 token: $K3S_JOIN_TOKEN
-kube-controller-manager-arg:
-  - leader-elect-lease-duration=3m
-  - leader-elect-renew-deadline=2m
-  - leader-elect-retry-period=10s
-kube-scheduler-arg:
-  - leader-elect-lease-duration=3m
-  - leader-elect-renew-deadline=2m
-  - leader-elect-retry-period=10s
-kube-cloud-controller-manager-arg:
-  - leader-elect-lease-duration=3m
-  - leader-elect-renew-deadline=2m
-  - leader-elect-retry-period=10s
 EOF2
+REMOTE_SCRIPT
+    # Shared server config keys (SELinux, kubeconfig mode, flannel backend,
+    # leader-election lease tolerances) appended to the role-specific keys.
+    printf "cat >>/etc/rancher/k3s/config.yaml <<'K3S_CONFIG_COMMON_EOF'\n"
+    cat "$INFRA_ROOT/scripts/k3s-server-config-common.yaml"
+    printf 'K3S_CONFIG_COMMON_EOF\n'
+    cat <<'REMOTE_SCRIPT2'
     if ! command -v k3s >/dev/null 2>&1; then
         curl -sfL https://get.k3s.io | INSTALL_K3S_SKIP_START=true INSTALL_K3S_VERSION=stable sh -
     fi
     systemctl daemon-reload
     systemctl enable --now k3s
 fi
-REMOTE_SCRIPT
+REMOTE_SCRIPT2
 )"
 ssh -t "$node_user@$node_ip" "sudo bash -s" <<<"$remote_script"
 

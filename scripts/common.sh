@@ -1,5 +1,5 @@
 #!/bin/bash
-# scripts/common.sh — env bootstrap + shared helpers (_confirm/get_sudo_cmd/
+# scripts/common.sh — env bootstrap + shared helpers (_confirm/
 # get_node_ip/wait_for_k3s_cluster) for the retained bash scripts.
 [[ "${INFRA_LIB_LOADED:-}" = true ]] && return 0
 INFRA_LIB_LOADED=true
@@ -15,19 +15,11 @@ fi
 export INFRA_ROOT
 [ -n "${COMPOSE_STATE_DIR:-}" ] || export COMPOSE_STATE_DIR="$INFRA_ROOT/current_target/compose_live_state"
 [ -n "${PVC_BACKUP_DIR:-}" ] || export PVC_BACKUP_DIR="$INFRA_ROOT/k3s_state_backups"
-if [ -z "${INFRA_INTERACTIVE:-}" ]; then
-    if [ -t 0 ]; then export INFRA_INTERACTIVE=true; else export INFRA_INTERACTIVE=false; fi
-fi
-export TARGET="${TARGET:-}"
 
 _confirm() {
     local prompt="${1:-Proceed?}" yn
     read -r -p "$prompt [y/N] " yn
     [[ "$yn" =~ ^[Yy] ]]
-}
-
-get_sudo_cmd() {
-    echo "sudo"
 }
 
 get_node_ip() {
@@ -67,6 +59,25 @@ set_my_uid() {
 # when this machine's hostname differs, so check flows like validate can run
 # for any target from any checkout.
 require_target() {
+    _require_target "$1"
+    if [ "$(hostname)" != "$TARGET" ]; then
+        echo "Warning: hostname '$(hostname)' does not match target '$TARGET'." >&2
+        echo "Deploying may apply the wrong configuration." >&2
+    fi
+}
+
+# require_target_host — like require_target, but hard-fails when this machine's
+# hostname does not match the target (compose ops run on the target machine).
+require_target_host() {
+    _require_target "$1"
+    if [ "$(hostname)" != "$TARGET" ]; then
+        echo "Error: running on host '$(hostname)' but target is '$TARGET'." >&2
+        exit 1
+    fi
+}
+
+# _require_target — validate the target name and export TARGET (no hostname check).
+_require_target() {
     local t="${1:-}"
     if [ -z "$t" ]; then
         echo "Error: usage: $(basename "$0") <target>" >&2
@@ -79,27 +90,3 @@ require_target() {
     export TARGET="$t"
     set_my_uid
 }
-
-# require_target_host — like require_target, but hard-fails when this machine's
-# hostname does not match the target (compose ops run on the target machine).
-require_target_host() {
-    require_target "$1"
-    if [ "$(hostname)" != "$TARGET" ]; then
-        echo "Error: running on host '$(hostname)' but target is '$TARGET'." >&2
-        exit 1
-    fi
-}
-
-# ---- Target mode guards ------------------------------------------------------
-if [ -n "$TARGET" ]; then
-    # Warn if this machine's hostname does not match the target name
-    if [ "$(hostname)" != "$TARGET" ]; then
-        echo "Warning: hostname '$(hostname)' does not match target '$TARGET'." >&2
-        echo "Deploying may apply the wrong configuration. Press Enter to continue." >&2
-        if [ "$INFRA_INTERACTIVE" = true ]; then
-            read -r || true
-        fi
-    fi
-
-    set_my_uid
-fi

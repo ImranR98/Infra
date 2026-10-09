@@ -22,10 +22,13 @@ usage() {
     echo "Checks (target-dependent):"
     echo "  - every file in targets/<target>/config_template/ exists in config/<target>/"
     echo "    (same relative path) and contains no template placeholders"
-    echo "  - values.yaml: key completeness vs the template + placeholder values"
-    echo "  - compose.env: key completeness vs the template + placeholder values"
+    echo "  - values.yaml: key completeness vs the template (missing and extra keys)"
+    echo "    and placeholder values"
+    echo "  - compose.env: key completeness vs the template (missing and extra keys)"
+    echo "    and placeholder values"
     echo "  - helm lint + helm template of each k3s chart (targets/<target>/k3s-base,"
     echo "    k3s-apps), rejecting '<no value>' renders"
+    echo "  - local Traefik plugin copies under files/ match their plugins/ sources"
     echo "  - Gateway certificateRefs resolve to rendered Certificates and"
     echo "    cross-namespace refs are covered by a ReferenceGrant"
     echo "  - compose mounts under ../../../config/ point at existing files"
@@ -39,13 +42,22 @@ check_yaml_vars() {
     local template="$1" config_file="$2"
     local ok=1
 
-    local missing
+    local missing extra
     missing=$(comm -23 \
         <(yq '. | keys | .[]' "$template" | sort) \
         <(yq '. | keys | .[]' "$config_file" | sort))
     if [ -n "$missing" ]; then
         _err "ERROR: $config_file is missing required variables:"
         awk '{print "  " $0}' <<<"$missing" >&2
+        ok=0
+    fi
+
+    extra=$(comm -13 \
+        <(yq '. | keys | .[]' "$template" | sort) \
+        <(yq '. | keys | .[]' "$config_file" | sort))
+    if [ -n "$extra" ]; then
+        _err "ERROR: $config_file has variables absent from the template (dead or renamed):"
+        awk '{print "  " $0}' <<<"$extra" >&2
         ok=0
     fi
 
@@ -89,13 +101,22 @@ check_env_vars() {
     local template="$1" config_file="$2"
     local ok=1
 
-    local missing
+    local missing extra
     missing=$(comm -23 \
         <(grep -oE '^[A-Z_][A-Z_0-9]*=' "$template" | tr -d '=' | sort) \
         <(grep -oE '^[A-Z_][A-Z_0-9]*=' "$config_file" | tr -d '=' | sort))
     if [ -n "$missing" ]; then
         _err "ERROR: $config_file is missing required variables:"
         awk '{print "  " $0}' <<<"$missing" >&2
+        ok=0
+    fi
+
+    extra=$(comm -13 \
+        <(grep -oE '^[A-Z_][A-Z_0-9]*=' "$template" | tr -d '=' | sort) \
+        <(grep -oE '^[A-Z_][A-Z_0-9]*=' "$config_file" | tr -d '=' | sort))
+    if [ -n "$extra" ]; then
+        _err "ERROR: $config_file has variables absent from the template (dead or renamed):"
+        awk '{print "  " $0}' <<<"$extra" >&2
         ok=0
     fi
 
@@ -251,6 +272,23 @@ check_helm() {
             ok=0
         fi
         all_out+="$out"$'\n'
+
+        # The chart ships one local Traefik plugin via files/, copied from the
+        # plugin sources by the plugin's build.sh — keep the copies in sync.
+        local plug
+        for plug in "$chart_dir"/plugins/*/; do
+            [ -d "$plug" ] || continue
+            if [ -f "${plug}.traefik.yml" ] && [ -f "$chart_dir/files/traefik-plugin-config.yaml" ] &&
+                ! cmp -s "${plug}.traefik.yml" "$chart_dir/files/traefik-plugin-config.yaml"; then
+                _err "ERROR: $chart_dir/files/traefik-plugin-config.yaml is out of date vs ${plug}.traefik.yml"
+                ok=0
+            fi
+            if [ -f "${plug}plugin.wasm" ] && [ -f "$chart_dir/files/plugin.wasm" ] &&
+                ! cmp -s "${plug}plugin.wasm" "$chart_dir/files/plugin.wasm"; then
+                _err "ERROR: $chart_dir/files/plugin.wasm is out of date vs ${plug}plugin.wasm"
+                ok=0
+            fi
+        done
     done
 
     check_gateway_certrefs "$all_out" || ok=0

@@ -17,7 +17,7 @@ usage() {
 
 [ $# -ge 1 ] && { case "$1" in -h | --help) usage ;; esac; }
 
-SU="$(get_sudo_cmd)"
+SU="sudo"
 node_ip="$(get_node_ip)"
 [ -n "$node_ip" ] || { echo "Error: cannot determine this machine's IP" >&2; exit 1; }
 
@@ -33,32 +33,15 @@ fi
 
 echo "==> Writing server config"
 # Flannel selects the interface owning node-ip, so no flannel-iface is needed
-# to keep VPN interfaces out. The lease flags keep the in-process controller
-# manager, scheduler, and cloud-controller-manager from exiting k3s when etcd
-# write stalls make them miss a lease renewal; observed stalls approach a
-# minute, so the renew deadline is 2x the worst. Dead-leader detection is
-# slower, which costs nothing on a single server. The cloud-controller-manager
-# needs its own key: the controller-manager args do not reach it.
+# to keep VPN interfaces out. Shared keys (SELinux, kubeconfig mode, flannel
+# backend, leader-election lease tolerances) live in
+# scripts/k3s-server-config-common.yaml.
 $SU mkdir -p /etc/rancher/k3s
-$SU tee /etc/rancher/k3s/config.yaml >/dev/null <<EOF
-selinux: true
-write-kubeconfig-mode: "0600"
-flannel-backend: wireguard-native
-cluster-init: true
-node-ip: $node_ip
-kube-controller-manager-arg:
-  - leader-elect-lease-duration=3m
-  - leader-elect-renew-deadline=2m
-  - leader-elect-retry-period=10s
-kube-scheduler-arg:
-  - leader-elect-lease-duration=3m
-  - leader-elect-renew-deadline=2m
-  - leader-elect-retry-period=10s
-kube-cloud-controller-manager-arg:
-  - leader-elect-lease-duration=3m
-  - leader-elect-renew-deadline=2m
-  - leader-elect-retry-period=10s
-EOF
+{
+    printf 'node-ip: %s\n' "$node_ip"
+    echo 'cluster-init: true'
+    cat "$INFRA_ROOT/scripts/k3s-server-config-common.yaml"
+} | $SU tee /etc/rancher/k3s/config.yaml >/dev/null
 
 echo "==> Starting K3s"
 $SU systemctl daemon-reload

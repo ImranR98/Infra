@@ -155,14 +155,14 @@ else
         if [[ "$docker_err" == *[Pp]ermission\ denied* ]]; then
             need_sudo=true
             if [ -n "$sudo_password" ]; then
-                if ! printf '%s\n' "$sudo_password" | "$(get_sudo_cmd)" -S -p '' docker info >/dev/null 2>&1; then
-                    echo "Error: docker is not usable via $(get_sudo_cmd) with the supplied password." >&2
+                if ! printf '%s\n' "$sudo_password" | sudo -S -p '' docker info >/dev/null 2>&1; then
+                    echo "Error: docker is not usable via sudo with the supplied password." >&2
                     exit 1
                 fi
-                docker_cmd=("$(get_sudo_cmd)" -S -p '' docker)
+                docker_cmd=(sudo -S -p '' docker)
                 echo "Docker needs elevated privileges; using 'sudo -S' with the supplied password" >&2
             else
-                docker_cmd=("$(get_sudo_cmd)" docker)
+                docker_cmd=(sudo docker)
                 echo "Docker needs elevated privileges; using ${docker_cmd[*]}" >&2
             fi
         else

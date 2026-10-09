@@ -2,7 +2,7 @@
 # scripts/pvc.sh — PVC backup/restore for the K3s cluster.
 # Usage: pvc.sh backup <pvc-name> | backup --all [-y] | restore <pvc-name> | restore --all [-y]
 # The in-cluster pvc-backup CronJob runs `pvc.sh backup --all -y` (see
-# targets/srv0/k3s/templates/base/pvc-backup.yaml).
+# targets/srv0/k3s-base/templates/pvc-backup.yaml).
 
 if [ -z "${INFRA_ROOT:-}" ]; then
     INFRA_ROOT="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd)"
@@ -380,11 +380,9 @@ pvc_backup_data() {
     return 0
 }
 
-# pvc_backup_all <auto-yes>
+# pvc_backup_all
 # Backs up every PVC with label auto-backup=true.
-# Skips the confirmation prompt when auto_yes=true.
 pvc_backup_all() {
-    local auto_yes="${1:-false}"
     local backup_dir="${PVC_BACKUP_DIR:?PVC_BACKUP_DIR not set}"
     local total=0 failed=0
     local pvc_list timestamp ns name exclude workloads
@@ -455,12 +453,10 @@ pvc_restore_data() {
     return 0
 }
 
-# pvc_restore_all <auto-yes>
+# pvc_restore_all
 # Restores every PVC with label auto-backup=true that has an existing backup archive.
 # Bulk scales down all workloads first, restores each PVC, then scales back up.
-# Skips the confirmation prompt when auto_yes=true.
 pvc_restore_all() {
-    local auto_yes="${1:-false}"
     local backup_dir="${PVC_BACKUP_DIR:?PVC_BACKUP_DIR not set}"
     local total=0 failed=0 skipped=0
     local pvc_list ns name backup_file timestamp
@@ -650,7 +646,7 @@ pvc_restore_one() {
 }
 
 pvc_main() {
-    local action="${1:-}" all_mode=false auto_yes=false
+    local action="${1:-}" all_mode=false auto_yes=false pvc_name=""
     shift || true
 
     case "$action" in
@@ -661,31 +657,35 @@ pvc_main() {
             ;;
     esac
 
-    if [ "${1:-}" = "--all" ]; then
-        all_mode=true
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            --all) all_mode=true ;;
+            -y) auto_yes=true ;;
+            -*) echo "Error: unknown option '$1'" >&2; exit 1 ;;
+            *)
+                [ -z "$pvc_name" ] || { echo "Error: unexpected argument '$1'" >&2; exit 1; }
+                pvc_name="$1"
+                ;;
+        esac
         shift
-    fi
-    if [ "${1:-}" = "-y" ]; then
-        auto_yes=true
-        shift
-    fi
+    done
 
     if $all_mode; then
         if [ "$action" = backup ]; then
             if ! $auto_yes && ! _confirm "Back up all auto-backup labeled PVCs?"; then
                 echo "Aborted."; exit 0
             fi
-            pvc_backup_all true
+            pvc_backup_all
         else
             if ! $auto_yes && ! _confirm "Restore all auto-backup labeled PVCs from backup archives?"; then
                 echo "Aborted."; exit 0
             fi
-            pvc_restore_all true
+            pvc_restore_all
         fi
         exit $?
     fi
 
-    local pvc_name="${1:?Usage: $0 $action <pvc-name> | --all [-y]}"
+    [ -n "$pvc_name" ] || { echo "Usage: $0 $action <pvc-name> | --all [-y]" >&2; exit 1; }
     if [ "$action" = backup ]; then
         pvc_backup_one "$pvc_name" "$auto_yes"
     else

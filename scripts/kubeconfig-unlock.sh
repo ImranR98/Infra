@@ -11,7 +11,7 @@ if [ -z "${INFRA_ROOT:-}" ]; then
 fi
 source "$INFRA_ROOT/scripts/common.sh"
 
-SU="$(get_sudo_cmd)"
+SU="sudo"
 K3S_KUBECONFIG="/etc/rancher/k3s/k3s.yaml"
 USER_KUBECONFIG="$HOME/.kube/config"
 

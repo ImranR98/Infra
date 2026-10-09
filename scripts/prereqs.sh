@@ -13,7 +13,7 @@ fi
 source "$INFRA_ROOT/scripts/common.sh"
 set_my_uid
 
-SU="$(get_sudo_cmd)"
+SU="sudo"
 HELM_VERSION="3.22.0"
 
 usage() {
@@ -30,11 +30,11 @@ usage() {
 
 if command -v dnf >/dev/null 2>&1; then
     PKG_CMD=(dnf install -y)
-    PACKAGES=(yq jq curl python3 golang openssl shellcheck yamllint git acl iscsi-initiator-utils nfs-utils)
+    PACKAGES=(yq jq curl python3 golang openssl shellcheck yamllint git acl iscsi-initiator-utils nfs-utils nodejs npm)
 elif command -v apt-get >/dev/null 2>&1; then
     $SU apt-get update -y
     PKG_CMD=(apt-get install -y)
-    PACKAGES=(yq jq curl python3 golang-go openssl shellcheck yamllint git acl open-iscsi nfs-common)
+    PACKAGES=(yq jq curl python3 golang-go openssl shellcheck yamllint git acl open-iscsi nfs-common nodejs npm)
 else
     echo "Error: neither dnf nor apt-get found — cannot install packages" >&2
     exit 1
@@ -151,7 +151,7 @@ fi
 
 echo "==> Verifying prerequisites"
 missing=0
-for tool in helm docker yq jq curl python3 go openssl shellcheck yamllint; do
+for tool in helm docker yq jq curl python3 go openssl shellcheck yamllint node; do
     if command -v "$tool" >/dev/null 2>&1; then
         echo "  [OK] $tool"
     else

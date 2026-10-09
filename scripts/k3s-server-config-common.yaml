@@ -1,0 +1,22 @@
+# K3s server config lines shared by k3s-server.sh (control-plane bootstrap) and
+# k3s-join.sh (server-role joins). The lease tolerances keep the in-process
+# controller-manager, scheduler, and cloud-controller-manager from exiting k3s
+# when etcd write stalls make them miss a lease renewal; observed stalls approach
+# a minute, so the renew deadline is 2x the worst. Dead-leader detection is
+# slower, which costs nothing on a small cluster. The cloud-controller-manager
+# needs its own key: the controller-manager args do not reach it.
+selinux: true
+write-kubeconfig-mode: "0600"
+flannel-backend: wireguard-native
+kube-controller-manager-arg:
+  - leader-elect-lease-duration=3m
+  - leader-elect-renew-deadline=2m
+  - leader-elect-retry-period=10s
+kube-scheduler-arg:
+  - leader-elect-lease-duration=3m
+  - leader-elect-renew-deadline=2m
+  - leader-elect-retry-period=10s
+kube-cloud-controller-manager-arg:
+  - leader-elect-lease-duration=3m
+  - leader-elect-renew-deadline=2m
+  - leader-elect-retry-period=10s

@@ -10,11 +10,6 @@ if [ -z "${INFRA_ROOT:-}" ]; then
 fi
 source "$INFRA_ROOT/scripts/common.sh"
 
-usage() {
-    echo "Usage: $(basename "$0")   (run ON the node; root or sudo)"
-    exit 1
-}
-
 [ "$(id -u)" -eq 0 ] || { echo "Error: must run as root (sudo $0)" >&2; exit 1; }
 
 # ---- sysctls ----------------------------------------------------------------
