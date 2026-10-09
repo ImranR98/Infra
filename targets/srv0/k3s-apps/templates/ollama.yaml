@@ -10,7 +10,7 @@ spec:
   targetNamespace: apps
   createNamespace: false
   failurePolicy: abort
-  version: 1.85.0
+  version: 1.87.0
   valuesContent: |-
     image:
       repository: ollama/ollama
