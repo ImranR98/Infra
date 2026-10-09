@@ -1,12 +1,10 @@
 /current_target/
 /compose_state_backups/
 /k3s_state_backups/
-/state/
-/vars/
-/temp
 /config/
 targets/*/compose/compose.private.yaml
 targets/*/compose/.env
+targets/*/k3s-base/plugins/*/plugin.wasm
 ~*
 **/__pycache__
 .venv/

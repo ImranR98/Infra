@@ -1,20 +1,12 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "baseBranches": [
-    "master"
-  ],
   "rangeStrategy": "replace",
   "prHourlyLimit": 20,
   "prConcurrentLimit": 20,
-  "branchConcurrentLimit": 20,
   "automerge": false,
-  "ignoreTests": true,
   "labels": [
     "deps"
   ],
-  "digest": {
-    "enabled": true
-  },
   "kubernetes": {
     "managerFilePatterns": [
       "/^targets\\/srv0\\/k3s-(base|apps)\\/.*\\.ya?ml$/"
@@ -24,8 +16,8 @@
     {
       "customType": "regex",
       "description": "Images inside the k3s charts (repository/tag pairs and single-line image refs). currentDigest is captured so digest-pinned images are recognized as pinned and refreshed; without it Renovate re-pins them and the branch update fails verification.",
-      "fileMatch": [
-        "targets/srv0/k3s-(base|apps)/.+\\.ya?ml$"
+      "managerFilePatterns": [
+        "/targets\\/srv0\\/k3s-(base|apps)\\/.+\\.ya?ml$/"
       ],
       "matchStrings": [
         "repository:\\s*(?<depName>\\S+)\\s*\\n(?:[^\\n]*\\n){0,10}?\\s*tag:\\s*\"?(?<currentValue>[^\"\\s@#]+)(?:@(?<currentDigest>sha256:[a-f0-9]+))?\"?",
@@ -37,8 +29,8 @@
     {
       "customType": "regex",
       "description": "immich-machine-learning: GHCR publishes 200k+ tags (per-commit/PR/variant builds), so the docker datasource's fetch-all-pages enumeration intermittently fails and Renovate skips the update with no-result. Look the version up from the immich GitHub releases instead (tiny list, authenticated by the platform token). currentValue captures only the base version, so the default replacement (replaceString.replace(currentValue, newValue)) preserves the -openvino suffix: v3.1.0-openvino -> v3.2.0-openvino.",
-      "fileMatch": [
-        "targets/srv0/k3s-apps/templates/immich.yaml"
+      "managerFilePatterns": [
+        "/targets\\/srv0\\/k3s-apps\\/templates\\/immich.yaml/"
       ],
       "matchStrings": [
         "repository:\\s*(?<depName>ghcr\\.io/immich-app/immich-machine-learning)\\s*\\n\\s*tag:\\s*\"?(?<currentValue>v\\d+\\.\\d+\\.\\d+)(?:-openvino)?\"?"
@@ -50,8 +42,8 @@
     {
       "customType": "regex",
       "description": "helm.cattle.io HelmChart CR chart versions (oci:// — via docker datasource; the helm datasource has no OCI support)",
-      "fileMatch": [
-        "targets/srv0/k3s-(base|apps)/.+\\.ya?ml$"
+      "managerFilePatterns": [
+        "/targets\\/srv0\\/k3s-(base|apps)\\/.+\\.ya?ml$/"
       ],
       "matchStrings": [
         "chart:\\s*oci://(?<depName>\\S+)\\s*\\n(?:[^\\n]*\\n){0,5}?\\s*version:\\s*(?<currentValue>\\S+)"
@@ -62,8 +54,8 @@
     {
       "customType": "regex",
       "description": "helm.cattle.io HelmChart CR chart versions (classic chart:+repo: form)",
-      "fileMatch": [
-        "targets/srv0/k3s-(base|apps)/.+\\.ya?ml$"
+      "managerFilePatterns": [
+        "/targets\\/srv0\\/k3s-(base|apps)\\/.+\\.ya?ml$/"
       ],
       "matchStrings": [
         "chart:\\s*(?<depName>\\S+)\\s*\\n(?:[^\\n]*\\n){0,5}?\\s*repo:\\s*(?<registryUrl>\\S+)\\s*\\n(?:[^\\n]*\\n){0,10}?\\s*version:\\s*(?<currentValue>\\S+)"
@@ -74,8 +66,8 @@
     {
       "customType": "regex",
       "description": "upgrade.cattle.io Plan CR k3s versions",
-      "fileMatch": [
-        "targets/srv0/k3s-(base|apps)/.+\\.ya?ml$"
+      "managerFilePatterns": [
+        "/targets\\/srv0\\/k3s-(base|apps)\\/.+\\.ya?ml$/"
       ],
       "matchStrings": [
         "version:\\s*\"?v(?<currentValue>\\d+\\.\\d+\\.\\d+\\+k3s\\d+)\"?"
@@ -87,9 +79,9 @@
     {
       "customType": "regex",
       "description": "Traefik plugin version pins in additionalArguments (k3s HelmChartConfig + compose)",
-      "fileMatch": [
-        "targets/srv0/k3s-(base|apps)/.+\\.ya?ml$",
-        "targets/.+/compose/compose\\.ya?ml$"
+      "managerFilePatterns": [
+        "/targets\\/srv0\\/k3s-(base|apps)\\/.+\\.ya?ml$/",
+        "/targets\\/.+\\/compose\\/compose\\.ya?ml$/"
       ],
       "matchStrings": [
         "--experimental\\.plugins\\.[^\\s.\"=]+\\.modulename=github\\.com/(?<owner>[^/]+)/(?<repo>[^\\s\"']+)[^\\n]*\\n\\s*-\\s*\"--experimental\\.plugins\\.[^\\s.\"=]+\\.version=v?(?<currentValue>[^\\s\"']+)"
@@ -101,8 +93,8 @@
     {
       "customType": "regex",
       "description": "Home Assistant Frigate integration pinned version (no runtime GitHub API polling)",
-      "fileMatch": [
-        "targets/srv0/k3s-apps/templates/homeassistant.yaml"
+      "managerFilePatterns": [
+        "/targets\\/srv0\\/k3s-apps\\/templates\\/homeassistant.yaml/"
       ],
       "matchStrings": [
         "repo=blakeblackshear/frigate-hass-integration\\n(?:[^\\n]*\\n){0,10}?\\s*latest=\"v(?<currentValue>\\d+\\.\\d+\\.\\d+)\""
@@ -114,8 +106,8 @@
     {
       "customType": "regex",
       "description": "Advanced Camera Card pinned version (no runtime GitHub API polling)",
-      "fileMatch": [
-        "targets/srv0/k3s-apps/templates/homeassistant.yaml"
+      "managerFilePatterns": [
+        "/targets\\/srv0\\/k3s-apps\\/templates\\/homeassistant.yaml/"
       ],
       "matchStrings": [
         "card=dermotduffy/advanced-camera-card\\n(?:[^\\n]*\\n){0,10}?\\s*card_latest=\"v(?<currentValue>\\d+\\.\\d+\\.\\d+)\""
@@ -127,8 +119,8 @@
     {
       "customType": "regex",
       "description": "dotdc Grafana dashboard URLs in the k8s-monitoring values (all six dashboards share one version)",
-      "fileMatch": [
-        "targets/srv0/k3s-base/templates/monitoring\\.yaml$"
+      "managerFilePatterns": [
+        "/targets\\/srv0\\/k3s-base\\/templates\\/monitoring\\.yaml$/"
       ],
       "matchStrings": [
         "raw\\.githubusercontent\\.com/dotdc/grafana-dashboards-kubernetes/v(?<currentValue>\\d+\\.\\d+\\.\\d+)/"
@@ -140,8 +132,8 @@
     {
       "customType": "regex",
       "description": "Images embedded in pvc.sh's generated backup/restore pod YAML",
-      "fileMatch": [
-        "scripts/pvc\\.sh$"
+      "managerFilePatterns": [
+        "/scripts\\/pvc\\.sh$/"
       ],
       "matchStrings": [
         "image:\\s*(?<depName>[^\\s@:\"']+):(?<currentValue>[^\\s@:\"'#]+)"
@@ -152,8 +144,8 @@
     {
       "customType": "regex",
       "description": "Pinned helm version in prereqs.sh",
-      "fileMatch": [
-        "scripts/prereqs\\.sh$"
+      "managerFilePatterns": [
+        "/scripts\\/prereqs\\.sh$/"
       ],
       "matchStrings": [
         "HELM_VERSION=\"(?<currentValue>\\d+\\.\\d+\\.\\d+)\""
