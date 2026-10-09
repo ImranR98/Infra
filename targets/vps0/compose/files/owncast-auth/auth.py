@@ -5,7 +5,7 @@ from http.server import HTTPServer, BaseHTTPRequestHandler
 from urllib.parse import urlparse, parse_qs
 
 
-TOKEN = os.environ["OWNCAST_ACCESS_TOKEN"]
+TOKEN = os.environ.get("OWNCAST_ACCESS_TOKEN", "")
 if not TOKEN:
     raise SystemExit("OWNCAST_ACCESS_TOKEN must be set and non-empty")
 COOKIE_NAME = "owncast_token"

@@ -454,7 +454,6 @@ services:
     traefik-logrotate:
         image: vitess/logrotate:latest@sha256:5dce34fbc2a1a34fc343620f45a5c075e819f5a4fe2b36db0f6468ff06ebbd75
         container_name: traefik-logrotate
-        user: "$MY_UID:$MY_UID"
         restart: unless-stopped
         mem_limit: 64M
         cpus: 0.25
