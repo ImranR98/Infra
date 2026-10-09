@@ -452,7 +452,7 @@ services:
 
     # Traefik logrotate - caps the host-mounted access log (CrowdSec's acquisition source)
     traefik-logrotate:
-        image: vitess/logrotate:latest@sha256:5dce34fbc2a1a34fc343620f45a5c075e819f5a4fe2b36db0f6468ff06ebbd75
+        image: vitess/logrotate:latest@sha256:8a298ad5114c92c520cafa312d7090f31ef61a14a5244b482826a4f566ba2955
         container_name: traefik-logrotate
         user: "$MY_UID:$MY_UID"
         restart: unless-stopped
@@ -688,7 +688,7 @@ services:
 
     # MeTube - YouTube Downloader
     metube:
-        image: ghcr.io/alexta69/metube:latest@sha256:8e2fe9beeefc55a02f6e1d04cad0fc3c22e8f067d309188f016551dc99ec27b3
+        image: ghcr.io/alexta69/metube:latest@sha256:df929ef2453fd75c1f1cbd8dafb309ee03ff18d8705c7c1e01642b1202d4a650
         container_name: metube
         volumes:
             - ../../../current_target/compose_live_state/metube:/downloads
