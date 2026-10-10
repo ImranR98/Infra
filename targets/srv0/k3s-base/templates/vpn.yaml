@@ -1,4 +1,4 @@
-{{- define "vpn-dns.corefile" -}}
+{{- define "remote-access-dns.corefile" -}}
 .:53 {
     bind 10.100.0.1
     file /etc/coredns/zone.db {{ .Values.SERVICES_DOMAIN }}
@@ -8,7 +8,7 @@
 }
 {{- end -}}
 
-{{- define "vpn-dns.zone" -}}
+{{- define "remote-access-dns.zone" -}}
 $ORIGIN {{ .Values.SERVICES_DOMAIN }}.
 $TTL 60
 @   IN  SOA ns.{{ .Values.SERVICES_DOMAIN }}. hostmaster.{{ .Values.SERVICES_DOMAIN }}. 1 3600 600 86400 60
@@ -18,16 +18,17 @@ ns  IN  A   10.100.0.1
 *   IN  A   10.100.0.1
 {{- end -}}
 ---
-# AmneziaWG VPN server: hostNetwork so it can create awg0 in the host netns
-# for the frpc sidecar to tunnel, pinned to the frpc node via the NFD
-# external-exposed label (same for vpn-dns). Keys and obfuscation parameters
-# are generated once by the keygen init container into wireguard-pvc
-# (auto-backup); profiles are fetched with scripts/wg-client.sh. conn-notify
-# alerts ntfy when a peer comes online.
+# Remote-access AmneziaWG VPN server: hostNetwork so it can create
+# ra-amneziawg0 in the host netns for the public-exposure tunnel to reach,
+# pinned to the exposed node via the NFD external-exposed label (same for
+# remote-access-dns). Keys and obfuscation parameters are generated once by the
+# keygen init container into remote-access-amneziawg-pvc (auto-backup); profiles
+# are fetched with scripts/remote-access-client.sh. conn-notify alerts ntfy when
+# a peer comes online.
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: wireguard-pvc
+  name: remote-access-amneziawg-pvc
   namespace: base
   labels:
     auto-backup: "true"
@@ -41,20 +42,20 @@ spec:
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: wireguard-scripts
+  name: remote-access-amneziawg-scripts
   namespace: base
 data:
   start.sh: |
-    {{- .Files.Get "files/wireguard-start.sh" | nindent 4 }}
+    {{- .Files.Get "files/ra-amneziawg-start.sh" | nindent 4 }}
   keygen.sh: |
-    {{- .Files.Get "files/wireguard-keygen.sh" | nindent 4 }}
+    {{- .Files.Get "files/ra-amneziawg-keygen.sh" | nindent 4 }}
   notify.sh: |
-    {{- .Files.Get "files/wireguard-notify.sh" | nindent 4 }}
+    {{- .Files.Get "files/ra-amneziawg-notify.sh" | nindent 4 }}
 ---
 apiVersion: v1
 kind: Secret
 metadata:
-  name: wireguard-ntfy-token
+  name: remote-access-amneziawg-ntfy-token
   namespace: base
 type: Opaque
 stringData:
@@ -63,23 +64,23 @@ stringData:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: wireguard
+  name: remote-access-amneziawg
   namespace: base
 spec:
   replicas: 1
-  # Two hostNetwork pods on one node cannot own wg0 at the same time, so never
-  # overlap old and new during a rollout.
+  # Two hostNetwork pods on one node cannot own the VPN address at the same
+  # time, so never overlap old and new during a rollout.
   strategy:
     type: Recreate
   selector:
     matchLabels:
-      app: wireguard
+      app: remote-access-amneziawg
   template:
     metadata:
       labels:
-        app: wireguard
+        app: remote-access-amneziawg
       annotations:
-        checksum/config: {{ printf "%s%s%s%s%s" (.Files.Get "files/wireguard-keygen.sh") (.Files.Get "files/wireguard-start.sh") (.Files.Get "files/wireguard-notify.sh") .Values.WG_ENDPOINT .Values.WG_CLIENTS | sha256sum }}
+        checksum/config: {{ printf "%s%s%s%s%s" (.Files.Get "files/ra-amneziawg-keygen.sh") (.Files.Get "files/ra-amneziawg-start.sh") (.Files.Get "files/ra-amneziawg-notify.sh") .Values.REMOTE_ACCESS_AMNEZIAWG_ENDPOINT .Values.REMOTE_ACCESS_AMNEZIAWG_CLIENTS | sha256sum }}
     spec:
       hostNetwork: true
       # ClusterFirstWithHostNet so conn-notify can resolve the ntfy Service.
@@ -100,10 +101,10 @@ spec:
             - /bin/bash
             - /scripts/keygen.sh
           env:
-            - name: WG_ENDPOINT
-              value: "{{ .Values.WG_ENDPOINT }}"
-            - name: WG_CLIENTS
-              value: "{{ .Values.WG_CLIENTS }}"
+            - name: REMOTE_ACCESS_AMNEZIAWG_ENDPOINT
+              value: "{{ .Values.REMOTE_ACCESS_AMNEZIAWG_ENDPOINT }}"
+            - name: REMOTE_ACCESS_AMNEZIAWG_CLIENTS
+              value: "{{ .Values.REMOTE_ACCESS_AMNEZIAWG_CLIENTS }}"
           securityContext:
             allowPrivilegeEscalation: false
             capabilities:
@@ -121,7 +122,7 @@ spec:
               mountPath: /scripts
               readOnly: true
       containers:
-        - name: wireguard
+        - name: amneziawg
           image: amneziavpn/amneziawg-go:3.1.20260828@sha256:cbafc02b8373a83f428272db6d8001b37bc02e6211cbd8c0cb4e2e3759b12b72
           command:
             - /bin/bash
@@ -164,7 +165,7 @@ spec:
             - name: NTFY_TOKEN
               valueFrom:
                 secretKeyRef:
-                  name: wireguard-ntfy-token
+                  name: remote-access-amneziawg-ntfy-token
                   key: token
           securityContext:
             allowPrivilegeEscalation: false
@@ -188,10 +189,10 @@ spec:
       volumes:
         - name: config
           persistentVolumeClaim:
-            claimName: wireguard-pvc
+            claimName: remote-access-amneziawg-pvc
         - name: scripts
           configMap:
-            name: wireguard-scripts
+            name: remote-access-amneziawg-scripts
             defaultMode: 0555
         - name: awg-run
           emptyDir: {}
@@ -200,25 +201,25 @@ spec:
             path: /dev/net/tun
             type: CharDevice
 ---
-# DNS for VPN clients only: bound to 10.100.0.1:53 (wg0), so LAN/public can't
-# reach it. Answers *.$SERVICES_DOMAIN with the VPN address; forwards the rest
-# to 127.0.0.53 (systemd-resolved's stub; hostNetwork keeps the host's live
-# resolver config). The init container waits for wg0 to exist.
+# DNS for remote-access clients only: bound to 10.100.0.1:53 (tunnel address),
+# so LAN/public can't reach it. Answers *.$SERVICES_DOMAIN with the VPN address;
+# forwards the rest to 127.0.0.53 (systemd-resolved's stub; hostNetwork keeps
+# the host's live resolver config). The init container waits for the tunnel.
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: vpn-dns
+  name: remote-access-dns
   namespace: base
 data:
   Corefile: |
-    {{- include "vpn-dns.corefile" . | nindent 4 }}
+    {{- include "remote-access-dns.corefile" . | nindent 4 }}
   zone.db: |
-    {{- include "vpn-dns.zone" . | nindent 4 }}
+    {{- include "remote-access-dns.zone" . | nindent 4 }}
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: vpn-dns
+  name: remote-access-dns
   namespace: base
 spec:
   replicas: 1
@@ -226,13 +227,13 @@ spec:
     type: Recreate
   selector:
     matchLabels:
-      app: vpn-dns
+      app: remote-access-dns
   template:
     metadata:
       labels:
-        app: vpn-dns
+        app: remote-access-dns
       annotations:
-        checksum/config: {{ printf "%s%s" (include "vpn-dns.corefile" .) (include "vpn-dns.zone" .) | sha256sum }}
+        checksum/config: {{ printf "%s%s" (include "remote-access-dns.corefile" .) (include "remote-access-dns.zone" .) | sha256sum }}
     spec:
       hostNetwork: true
       dnsPolicy: Default
@@ -240,12 +241,12 @@ spec:
       nodeSelector:
         infra.local/external-exposed: "true"
       initContainers:
-        - name: wait-for-wireguard
+        - name: wait-for-amneziawg
           image: busybox:1.38
           command:
             - sh
             - -c
-            - until ip -4 addr show awg0 2>/dev/null | grep -q '10.100.0.1'; do sleep 2; done
+            - until ip -4 addr show ra-amneziawg0 2>/dev/null | grep -q '10.100.0.1'; do sleep 2; done
           securityContext:
             allowPrivilegeEscalation: false
             capabilities:
@@ -281,5 +282,5 @@ spec:
       volumes:
         - name: dns-config
           configMap:
-            name: vpn-dns
+            name: remote-access-dns
             defaultMode: 0444

@@ -1,10 +1,10 @@
 #!/bin/bash
 # DESC: Install the preboot initramfs LUKS-unlock module (dracut-remote-luks-unlock).
-# frpc: initramfs frpc tunnels SSH via FRPS (mTLS certs from
-# config/<hostname>/frpc/, PROXY_HOST/TLS_SERVER_NAME from config/<hostname>/compose.env,
-# PROXY_IP resolved here). crypt-ssh: dropbear SSH directly on the LAN, patched
-# to the preboot port (ethernet only). Re-run frpc after rotating the preboot
-# mTLS certs. Run ON the node.
+# public-exposure: initramfs WireGuard client (pubexp-pre0) handshakes with the
+# vps0 hub so dropbear can be reached over the tunnel; keys come from
+# config/<hostname>/public-exposure/ and PUBLIC_EXPOSURE_HOST/PORT from
+# config/<hostname>/compose.env (resolved here). crypt-ssh: dropbear SSH directly
+# on the LAN, patched to the preboot port (ethernet only). Run ON the node.
 set -euo pipefail
 
 if [ -z "${INFRA_ROOT:-}" ]; then
@@ -14,17 +14,22 @@ fi
 source "$INFRA_ROOT/scripts/common.sh"
 
 usage() {
-    echo "Usage: $(basename "$0") <frpc|crypt-ssh>   (run ON the node)"
+    echo "Usage: $(basename "$0") <public-exposure|crypt-ssh>   (run ON the node)"
     echo
-    echo "  frpc       initramfs frpc tunnels SSH via FRPS (needs the mTLS certs"
-    echo "             from config/<hostname>/frpc/ and the compose env — see DESC header)"
-    echo "  crypt-ssh  dropbear SSH directly on the LAN (ethernet only)"
+    echo "  public-exposure  initramfs WireGuard client to the vps0 hub (needs the"
+    echo "                   keys from config/<hostname>/public-exposure/ and the"
+    echo "                   compose env — see DESC header)"
+    echo "  crypt-ssh        dropbear SSH directly on the LAN (ethernet only)"
+    echo
+    echo "Env overrides (testing a branch before it is pushed):"
+    echo "  PREBOOT_REPO=<url|path>  default: the GitHub repo"
+    echo "  PREBOOT_REF=<branch>     optional clone branch"
     exit 1
 }
 
 module="${1:-}"
 case "$module" in
-    frpc | crypt-ssh) ;;
+    public-exposure | crypt-ssh) ;;
     *) usage ;;
 esac
 
@@ -42,51 +47,45 @@ if ! { [ -n "$root_src" ] && [ -b "$root_src" ] && lsblk -s -o TYPE "$root_src" 
 fi
 
 rm -rf "$work_dir"
-git clone --depth 1 https://github.com/ImranR98/dracut-remote-luks-unlock.git "$work_dir"
+repo_url="${PREBOOT_REPO:-https://github.com/ImranR98/dracut-remote-luks-unlock.git}"
+clone_args=(--depth 1)
+[ -n "${PREBOOT_REF:-}" ] && clone_args+=(--branch "$PREBOOT_REF")
+git clone "${clone_args[@]}" "$repo_url" "$work_dir"
 
 setup_args=(bash "$work_dir/setup.sh" --user "$(id -un)")
 
-if [ "$module" = frpc ]; then
+if [ "$module" = public-exposure ]; then
+    # Retire the old FRP preboot module if it is still installed.
+    sudo rm -rf /usr/lib/dracut/modules.d/99frpc
+
     env_file="$INFRA_ROOT/config/$target/compose.env"
     [ -f "$env_file" ] || { echo "Error: $env_file not found" >&2; exit 1; }
-    proxy_host=$(grep -E '^PROXY_HOST=' "$env_file" | head -1 | cut -d= -f2- | tr -d '"'"'"' ')
-    tls_server_name=$(grep -E '^TLS_SERVER_NAME=' "$env_file" | head -1 | cut -d= -f2- | tr -d '"'"'"' ')
-    [ -n "$proxy_host" ] && [ -n "$tls_server_name" ] || {
-        echo "Error: PROXY_HOST and TLS_SERVER_NAME must be set in $env_file" >&2
-        exit 1
-    }
-    proxy_ip=$(getent hosts "$proxy_host" | awk '{print $1; exit}')
-    [ -n "$proxy_ip" ] || { echo "Error: cannot resolve PROXY_HOST '$proxy_host'" >&2; exit 1; }
+    hub_host=$(grep -E '^PUBLIC_EXPOSURE_HOST=' "$env_file" | head -1 | cut -d= -f2- | tr -d '"'"'"' ')
+    hub_port=$(grep -E '^PUBLIC_EXPOSURE_PORT=' "$env_file" | head -1 | cut -d= -f2- | tr -d '"'"'"' ')
+    hub_port="${hub_port:-51822}"
+    [ -n "$hub_host" ] || { echo "Error: PUBLIC_EXPOSURE_HOST must be set in $env_file" >&2; exit 1; }
+    hub_ip=$(getent hosts "$hub_host" | awk '{print $1; exit}')
+    [ -n "$hub_ip" ] || { echo "Error: cannot resolve PUBLIC_EXPOSURE_HOST '$hub_host'" >&2; exit 1; }
 
-    certs_dir="$INFRA_ROOT/config/$target/frpc"
-    for f in ca.crt preboot-client.crt preboot-client.key; do
-        [ -f "$certs_dir/$f" ] || { echo "Error: $certs_dir/$f not found" >&2; exit 1; }
+    keys_dir="$INFRA_ROOT/config/$target/public-exposure"
+    for f in pre0.key server.pub; do
+        [ -f "$keys_dir/$f" ] || { echo "Error: $keys_dir/$f not found (run scripts/public-exposure-keygen.sh)" >&2; exit 1; }
     done
 
-    cat >"$work_dir/frpc-preboot.toml" <<EOF
-serverAddr = "$proxy_ip"
-serverPort = 7000
-auth.additionalScopes = ["HeartBeats", "NewWorkConns"]
-loginFailExit = true
+    conf="$work_dir/pubexp-pre0.wg"
+    {
+        echo "[Interface]"
+        echo "PrivateKey = $(<"$keys_dir/pre0.key")"
+        echo
+        echo "[Peer]"
+        echo "PublicKey = $(<"$keys_dir/server.pub")"
+        echo "Endpoint = $hub_ip:$hub_port"
+        echo "AllowedIPs = 10.99.0.1/32"
+        echo "PersistentKeepalive = 25"
+    } >"$conf"
+    chmod 600 "$conf"
 
-transport.tls.enable = true
-transport.tls.serverName = "$tls_server_name"
-transport.tls.certFile = "/etc/frp/client.crt"
-transport.tls.keyFile = "/etc/frp/client.key"
-transport.tls.trustedCaFile = "/etc/frp/ca.crt"
-
-[[proxies]]
-name = "ssh-preboot"
-type = "tcp"
-localIP = "127.0.0.1"
-localPort = 22
-remotePort = 8887
-EOF
-
-    setup_args+=(--frpc-config "$work_dir/frpc-preboot.toml"
-        --frpc-cert "$certs_dir/preboot-client.crt"
-        --frpc-key "$certs_dir/preboot-client.key"
-        --frpc-ca "$certs_dir/ca.crt")
+    setup_args+=(--pubexp-conf "$conf")
 else
     sed -i 's/^dropbear_port="22"/dropbear_port="8887"/' "$work_dir/modules/99crypt-ssh/crypt-ssh.conf"
 fi

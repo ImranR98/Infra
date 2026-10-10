@@ -1,14 +1,15 @@
 #!/bin/bash
-# DESC: Configure the host-network AmneziaWG interface for the VPN server pod.
-# Runs as root in a hostNetwork pod (NET_ADMIN, spc_t). awg0, the NAT rule and
-# the iptables FORWARD accepts live in the host netns and are torn down on
-# SIGTERM; full-tunnel clients are masqueraded so LAN/WAN return traffic comes
-# back through the tunnel. No host kernel module: awg-quick falls back to the
-# userspace amneziawg-go implementation.
+# DESC: Configure the host-network AmneziaWG interface for the
+# remote-access-amneziawg pod. Runs as root in a hostNetwork pod (NET_ADMIN,
+# spc_t). ra-amneziawg0, the NAT rule and the iptables FORWARD accepts live in
+# the host netns and are torn down on SIGTERM; full-tunnel clients are
+# masqueraded so LAN/WAN return traffic comes back through the tunnel. No host
+# kernel module: awg-quick falls back to the userspace amneziawg-go
+# implementation.
 set -euo pipefail
 
-WG_IF=awg0
-WG_CONF=/wg/awg0.conf
+WG_IF=ra-amneziawg0
+WG_CONF=/wg/ra-amneziawg0.conf
 WG_SUBNET=10.100.0.0/24
 POD_CIDR=10.42.0.0/16
 SERVICE_CIDR=10.43.0.0/16

@@ -25,7 +25,8 @@ x-socket-proxy: &socket-proxy
 
 # Config files inlined so docker compose interpolates ${VARS} natively from
 # config/vps0/compose.env (--env-file). Verbatim files live under ./files/,
-# mTLS certs as real 0600 files under ../../../config/vps0/frps/.
+# the public-exposure tunnel conf as a real 0600 file under
+# ../../../config/vps0/public-exposure/.
 configs:
     authelia_configuration:
         content: |
@@ -153,35 +154,35 @@ configs:
                       crowdsecAppsecPath: "/"
                       forwardedheaderstrustedips: "127.0.0.1/32"
               routers:
-                http-to-frps:
+                http-to-public-exposure:
                   rule: "Host(`home.${BASE_SERVICES_DOMAIN}`) || Host(`*.home.${BASE_SERVICES_DOMAIN}`)"
                   entryPoints: [web]
-                  service: http-frps
+                  service: http-public-exposure
                   priority: 100
               services:
-                http-frps:
+                http-public-exposure:
                   loadBalancer:
                     servers:
-                      - url: "http://frps:8080"
+                      - url: "http://10.99.0.2:80"
 
             tcp:
               serversTransports:
-                frps-proxy:
+                public-exposure-proxy:
                   proxyProtocol:
                     version: 2
               routers:
-                https-to-frps:
+                https-to-public-exposure:
                   rule: "HostSNI(`home.${BASE_SERVICES_DOMAIN}`) || HostSNI(`*.home.${BASE_SERVICES_DOMAIN}`)"
                   entryPoints: [websecure]
-                  service: https-frps
+                  service: https-public-exposure
                   tls:
                     passthrough: true
               services:
-                https-frps:
+                https-public-exposure:
                   loadBalancer:
-                    serversTransport: frps-proxy
+                    serversTransport: public-exposure-proxy
                     servers:
-                      - address: "frps:8443"
+                      - address: "10.99.0.2:8443"
 
     crowdsec_http_notifications:
         content: |
@@ -259,10 +260,10 @@ configs:
                         "module": "generic_logs",
                         "moduleInstances": [
                             {
-                                "name": "frps_ssh_preboot",
+                                "name": "public_exposure_preboot",
                                 "enabled": true,
-                                "loggerArg": "frps stderr2stdout",
-                                "parserArg": "{\"regex\":\"\\\\[ssh-preboot\\\\] get a user connection\",\"title\":\"FRP: SSH preboot connection\",\"message\":\"New connection to the ssh-preboot tunnel:\"}",
+                                "loggerArg": "public-exposure-watch stderr2stdout",
+                                "parserArg": "{\"regex\":\"PREBOOT handshake\",\"title\":\"Public exposure: preboot client online\",\"message\":\"The LUKS-unlock tunnel just handshaked:\"}",
                                 "ntfyTopic": "logtfy"
                             }
                         ]
@@ -271,35 +272,45 @@ configs:
             }
 
 services:
-    # FRP server - reverse proxy tunnel for home server
-    frps:
-        image: fatedier/frps:v0.71.0
-        container_name: frps
+    # Public-exposure hub (WireGuard): creates pubexp-server0 in the host netns
+    # and maps the public service ports to the tunnel via kernel DNAT
+    # (files/public-exposure/forwards.conf). Host effects are lifecycle-bound:
+    # stopping the container removes the interface, DNAT and firewall rules.
+    public-exposure-server-wg:
+        image: lscr.io/linuxserver/wireguard:latest@sha256:437a490f7afc6969434251351ba47455a3829e71cef9c6172f3f533332d04063
+        container_name: public-exposure-server-wg
         restart: always
-        mem_limit: 128M
-        cpus: 1.0
+        network_mode: host
+        cap_add:
+            - NET_ADMIN
         volumes:
-          - ./files/frps/frps.toml:/frps.toml:ro
-          - ../../../config/vps0/frps/server.crt:/etc/frp/server.crt:ro
-          - ../../../config/vps0/frps/server.key:/etc/frp/server.key:ro
-          - ../../../config/vps0/frps/ca.crt:/etc/frp/ca.crt:ro
-        ports:
-            - "7000:7000"
-            - "8887:8887"
-            - "127.0.0.1:8888:8888"
-            - "56881:56881"
-            - "56881:56881/udp"
-            - "51820:51820/udp"
-        networks:
-            - traefik
+          - ../../../config/vps0/public-exposure/pubexp-server0.conf:/etc/wireguard/pubexp-server0.conf:ro
+          - ./files/public-exposure/server-entrypoint.sh:/usr/local/bin/server-entrypoint.sh:ro
+          - ./files/public-exposure/apply-forwards.sh:/usr/local/bin/apply-forwards.sh:ro
+          - ./files/public-exposure/forwards.conf:/etc/public-exposure/forwards.conf:ro
+        entrypoint: ["/bin/bash", "/usr/local/bin/server-entrypoint.sh"]
         healthcheck:
-            test: ["CMD-SHELL", "wget --no-verbose --tries=1 -O - http://127.0.0.1:7500/healthz || exit 1"]
+            test: ["CMD", "wg", "show", "pubexp-server0"]
             interval: 30s
             timeout: 10s
-            start_period: 1m
+            start_period: 15s
             retries: 3
         logging: *logging
-        command: "-c /frps.toml"
+
+    # Prints one line per preboot-client handshake so logtfy can alert on it.
+    public-exposure-watch:
+        image: lscr.io/linuxserver/wireguard:latest@sha256:437a490f7afc6969434251351ba47455a3829e71cef9c6172f3f533332d04063
+        container_name: public-exposure-watch
+        restart: unless-stopped
+        network_mode: host
+        cap_add:
+            - NET_ADMIN
+        volumes:
+          - ./files/public-exposure/watch.sh:/usr/local/bin/watch.sh:ro
+        entrypoint: ["/bin/bash", "/usr/local/bin/watch.sh"]
+        mem_limit: 64M
+        cpus: 0.25
+        logging: *logging
 
     # https://github.com/wollomatic/socket-proxy for Traefik and other read-only needs
     dockerproxy:
@@ -409,7 +420,7 @@ services:
             - "--certificatesresolvers.le.acme.email=$DOMAIN_OWNER_EMAIL"
             - "--certificatesresolvers.le.acme.storage=/acme/acme.json"
             # TLS-ALPN-01 avoids intercepting /.well-known/acme-challenge/ on :80,
-            # letting srv0 cert-manager pass through the FRP tunnel.
+            # letting srv0 cert-manager pass through the public-exposure tunnel.
             - "--certificatesresolvers.le.acme.tlsChallenge=true"
             - "--experimental.plugins.geoblock.modulename=github.com/PascalMinder/geoblock"
             - "--experimental.plugins.geoblock.version=v0.3.8"

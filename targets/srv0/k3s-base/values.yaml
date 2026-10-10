@@ -3,5 +3,5 @@
 # (passed as a later -f, so it wins on conflicts).
 MY_UID: 1000
 
-WG_ENDPOINT: "vps0.imranr.dev:51820"
-WG_CLIENTS: "client1 client2"
+REMOTE_ACCESS_AMNEZIAWG_ENDPOINT: "vps0.imranr.dev:51820"
+REMOTE_ACCESS_AMNEZIAWG_CLIENTS: "client1 client2"

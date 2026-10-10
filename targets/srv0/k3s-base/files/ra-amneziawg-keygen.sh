@@ -1,36 +1,37 @@
 #!/bin/bash
 # DESC: Generate the AmneziaWG server + client keys and obfuscation parameters
-# on the wireguard-pvc if they do not exist yet. Runs as an init container
-# before the server starts; idempotent and never prints key material. Client
-# profiles are fetched on an unlocked host with scripts/wg-client.sh.
+# on the remote-access-amneziawg-pvc if they do not exist yet. Runs as an init
+# container before the server starts; idempotent and never prints key material.
+# Client profiles are fetched on an unlocked host with
+# scripts/remote-access-client.sh.
 set -euo pipefail
 
 WG_DIR=/wg
-WG_ENDPOINT="${WG_ENDPOINT:-}"
+WG_ENDPOINT="${REMOTE_ACCESS_AMNEZIAWG_ENDPOINT:-}"
 WG_SUBNET=10.100.0
 WG_PORT=51830
 WG_MTU=1280
 
-[ -n "$WG_ENDPOINT" ] || { echo "Error: WG_ENDPOINT is required (public host:port clients dial)" >&2; exit 1; }
+[ -n "$WG_ENDPOINT" ] || { echo "Error: REMOTE_ACCESS_AMNEZIAWG_ENDPOINT is required (public host:port clients dial)" >&2; exit 1; }
 
-read -r -a clients <<<"${WG_CLIENTS:-client1 client2}"
-[ "${#clients[@]}" -gt 0 ] || { echo "Error: WG_CLIENTS is empty" >&2; exit 1; }
+read -r -a clients <<<"${REMOTE_ACCESS_AMNEZIAWG_CLIENTS:-client1 client2}"
+[ "${#clients[@]}" -gt 0 ] || { echo "Error: REMOTE_ACCESS_AMNEZIAWG_CLIENTS is empty" >&2; exit 1; }
 
 umask 077
 mkdir -p "$WG_DIR"
 
 # Never regenerate existing keys; a missing client profile can't be recovered,
 # so warn only.
-if [ -s "$WG_DIR/awg0.conf" ]; then
+if [ -s "$WG_DIR/ra-amneziawg0.conf" ]; then
     for client in "${clients[@]}"; do
         [ -s "$WG_DIR/$client.conf" ] ||
-            echo "Warning: /wg/$client.conf is missing; to regenerate all keys, delete /wg/awg0.conf and restart the pod" >&2
+            echo "Warning: /wg/$client.conf is missing; to regenerate all keys, delete /wg/ra-amneziawg0.conf and restart the pod" >&2
     done
-    echo "wireguard-keygen: keys already present"
+    echo "ra-amneziawg-keygen: keys already present"
     exit 0
 fi
 
-echo "wireguard-keygen: generating server and client keys"
+echo "ra-amneziawg-keygen: generating server and client keys"
 
 rand() { # rand MIN MAX (inclusive)
     local min=$1 max=$2
@@ -62,7 +63,7 @@ header_protection_key="$(<"$WG_DIR/server.hpk")"
     printf 'H1 = %s\nH2 = %s\nH3 = %s\nH4 = %s\n' "$h1" "$h2" "$h3" "$h4"
     printf 'HeaderProtectionKey = %s\n' "$header_protection_key"
     printf 'ContentPaddingAddition = 0-64\n'
-} >"$WG_DIR/awg0.conf"
+} >"$WG_DIR/ra-amneziawg0.conf"
 
 i=0
 for client in "${clients[@]}"; do
@@ -79,7 +80,7 @@ for client in "${clients[@]}"; do
         printf 'PublicKey = %s\n' "$(<"$WG_DIR/$client.pub")"
         printf 'PresharedKey = %s\n' "$(<"$WG_DIR/$client.psk")"
         printf 'AllowedIPs = %s/32\n' "$addr"
-    } >>"$WG_DIR/awg0.conf"
+    } >>"$WG_DIR/ra-amneziawg0.conf"
 
     {
         printf '[Interface]\n'
@@ -105,9 +106,9 @@ for client in "${clients[@]}"; do
         printf 'PersistentKeepalive = 25\n'
     } >"$WG_DIR/$client.conf"
 
-    echo "wireguard-keygen: created /wg/$client.conf (address $addr)"
+    echo "ra-amneziawg-keygen: created /wg/$client.conf (address $addr)"
 done
 
 chmod 700 "$WG_DIR"
 chmod 600 "$WG_DIR"/*.key "$WG_DIR"/*.psk "$WG_DIR"/*.conf "$WG_DIR"/*.hpk "$WG_DIR"/server.pub 2>/dev/null || true
-echo "wireguard-keygen: done"
+echo "ra-amneziawg-keygen: done"

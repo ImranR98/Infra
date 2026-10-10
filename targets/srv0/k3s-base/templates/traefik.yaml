@@ -148,7 +148,7 @@ spec:
       - "--global.checkNewVersion=true"
       - "--log.level=INFO"
       - "--accesslog.format=json"
-      - "--entryPoints.websecure-proxy.proxyProtocol.trustedIPs=127.0.0.1/32,10.42.0.0/16,10.43.0.0/16"
+      - "--entryPoints.websecure-proxy.proxyProtocol.trustedIPs=10.99.0.1/32"
       - "--entryPoints.web.http.redirections.entryPoint.to=websecure"
       - "--entryPoints.web.http.redirections.entryPoint.scheme=https"
       - "--entryPoints.web.http.redirections.entryPoint.permanent=true"

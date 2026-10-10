@@ -168,6 +168,16 @@ spec:
           port: 8000
         - protocol: TCP
           port: 8443
+    # public-exposure-client-wg delivers the vps0 edge traffic from the hub
+    # address (SNAT'd to 10.99.0.1); it is not a pod, so it needs an ipBlock.
+    - from:
+        - ipBlock:
+            cidr: 10.99.0.1/32
+      ports:
+        - protocol: TCP
+          port: 80
+        - protocol: TCP
+          port: 8443
   policyTypes:
     - Ingress
 ---

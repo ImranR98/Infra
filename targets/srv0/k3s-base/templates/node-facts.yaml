@@ -7,7 +7,8 @@
 # an omitted line makes NFD remove the corresponding label.
 #
 #   hostpath-main     -> {{ .Values.MAIN_PARENT_DIR }}/Main exists
-#   external-exposed  -> an frpc process is running (FRP client container)
+#   external-exposed  -> the pubexp-client0 interface exists in the host netns
+#                        (public-exposure-client-wg container)
 #
 # Host root is reached through /host-proc/1/root (no host / mount): the pod
 # mounts only the host procfs and the features.d dir. spc_t + SYS_PTRACE cover
@@ -46,9 +47,7 @@ spec:
                 out=/features/node-facts
                 : > "$tmp"
                 [ -d "/host-proc/1/root${MAIN_PATH}" ] && echo "infra.local/hostpath-main=true" >> "$tmp"
-                for c in /host-proc/[0-9]*/comm; do
-                  [ "$(cat "$c" 2>/dev/null)" = frpc ] && { echo "infra.local/external-exposed=true" >> "$tmp"; break; }
-                done
+                grep -q 'pubexp-client0' /host-proc/1/net/dev && echo "infra.local/external-exposed=true" >> "$tmp"
                 mv -f "$tmp" "$out"
                 sleep 60
               done

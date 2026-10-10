@@ -1,13 +1,13 @@
 #!/bin/bash
 # DESC: Publish an ntfy notification when an AmneziaWG peer transitions from
-# offline to online. Runs as a sidecar in the wireguard pod; reads the
-# userspace UAPI socket shared via /var/run/amneziawg and the server config on
-# the PVC for peer names. State is primed on start, so pod restarts while a
-# client is connected do not re-notify.
+# offline to online. Runs as a sidecar in the remote-access-amneziawg pod;
+# reads the userspace UAPI socket shared via /var/run/amneziawg and the server
+# config on the PVC for peer names. State is primed on start, so pod restarts
+# while a client is connected do not re-notify.
 set -euo pipefail
 
-WG_IF=awg0
-WG_CONF=/wg/awg0.conf
+WG_IF=ra-amneziawg0
+WG_CONF=/wg/ra-amneziawg0.conf
 ONLINE_SECS=240
 COOLDOWN_SECS=600
 
