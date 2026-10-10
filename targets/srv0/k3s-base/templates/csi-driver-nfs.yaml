@@ -9,7 +9,7 @@ spec:
   repo: https://raw.githubusercontent.com/kubernetes-csi/csi-driver-nfs/master/charts
   failurePolicy: abort
   targetNamespace: kube-system
-  version: 4.13.4
+  version: 4.13.5
   valuesContent: |-
     node:
       dnsPolicy: ClusterFirstWithHostNet
