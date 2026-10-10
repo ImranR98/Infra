@@ -2,11 +2,7 @@
 server:
   cacheDir: /home/filebrowser/data/cache
   database:
-    # The migrate-db init container below renames the v1 BoltDB to
-    # database.db.old; v2 imports it into SQLite on first start. The
-    # migrateFrom key and the init container are removed once done.
     path: /home/filebrowser/data/database.sqlite
-    migrateFrom: /home/filebrowser/data/database.db.old
   sources:
     - path: /main
       config:
@@ -117,12 +113,6 @@ spec:
           command: ["sh", "-c", "chown -R {{ .Values.MY_UID }}:{{ .Values.MY_UID }} /home/filebrowser/data"]
           securityContext:
             runAsUser: 0
-          volumeMounts:
-            - name: filebrowser-data
-              mountPath: /home/filebrowser/data
-        - name: migrate-db
-          image: busybox:1.38
-          command: ["sh", "-c", "cd /home/filebrowser/data && if [ -f database.db ] && [ ! -f database.db.old ]; then mv database.db database.db.old; fi"]
           volumeMounts:
             - name: filebrowser-data
               mountPath: /home/filebrowser/data
