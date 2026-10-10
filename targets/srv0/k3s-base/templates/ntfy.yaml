@@ -98,6 +98,12 @@ spec:
               kubernetes.io/metadata.name: apps
           podSelector:
             matchLabels:
+              app: immrtlize
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: apps
+          podSelector:
+            matchLabels:
               app: opencanary
         # Grafana alert notifications.
         - podSelector:

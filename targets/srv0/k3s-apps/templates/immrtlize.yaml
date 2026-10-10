@@ -1,0 +1,164 @@
+# IMMRTL↑ZE — media ingestion daemon (replaces the mdscl deployments).
+# Watches the phone-synced deviceSync tree, standardizes / concatenates /
+# copies into the Main/Media tree, serves a web UI, and cleans up processed
+# originals into trash only after verifying the destination copy.
+#
+# Config lives on a Longhorn volume (auto-backed-up) and is edited from the UI;
+# trash + logs live on a host path outside any synced tree.
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: immrtlize-config-pvc
+  namespace: apps
+  labels:
+    auto-backup: "true"
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: longhorn
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: immrtlize
+  namespace: apps
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: immrtlize
+  template:
+    metadata:
+      labels:
+        app: immrtlize
+    spec:
+      securityContext:
+        fsGroup: {{ .Values.MY_UID }}
+        # s0: the pod reads Syncthing-written trees and writes files that host
+        # processes and other containers must be able to read back.
+        seLinuxOptions:
+          level: s0
+      containers:
+        - name: immrtlize
+          # Pin by digest after the first push so Renovate can bump deliberately.
+          image: imranrdev/immrtlize:latest
+          securityContext:
+            runAsUser: {{ .Values.MY_UID }}
+            runAsGroup: {{ .Values.MY_UID }}
+            allowPrivilegeEscalation: false
+          ports:
+            - name: http
+              containerPort: 8791
+          resources:
+            limits:
+              memory: 2Gi
+            requests:
+              memory: 256Mi
+              cpu: 100m
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: http
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+          volumeMounts:
+            - name: source
+              mountPath: /source
+            - name: destination
+              mountPath: /destination
+            - name: config
+              mountPath: /config
+            - name: appdata
+              mountPath: /appdata
+      volumes:
+        - name: source
+          persistentVolumeClaim:
+            claimName: hostpath-main-node-devicesync-pvc
+        - name: destination
+          persistentVolumeClaim:
+            claimName: hostpath-main-node-main-pvc
+        - name: config
+          persistentVolumeClaim:
+            claimName: immrtlize-config-pvc
+        - name: appdata
+          persistentVolumeClaim:
+            claimName: hostpath-main-node-immrtlize-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: immrtlize
+  namespace: apps
+spec:
+  selector:
+    app: immrtlize
+  ports:
+    - name: http
+      port: 8791
+      targetPort: http
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: immrtlize-prod-tls
+  namespace: apps
+spec:
+  secretName: immrtlize-prod-tls
+  issuerRef:
+    name: letsencrypt-prod
+    kind: ClusterIssuer
+  dnsNames:
+    - immrtlize.{{ .Values.SERVICES_DOMAIN }}
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: immrtlize-ingress
+  # Routes live in `base` because Traefik resolves Middleware ExtensionRefs
+  # only in the route's namespace, and the shared middlewares live there.
+  namespace: base
+spec:
+  parentRefs:
+    # Public (websecure-proxy) + LAN/VPN (websecure), like dscpln and the rest
+    # of the Authelia-protected apps; geoblock + CrowdSec + SSO guard the UI,
+    # which can delete files, so admin-only two_factor is intended.
+    - name: srv0
+      sectionName: websecure
+    - name: srv0
+      sectionName: websecure-proxy
+  hostnames:
+    - immrtlize.{{ .Values.SERVICES_DOMAIN }}
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      filters:
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: geoblock
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: crowdsec-bouncer
+        # Access is governed by the wildcard `*=admins, two_factor` rule in
+        # authelia.yaml; the UI can delete files, so admin-only is intended.
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: forwardauth-authelia
+      backendRefs:
+        - name: immrtlize
+          namespace: apps
+          port: 8791

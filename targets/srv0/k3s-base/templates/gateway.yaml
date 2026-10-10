@@ -16,6 +16,7 @@
 - {name: headlamp-prod-tls, namespace: apps}
 - {name: homeassistant-prod-tls, namespace: apps}
 - {name: immich-prod-tls, namespace: apps}
+- {name: immrtlize-prod-tls, namespace: apps}
 - {name: jellyfin-prod-tls, namespace: apps}
 - {name: linkwarden-prod-tls, namespace: apps}
 - {name: navidrome-prod-tls, namespace: apps}
