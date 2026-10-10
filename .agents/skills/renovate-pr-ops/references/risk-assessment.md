@@ -16,7 +16,7 @@
 
 **Critical** — breakage can cut off access, auth, storage, or the cluster:
 k3s and its system-upgrade Plans, Traefik/Gateway/CRDs, Authelia (srv0 and vps0),
-cert-manager, Longhorn, NFS server / csi-driver-nfs / host-volumes, FRP (frps/frpc),
+cert-manager, Longhorn, NFS server / csi-driver-nfs / host-volumes, public-exposure tunnel (WireGuard),
 CrowdSec, coredns, and DB engines (authelia DB, immich-postgres, clickhouse, nextcloud DB).
 
 **Elevated** — user-facing apps with data or auth; recoverable but disruptive:

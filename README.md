@@ -22,7 +22,7 @@ The IaC system for my homelab and other devices.
   - **[CrowdSec](https://www.crowdsec.net/) automated threat response** guards all public services.
   - **Geoblocking** is used for services that do not need to be globally accessible.
   - **Network policies** are used in the `srv0` Kubernetes stack to ensure that pod-to-pod communication is only allowed where necessary.
-  - **mTLS** (as opposed to symmetric token-based encryption) is used to protect the FRP tunnel between `srv0` and `vps0` (this prevents certain kinds of MITM attacks).
+  - **WireGuard key pairs** (as opposed to symmetric token-based encryption) protect the public-exposure tunnel between `srv0` and `vps0`; each peer authenticates with its own key, preventing certain kinds of MITM attacks.
   - **The Principle of Least Privilege** is applied to containers, with elevated privileges and root runtime user only allowed where necessary. Host devices are granted as Kubernetes device-plugin resources (via the generic-device-plugin) rather than `privileged: true`.
   - **Comprehensive Monitoring and Alerting** is done using [Alloy](https://grafana.com/docs/alloy/) + [Mimir](https://grafana.com/oss/mimir/), [Loki](https://grafana.com/docs/loki/latest/), [Grafana](https://grafana.com/), [Ntfy.sh](https://ntfy.sh/) + [Logtfy](https://github.com/ImranR98/Logtfy), [Headlamp](https://headlamp.dev/), [Dozzle](https://dozzle.dev/), and [Uptime Kuma](https://uptimekuma.co/).
   - **A Honeypot ([Opencanary](https://github.com/thinkst/opencanary))** is used to discover intruders. 
@@ -54,7 +54,7 @@ helm upgrade --install srv0-apps targets/srv0/k3s-apps -n apps --create-namespac
 docker compose --env-file config/vps0/compose.env --env-file targets/vps0/compose/.env \
   -f targets/vps0/compose/compose.yaml \
   [-f targets/vps0/compose/compose.private.yaml] up -d --remove-orphans
-# srv0 (frpc sidecar; config env only):
+# srv0 (public-exposure client sidecar; config env only):
 docker compose --env-file config/srv0/compose.env -f targets/srv0/compose/compose.yaml up -d
 # pc/bigpc/rpi (machine facts only — the project-dir .env auto-loads):
 docker compose -f targets/<target>/compose/compose.yaml up -d

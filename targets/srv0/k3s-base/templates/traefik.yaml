@@ -245,7 +245,7 @@ metadata:
   namespace: base
 spec:
   parentRefs:
-    # LAN/VPN-only: not attached to websecure-proxy (the public FRP listener).
+    # LAN/VPN-only: not attached to websecure-proxy (the public-exposure listener).
     - name: srv0
       sectionName: websecure
   hostnames:

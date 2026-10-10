@@ -41,7 +41,7 @@ srv0_dir="$INFRA_ROOT/config/srv0/public-exposure"
 [ -f "$srv0_env" ] || { echo "Error: $srv0_env not found (copy config_template first)" >&2; exit 1; }
 [ -f "$srv0_vals" ] || { echo "Error: $srv0_vals not found (copy config_template first)" >&2; exit 1; }
 
-# Migrate the pre-public-exposure FRP keys without touching their values.
+# Migrate the legacy tunnel keys in compose.env without touching their values.
 if grep -q '^PROXY_HOST=' "$srv0_env" && ! grep -q '^PUBLIC_EXPOSURE_HOST=' "$srv0_env"; then
     sed -i 's/^PROXY_HOST=/PUBLIC_EXPOSURE_HOST=/' "$srv0_env"
     echo "migrated config/srv0/compose.env: PROXY_HOST -> PUBLIC_EXPOSURE_HOST"

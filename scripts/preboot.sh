@@ -55,7 +55,7 @@ git clone "${clone_args[@]}" "$repo_url" "$work_dir"
 setup_args=(bash "$work_dir/setup.sh" --user "$(id -un)")
 
 if [ "$module" = public-exposure ]; then
-    # Retire the old FRP preboot module if it is still installed.
+    # Retire the superseded preboot module if it is still installed.
     sudo rm -rf /usr/lib/dracut/modules.d/99frpc
 
     env_file="$INFRA_ROOT/config/$target/compose.env"

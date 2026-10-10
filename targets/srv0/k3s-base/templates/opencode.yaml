@@ -6,7 +6,7 @@
 # port by the Service port's name.
 #
 # VPN+LAN, never public: the HTTPRoute attaches to `websecure` only (never
-# websecure-proxy), so the public FRP path has no route and no certificate for
+# websecure-proxy), so the public-exposure path has no route and no certificate for
 # the hostname. LAN and VPN clients reach it with their real source IPs through
 # the Traefik hostPorts; Authelia SSO is the app-level gate. The backend port
 # itself is bound to the bridge, so it is not LAN-reachable.

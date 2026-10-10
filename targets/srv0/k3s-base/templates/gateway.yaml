@@ -6,7 +6,7 @@
 # component Certificate exposed on both secure listeners. scripts/validate.sh
 # checks every ref against the rendered Certificates; add a new app's certRef
 # only after its Certificate is Ready. The `websecure`-only certs (LAN/VPN apps
-# that must never be reachable through the public FRP tunnel) are appended
+# that must never be reachable through the public-exposure tunnel) are appended
 # explicitly next to the include.
 {{- define "gateway.certRefs" -}}
 - {name: dscpln-prod-tls, namespace: apps}
@@ -56,7 +56,7 @@ spec:
         mode: Terminate
         certificateRefs:{{ include "gateway.certRefs" . | nindent 10 }}
           # LAN/VPN-only: not attached to websecure-proxy, so unreachable
-          # through the public FRP tunnel.
+          # through the public-exposure tunnel.
           - {name: filebrowser-prod-tls, namespace: apps}
           - {name: opencode-prod-tls}
           - {name: longhorn-prod-tls}

@@ -39,11 +39,11 @@ Then run `... ps <services>` to confirm health. `-A` (agent forwarding) is only 
 so the remote `git pull` can authenticate to the git host; a deploy key there removes
 the need for it.
 
-## srv0 frpc sidecar (compose)
+## srv0 public-exposure client sidecar (compose)
 
 ```bash
 docker compose --env-file config/srv0/compose.env --env-file targets/srv0/compose/.env \
-  -f targets/srv0/compose/compose.yaml up -d frpc
+  -f targets/srv0/compose/compose.yaml up -d public-exposure-client-wg
 ```
 
 ## pc / bigpc / rpi — print these, do not run
