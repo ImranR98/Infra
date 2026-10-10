@@ -81,6 +81,7 @@ metadata:
 type: Opaque
 stringData:
   oidc-client-secret: "{{ .Values.AUTHELIA_FILEBROWSER_CLIENT_SECRET_HASHABLE }}"
+  # Retained for recovery only; the app reads the key persisted in its SQLite DB.
   jwt-token-secret: "{{ .Values.FILEBROWSER_JWT_TOKEN_SECRET }}"
 ---
 apiVersion: apps/v1
@@ -145,11 +146,9 @@ spec:
                 secretKeyRef:
                   name: filebrowser-secrets
                   key: oidc-client-secret
-            - name: FILEBROWSER_JWT_TOKEN_SECRET
-              valueFrom:
-                secretKeyRef:
-                  name: filebrowser-secrets
-                  key: jwt-token-secret
+            # No FILEBROWSER_JWT_TOKEN_SECRET: v2 persists the session signing
+            # key in SQLite (imported from the v1 DB), and a differing env
+            # value aborts startup.
           ports:
             - containerPort: 80
           readinessProbe:
