@@ -92,12 +92,6 @@ spec:
               kubernetes.io/metadata.name: apps
           podSelector:
             matchLabels:
-              app.kubernetes.io/component: mdscl
-        - namespaceSelector:
-            matchLabels:
-              kubernetes.io/metadata.name: apps
-          podSelector:
-            matchLabels:
               app: immrtlize
         - namespaceSelector:
             matchLabels:
