@@ -178,6 +178,16 @@ spec:
           port: 80
         - protocol: TCP
           port: 8443
+    # remote-access-amneziawg clients: not pods, so the VPN subnet needs an
+    # ipBlock to reach Traefik (which then proxies to the app pods).
+    - from:
+        - ipBlock:
+            cidr: 10.100.0.0/24
+      ports:
+        - protocol: TCP
+          port: 80
+        - protocol: TCP
+          port: 443
   policyTypes:
     - Ingress
 ---

@@ -10,7 +10,9 @@ WG_DIR=/wg
 WG_ENDPOINT="${REMOTE_ACCESS_AMNEZIAWG_ENDPOINT:-}"
 WG_SUBNET=10.100.0
 WG_PORT=51830
-WG_MTU=1280
+# Must fit inside the public-exposure tunnel's 1340-byte MTU once the AWG
+# obfuscation/padding overhead is added.
+WG_MTU=1180
 
 [ -n "$WG_ENDPOINT" ] || { echo "Error: REMOTE_ACCESS_AMNEZIAWG_ENDPOINT is required (public host:port clients dial)" >&2; exit 1; }
 
