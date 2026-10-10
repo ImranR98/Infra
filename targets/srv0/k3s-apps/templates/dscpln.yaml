@@ -47,7 +47,7 @@ spec:
           level: s0
       containers:
         - name: dscpln
-          image: imranrdev/dscpln:latest@sha256:218e8837e07611e07889c057e4a96716cd0f36232d3e4792d964f11e8500fe95
+          image: imranrdev/dscpln:latest@sha256:5a5ddcf360bdfb26a67d5f78f404a3f7fe9125237abc7d2677a38faf3410a23f
           securityContext:
             runAsUser: {{ .Values.MY_UID }}
             runAsGroup: {{ .Values.MY_UID }}
