@@ -28,6 +28,9 @@ spec:
           image: imranrdev/dscpln-watxt:latest@sha256:ae2f48da96eb5e0a85f6d27e8c2326617c9ba677c732f7a7324da79c6780bd80
           securityContext:
             allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            seccompProfile:
+              type: RuntimeDefault
             capabilities:
               drop:
                 - ALL
@@ -53,9 +56,15 @@ spec:
               memory: 128Mi
               cpu: 10m
           volumeMounts:
+            - name: tmp
+              mountPath: /tmp
             - name: data
               mountPath: /data
       volumes:
+        - name: tmp
+          emptyDir:
+            medium: Memory
+            sizeLimit: 256Mi
         - name: data
           persistentVolumeClaim:
             claimName: hostpath-main-node-wa-txt-pvc

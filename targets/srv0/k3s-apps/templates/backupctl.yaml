@@ -53,6 +53,11 @@ spec:
             runAsUser: {{ .Values.MY_UID }}
             runAsGroup: {{ .Values.MY_UID }}
             allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            seccompProfile:
+              type: RuntimeDefault
           ports:
             - name: http
               containerPort: 8085
@@ -96,6 +101,8 @@ spec:
             timeoutSeconds: 5
             failureThreshold: 3
           volumeMounts:
+            - name: tmp
+              mountPath: /tmp
             - name: home
               mountPath: /home/imranr
             - name: main
@@ -104,6 +111,10 @@ spec:
               mountPath: /config-src
               readOnly: true
       volumes:
+        - name: tmp
+          emptyDir:
+            medium: Memory
+            sizeLimit: 256Mi
         - name: home
           persistentVolumeClaim:
             claimName: backupctl-home-pvc

@@ -52,6 +52,12 @@ spec:
             runAsUser: {{ .Values.MY_UID }}
             runAsGroup: {{ .Values.MY_UID }}
             allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            readOnlyRootFilesystem: true
+            seccompProfile:
+              type: RuntimeDefault
           ports:
             - containerPort: 3300
           resources:
@@ -77,6 +83,8 @@ spec:
             - name: BASE_PATH
               value: /balance
           volumeMounts:
+            - name: tmp
+              mountPath: /tmp
             - name: config
               mountPath: /app/config.json
               subPath: config.json
@@ -86,6 +94,10 @@ spec:
             - name: dscpln-ledger
               mountPath: {{ .Values.DSCPLN_LEDGER_PATH }}
       volumes:
+        - name: tmp
+          emptyDir:
+            medium: Memory
+            sizeLimit: 256Mi
         - name: config
           secret:
             secretName: dscpln-config

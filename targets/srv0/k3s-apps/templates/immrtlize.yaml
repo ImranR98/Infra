@@ -52,6 +52,12 @@ spec:
             runAsUser: {{ .Values.MY_UID }}
             runAsGroup: {{ .Values.MY_UID }}
             allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            readOnlyRootFilesystem: true
+            seccompProfile:
+              type: RuntimeDefault
           ports:
             - name: http
               containerPort: 8791
@@ -72,6 +78,8 @@ spec:
             timeoutSeconds: 5
             failureThreshold: 3
           volumeMounts:
+            - name: tmp
+              mountPath: /tmp
             - name: source
               mountPath: /source
             - name: destination
@@ -81,6 +89,10 @@ spec:
             - name: appdata
               mountPath: /appdata
       volumes:
+        - name: tmp
+          emptyDir:
+            medium: Memory
+            sizeLimit: 256Mi
         - name: source
           persistentVolumeClaim:
             claimName: hostpath-main-node-devicesync-pvc
