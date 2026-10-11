@@ -97,7 +97,7 @@ spec:
   targetNamespace: apps
   createNamespace: false
   failurePolicy: abort
-  version: 16.6.0
+  version: 17.0.0
   valuesContent: |-
     # OIDC client secret is an env secretKeyRef inside the chart values.
     podAnnotations:
