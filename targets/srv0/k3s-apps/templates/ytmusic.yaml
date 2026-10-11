@@ -43,7 +43,7 @@ spec:
           level: s0
       containers:
         - name: ytmusic
-          image: imranrdev/dscpln-ytmusic:latest@sha256:d7ddc4fc361b3124203524b766da333d22e01959a702040574ff29bb7852e297
+          image: imranrdev/dscpln-ytmusic:latest@sha256:b91a67544ee6033abc7876d7e22bfd93ad22b2889375ccc7ce036f1ac80b5d30
           securityContext:
             runAsUser: {{ .Values.MY_UID }}
             runAsGroup: {{ .Values.MY_UID }}

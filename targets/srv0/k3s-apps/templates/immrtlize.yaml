@@ -47,7 +47,7 @@ spec:
       containers:
         - name: immrtlize
           # Pin by digest after the first push so Renovate can bump deliberately.
-          image: imranrdev/dscpln-media-sync:latest@sha256:94d78a08a50a38e3ad6214b36bea7b47c37dffa56a8983701dcc99a5dc1c2554
+          image: imranrdev/dscpln-media-sync:latest@sha256:21f143bf6578381b559996c00912eba903a92bfe619cf677e878c626817bbfdf
           securityContext:
             runAsUser: {{ .Values.MY_UID }}
             runAsGroup: {{ .Values.MY_UID }}
