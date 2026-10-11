@@ -80,7 +80,7 @@ spec:
               kubernetes.io/metadata.name: apps
           podSelector:
             matchLabels:
-              app: dscpln
+              app: balance-xlsx
         - namespaceSelector:
             matchLabels:
               kubernetes.io/metadata.name: apps
@@ -92,7 +92,25 @@ spec:
               kubernetes.io/metadata.name: apps
           podSelector:
             matchLabels:
-              app: immrtlize
+              app: media-sync
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: apps
+          podSelector:
+            matchLabels:
+              app: contacts-calendar
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: apps
+          podSelector:
+            matchLabels:
+              app: compose-state
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: apps
+          podSelector:
+            matchLabels:
+              app: ytmusic
         - namespaceSelector:
             matchLabels:
               kubernetes.io/metadata.name: apps
