@@ -55,6 +55,9 @@ spec:
           ports:
             - name: http
               containerPort: 8791
+          env:
+            - name: BASE_PATH
+              value: /media
           resources:
             limits:
               memory: 2Gi
@@ -63,7 +66,7 @@ spec:
               cpu: 100m
           readinessProbe:
             httpGet:
-              path: /api/health
+              path: /media/api/health
               port: http
             periodSeconds: 30
             timeoutSeconds: 5
@@ -103,62 +106,3 @@ spec:
     - name: http
       port: 8791
       targetPort: http
----
-apiVersion: cert-manager.io/v1
-kind: Certificate
-metadata:
-  name: immrtlize-prod-tls
-  namespace: apps
-spec:
-  secretName: immrtlize-prod-tls
-  issuerRef:
-    name: letsencrypt-prod
-    kind: ClusterIssuer
-  dnsNames:
-    - immrtlize.{{ .Values.SERVICES_DOMAIN }}
----
-apiVersion: gateway.networking.k8s.io/v1
-kind: HTTPRoute
-metadata:
-  name: immrtlize-ingress
-  # Routes live in `base` because Traefik resolves Middleware ExtensionRefs
-  # only in the route's namespace, and the shared middlewares live there.
-  namespace: base
-spec:
-  parentRefs:
-    # Public (websecure-proxy) + LAN/VPN (websecure), like dscpln and the rest
-    # of the Authelia-protected apps; geoblock + CrowdSec + SSO guard the UI,
-    # which can delete files, so admin-only two_factor is intended.
-    - name: srv0
-      sectionName: websecure
-    - name: srv0
-      sectionName: websecure-proxy
-  hostnames:
-    - immrtlize.{{ .Values.SERVICES_DOMAIN }}
-  rules:
-    - matches:
-        - path:
-            type: PathPrefix
-            value: /
-      filters:
-        - type: ExtensionRef
-          extensionRef:
-            group: traefik.io
-            kind: Middleware
-            name: geoblock
-        - type: ExtensionRef
-          extensionRef:
-            group: traefik.io
-            kind: Middleware
-            name: crowdsec-bouncer
-        # Access is governed by the wildcard `*=admins, two_factor` rule in
-        # authelia.yaml; the UI can delete files, so admin-only is intended.
-        - type: ExtensionRef
-          extensionRef:
-            group: traefik.io
-            kind: Middleware
-            name: forwardauth-authelia
-      backendRefs:
-        - name: media-sync
-          namespace: apps
-          port: 8791

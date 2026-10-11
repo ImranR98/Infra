@@ -9,7 +9,6 @@
 # that must never be reachable through the public-exposure tunnel) are appended
 # explicitly next to the include.
 {{- define "gateway.certRefs" -}}
-- {name: backupctl-prod-tls, namespace: apps}
 - {name: dscpln-prod-tls, namespace: apps}
 - {name: fmd-prod-tls, namespace: apps}
 - {name: freshrss-prod-tls, namespace: apps}
@@ -17,7 +16,6 @@
 - {name: headlamp-prod-tls, namespace: apps}
 - {name: homeassistant-prod-tls, namespace: apps}
 - {name: immich-prod-tls, namespace: apps}
-- {name: immrtlize-prod-tls, namespace: apps}
 - {name: jellyfin-prod-tls, namespace: apps}
 - {name: linkwarden-prod-tls, namespace: apps}
 - {name: navidrome-prod-tls, namespace: apps}
@@ -30,7 +28,6 @@
 - {name: radarr-prod-tls, namespace: apps}
 - {name: seerr-prod-tls, namespace: apps}
 - {name: sonarr-prod-tls, namespace: apps}
-- {name: watxt-prod-tls, namespace: apps}
 - {name: authelia-prod-tls}
 - {name: crowdsec-web-ui-prod-tls}
 - {name: grafana-prod-tls}

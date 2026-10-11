@@ -80,6 +80,8 @@ spec:
               value: {{ .Values.BACKUPCTL_GIT_NAME | quote }}
             - name: GIT_COMMITTER_EMAIL
               value: {{ .Values.BACKUPCTL_GIT_EMAIL | quote }}
+            - name: BASE_PATH
+              value: /tasks
           resources:
             limits:
               memory: 1Gi
@@ -88,7 +90,7 @@ spec:
               cpu: 50m
           readinessProbe:
             httpGet:
-              path: /api/tasks
+              path: /tasks/api/tasks
               port: http
             periodSeconds: 30
             timeoutSeconds: 5
@@ -128,57 +130,3 @@ spec:
     - name: http
       port: 8085
       targetPort: http
----
-apiVersion: cert-manager.io/v1
-kind: Certificate
-metadata:
-  name: backupctl-prod-tls
-  namespace: apps
-spec:
-  secretName: backupctl-prod-tls
-  issuerRef:
-    name: letsencrypt-prod
-    kind: ClusterIssuer
-  dnsNames:
-    - backupctl.{{ .Values.SERVICES_DOMAIN }}
----
-apiVersion: gateway.networking.k8s.io/v1
-kind: HTTPRoute
-metadata:
-  name: backupctl-ingress
-  namespace: base
-spec:
-  parentRefs:
-    - name: srv0
-      sectionName: websecure
-    - name: srv0
-      sectionName: websecure-proxy
-  hostnames:
-    - backupctl.{{ .Values.SERVICES_DOMAIN }}
-  rules:
-    - matches:
-        - path:
-            type: PathPrefix
-            value: /
-      filters:
-        - type: ExtensionRef
-          extensionRef:
-            group: traefik.io
-            kind: Middleware
-            name: geoblock
-        - type: ExtensionRef
-          extensionRef:
-            group: traefik.io
-            kind: Middleware
-            name: crowdsec-bouncer
-        # The UI can run arbitrary configured tasks and write into the backup
-        # tree, so access is admin-only two_factor (wildcard rule).
-        - type: ExtensionRef
-          extensionRef:
-            group: traefik.io
-            kind: Middleware
-            name: forwardauth-authelia
-      backendRefs:
-        - name: task-runner
-          namespace: apps
-          port: 8085

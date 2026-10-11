@@ -1,0 +1,57 @@
+# D$CPLN portal — the root landing page listing every function subpath.
+# Stateless: no PVC. Reachable at the host root behind Authelia.
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: portal
+  namespace: apps
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: portal
+  template:
+    metadata:
+      labels:
+        app: portal
+    spec:
+      securityContext:
+        fsGroup: {{ .Values.MY_UID }}
+      containers:
+        - name: portal
+          image: imranrdev/dscpln-portal:latest@sha256:a1517c0403867a63e07cdf334b2186b2b76cf3305d9d67695fbe8c8fd08a918c
+          securityContext:
+            runAsUser: {{ .Values.MY_UID }}
+            runAsGroup: {{ .Values.MY_UID }}
+            allowPrivilegeEscalation: false
+          ports:
+            - name: http
+              containerPort: 8080
+          resources:
+            limits:
+              memory: 128Mi
+            requests:
+              memory: 32Mi
+              cpu: 10m
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: http
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: portal
+  namespace: apps
+spec:
+  type: ClusterIP
+  selector:
+    app: portal
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http

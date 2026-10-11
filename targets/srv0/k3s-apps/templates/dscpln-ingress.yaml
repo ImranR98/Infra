@@ -1,0 +1,257 @@
+# D$CPLN consolidated ingress: ONE TLS certificate and ONE HTTPRoute serving
+# every function under https://dscpln.<domain>/<function> (plus the portal at
+# /). Per-app hostnames/certificates/routes were retired in P4; the old
+# resources live in git history if a rollback is needed.
+#
+# Routes live in `base` because Traefik resolves Middleware ExtensionRefs only
+# in the route's namespace, and the shared middlewares live there.
+#
+# Rule order matters: the token-protected external API bypasses Authelia and
+# must be matched before the /balance catch-all.
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: dscpln-prod-tls
+  namespace: apps
+spec:
+  secretName: dscpln-prod-tls
+  issuerRef:
+    name: letsencrypt-prod
+    kind: ClusterIssuer
+  dnsNames:
+    - dscpln.{{ .Values.SERVICES_DOMAIN }}
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: dscpln-ingress
+  namespace: base
+spec:
+  parentRefs:
+    # Public (websecure-proxy, via the vps0 tunnel) + LAN/VPN (websecure).
+    - name: srv0
+      sectionName: websecure
+    - name: srv0
+      sectionName: websecure-proxy
+  hostnames:
+    - dscpln.{{ .Values.SERVICES_DOMAIN }}
+  rules:
+    # The external API is deliberately unauthenticated at the proxy: it is
+    # token-protected by the app and called by scripts, not browsers. geoblock
+    # and CrowdSec still apply; Authelia does not (the token itself lives on
+    # /balance/settings, which stays behind the catch-all below).
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /balance/api
+      filters:
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: geoblock
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: crowdsec-bouncer
+      backendRefs:
+        - name: balance-xlsx
+          namespace: apps
+          port: 3300
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /balance
+      filters:
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: geoblock
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: crowdsec-bouncer
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: forwardauth-authelia
+      backendRefs:
+        - name: balance-xlsx
+          namespace: apps
+          port: 3300
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /media
+      filters:
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: geoblock
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: crowdsec-bouncer
+        # The UI can delete files, so access is admin-only two_factor
+        # (wildcard rule in authelia.yaml).
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: forwardauth-authelia
+      backendRefs:
+        - name: media-sync
+          namespace: apps
+          port: 8791
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /watxt
+      filters:
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: geoblock
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: crowdsec-bouncer
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: forwardauth-authelia
+      backendRefs:
+        - name: whatsapp-txt
+          namespace: apps
+          port: 8787
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /tasks
+      filters:
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: geoblock
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: crowdsec-bouncer
+        # Can run arbitrary configured tasks and write into the backup tree.
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: forwardauth-authelia
+      backendRefs:
+        - name: task-runner
+          namespace: apps
+          port: 8085
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /contacts
+      filters:
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: geoblock
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: crowdsec-bouncer
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: forwardauth-authelia
+      backendRefs:
+        - name: contacts-calendar
+          namespace: apps
+          port: 8080
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /compose
+      filters:
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: geoblock
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: crowdsec-bouncer
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: forwardauth-authelia
+      backendRefs:
+        - name: compose-state
+          namespace: apps
+          port: 8080
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /ytmusic
+      filters:
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: geoblock
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: crowdsec-bouncer
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: forwardauth-authelia
+      backendRefs:
+        - name: ytmusic
+          namespace: apps
+          port: 8080
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      filters:
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: geoblock
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: crowdsec-bouncer
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: forwardauth-authelia
+      backendRefs:
+        - name: portal
+          namespace: apps
+          port: 8080

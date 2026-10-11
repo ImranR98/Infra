@@ -58,6 +58,8 @@ spec:
               value: /data
             - name: TZ
               value: America/Toronto
+            - name: BASE_PATH
+              value: /compose
           resources:
             limits:
               memory: 512Mi
@@ -66,7 +68,7 @@ spec:
               cpu: 10m
           readinessProbe:
             httpGet:
-              path: /api/health
+              path: /compose/api/health
               port: http
             periodSeconds: 30
             timeoutSeconds: 5

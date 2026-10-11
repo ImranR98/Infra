@@ -59,6 +59,8 @@ spec:
               value: /data
             - name: TZ
               value: America/Toronto
+            - name: BASE_PATH
+              value: /contacts
             # Git identity for the export commits (same values as the bridge).
             - name: GIT_AUTHOR_NAME
               value: {{ .Values.BACKUPCTL_GIT_NAME | quote }}
@@ -76,7 +78,7 @@ spec:
               cpu: 10m
           readinessProbe:
             httpGet:
-              path: /api/health
+              path: /contacts/api/health
               port: http
             periodSeconds: 30
             timeoutSeconds: 5

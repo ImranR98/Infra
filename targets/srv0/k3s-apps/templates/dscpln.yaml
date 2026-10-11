@@ -47,7 +47,7 @@ spec:
           level: s0
       containers:
         - name: balance-xlsx
-          image: imranrdev/dscpln:latest@sha256:7c8912ce13326c227472b1ef0e395ca9222be0cc09ca82605d6aa539a31719d1
+          image: imranrdev/dscpln-balance:latest@sha256:c5c246055aa225b0ba728050382adfd62735c2e8dbe770d486a42918d9631a1a
           securityContext:
             runAsUser: {{ .Values.MY_UID }}
             runAsGroup: {{ .Values.MY_UID }}
@@ -62,7 +62,8 @@ spec:
             requests:
               memory: 256Mi
           readinessProbe:
-            tcpSocket:
+            httpGet:
+              path: /balance/api/health
               port: 3300
             periodSeconds: 30
             timeoutSeconds: 5
@@ -73,6 +74,8 @@ spec:
               value: "0"
             - name: NODE_OPTIONS
               value: "--max-old-space-size=1536"
+            - name: BASE_PATH
+              value: /balance
           volumeMounts:
             - name: config
               mountPath: /app/config.json
@@ -102,82 +105,6 @@ spec:
   ports:
     - port: 3300
       targetPort: 3300
----
----
-apiVersion: cert-manager.io/v1
-kind: Certificate
-metadata:
-  name: dscpln-prod-tls
-  namespace: apps
-spec:
-  secretName: dscpln-prod-tls
-  issuerRef:
-    name: letsencrypt-prod
-    kind: ClusterIssuer
-  dnsNames:
-    - dscpln.{{ .Values.SERVICES_DOMAIN }}
----
-apiVersion: gateway.networking.k8s.io/v1
-kind: HTTPRoute
-metadata:
-  name: dscpln-ingress
-  namespace: base
-spec:
-  parentRefs:
-    - name: srv0
-      sectionName: websecure
-    - name: srv0
-      sectionName: websecure-proxy
-  hostnames:
-    - dscpln.{{ .Values.SERVICES_DOMAIN }}
-  rules:
-    # The external API is deliberately unauthenticated at the proxy: it is
-    # token-protected by the app and called by scripts, not browsers. geoblock
-    # and CrowdSec still apply; Authelia does not (the token lives on /settings,
-    # which stays behind the catch-all rule below).
-    - matches:
-        - path:
-            type: PathPrefix
-            value: /api/
-      filters:
-        - type: ExtensionRef
-          extensionRef:
-            group: traefik.io
-            kind: Middleware
-            name: geoblock
-        - type: ExtensionRef
-          extensionRef:
-            group: traefik.io
-            kind: Middleware
-            name: crowdsec-bouncer
-      backendRefs:
-        - name: balance-xlsx
-          namespace: apps
-          port: 3300
-    - matches:
-        - path:
-            type: PathPrefix
-            value: /
-      filters:
-        - type: ExtensionRef
-          extensionRef:
-            group: traefik.io
-            kind: Middleware
-            name: geoblock
-        - type: ExtensionRef
-          extensionRef:
-            group: traefik.io
-            kind: Middleware
-            name: crowdsec-bouncer
-        - type: ExtensionRef
-          extensionRef:
-            group: traefik.io
-            kind: Middleware
-            name: forwardauth-authelia
-      backendRefs:
-        - name: balance-xlsx
-          namespace: apps
-          port: 3300
 ---
 apiVersion: v1
 kind: PersistentVolume

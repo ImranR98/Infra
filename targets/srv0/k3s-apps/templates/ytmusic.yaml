@@ -60,6 +60,8 @@ spec:
               value: /data/cache
             - name: TZ
               value: America/Toronto
+            - name: BASE_PATH
+              value: /ytmusic
           resources:
             # ffmpeg + yt-dlp over a large library.
             limits:
@@ -69,7 +71,7 @@ spec:
               cpu: 50m
           readinessProbe:
             httpGet:
-              path: /api/health
+              path: /ytmusic/api/health
               port: http
             periodSeconds: 30
             timeoutSeconds: 5
