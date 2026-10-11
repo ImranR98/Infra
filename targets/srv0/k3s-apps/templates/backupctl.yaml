@@ -1,8 +1,10 @@
-# backupctl — the config-driven backup runner, also deployed as a bridge
-# instance on srv0 so upload/ingest tasks are usable from any browser behind
-# Authelia. The same synced config.mjs is mounted read-only (edits need a pod
-# restart, no image rebuild), the shared Main tree is mounted at the same path,
-# and `host:` fields in config.mjs pin tasks to a machine (BACKUPCTL_HOST).
+# backupctl (D$CPLN Task Runner) — the config-driven backup runner, also
+# deployed as a bridge instance on srv0 so upload/ingest tasks are usable from
+# any browser behind Authelia. The same synced monorepo config.mjs is mounted
+# read-only (edits need a pod restart, no image rebuild), the shared Main tree
+# is mounted at the same path, and `host:` fields in config.mjs pin tasks to a
+# machine (BACKUPCTL_HOST). The image carries the monorepo (tools/ included) and
+# BACKUPCTL_REPO_DIR=/app makes the repo_dir token point at it.
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -46,7 +48,7 @@ spec:
           level: s0
       containers:
         - name: backupctl
-          image: imranrdev/backupctl:latest@sha256:c6e3f1102c337ac4fce1f2bbd1b935e7e48f4cc0a81f804a94f0f8be20441683
+          image: imranrdev/dscpln-task-runner:latest@sha256:74511e94b0314a6de76080ca3d1f44fb7e049c0997b18d4a8bd1396df51ad0d2
           securityContext:
             runAsUser: {{ .Values.MY_UID }}
             runAsGroup: {{ .Values.MY_UID }}
@@ -61,7 +63,10 @@ spec:
             - name: BACKUPCTL_HOST
               value: srv0
             - name: BACKUPCTL_CONFIG_FILE
-              value: /config-src/config.mjs
+              value: /config-src/apps/task-runner/config.mjs
+            # The monorepo root baked into the image (the repo_dir token).
+            - name: BACKUPCTL_REPO_DIR
+              value: /app
             - name: BACKUPCTL_STATE_DIR
               value: /home/imranr/.backupctl
             - name: BACKUPCTL_TMP_DIR
@@ -103,11 +108,12 @@ spec:
         - name: main
           persistentVolumeClaim:
             claimName: hostpath-main-node-main-pvc
-        # The Syncthing-synced repo checkout; only config.mjs is read from it.
-        # A directory mount (not a file) so atomic config replacements are seen.
+        # The Syncthing-synced monorepo checkout; only the task-runner config is
+        # read from it. A directory mount (not a file) so atomic config
+        # replacements are seen.
         - name: config-src
           hostPath:
-            path: {{ .Values.MAIN_PARENT_DIR }}/Main/Code/Automation/backupctl
+            path: {{ .Values.MAIN_PARENT_DIR }}/Main/Code/Apps/D$CPLN
             type: Directory
 ---
 apiVersion: v1
