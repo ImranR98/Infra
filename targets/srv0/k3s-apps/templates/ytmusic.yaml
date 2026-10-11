@@ -1,0 +1,102 @@
+# YTMusic Downloads (D$CPLN) — scheduled YouTube Music library downloads via
+# the absorbed YTMusicDL downloader. Auth is a pasted ytmusicapi browser.json
+# stored on the app's PVC; downloads land in ~/Main/Media/Music.
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: ytmusic-pvc
+  namespace: apps
+  labels:
+    auto-backup: "true"
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: longhorn
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ytmusic
+  namespace: apps
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: ytmusic
+  template:
+    metadata:
+      labels:
+        app: ytmusic
+    spec:
+      nodeSelector:
+        infra.local/hostpath-main: "true"
+      securityContext:
+        fsGroup: {{ .Values.MY_UID }}
+        # s0: downloads are written into the shared Main tree.
+        seLinuxOptions:
+          level: s0
+      containers:
+        - name: ytmusic
+          image: imranrdev/dscpln-ytmusic:latest@sha256:d7ddc4fc361b3124203524b766da333d22e01959a702040574ff29bb7852e297
+          securityContext:
+            runAsUser: {{ .Values.MY_UID }}
+            runAsGroup: {{ .Values.MY_UID }}
+            allowPrivilegeEscalation: false
+          ports:
+            - name: http
+              containerPort: 8080
+          env:
+            - name: HOME
+              value: /home/imranr
+            - name: DSCPLN_DATA_DIR
+              value: /data
+            - name: XDG_CACHE_HOME
+              value: /data/cache
+            - name: TZ
+              value: America/Toronto
+          resources:
+            # ffmpeg + yt-dlp over a large library.
+            limits:
+              memory: 1Gi
+            requests:
+              memory: 128Mi
+              cpu: 50m
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: http
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+          volumeMounts:
+            - name: config
+              mountPath: /data
+            - name: main
+              mountPath: /home/imranr/Main
+      volumes:
+        - name: config
+          persistentVolumeClaim:
+            claimName: ytmusic-pvc
+        - name: main
+          persistentVolumeClaim:
+            claimName: hostpath-main-node-main-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ytmusic
+  namespace: apps
+spec:
+  type: ClusterIP
+  selector:
+    app: ytmusic
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http

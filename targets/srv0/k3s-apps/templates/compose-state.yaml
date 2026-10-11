@@ -1,0 +1,99 @@
+# Infra Compose State (D$CPLN) — scheduled backups of the compose runtime
+# state on srv0 (locally) and vps0 (over SSH). Generates its own ed25519 key
+# on first boot; the public key is shown in the UI to authorize on vps0.
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: compose-state-pvc
+  namespace: apps
+  labels:
+    auto-backup: "true"
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: longhorn
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: compose-state
+  namespace: apps
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: compose-state
+  template:
+    metadata:
+      labels:
+        app: compose-state
+    spec:
+      nodeSelector:
+        infra.local/hostpath-main: "true"
+      securityContext:
+        fsGroup: {{ .Values.MY_UID }}
+        # s0: archives are written into the shared Main tree.
+        seLinuxOptions:
+          level: s0
+      containers:
+        - name: compose-state
+          image: imranrdev/dscpln-compose:latest@sha256:85dda16b00994ce2d79d34807eb743e79b40ecc4f7834157acf0a6c2bd615b1f
+          securityContext:
+            runAsUser: {{ .Values.MY_UID }}
+            runAsGroup: {{ .Values.MY_UID }}
+            allowPrivilegeEscalation: false
+          ports:
+            - name: http
+              containerPort: 8080
+          env:
+            - name: HOME
+              value: /home/imranr
+            - name: DSCPLN_DATA_DIR
+              value: /data
+            - name: TZ
+              value: America/Toronto
+          resources:
+            limits:
+              memory: 512Mi
+            requests:
+              memory: 64Mi
+              cpu: 10m
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: http
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+          volumeMounts:
+            - name: config
+              mountPath: /data
+            - name: main
+              mountPath: /home/imranr/Main
+      volumes:
+        - name: config
+          persistentVolumeClaim:
+            claimName: compose-state-pvc
+        - name: main
+          persistentVolumeClaim:
+            claimName: hostpath-main-node-main-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: compose-state
+  namespace: apps
+spec:
+  type: ClusterIP
+  selector:
+    app: compose-state
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http
