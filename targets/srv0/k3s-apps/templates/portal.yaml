@@ -17,21 +17,13 @@ spec:
         app: portal
     spec:
       securityContext:
-        fsGroup: {{ .Values.MY_UID }}
+        {{- include "dscpln.podSecurityContext" (dict "uid" .Values.MY_UID) | nindent 8 }}
       automountServiceAccountToken: false
       containers:
         - name: portal
           image: imranrdev/dscpln-portal:latest@sha256:09aafa0948cdf52facb591b25407c605e8f0fcd324b19f15bed2b7deb7672819
           securityContext:
-            runAsUser: {{ .Values.MY_UID }}
-            runAsGroup: {{ .Values.MY_UID }}
-            allowPrivilegeEscalation: false
-            capabilities:
-              drop:
-                - ALL
-            readOnlyRootFilesystem: true
-            seccompProfile:
-              type: RuntimeDefault
+            {{- include "dscpln.containerSecurityContext" (dict "uid" .Values.MY_UID "readOnlyRootFilesystem" true) | nindent 12 }}
           ports:
             - name: http
               containerPort: 8080
@@ -42,12 +34,7 @@ spec:
               memory: 32Mi
               cpu: 10m
           readinessProbe:
-            httpGet:
-              path: /api/health
-              port: http
-            periodSeconds: 30
-            timeoutSeconds: 5
-            failureThreshold: 3
+            {{- include "dscpln.readinessProbe" (dict "path" "/api/health" "port" "http") | nindent 12 }}
           volumeMounts:
             - name: tmp
               mountPath: /tmp
@@ -57,16 +44,4 @@ spec:
             medium: Memory
             sizeLimit: 128Mi
 ---
-apiVersion: v1
-kind: Service
-metadata:
-  name: portal
-  namespace: apps
-spec:
-  type: ClusterIP
-  selector:
-    app: portal
-  ports:
-    - name: http
-      port: 8080
-      targetPort: http
+{{ include "dscpln.service" (dict "name" "portal" "targetPort" "http" "port" 8080) }}

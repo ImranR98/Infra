@@ -42,23 +42,13 @@ spec:
         checksum/dscpln-config: {{ include "dscpln.config" . | sha256sum }}
     spec:
       securityContext:
-        fsGroup: {{ .Values.MY_UID }}
-        seLinuxOptions:
-          level: s0
+        {{- include "dscpln.podSecurityContext" (dict "uid" .Values.MY_UID "seLevel" "s0") | nindent 8 }}
       automountServiceAccountToken: false
       containers:
         - name: balance-xlsx
           image: imranrdev/dscpln-balance:latest@sha256:3b74ca8cfd90b35f8d6a8ceabee90b9640f2bcf9e830fd9f0c5e8f8fd60d6d34
           securityContext:
-            runAsUser: {{ .Values.MY_UID }}
-            runAsGroup: {{ .Values.MY_UID }}
-            allowPrivilegeEscalation: false
-            capabilities:
-              drop:
-                - ALL
-            readOnlyRootFilesystem: true
-            seccompProfile:
-              type: RuntimeDefault
+            {{- include "dscpln.containerSecurityContext" (dict "uid" .Values.MY_UID "readOnlyRootFilesystem" true) | nindent 12 }}
           ports:
             - containerPort: 3300
           resources:
@@ -69,12 +59,7 @@ spec:
             requests:
               memory: 256Mi
           readinessProbe:
-            httpGet:
-              path: /balance/api/health
-              port: 3300
-            periodSeconds: 30
-            timeoutSeconds: 5
-            failureThreshold: 3
+            {{- include "dscpln.readinessProbe" (dict "path" "/balance/api/health" "port" "3300") | nindent 12 }}
           env:
             # Silence Node/libuv io_uring SELinux denials on Fedora nodes.
             - name: UV_USE_IO_URING
@@ -108,18 +93,7 @@ spec:
           persistentVolumeClaim:
             claimName: dscpln-ledger-pvc
 ---
-apiVersion: v1
-kind: Service
-metadata:
-  name: balance-xlsx
-  namespace: apps
-spec:
-  type: ClusterIP
-  selector:
-    app: balance-xlsx
-  ports:
-    - port: 3300
-      targetPort: 3300
+{{ include "dscpln.service" (dict "name" "balance-xlsx" "port" 3300) }}
 ---
 apiVersion: v1
 kind: PersistentVolume

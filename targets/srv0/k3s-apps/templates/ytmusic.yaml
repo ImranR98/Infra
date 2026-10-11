@@ -37,24 +37,14 @@ spec:
       nodeSelector:
         infra.local/hostpath-main: "true"
       securityContext:
-        fsGroup: {{ .Values.MY_UID }}
         # s0: downloads are written into the shared Main tree.
-        seLinuxOptions:
-          level: s0
+        {{- include "dscpln.podSecurityContext" (dict "uid" .Values.MY_UID "seLevel" "s0") | nindent 8 }}
       automountServiceAccountToken: false
       containers:
         - name: ytmusic
           image: imranrdev/dscpln-ytmusic:latest@sha256:739b44b7816b50a270c195f7922bafacec03c154caecae87c7c2a60b7139af6a
           securityContext:
-            runAsUser: {{ .Values.MY_UID }}
-            runAsGroup: {{ .Values.MY_UID }}
-            allowPrivilegeEscalation: false
-            capabilities:
-              drop:
-                - ALL
-            readOnlyRootFilesystem: true
-            seccompProfile:
-              type: RuntimeDefault
+            {{- include "dscpln.containerSecurityContext" (dict "uid" .Values.MY_UID "readOnlyRootFilesystem" true) | nindent 12 }}
           ports:
             - name: http
               containerPort: 8080
@@ -79,12 +69,7 @@ spec:
               memory: 128Mi
               cpu: 50m
           readinessProbe:
-            httpGet:
-              path: /ytmusic/api/health
-              port: http
-            periodSeconds: 30
-            timeoutSeconds: 5
-            failureThreshold: 3
+            {{- include "dscpln.readinessProbe" (dict "path" "/ytmusic/api/health" "port" "http") | nindent 12 }}
           volumeMounts:
             - name: tmp
               mountPath: /tmp
@@ -104,16 +89,4 @@ spec:
           persistentVolumeClaim:
             claimName: hostpath-main-node-main-pvc
 ---
-apiVersion: v1
-kind: Service
-metadata:
-  name: ytmusic
-  namespace: apps
-spec:
-  type: ClusterIP
-  selector:
-    app: ytmusic
-  ports:
-    - name: http
-      port: 8080
-      targetPort: http
+{{ include "dscpln.service" (dict "name" "ytmusic" "targetPort" "http" "port" 8080) }}

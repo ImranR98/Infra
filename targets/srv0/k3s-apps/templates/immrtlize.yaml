@@ -39,26 +39,16 @@ spec:
         app: media-sync
     spec:
       securityContext:
-        fsGroup: {{ .Values.MY_UID }}
         # s0: the pod reads Syncthing-written trees and writes files that host
         # processes and other containers must be able to read back.
-        seLinuxOptions:
-          level: s0
+        {{- include "dscpln.podSecurityContext" (dict "uid" .Values.MY_UID "seLevel" "s0") | nindent 8 }}
       automountServiceAccountToken: false
       containers:
         - name: media-sync
           # Pin by digest after the first push so Renovate can bump deliberately.
           image: imranrdev/dscpln-media-sync:latest@sha256:82092ce531d6d48c2464a7fb3798277eacc60d87a8cc882fbc0e16982fc247ec
           securityContext:
-            runAsUser: {{ .Values.MY_UID }}
-            runAsGroup: {{ .Values.MY_UID }}
-            allowPrivilegeEscalation: false
-            capabilities:
-              drop:
-                - ALL
-            readOnlyRootFilesystem: true
-            seccompProfile:
-              type: RuntimeDefault
+            {{- include "dscpln.containerSecurityContext" (dict "uid" .Values.MY_UID "readOnlyRootFilesystem" true) | nindent 12 }}
           ports:
             - name: http
               containerPort: 8791
@@ -74,12 +64,7 @@ spec:
               memory: 256Mi
               cpu: 100m
           readinessProbe:
-            httpGet:
-              path: /media/api/health
-              port: http
-            periodSeconds: 30
-            timeoutSeconds: 5
-            failureThreshold: 3
+            {{- include "dscpln.readinessProbe" (dict "path" "/media/api/health" "port" "http") | nindent 12 }}
           volumeMounts:
             - name: tmp
               mountPath: /tmp
@@ -109,15 +94,4 @@ spec:
           persistentVolumeClaim:
             claimName: hostpath-main-node-immrtlize-pvc
 ---
-apiVersion: v1
-kind: Service
-metadata:
-  name: media-sync
-  namespace: apps
-spec:
-  selector:
-    app: media-sync
-  ports:
-    - name: http
-      port: 8791
-      targetPort: http
+{{ include "dscpln.service" (dict "name" "media-sync" "targetPort" "http" "port" 8791) }}

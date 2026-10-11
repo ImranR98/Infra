@@ -41,13 +41,7 @@ spec:
             - name: BASE_PATH
               value: /watxt
           readinessProbe:
-            httpGet:
-              path: /watxt/api/state
-              port: 8787
-            periodSeconds: 30
-            timeoutSeconds: 5
-            failureThreshold: 3
-            initialDelaySeconds: 10
+            {{- include "dscpln.readinessProbe" (dict "path" "/watxt/api/state" "port" "8787" "initialDelaySeconds" 10) | nindent 12 }}
           resources:
             # The whole conversation index is held in memory, and imports merge
             # in-process, so give it room beyond the usual Node baseline.
@@ -70,15 +64,4 @@ spec:
           persistentVolumeClaim:
             claimName: hostpath-main-node-wa-txt-pvc
 ---
-apiVersion: v1
-kind: Service
-metadata:
-  name: whatsapp-txt
-  namespace: apps
-spec:
-  type: ClusterIP
-  selector:
-    app: whatsapp-txt
-  ports:
-    - port: 8787
-      targetPort: 8787
+{{ include "dscpln.service" (dict "name" "whatsapp-txt" "port" 8787) }}

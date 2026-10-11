@@ -41,24 +41,15 @@ spec:
       nodeSelector:
         infra.local/hostpath-main: "true"
       securityContext:
-        fsGroup: {{ .Values.MY_UID }}
         # s0: writes into the shared Main tree stay readable by host processes
         # and other containers (same as dscpln/immrtlize).
-        seLinuxOptions:
-          level: s0
+        {{- include "dscpln.podSecurityContext" (dict "uid" .Values.MY_UID "seLevel" "s0") | nindent 8 }}
       automountServiceAccountToken: false
       containers:
         - name: task-runner
           image: imranrdev/dscpln-task-runner:latest@sha256:ee63b09d49cf5710b2af302228ab03d6e074fe2fa68b7b17e84208cebef7e284
           securityContext:
-            runAsUser: {{ .Values.MY_UID }}
-            runAsGroup: {{ .Values.MY_UID }}
-            allowPrivilegeEscalation: false
-            capabilities:
-              drop:
-                - ALL
-            seccompProfile:
-              type: RuntimeDefault
+            {{- include "dscpln.containerSecurityContext" (dict "uid" .Values.MY_UID) | nindent 12 }}
           ports:
             - name: http
               containerPort: 8085
@@ -95,12 +86,7 @@ spec:
               memory: 128Mi
               cpu: 50m
           readinessProbe:
-            httpGet:
-              path: /tasks/api/tasks
-              port: http
-            periodSeconds: 30
-            timeoutSeconds: 5
-            failureThreshold: 3
+            {{- include "dscpln.readinessProbe" (dict "path" "/tasks/api/tasks" "port" "http") | nindent 12 }}
           volumeMounts:
             - name: tmp
               mountPath: /tmp
@@ -130,15 +116,4 @@ spec:
             path: {{ .Values.MAIN_PARENT_DIR }}/Main/Code/Apps/D$CPLN
             type: Directory
 ---
-apiVersion: v1
-kind: Service
-metadata:
-  name: task-runner
-  namespace: apps
-spec:
-  selector:
-    app: task-runner
-  ports:
-    - name: http
-      port: 8085
-      targetPort: http
+{{ include "dscpln.service" (dict "name" "task-runner" "targetPort" "http" "port" 8085) }}

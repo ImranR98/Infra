@@ -38,24 +38,14 @@ spec:
       nodeSelector:
         infra.local/hostpath-main: "true"
       securityContext:
-        fsGroup: {{ .Values.MY_UID }}
         # s0: git commits and exports land in the shared Main tree.
-        seLinuxOptions:
-          level: s0
+        {{- include "dscpln.podSecurityContext" (dict "uid" .Values.MY_UID "seLevel" "s0") | nindent 8 }}
       automountServiceAccountToken: false
       containers:
         - name: contacts-calendar
           image: imranrdev/dscpln-contacts:latest@sha256:74777c6f7a71c796a62f43a141c297f02af1ad296e58051b483f28250f2bc93b
           securityContext:
-            runAsUser: {{ .Values.MY_UID }}
-            runAsGroup: {{ .Values.MY_UID }}
-            allowPrivilegeEscalation: false
-            capabilities:
-              drop:
-                - ALL
-            readOnlyRootFilesystem: true
-            seccompProfile:
-              type: RuntimeDefault
+            {{- include "dscpln.containerSecurityContext" (dict "uid" .Values.MY_UID "readOnlyRootFilesystem" true) | nindent 12 }}
           ports:
             - name: http
               containerPort: 8080
@@ -86,12 +76,7 @@ spec:
               memory: 64Mi
               cpu: 10m
           readinessProbe:
-            httpGet:
-              path: /contacts/api/health
-              port: http
-            periodSeconds: 30
-            timeoutSeconds: 5
-            failureThreshold: 3
+            {{- include "dscpln.readinessProbe" (dict "path" "/contacts/api/health" "port" "http") | nindent 12 }}
           volumeMounts:
             - name: tmp
               mountPath: /tmp
@@ -111,16 +96,4 @@ spec:
           persistentVolumeClaim:
             claimName: hostpath-main-node-main-pvc
 ---
-apiVersion: v1
-kind: Service
-metadata:
-  name: contacts-calendar
-  namespace: apps
-spec:
-  type: ClusterIP
-  selector:
-    app: contacts-calendar
-  ports:
-    - name: http
-      port: 8080
-      targetPort: http
+{{ include "dscpln.service" (dict "name" "contacts-calendar" "targetPort" "http" "port" 8080) }}

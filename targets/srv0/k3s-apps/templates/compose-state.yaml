@@ -37,24 +37,14 @@ spec:
       nodeSelector:
         infra.local/hostpath-main: "true"
       securityContext:
-        fsGroup: {{ .Values.MY_UID }}
         # s0: archives are written into the shared Main tree.
-        seLinuxOptions:
-          level: s0
+        {{- include "dscpln.podSecurityContext" (dict "uid" .Values.MY_UID "seLevel" "s0") | nindent 8 }}
       automountServiceAccountToken: false
       containers:
         - name: compose-state
           image: imranrdev/dscpln-compose:latest@sha256:74eadd049e1a3bf3d3df0fe8a106d0cb1b5b5ad043ee5cad432c1c5c56310ccd
           securityContext:
-            runAsUser: {{ .Values.MY_UID }}
-            runAsGroup: {{ .Values.MY_UID }}
-            allowPrivilegeEscalation: false
-            capabilities:
-              drop:
-                - ALL
-            readOnlyRootFilesystem: true
-            seccompProfile:
-              type: RuntimeDefault
+            {{- include "dscpln.containerSecurityContext" (dict "uid" .Values.MY_UID "readOnlyRootFilesystem" true) | nindent 12 }}
           ports:
             - name: http
               containerPort: 8080
@@ -76,12 +66,7 @@ spec:
               memory: 64Mi
               cpu: 10m
           readinessProbe:
-            httpGet:
-              path: /compose/api/health
-              port: http
-            periodSeconds: 30
-            timeoutSeconds: 5
-            failureThreshold: 3
+            {{- include "dscpln.readinessProbe" (dict "path" "/compose/api/health" "port" "http") | nindent 12 }}
           volumeMounts:
             - name: tmp
               mountPath: /tmp
@@ -101,16 +86,4 @@ spec:
           persistentVolumeClaim:
             claimName: hostpath-main-node-main-pvc
 ---
-apiVersion: v1
-kind: Service
-metadata:
-  name: compose-state
-  namespace: apps
-spec:
-  type: ClusterIP
-  selector:
-    app: compose-state
-  ports:
-    - name: http
-      port: 8080
-      targetPort: http
+{{ include "dscpln.service" (dict "name" "compose-state" "targetPort" "http" "port" 8080) }}
