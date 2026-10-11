@@ -47,7 +47,7 @@ spec:
       containers:
         - name: media-sync
           # Pin by digest after the first push so Renovate can bump deliberately.
-          image: imranrdev/dscpln-media-sync:latest@sha256:b705c30a9bff36b21c41809e5c793495ec67d0fb5be04cb698b178543b3614d1
+          image: imranrdev/dscpln-media-sync:latest@sha256:558accf58b908b0f05370b3f5e3785e0627c52f6a34e7ead9addf1792d0c6c39
           securityContext:
             runAsUser: {{ .Values.MY_UID }}
             runAsGroup: {{ .Values.MY_UID }}
