@@ -44,7 +44,7 @@ spec:
       automountServiceAccountToken: false
       containers:
         - name: compose-state
-          image: imranrdev/dscpln-compose:latest@sha256:644eeadfad78eab293901ea001310baedcc59ed21b0066fa2d1cf012a08a6016
+          image: imranrdev/dscpln-compose:latest@sha256:74eadd049e1a3bf3d3df0fe8a106d0cb1b5b5ad043ee5cad432c1c5c56310ccd
           securityContext:
             runAsUser: {{ .Values.MY_UID }}
             runAsGroup: {{ .Values.MY_UID }}
@@ -67,6 +67,8 @@ spec:
               value: America/Toronto
             - name: BASE_PATH
               value: /compose
+            - name: DSCPLN_ORIGIN
+              value: "https://dscpln.{{ .Values.SERVICES_DOMAIN }}"
           resources:
             limits:
               memory: 512Mi

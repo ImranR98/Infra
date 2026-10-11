@@ -45,7 +45,7 @@ spec:
       automountServiceAccountToken: false
       containers:
         - name: contacts-calendar
-          image: imranrdev/dscpln-contacts:latest@sha256:49735b078278635a4b8e7ac2309cc94f136bf04ca6de765b4b04be535007967d
+          image: imranrdev/dscpln-contacts:latest@sha256:74777c6f7a71c796a62f43a141c297f02af1ad296e58051b483f28250f2bc93b
           securityContext:
             runAsUser: {{ .Values.MY_UID }}
             runAsGroup: {{ .Values.MY_UID }}
@@ -68,6 +68,8 @@ spec:
               value: America/Toronto
             - name: BASE_PATH
               value: /contacts
+            - name: DSCPLN_ORIGIN
+              value: "https://dscpln.{{ .Values.SERVICES_DOMAIN }}"
             # Git identity for the export commits (same values as the bridge).
             - name: GIT_AUTHOR_NAME
               value: {{ .Values.BACKUPCTL_GIT_NAME | quote }}

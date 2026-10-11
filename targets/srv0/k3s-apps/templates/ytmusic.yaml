@@ -44,7 +44,7 @@ spec:
       automountServiceAccountToken: false
       containers:
         - name: ytmusic
-          image: imranrdev/dscpln-ytmusic:latest@sha256:00f30a3ba890e4bf15d70ff2ed6aa5955f472d0a27d78436615e6dbc76487dc4
+          image: imranrdev/dscpln-ytmusic:latest@sha256:739b44b7816b50a270c195f7922bafacec03c154caecae87c7c2a60b7139af6a
           securityContext:
             runAsUser: {{ .Values.MY_UID }}
             runAsGroup: {{ .Values.MY_UID }}
@@ -69,6 +69,8 @@ spec:
               value: America/Toronto
             - name: BASE_PATH
               value: /ytmusic
+            - name: DSCPLN_ORIGIN
+              value: "https://dscpln.{{ .Values.SERVICES_DOMAIN }}"
           resources:
             # ffmpeg + yt-dlp over a large library.
             limits:

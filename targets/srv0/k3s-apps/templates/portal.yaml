@@ -21,7 +21,7 @@ spec:
       automountServiceAccountToken: false
       containers:
         - name: portal
-          image: imranrdev/dscpln-portal:latest@sha256:1cb97c8672af6682e0d5b55bd011c8d51be36c2221eadb78a3ace25fcb9efe86
+          image: imranrdev/dscpln-portal:latest@sha256:09aafa0948cdf52facb591b25407c605e8f0fcd324b19f15bed2b7deb7672819
           securityContext:
             runAsUser: {{ .Values.MY_UID }}
             runAsGroup: {{ .Values.MY_UID }}

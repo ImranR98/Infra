@@ -48,7 +48,7 @@ spec:
       containers:
         - name: media-sync
           # Pin by digest after the first push so Renovate can bump deliberately.
-          image: imranrdev/dscpln-media-sync:latest@sha256:f85da897cb57d90fe4cf2d6b6b4a938cf20e99f07c518383bb35ae29231002c3
+          image: imranrdev/dscpln-media-sync:latest@sha256:82092ce531d6d48c2464a7fb3798277eacc60d87a8cc882fbc0e16982fc247ec
           securityContext:
             runAsUser: {{ .Values.MY_UID }}
             runAsGroup: {{ .Values.MY_UID }}
@@ -65,6 +65,8 @@ spec:
           env:
             - name: BASE_PATH
               value: /media
+            - name: DSCPLN_ORIGIN
+              value: "https://dscpln.{{ .Values.SERVICES_DOMAIN }}"
           resources:
             limits:
               memory: 2Gi

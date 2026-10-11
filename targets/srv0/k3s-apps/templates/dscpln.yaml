@@ -48,7 +48,7 @@ spec:
       automountServiceAccountToken: false
       containers:
         - name: balance-xlsx
-          image: imranrdev/dscpln-balance:latest@sha256:e23d3cd7b617fcc680ae71afd2a85dc7e476d4f815fe05d14e95f566e7ac7273
+          image: imranrdev/dscpln-balance:latest@sha256:3b74ca8cfd90b35f8d6a8ceabee90b9640f2bcf9e830fd9f0c5e8f8fd60d6d34
           securityContext:
             runAsUser: {{ .Values.MY_UID }}
             runAsGroup: {{ .Values.MY_UID }}
@@ -83,6 +83,8 @@ spec:
               value: "--max-old-space-size=1536"
             - name: BASE_PATH
               value: /balance
+            - name: DSCPLN_ORIGIN
+              value: "https://dscpln.{{ .Values.SERVICES_DOMAIN }}"
           volumeMounts:
             - name: tmp
               mountPath: /tmp
