@@ -181,7 +181,9 @@ spec:
                   name: nextcloud-db-secret
                   key: password
             - name: NEXTCLOUD_TRUSTED_DOMAINS
-              value: "nextcloud.{{ .Values.SERVICES_DOMAIN }}"
+              # Space-separated; the bare service name is used by in-cluster
+              # DAV clients (Contacts + Calendar). Only applied on first install.
+              value: "nextcloud.{{ .Values.SERVICES_DOMAIN }} nextcloud"
             - name: APACHE_DISABLE_REWRITE_IP
               value: "1"
             - name: TRUSTED_PROXIES
