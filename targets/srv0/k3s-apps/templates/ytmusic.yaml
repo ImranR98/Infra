@@ -44,7 +44,7 @@ spec:
       automountServiceAccountToken: false
       containers:
         - name: ytmusic
-          image: imranrdev/dscpln-ytmusic:latest@sha256:d48dabedeb095362bf631f70a507be191a85230d5a2954cab6690e4843be8983
+          image: imranrdev/dscpln-ytmusic:latest@sha256:00f30a3ba890e4bf15d70ff2ed6aa5955f472d0a27d78436615e6dbc76487dc4
           securityContext:
             runAsUser: {{ .Values.MY_UID }}
             runAsGroup: {{ .Values.MY_UID }}
