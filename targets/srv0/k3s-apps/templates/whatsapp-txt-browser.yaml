@@ -78,7 +78,7 @@ spec:
           level: s0
       containers:
         - name: whatsapp-txt-browser
-          image: imranrdev/whatsapp-txt-browser:latest@sha256:90e398814793ccb28761c2bb3a85ee2ea5af8409f6b3c6f3920ffabfb3e53c54
+          image: imranrdev/whatsapp-txt-browser:latest@sha256:df28a50722a76abeb78f97ca474febf0c9b8b33c6a19ec9d5a9bd6f01ccf3b6f
           securityContext:
             allowPrivilegeEscalation: false
             capabilities:
