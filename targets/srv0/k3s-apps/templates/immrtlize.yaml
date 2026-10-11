@@ -1,4 +1,4 @@
-# IMMRTL↑ZE — media ingestion daemon (replaces the mdscl deployments).
+# Media Sync (D$CPLN) — former IMMRTL↑ZE media ingestion daemon (replaces the mdscl deployments).
 # Watches the phone-synced deviceSync tree, standardizes / concatenates /
 # copies into the Main/Media tree, serves a web UI, and cleans up processed
 # originals into trash only after verifying the destination copy.
@@ -47,7 +47,7 @@ spec:
       containers:
         - name: immrtlize
           # Pin by digest after the first push so Renovate can bump deliberately.
-          image: imranrdev/immrtlize:latest@sha256:2288b9ee3ead0f604f8b17ae74900302db2a99d31fe13d7fae669d32cdfd0cb4
+          image: imranrdev/dscpln-media-sync:latest@sha256:98468ce2f30fe5398d2787eeb7b09c74898908f8ca25ef90a6dccb256c938aba
           securityContext:
             runAsUser: {{ .Values.MY_UID }}
             runAsGroup: {{ .Values.MY_UID }}
