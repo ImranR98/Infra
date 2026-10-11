@@ -47,7 +47,7 @@ spec:
           level: s0
       containers:
         - name: balance-xlsx
-          image: imranrdev/dscpln-balance:latest@sha256:c5c246055aa225b0ba728050382adfd62735c2e8dbe770d486a42918d9631a1a
+          image: imranrdev/dscpln-balance:latest@sha256:65f3703f8d5f9dce66aed10ef7fbb1eccba26fc3695282d7da5cc14781d23fe1
           securityContext:
             runAsUser: {{ .Values.MY_UID }}
             runAsGroup: {{ .Values.MY_UID }}

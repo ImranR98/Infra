@@ -25,7 +25,7 @@ spec:
           level: s0
       containers:
         - name: whatsapp-txt
-          image: imranrdev/dscpln-watxt:latest@sha256:ae2f48da96eb5e0a85f6d27e8c2326617c9ba677c732f7a7324da79c6780bd80
+          image: imranrdev/dscpln-watxt:latest@sha256:8f7c190a1ec98754310f4fcfbb4c2493e1393b612f4b63fc4d745c9a69a1a68d
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true

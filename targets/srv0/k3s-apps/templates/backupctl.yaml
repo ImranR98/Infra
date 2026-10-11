@@ -48,7 +48,7 @@ spec:
           level: s0
       containers:
         - name: task-runner
-          image: imranrdev/dscpln-task-runner:latest@sha256:74511e94b0314a6de76080ca3d1f44fb7e049c0997b18d4a8bd1396df51ad0d2
+          image: imranrdev/dscpln-task-runner:latest@sha256:c700ab6eef386fa759130c4685c8b3af3ba2e8a1e651b7805166748415e20c3e
           securityContext:
             runAsUser: {{ .Values.MY_UID }}
             runAsGroup: {{ .Values.MY_UID }}
