@@ -46,7 +46,7 @@ spec:
       containers:
         - name: media-sync
           # Pin by digest after the first push so Renovate can bump deliberately.
-          image: imranrdev/dscpln-media-sync:latest@sha256:0d336c36516d1929694b4649ed64260889add21d98c6605837a5e5185c6e44ed
+          image: imranrdev/dscpln-media-sync:latest@sha256:38b4e8290eddfcdb459f7666a5d1f802bd84d4c4ec5cde37114d774b2287e685
           securityContext:
             {{- include "dscpln.containerSecurityContext" (dict "uid" .Values.MY_UID "readOnlyRootFilesystem" true) | nindent 12 }}
           ports:
