@@ -1,0 +1,178 @@
+# backupctl — the config-driven backup runner, also deployed as a bridge
+# instance on srv0 so upload/ingest tasks are usable from any browser behind
+# Authelia. The same synced config.mjs is mounted read-only (edits need a pod
+# restart, no image rebuild), the shared Main tree is mounted at the same path,
+# and `host:` fields in config.mjs pin tasks to a machine (BACKUPCTL_HOST).
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: backupctl-home-pvc
+  namespace: apps
+  labels:
+    auto-backup: "true"
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: longhorn
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backupctl
+  namespace: apps
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: backupctl
+  template:
+    metadata:
+      labels:
+        app: backupctl
+    spec:
+      nodeSelector:
+        infra.local/hostpath-main: "true"
+      securityContext:
+        fsGroup: {{ .Values.MY_UID }}
+        # s0: writes into the shared Main tree stay readable by host processes
+        # and other containers (same as dscpln/immrtlize).
+        seLinuxOptions:
+          level: s0
+      containers:
+        - name: backupctl
+          image: imranrdev/backupctl:latest@sha256:c6e3f1102c337ac4fce1f2bbd1b935e7e48f4cc0a81f804a94f0f8be20441683
+          securityContext:
+            runAsUser: {{ .Values.MY_UID }}
+            runAsGroup: {{ .Values.MY_UID }}
+            allowPrivilegeEscalation: false
+          ports:
+            - name: http
+              containerPort: 8085
+          env:
+            - name: HOME
+              value: /home/imranr
+            # Tasks pinned to another machine show as unavailable on this one.
+            - name: BACKUPCTL_HOST
+              value: srv0
+            - name: BACKUPCTL_CONFIG_FILE
+              value: /config-src/config.mjs
+            - name: BACKUPCTL_STATE_DIR
+              value: /home/imranr/.backupctl
+            - name: BACKUPCTL_TMP_DIR
+              value: /home/imranr/tmp
+            # Git identity for task commits (lib.sh git-commit).
+            - name: GIT_AUTHOR_NAME
+              value: {{ .Values.BACKUPCTL_GIT_NAME | quote }}
+            - name: GIT_AUTHOR_EMAIL
+              value: {{ .Values.BACKUPCTL_GIT_EMAIL | quote }}
+            - name: GIT_COMMITTER_NAME
+              value: {{ .Values.BACKUPCTL_GIT_NAME | quote }}
+            - name: GIT_COMMITTER_EMAIL
+              value: {{ .Values.BACKUPCTL_GIT_EMAIL | quote }}
+          resources:
+            limits:
+              memory: 1Gi
+            requests:
+              memory: 128Mi
+              cpu: 50m
+          readinessProbe:
+            httpGet:
+              path: /api/tasks
+              port: http
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+          volumeMounts:
+            - name: home
+              mountPath: /home/imranr
+            - name: main
+              mountPath: /home/imranr/Main
+            - name: config-src
+              mountPath: /config-src
+              readOnly: true
+      volumes:
+        - name: home
+          persistentVolumeClaim:
+            claimName: backupctl-home-pvc
+        - name: main
+          persistentVolumeClaim:
+            claimName: hostpath-main-node-main-pvc
+        # The Syncthing-synced repo checkout; only config.mjs is read from it.
+        # A directory mount (not a file) so atomic config replacements are seen.
+        - name: config-src
+          hostPath:
+            path: {{ .Values.MAIN_PARENT_DIR }}/Main/Code/Automation/backupctl
+            type: Directory
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: backupctl
+  namespace: apps
+spec:
+  selector:
+    app: backupctl
+  ports:
+    - name: http
+      port: 8085
+      targetPort: http
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: backupctl-prod-tls
+  namespace: apps
+spec:
+  secretName: backupctl-prod-tls
+  issuerRef:
+    name: letsencrypt-prod
+    kind: ClusterIssuer
+  dnsNames:
+    - backupctl.{{ .Values.SERVICES_DOMAIN }}
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: backupctl-ingress
+  namespace: base
+spec:
+  parentRefs:
+    - name: srv0
+      sectionName: websecure
+    - name: srv0
+      sectionName: websecure-proxy
+  hostnames:
+    - backupctl.{{ .Values.SERVICES_DOMAIN }}
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      filters:
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: geoblock
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: crowdsec-bouncer
+        # The UI can run arbitrary configured tasks and write into the backup
+        # tree, so access is admin-only two_factor (wildcard rule).
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: forwardauth-authelia
+      backendRefs:
+        - name: backupctl
+          namespace: apps
+          port: 8085

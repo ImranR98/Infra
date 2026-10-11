@@ -267,6 +267,12 @@ FILEBROWSER_JWT_TOKEN_SECRET: "change_me" # openssl rand -base64 32
 DSCPLN_LEDGER_PATH: "/path/to/data/Main/Documents/Balance"
 DSCPLN_WORKBOOK_FILE: "Balance.xlsx"
 
+# ====== backupctl (bridge instance) ======
+# Git identity for commits made by backupctl tasks (the app also runs on srv0;
+# config.mjs `host:` fields pin tasks per machine).
+BACKUPCTL_GIT_NAME: "change_me"
+BACKUPCTL_GIT_EMAIL: "change_me"
+
 # ====== FMD ======
 FMD_REGISTRATIONTOKEN: "change_me" # openssl rand -base64 32
 
