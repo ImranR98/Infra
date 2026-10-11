@@ -43,7 +43,7 @@ spec:
           level: s0
       containers:
         - name: compose-state
-          image: imranrdev/dscpln-compose:latest@sha256:51a2dc549c7a14ee943bd2cfafdeff01a0f3f18d7475125080f2c23028bdc612
+          image: imranrdev/dscpln-compose:latest@sha256:608891a27e4ab2b8069564e449bc7e852e7b68cedddbde3b92a646d3482045b6
           securityContext:
             runAsUser: {{ .Values.MY_UID }}
             runAsGroup: {{ .Values.MY_UID }}
