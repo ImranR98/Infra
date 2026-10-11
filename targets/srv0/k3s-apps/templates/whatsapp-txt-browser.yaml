@@ -38,7 +38,7 @@ spec:
               value: /watxt
           readinessProbe:
             httpGet:
-              path: /watxt/api/health
+              path: /watxt/api/state
               port: 8787
             periodSeconds: 30
             timeoutSeconds: 5
