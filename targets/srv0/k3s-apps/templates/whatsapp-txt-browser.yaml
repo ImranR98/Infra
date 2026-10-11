@@ -47,14 +47,14 @@ spec:
             kind: Middleware
             name: forwardauth-authelia
       backendRefs:
-        - name: whatsapp-txt-browser
+        - name: whatsapp-txt
           namespace: apps
           port: 8787
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: whatsapp-txt-browser
+  name: whatsapp-txt
   namespace: apps
 spec:
   replicas: 1
@@ -62,11 +62,11 @@ spec:
     type: Recreate
   selector:
     matchLabels:
-      app: whatsapp-txt-browser
+      app: whatsapp-txt
   template:
     metadata:
       labels:
-        app: whatsapp-txt-browser
+        app: whatsapp-txt
     spec:
       securityContext:
         runAsUser: {{ .Values.MY_UID }}
@@ -77,7 +77,7 @@ spec:
           type: spc_t
           level: s0
       containers:
-        - name: whatsapp-txt-browser
+        - name: whatsapp-txt
           image: imranrdev/dscpln-watxt:latest@sha256:e7b5a1ef8b36f6c8c5d2f0be944dc395bc47906ef6b0d25b66f641e70e93f861
           securityContext:
             allowPrivilegeEscalation: false
@@ -112,12 +112,12 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: whatsapp-txt-browser
+  name: whatsapp-txt
   namespace: apps
 spec:
   type: ClusterIP
   selector:
-    app: whatsapp-txt-browser
+    app: whatsapp-txt
   ports:
     - port: 8787
       targetPort: 8787

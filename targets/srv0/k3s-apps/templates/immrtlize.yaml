@@ -24,7 +24,7 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: immrtlize
+  name: media-sync
   namespace: apps
 spec:
   replicas: 1
@@ -32,11 +32,11 @@ spec:
     type: Recreate
   selector:
     matchLabels:
-      app: immrtlize
+      app: media-sync
   template:
     metadata:
       labels:
-        app: immrtlize
+        app: media-sync
     spec:
       securityContext:
         fsGroup: {{ .Values.MY_UID }}
@@ -45,7 +45,7 @@ spec:
         seLinuxOptions:
           level: s0
       containers:
-        - name: immrtlize
+        - name: media-sync
           # Pin by digest after the first push so Renovate can bump deliberately.
           image: imranrdev/dscpln-media-sync:latest@sha256:21f143bf6578381b559996c00912eba903a92bfe619cf677e878c626817bbfdf
           securityContext:
@@ -94,11 +94,11 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: immrtlize
+  name: media-sync
   namespace: apps
 spec:
   selector:
-    app: immrtlize
+    app: media-sync
   ports:
     - name: http
       port: 8791
@@ -159,6 +159,6 @@ spec:
             kind: Middleware
             name: forwardauth-authelia
       backendRefs:
-        - name: immrtlize
+        - name: media-sync
           namespace: apps
           port: 8791

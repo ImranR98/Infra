@@ -24,7 +24,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: dscpln
+  name: balance-xlsx
   namespace: apps
 spec:
   replicas: 1
@@ -32,11 +32,11 @@ spec:
     type: Recreate
   selector:
     matchLabels:
-      app: dscpln
+      app: balance-xlsx
   template:
     metadata:
       labels:
-        app: dscpln
+        app: balance-xlsx
       annotations:
         # Mounted Secret contents only refresh on restart.
         checksum/dscpln-config: {{ include "dscpln.config" . | sha256sum }}
@@ -46,7 +46,7 @@ spec:
         seLinuxOptions:
           level: s0
       containers:
-        - name: dscpln
+        - name: balance-xlsx
           image: imranrdev/dscpln:latest@sha256:7c8912ce13326c227472b1ef0e395ca9222be0cc09ca82605d6aa539a31719d1
           securityContext:
             runAsUser: {{ .Values.MY_UID }}
@@ -93,12 +93,12 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: dscpln
+  name: balance-xlsx
   namespace: apps
 spec:
   type: ClusterIP
   selector:
-    app: dscpln
+    app: balance-xlsx
   ports:
     - port: 3300
       targetPort: 3300
@@ -151,7 +151,7 @@ spec:
             kind: Middleware
             name: crowdsec-bouncer
       backendRefs:
-        - name: dscpln
+        - name: balance-xlsx
           namespace: apps
           port: 3300
     - matches:
@@ -175,7 +175,7 @@ spec:
             kind: Middleware
             name: forwardauth-authelia
       backendRefs:
-        - name: dscpln
+        - name: balance-xlsx
           namespace: apps
           port: 3300
 ---

@@ -24,7 +24,7 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: backupctl
+  name: task-runner
   namespace: apps
 spec:
   replicas: 1
@@ -32,11 +32,11 @@ spec:
     type: Recreate
   selector:
     matchLabels:
-      app: backupctl
+      app: task-runner
   template:
     metadata:
       labels:
-        app: backupctl
+        app: task-runner
     spec:
       nodeSelector:
         infra.local/hostpath-main: "true"
@@ -47,7 +47,7 @@ spec:
         seLinuxOptions:
           level: s0
       containers:
-        - name: backupctl
+        - name: task-runner
           image: imranrdev/dscpln-task-runner:latest@sha256:74511e94b0314a6de76080ca3d1f44fb7e049c0997b18d4a8bd1396df51ad0d2
           securityContext:
             runAsUser: {{ .Values.MY_UID }}
@@ -119,11 +119,11 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: backupctl
+  name: task-runner
   namespace: apps
 spec:
   selector:
-    app: backupctl
+    app: task-runner
   ports:
     - name: http
       port: 8085
@@ -179,6 +179,6 @@ spec:
             kind: Middleware
             name: forwardauth-authelia
       backendRefs:
-        - name: backupctl
+        - name: task-runner
           namespace: apps
           port: 8085
