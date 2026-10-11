@@ -60,7 +60,7 @@ spec:
             - name: BACKUPCTL_HOST
               value: srv0
             - name: BACKUPCTL_CONFIG_FILE
-              value: /config-src/apps/task-runner/config.mjs
+              value: /config-src/config.mjs
             # The monorepo root baked into the image (the repo_dir token).
             - name: BACKUPCTL_REPO_DIR
               value: /app
@@ -108,12 +108,11 @@ spec:
         - name: main
           persistentVolumeClaim:
             claimName: hostpath-main-node-main-pvc
-        # The Syncthing-synced monorepo checkout; only the task-runner config is
-        # read from it. A directory mount (not a file) so atomic config
-        # replacements are seen.
+        # The Syncthing-synced private workflows checkout (config.mjs + tools/);
+        # a directory mount (not a file) so atomic config replacements are seen.
         - name: config-src
           hostPath:
-            path: {{ .Values.MAIN_PARENT_DIR }}/Main/Code/Apps/D$CPLN
+            path: {{ .Values.MAIN_PARENT_DIR }}/Main/Code/Automation/dscpln-workflows
             type: Directory
 ---
 {{ include "dscpln.service" (dict "name" "task-runner" "targetPort" "http" "port" 8085) }}
