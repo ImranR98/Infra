@@ -44,7 +44,7 @@ spec:
           level: s0
       containers:
         - name: contacts-calendar
-          image: imranrdev/dscpln-contacts:latest@sha256:6686236470f0be30c16a2b394310cc5c09c25d510bc601769c9e52956e934dc5
+          image: imranrdev/dscpln-contacts:latest@sha256:725dbe1109705a2b30fe23ce5e4387c6fd1020bf760acd4905f9af3abf6e9fb5
           securityContext:
             runAsUser: {{ .Values.MY_UID }}
             runAsGroup: {{ .Values.MY_UID }}
