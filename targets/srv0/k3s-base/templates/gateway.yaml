@@ -9,6 +9,7 @@
 # that must never be reachable through the public-exposure tunnel) are appended
 # explicitly next to the include.
 {{- define "gateway.certRefs" -}}
+- {name: backupctl-prod-tls, namespace: apps}
 - {name: dscpln-prod-tls, namespace: apps}
 - {name: fmd-prod-tls, namespace: apps}
 - {name: freshrss-prod-tls, namespace: apps}
