@@ -44,6 +44,7 @@ spec:
         # processes and other containers must be able to read back.
         seLinuxOptions:
           level: s0
+      automountServiceAccountToken: false
       containers:
         - name: media-sync
           # Pin by digest after the first push so Renovate can bump deliberately.

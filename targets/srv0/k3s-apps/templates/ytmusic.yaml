@@ -41,9 +41,10 @@ spec:
         # s0: downloads are written into the shared Main tree.
         seLinuxOptions:
           level: s0
+      automountServiceAccountToken: false
       containers:
         - name: ytmusic
-          image: imranrdev/dscpln-ytmusic:latest@sha256:640c6daf20b791003f25e0a5a397758e58f84ca2b356318a515ffea114d5e6c9
+          image: imranrdev/dscpln-ytmusic:latest@sha256:d48dabedeb095362bf631f70a507be191a85230d5a2954cab6690e4843be8983
           securityContext:
             runAsUser: {{ .Values.MY_UID }}
             runAsGroup: {{ .Values.MY_UID }}

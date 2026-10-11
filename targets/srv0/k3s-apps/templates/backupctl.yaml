@@ -46,6 +46,7 @@ spec:
         # and other containers (same as dscpln/immrtlize).
         seLinuxOptions:
           level: s0
+      automountServiceAccountToken: false
       containers:
         - name: task-runner
           image: imranrdev/dscpln-task-runner:latest@sha256:ee63b09d49cf5710b2af302228ab03d6e074fe2fa68b7b17e84208cebef7e284

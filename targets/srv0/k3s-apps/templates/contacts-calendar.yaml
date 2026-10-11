@@ -42,9 +42,10 @@ spec:
         # s0: git commits and exports land in the shared Main tree.
         seLinuxOptions:
           level: s0
+      automountServiceAccountToken: false
       containers:
         - name: contacts-calendar
-          image: imranrdev/dscpln-contacts:latest@sha256:58314fce356b3b3778940c6966c7bd3705ae6fd030107183dcd8eca22e19ac37
+          image: imranrdev/dscpln-contacts:latest@sha256:49735b078278635a4b8e7ac2309cc94f136bf04ca6de765b4b04be535007967d
           securityContext:
             runAsUser: {{ .Values.MY_UID }}
             runAsGroup: {{ .Values.MY_UID }}

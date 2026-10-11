@@ -45,6 +45,7 @@ spec:
         fsGroup: {{ .Values.MY_UID }}
         seLinuxOptions:
           level: s0
+      automountServiceAccountToken: false
       containers:
         - name: balance-xlsx
           image: imranrdev/dscpln-balance:latest@sha256:e23d3cd7b617fcc680ae71afd2a85dc7e476d4f815fe05d14e95f566e7ac7273

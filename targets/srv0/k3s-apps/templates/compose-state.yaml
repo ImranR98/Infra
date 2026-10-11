@@ -41,9 +41,10 @@ spec:
         # s0: archives are written into the shared Main tree.
         seLinuxOptions:
           level: s0
+      automountServiceAccountToken: false
       containers:
         - name: compose-state
-          image: imranrdev/dscpln-compose:latest@sha256:795a20d17c09996c68224d5b3aeaff94587506093ba5c8312a43552f967c0cea
+          image: imranrdev/dscpln-compose:latest@sha256:644eeadfad78eab293901ea001310baedcc59ed21b0066fa2d1cf012a08a6016
           securityContext:
             runAsUser: {{ .Values.MY_UID }}
             runAsGroup: {{ .Values.MY_UID }}
