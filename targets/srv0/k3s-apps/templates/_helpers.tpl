@@ -19,6 +19,10 @@ these named templates.
 
 {{- define "dscpln.podSecurityContext" -}}
 fsGroup: {{ .uid }}
+# Only fix ownership when the volume root does not already match: local PVs
+# are bind mounts of host trees, and the default (Always) policy makes the
+# kubelet recursively chgrp the whole tree on every pod start.
+fsGroupChangePolicy: OnRootMismatch
 {{- if or .seType .seLevel }}
 seLinuxOptions:
   {{- with .seType }}
