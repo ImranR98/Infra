@@ -156,7 +156,30 @@ configs:
                       crowdsecAppsecScheme: http
                       crowdsecAppsecHost: crowdsec:7422
                       crowdsecAppsecPath: "/"
-                      forwardedheaderstrustedips: "127.0.0.1/32"
+                      forwardedheaderstrustedips:
+                        - 127.0.0.1/32
+                        - 173.245.48.0/20
+                        - 103.21.244.0/22
+                        - 103.22.200.0/22
+                        - 103.31.4.0/22
+                        - 141.101.64.0/18
+                        - 108.162.192.0/18
+                        - 190.93.240.0/20
+                        - 188.114.96.0/20
+                        - 197.234.240.0/22
+                        - 198.41.128.0/17
+                        - 162.158.0.0/15
+                        - 104.16.0.0/13
+                        - 104.24.0.0/14
+                        - 172.64.0.0/13
+                        - 131.0.72.0/22
+                        - 2400:cb00::/32
+                        - 2606:4700::/32
+                        - 2803:f800::/32
+                        - 2405:b500::/32
+                        - 2405:8100::/32
+                        - 2a06:98c0::/29
+                        - 2c0f:f248::/32
               routers:
                 http-to-public-exposure:
                   rule: "Host(`home.${BASE_SERVICES_DOMAIN}`) || Host(`*.home.${BASE_SERVICES_DOMAIN}`)"
@@ -421,6 +444,10 @@ services:
             - "--entryPoints.websecure.address=:443"
             - "--entryPoints.rtmp=true"
             - "--entryPoints.rtmp.address=:1935"
+            # Cloudflare-proxied hostnames (plausible, obtainium_apps): restore the real
+            # client IP from X-Forwarded-For so CrowdSec/logs never see CF edge IPs.
+            - "--entryPoints.web.forwardedHeaders.trustedIPs=173.245.48.0/20,103.21.244.0/22,103.22.200.0/22,103.31.4.0/22,141.101.64.0/18,108.162.192.0/18,190.93.240.0/20,188.114.96.0/20,197.234.240.0/22,198.41.128.0/17,162.158.0.0/15,104.16.0.0/13,104.24.0.0/14,172.64.0.0/13,131.0.72.0/22,2400:cb00::/32,2606:4700::/32,2803:f800::/32,2405:b500::/32,2405:8100::/32,2a06:98c0::/29,2c0f:f248::/32"
+            - "--entryPoints.websecure.forwardedHeaders.trustedIPs=173.245.48.0/20,103.21.244.0/22,103.22.200.0/22,103.31.4.0/22,141.101.64.0/18,108.162.192.0/18,190.93.240.0/20,188.114.96.0/20,197.234.240.0/22,198.41.128.0/17,162.158.0.0/15,104.16.0.0/13,104.24.0.0/14,172.64.0.0/13,131.0.72.0/22,2400:cb00::/32,2606:4700::/32,2803:f800::/32,2405:b500::/32,2405:8100::/32,2a06:98c0::/29,2c0f:f248::/32"
             - "--certificatesresolvers.le.acme.email=$DOMAIN_OWNER_EMAIL"
             - "--certificatesresolvers.le.acme.storage=/acme/acme.json"
             # TLS-ALPN-01 avoids intercepting /.well-known/acme-challenge/ on :80,
@@ -729,6 +756,10 @@ services:
         image: imranrdev/apps.obtainium.imranr.dev:latest@sha256:eea94be280aea2129e8ec7672d5050ade04337ce847549efa4b648b2ec07cb3f
         depends_on:
             - traefik
+        # Fetch Plausible stats over the local edge, not Cloudflare (Bot Fight Mode
+        # can't be skipped there and would challenge this server-side request).
+        extra_hosts:
+            - "plausible.imranr.dev:host-gateway"
         labels:
             - "traefik.enable=true"
             - "traefik.http.routers.obtainium_apps.rule=Host(`apps.obtainium.$BASE_SERVICES_DOMAIN`)"
