@@ -42,7 +42,7 @@ spec:
       automountServiceAccountToken: false
       containers:
         - name: ytmusic
-          image: imranrdev/dscpln-ytmusic:latest@sha256:3d67c43a773d8ee95db8d946ea01f01c89094e9886f8e9bc75742c79d642f789
+          image: imranrdev/dscpln-ytmusic:latest@sha256:f1d0c73ea0160c53126ed35e73a913b16cb4c5b3a006e82857ce51dd963a2bb7
           securityContext:
             {{- include "dscpln.containerSecurityContext" (dict "uid" .Values.MY_UID "readOnlyRootFilesystem" true) | nindent 12 }}
           ports:
