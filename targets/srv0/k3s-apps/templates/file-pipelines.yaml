@@ -1,4 +1,4 @@
-# Media Sync (D$CPLN) — former IMMRTL↑ZE media ingestion daemon (replaces the mdscl deployments).
+# File Pipelines (D$CPLN) — former IMMRTL↑ZE / Media Sync ingestion daemon (replaces the mdscl deployments).
 # Watches the phone-synced deviceSync tree, standardizes / concatenates /
 # copies into the Main/Media tree, serves a web UI, and cleans up processed
 # originals into trash only after verifying the destination copy.
@@ -21,10 +21,63 @@ spec:
     requests:
       storage: 1Gi
 ---
+# Scoped access for remote pipeline runs: create/watch/delete Jobs, read their
+# pod logs (streamed into the app log) and check node readiness.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: file-pipelines
+  namespace: apps
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: file-pipelines
+  namespace: apps
+rules:
+  - apiGroups: ["batch"]
+    resources: ["jobs"]
+    verbs: ["create", "get", "list", "watch", "delete"]
+  - apiGroups: [""]
+    resources: ["pods", "pods/log"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["nodes"]
+    verbs: ["get", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: file-pipelines
+  namespace: apps
+subjects:
+  - kind: ServiceAccount
+    name: file-pipelines
+    namespace: apps
+roleRef:
+  kind: Role
+  name: file-pipelines
+  apiGroup: rbac.authorization.k8s.io
+---
+# Shared scratch space for remote pipeline jobs (RWX so pods on bigpc can
+# write the output the app then moves into the destination).
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: file-pipelines-staging-pvc
+  namespace: apps
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: longhorn
+  resources:
+    requests:
+      storage: 10Gi
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: media-sync
+  name: file-pipelines
   namespace: apps
 spec:
   replicas: 1
@@ -32,21 +85,22 @@ spec:
     type: Recreate
   selector:
     matchLabels:
-      app: media-sync
+      app: file-pipelines
   template:
     metadata:
       labels:
-        app: media-sync
+        app: file-pipelines
     spec:
       securityContext:
         # s0: the pod reads Syncthing-written trees and writes files that host
         # processes and other containers must be able to read back.
         {{- include "dscpln.podSecurityContext" (dict "uid" .Values.MY_UID "seLevel" "s0") | nindent 8 }}
-      automountServiceAccountToken: false
+      serviceAccountName: file-pipelines
+      automountServiceAccountToken: true
       containers:
-        - name: media-sync
+        - name: file-pipelines
           # Pin by digest after the first push so Renovate can bump deliberately.
-          image: imranrdev/dscpln-media-sync:latest@sha256:a12968cf2e2837e5b837117a8ce3e916bac2310faffc35a9dc3339f90c24b6d1
+          image: imranrdev/dscpln-file-pipelines:latest@sha256:a12968cf2e2837e5b837117a8ce3e916bac2310faffc35a9dc3339f90c24b6d1
           securityContext:
             {{- include "dscpln.containerSecurityContext" (dict "uid" .Values.MY_UID "readOnlyRootFilesystem" true) | nindent 12 }}
           ports:
@@ -54,9 +108,16 @@ spec:
               containerPort: 8791
           env:
             - name: BASE_PATH
-              value: /media
+              value: /pipelines
             - name: DSCPLN_ORIGIN
               value: "https://dscpln.{{ .Values.SERVICES_DOMAIN }}"
+            # Remote pipeline runs: shared staging volume + the image jobs run.
+            - name: PIPELINES_STAGING_DIR
+              value: /staging
+            - name: PIPELINES_STAGING_CLAIM
+              value: file-pipelines-staging-pvc
+            - name: PIPELINES_IMAGE
+              value: imranrdev/dscpln-file-pipelines:latest
           resources:
             limits:
               memory: 2Gi
@@ -64,7 +125,7 @@ spec:
               memory: 256Mi
               cpu: 100m
           readinessProbe:
-            {{- include "dscpln.readinessProbe" (dict "path" "/media/api/health" "port" "http") | nindent 12 }}
+            {{- include "dscpln.readinessProbe" (dict "path" "/pipelines/api/health" "port" "http") | nindent 12 }}
           volumeMounts:
             - name: tmp
               mountPath: /tmp
@@ -76,6 +137,8 @@ spec:
               mountPath: /config
             - name: appdata
               mountPath: /appdata
+            - name: pipeline-staging
+              mountPath: /staging
       volumes:
         - name: tmp
           emptyDir:
@@ -93,5 +156,8 @@ spec:
         - name: appdata
           persistentVolumeClaim:
             claimName: hostpath-main-node-immrtlize-pvc
+        - name: pipeline-staging
+          persistentVolumeClaim:
+            claimName: file-pipelines-staging-pvc
 ---
-{{ include "dscpln.service" (dict "name" "media-sync" "targetPort" "http" "port" 8791) }}
+{{ include "dscpln.service" (dict "name" "file-pipelines" "targetPort" "http" "port" 8791) }}

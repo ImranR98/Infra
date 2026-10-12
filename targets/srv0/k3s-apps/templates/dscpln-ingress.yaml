@@ -87,7 +87,7 @@ spec:
     - matches:
         - path:
             type: PathPrefix
-            value: /media
+            value: /pipelines
       filters:
         - type: ExtensionRef
           extensionRef:
@@ -107,7 +107,7 @@ spec:
             kind: Middleware
             name: forwardauth-authelia
       backendRefs:
-        - name: media-sync
+        - name: file-pipelines
           namespace: apps
           port: 8791
     - matches:
