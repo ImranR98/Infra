@@ -833,14 +833,12 @@ services:
     # Our Times - long-term countdown timers (Authelia headers carry the identity)
     our-times:
         container_name: our-times
-        image: imranrdev/our-times:latest@sha256:edcecc790bd5ff78ae2ebb0c27880d31d391103c4bdf780fae121306afd2baf0
+        image: imranrdev/our-times:latest@sha256:ea690518a48e2710beb52e03baa9df34302d2e32632e7530c2899e76a60a9463
         user: "$MY_UID:$MY_UID"
         depends_on:
             - traefik
         environment:
             - PORT=3000
-            - NTFY_BASE_URL=$OUR_TIME_NTFY_BASE_URL
-            - NTFY_TOKEN=$NTFY_WRITE_ONLY_ACCOUNT_TOKEN
             - PUBLIC_URL=https://times.$CLOUD_SERVICES_DOMAIN
         volumes:
             - ../../../current_target/compose_live_state/our-times:/app/data
