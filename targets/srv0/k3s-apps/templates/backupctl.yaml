@@ -59,7 +59,7 @@ spec:
         infra.local/hostpath-main: "true"
       securityContext:
         # s0: writes into the shared Main tree stay readable by host processes
-        # and other containers (same as dscpln/immrtlize).
+        # and other containers (same as dscpln/file-pipelines).
         {{- include "dscpln.podSecurityContext" (dict "uid" .Values.MY_UID "seLevel" "s0") | nindent 8 }}
       automountServiceAccountToken: false
       containers:

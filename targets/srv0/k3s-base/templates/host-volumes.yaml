@@ -154,7 +154,7 @@ spec:
 apiVersion: v1
 kind: PersistentVolume
 metadata:
-  name: hostpath-main-node-immrtlize-pv
+  name: hostpath-main-node-file-pipelines-pv
 spec:
   capacity:
     storage: 4096Gi
@@ -164,7 +164,7 @@ spec:
   persistentVolumeReclaimPolicy: Retain
   storageClassName: hostpath
   local:
-    path: {{ .Values.MAIN_PARENT_DIR }}/.immrtlize
+    path: {{ .Values.MAIN_PARENT_DIR }}/.file-pipelines
   nodeAffinity:
     required:
       nodeSelectorTerms:
@@ -177,7 +177,7 @@ spec:
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: hostpath-main-node-immrtlize-pvc
+  name: hostpath-main-node-file-pipelines-pvc
   namespace: apps
 spec:
   accessModes:
@@ -186,7 +186,7 @@ spec:
   resources:
     requests:
       storage: 4096Gi
-  volumeName: hostpath-main-node-immrtlize-pv
+  volumeName: hostpath-main-node-file-pipelines-pv
 ---
 apiVersion: v1
 kind: PersistentVolume

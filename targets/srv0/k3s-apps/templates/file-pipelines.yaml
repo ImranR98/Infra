@@ -1,4 +1,4 @@
-# File Pipelines (D$CPLN) — former IMMRTL↑ZE / Media Sync ingestion daemon (replaces the mdscl deployments).
+# File Pipelines (D$CPLN) — media ingestion daemon (replaces the mdscl deployments).
 # Watches the phone-synced deviceSync tree, standardizes / concatenates /
 # copies into the Main/Media tree, serves a web UI, and cleans up processed
 # originals into trash only after verifying the destination copy.
@@ -9,7 +9,7 @@
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: immrtlize-config-pvc
+  name: file-pipelines-config-pvc
   namespace: apps
   labels:
     auto-backup: "true"
@@ -171,10 +171,10 @@ spec:
             claimName: hostpath-main-node-whatsapp-pvc
         - name: config
           persistentVolumeClaim:
-            claimName: immrtlize-config-pvc
+            claimName: file-pipelines-config-pvc
         - name: appdata
           persistentVolumeClaim:
-            claimName: hostpath-main-node-immrtlize-pvc
+            claimName: hostpath-main-node-file-pipelines-pvc
         - name: pipeline-staging
           persistentVolumeClaim:
             claimName: file-pipelines-staging-pvc
