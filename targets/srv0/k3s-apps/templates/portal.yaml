@@ -21,7 +21,7 @@ spec:
       automountServiceAccountToken: false
       containers:
         - name: portal
-          image: imranrdev/dscpln-portal:latest@sha256:5a18569c54a07be642f07be048a601c238b43fd5315db294ea5b03c32d3182f2
+          image: imranrdev/dscpln-portal:latest@sha256:1f590fffdd9d59ff535954a4bdeeaf71adf1d40a87653c9258c2107a06c424b2
           securityContext:
             {{- include "dscpln.containerSecurityContext" (dict "uid" .Values.MY_UID "readOnlyRootFilesystem" true) | nindent 12 }}
           ports:
