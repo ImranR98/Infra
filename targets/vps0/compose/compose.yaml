@@ -671,7 +671,6 @@ services:
             - "traefik.enable=true"
             - "traefik.http.routers.plausible.rule=Host(`plausible.$BASE_SERVICES_DOMAIN`) && !PathRegexp(`^/[^/]+/export`)"
             - "traefik.http.routers.plausible.entrypoints=websecure"
-            - "traefik.http.routers.plausible.tls.certresolver=le"
             - "traefik.http.routers.plausible.tls=true"
             - "traefik.http.routers.plausible.middlewares=crowdsec-bouncer@file"
             - "traefik.http.services.plausible.loadbalancer.server.port=8000"
@@ -753,7 +752,7 @@ services:
     # Obtainium Apps
     obtainium_apps:
         container_name: obtainium_apps
-        image: imranrdev/apps.obtainium.imranr.dev:latest@sha256:eea94be280aea2129e8ec7672d5050ade04337ce847549efa4b648b2ec07cb3f
+        image: imranrdev/apps.obtainium.imranr.dev:latest@sha256:50a9cde3811a60fed21a8775f1417ba45b0b05d321d68a452d85708d7ac1608c
         depends_on:
             - traefik
         # Fetch Plausible stats over the local edge, not Cloudflare (Bot Fight Mode
