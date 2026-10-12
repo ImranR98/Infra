@@ -42,7 +42,7 @@ spec:
       automountServiceAccountToken: false
       containers:
         - name: compose-state
-          image: imranrdev/dscpln-compose:latest@sha256:7f142717f01a24e6a622a5db152daf23918b08918c77bb41a677887d998df177
+          image: imranrdev/dscpln-compose:latest@sha256:27867e9b791b76eebe870eb592cca6d8f8c88d9220ded83bd83064eccd1bffa4
           securityContext:
             {{- include "dscpln.containerSecurityContext" (dict "uid" .Values.MY_UID "readOnlyRootFilesystem" true) | nindent 12 }}
           ports:
