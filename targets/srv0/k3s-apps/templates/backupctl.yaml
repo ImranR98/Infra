@@ -21,6 +21,23 @@ spec:
     requests:
       storage: 1Gi
 ---
+# Chrome profiles for the login-browser sidecar: logins survive pod restarts
+# (the scraper tools point their --user-data-dir under /home/seluser/.config).
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: backupctl-browser-pvc
+  namespace: apps
+  labels:
+    auto-backup: "true"
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: longhorn
+  resources:
+    requests:
+      storage: 1Gi
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -79,6 +96,12 @@ spec:
               value: {{ .Values.BACKUPCTL_GIT_EMAIL | quote }}
             - name: BASE_PATH
               value: /tasks
+            # Login-browser sidecar: noVNC viewer proxied at /tasks/browser/,
+            # WebDriver for the scraper tools (local Chrome when unset).
+            - name: BROWSER_REMOTE
+              value: http://localhost:7900
+            - name: SELENIUM_REMOTE_URL
+              value: http://localhost:4444
           resources:
             limits:
               memory: 1Gi
@@ -97,6 +120,45 @@ spec:
             - name: config-src
               mountPath: /config-src
               readOnly: true
+        # The Selenium sidecar a scraper task drives; its viewer is embedded
+        # in the task cards for manual logins (2FA). One session at a time.
+        - name: browser
+          image: selenium/standalone-chromium:4.49.0@sha256:08fd293648e126275782c616a61f4ee1d90cf413b1972ebc35dbd054d6789f55
+          securityContext:
+            # The image runs Chrome as seluser (1200); the pod fsGroup (MY_UID)
+            # owns the profile volume, so join that group for write access.
+            runAsUser: 1200
+            runAsGroup: {{ .Values.MY_UID }}
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            seccompProfile:
+              type: RuntimeDefault
+          env:
+            # Manual logins/2FA can idle for a long time.
+            - name: SE_SESSION_TIMEOUT
+              value: "7200"
+            - name: SE_NODE_MAX_SESSIONS
+              value: "1"
+            - name: SE_VNC_NO_PASSWORD
+              value: "1"
+            - name: SE_SCREEN_WIDTH
+              value: "1920"
+            - name: SE_SCREEN_HEIGHT
+              value: "1080"
+          resources:
+            limits:
+              memory: 2Gi
+              cpu: "2"
+            requests:
+              memory: 256Mi
+              cpu: 100m
+          volumeMounts:
+            - name: browser-profile
+              mountPath: /home/seluser/.config
+            - name: shm
+              mountPath: /dev/shm
       volumes:
         - name: tmp
           emptyDir:
@@ -114,5 +176,12 @@ spec:
           hostPath:
             path: {{ .Values.MAIN_PARENT_DIR }}/Main/Code/Automation/dscpln-workflows
             type: Directory
+        - name: browser-profile
+          persistentVolumeClaim:
+            claimName: backupctl-browser-pvc
+        - name: shm
+          emptyDir:
+            medium: Memory
+            sizeLimit: 1Gi
 ---
 {{ include "dscpln.service" (dict "name" "task-runner" "targetPort" "http" "port" 8085) }}
