@@ -1,7 +1,6 @@
 # D$CPLN consolidated ingress: ONE TLS certificate and ONE HTTPRoute serving
 # every function under https://dscpln.<domain>/<function> (plus the portal at
-# /). Per-app hostnames/certificates/routes were retired in P4; the old
-# resources live in git history if a rollback is needed.
+# /).
 #
 # Routes live in `base` because Traefik resolves Middleware ExtensionRefs only
 # in the route's namespace, and the shared middlewares live there.

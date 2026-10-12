@@ -519,9 +519,8 @@ spec:
       limits_config:
         # 90 days of logs; compactor enforces this against the object store.
         retention_period: 2160h
-        # NOTE: keep reject_old_samples at its default (true). Disabling it
-        # once shipped months of historical docker logs through Loki ->
-        # RustFS -> Longhorn and saturated the node's storage path.
+        # Keep reject_old_samples at its default (true): disabling it lets
+        # old docker logs flood the log store and saturate node storage.
     chunksCache:
       enabled: false
     resultsCache:
@@ -546,8 +545,7 @@ spec:
   accessModes:
     - ReadWriteOnce
   resources:
-    # Grew to 200Gi during an aborted filesystem-storage migration; Longhorn
-    # cannot shrink, so the manifest matches the live volume.
+    # Longhorn volumes cannot shrink, so this matches the live size.
     requests:
       storage: 200Gi
   storageClassName: longhorn
