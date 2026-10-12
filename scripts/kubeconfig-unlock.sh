@@ -1,8 +1,11 @@
 #!/bin/bash
 # DESC: Unlock the K3s admin kubeconfig for this user's dev session: grant a
 # user read ACL on /etc/rancher/k3s/k3s.yaml and symlink ~/.kube/config to it,
-# then hold until interrupted (Ctrl-C) and remove both. `--lock` removes a
-# leftover unlock (e.g. after a SIGKILL). Machine-local, run as the user.
+# then hold until interrupted (Ctrl-C) and remove both. While held, the ACL is
+# re-asserted automatically if k3s rewrites the kubeconfig (its chmod 0600
+# clears the ACL mask on restart/cert rotation), so the unlock stays effective
+# for the whole session without re-running. `--lock` removes a leftover unlock
+# (e.g. after a SIGKILL). Machine-local, run as the user.
 set -euo pipefail
 
 if [ -z "${INFRA_ROOT:-}" ]; then
@@ -20,15 +23,15 @@ usage() {
 Usage: $(basename "$0") [--lock]   (run as your user, no target)
 
   (no args)  grant a read ACL on the K3s kubeconfig + symlink ~/.kube/config,
-             then wait until Ctrl-C removes both
+             then wait until Ctrl-C removes both (self-heals k3s rewrites)
   --lock     remove a leftover unlock (e.g. after the script was killed)
 EOF
     exit 1
 }
 
 # k3s's bundled kubectl ignores ~/.kube/config and reads the k3s default path,
-# so kubectl needs the ACL; helm uses the symlink. k3s rewrites the kubeconfig
-# (and chmod clears the ACL mask) on restart/cert rotation — re-run afterwards.
+# so kubectl needs the ACL; helm uses the symlink. While this script holds, the
+# watchdog re-applies the ACL whenever k3s clobbers it on restart/rotation.
 lock() {
     if [ -L "$USER_KUBECONFIG" ] && [ "$(readlink "$USER_KUBECONFIG")" = "$K3S_KUBECONFIG" ]; then
         rm -f "$USER_KUBECONFIG"
@@ -63,10 +66,18 @@ trap 'exit 0' INT TERM HUP
 
 mkdir -p "$HOME/.kube"
 chmod 700 "$HOME/.kube"
-$SU setfacl -m "u:$(id -un):r" "$K3S_KUBECONFIG"
+# The explicit mask matters: chmod 600 (k3s's write-kubeconfig-mode) collapses
+# the ACL mask to ---, which silently nullifies the named-user entry.
+$SU setfacl -m "u:$(id -un):r,m::r" "$K3S_KUBECONFIG"
 ln -sfn "$K3S_KUBECONFIG" "$USER_KUBECONFIG"
 
 echo "kubeconfig unlocked for $(id -un):"
 echo "  $USER_KUBECONFIG -> $K3S_KUBECONFIG (read ACL)"
 echo "kubectl and helm now work in every shell. Press Ctrl-C to lock."
-while :; do sleep 3600; done
+# Watchdog: k3s rewrites the kubeconfig on restart/cert rotation and its chmod
+# clears the ACL mask; re-assert whenever our read access disappears.
+while :; do
+    sleep 15
+    [ -e "$USER_KUBECONFIG" ] || ln -sfn "$K3S_KUBECONFIG" "$USER_KUBECONFIG"
+    [ -r "$K3S_KUBECONFIG" ] || $SU setfacl -m "u:$(id -un):r,m::r" "$K3S_KUBECONFIG" || true
+done
