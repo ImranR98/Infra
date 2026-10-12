@@ -61,6 +61,10 @@ configs:
                   policy: one_factor
                   subject:
                   - 'group:family'
+                - domain: times.${CLOUD_SERVICES_DOMAIN}
+                  policy: one_factor
+                  subject:
+                  - 'group:family'
                 - domain: tech.sale.${CLOUD_SERVICES_DOMAIN}
                   resources:
                   - '^/admin([/?].*)?$'
@@ -824,6 +828,47 @@ services:
         restart: unless-stopped
         mem_limit: 128M
         cpus: 0.25
+        logging: *logging
+
+    # Our Times - long-term countdown timers (Authelia headers carry the identity)
+    our-times:
+        container_name: our-times
+        image: imranrdev/our-times:latest@sha256:dc450a6b7c68729acb765c9b357898d218f25ba17d46d9a5e1127e85e14f3bb1
+        user: "$MY_UID:$MY_UID"
+        depends_on:
+            - traefik
+        environment:
+            - PORT=3000
+            - NTFY_BASE_URL=$OUR_TIME_NTFY_BASE_URL
+            - NTFY_TOKEN=$NTFY_WRITE_ONLY_ACCOUNT_TOKEN
+            - PUBLIC_URL=https://times.$CLOUD_SERVICES_DOMAIN
+        volumes:
+            - ../../../current_target/compose_live_state/our-times:/app/data
+        labels:
+            - "traefik.enable=true"
+            - "traefik.http.routers.our-times.rule=Host(`times.$CLOUD_SERVICES_DOMAIN`)"
+            - "traefik.http.routers.our-times.entrypoints=websecure"
+            - "traefik.http.routers.our-times.tls.certresolver=le"
+            - "traefik.http.routers.our-times.tls=true"
+            - "traefik.http.routers.our-times.middlewares=crowdsec-bouncer@file,authelia@file,geoblock@file"
+            - "traefik.http.services.our-times.loadbalancer.server.port=3000"
+        networks:
+            - traefik
+        restart: unless-stopped
+        mem_limit: 256M
+        cpus: 0.5
+        healthcheck:
+            test:
+                [
+                    "CMD",
+                    "node",
+                    "-e",
+                    "fetch('http://127.0.0.1:3000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+                ]
+            interval: 30s
+            timeout: 10s
+            start_period: 20s
+            retries: 3
         logging: *logging
 
     # Tech Sale - sale site for tech items
