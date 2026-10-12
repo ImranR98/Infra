@@ -849,6 +849,16 @@ services:
             - "traefik.http.routers.our-times.tls.certresolver=le"
             - "traefik.http.routers.our-times.tls=true"
             - "traefik.http.routers.our-times.middlewares=crowdsec-bouncer@file,authelia@file,geoblock@file"
+            # PWA shell assets must be fetchable without SSO (browsers request the
+            # manifest/service worker without credentials); the app serves them
+            # header-free and only caches static files.
+            - "traefik.http.routers.our-times-static.rule=Host(`times.$CLOUD_SERVICES_DOMAIN`) && (Path(`/manifest.webmanifest`) || Path(`/sw.js`) || Path(`/offline.html`) || PathPrefix(`/icons/`))"
+            - "traefik.http.routers.our-times-static.entrypoints=websecure"
+            - "traefik.http.routers.our-times-static.tls.certresolver=le"
+            - "traefik.http.routers.our-times-static.tls=true"
+            - "traefik.http.routers.our-times-static.middlewares=crowdsec-bouncer@file,geoblock@file"
+            - "traefik.http.routers.our-times-static.priority=100"
+            - "traefik.http.routers.our-times-static.service=our-times"
             - "traefik.http.services.our-times.loadbalancer.server.port=3000"
         networks:
             - traefik
