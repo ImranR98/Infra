@@ -76,7 +76,7 @@ spec:
             - name: config
               mountPath: /data
             - name: main
-              mountPath: /home/imranr/Main
+              mountPath: /home/imranr/Main/Media/Music
       volumes:
         - name: tmp
           emptyDir:
@@ -87,6 +87,6 @@ spec:
             claimName: ytmusic-pvc
         - name: main
           persistentVolumeClaim:
-            claimName: hostpath-main-node-main-pvc
+            claimName: hostpath-main-node-music-pvc
 ---
 {{ include "dscpln.service" (dict "name" "ytmusic" "targetPort" "http" "port" 8080) }}

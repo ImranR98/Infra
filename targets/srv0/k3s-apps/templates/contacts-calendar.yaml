@@ -83,7 +83,7 @@ spec:
             - name: config
               mountPath: /data
             - name: main
-              mountPath: /home/imranr/Main
+              mountPath: /home/imranr/Main/Backups
       volumes:
         - name: tmp
           emptyDir:
@@ -94,6 +94,6 @@ spec:
             claimName: contacts-config-pvc
         - name: main
           persistentVolumeClaim:
-            claimName: hostpath-main-node-main-pvc
+            claimName: hostpath-main-node-backups-pvc
 ---
 {{ include "dscpln.service" (dict "name" "contacts-calendar" "targetPort" "http" "port" 8080) }}

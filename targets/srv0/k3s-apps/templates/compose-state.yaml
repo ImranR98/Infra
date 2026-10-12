@@ -73,7 +73,7 @@ spec:
             - name: config
               mountPath: /data
             - name: main
-              mountPath: /home/imranr/Main
+              mountPath: /home/imranr/Main/Infra
       volumes:
         - name: tmp
           emptyDir:
@@ -84,6 +84,6 @@ spec:
             claimName: compose-state-pvc
         - name: main
           persistentVolumeClaim:
-            claimName: hostpath-main-node-main-pvc
+            claimName: hostpath-main-node-infra-pvc
 ---
 {{ include "dscpln.service" (dict "name" "compose-state" "targetPort" "http" "port" 8080) }}

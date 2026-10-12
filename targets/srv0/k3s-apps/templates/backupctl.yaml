@@ -115,8 +115,14 @@ spec:
               mountPath: /tmp
             - name: home
               mountPath: /home/imranr
-            - name: main
-              mountPath: /home/imranr/Main
+            # Narrow per-tree mounts (the tasks only ever touch these three
+            # top-level dirs); no whole-Main mount.
+            - name: main-backups
+              mountPath: /home/imranr/Main/Backups
+            - name: main-media
+              mountPath: /home/imranr/Main/Media
+            - name: main-documents
+              mountPath: /home/imranr/Main/Documents
             - name: config-src
               mountPath: /config-src
               readOnly: true
@@ -167,9 +173,15 @@ spec:
         - name: home
           persistentVolumeClaim:
             claimName: backupctl-home-pvc
-        - name: main
+        - name: main-backups
           persistentVolumeClaim:
-            claimName: hostpath-main-node-main-pvc
+            claimName: hostpath-main-node-backups-pvc
+        - name: main-media
+          persistentVolumeClaim:
+            claimName: hostpath-main-node-media-pvc
+        - name: main-documents
+          persistentVolumeClaim:
+            claimName: hostpath-main-node-documents-pvc
         # The Syncthing-synced private workflows checkout (config.mjs + tools/);
         # a directory mount (not a file) so atomic config replacements are seen.
         - name: config-src
