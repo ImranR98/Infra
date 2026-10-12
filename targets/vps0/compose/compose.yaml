@@ -64,7 +64,7 @@ configs:
                 - domain: times.${CLOUD_SERVICES_DOMAIN}
                   policy: one_factor
                   subject:
-                  - 'group:family'
+                  - 'group:jaan'
                 - domain: tech.sale.${CLOUD_SERVICES_DOMAIN}
                   resources:
                   - '^/admin([/?].*)?$'
