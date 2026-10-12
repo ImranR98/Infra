@@ -43,7 +43,7 @@ spec:
       automountServiceAccountToken: false
       containers:
         - name: contacts-calendar
-          image: imranrdev/dscpln-contacts:latest@sha256:d1da19bab558e4795da9089e6045a248dce6bdb8df51b1adc4db5831933bb93b
+          image: imranrdev/dscpln-contacts:latest@sha256:2fdce025b1cc94922c3b65a6aff8d4943f46956b81767e894d73f22f53c591f4
           securityContext:
             {{- include "dscpln.containerSecurityContext" (dict "uid" .Values.MY_UID "readOnlyRootFilesystem" true) | nindent 12 }}
           ports:
