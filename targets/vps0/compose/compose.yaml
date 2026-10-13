@@ -494,7 +494,7 @@ services:
 
     # Traefik logrotate - caps the host-mounted access log (CrowdSec's acquisition source)
     traefik-logrotate:
-        image: vitess/logrotate:latest@sha256:8a298ad5114c92c520cafa312d7090f31ef61a14a5244b482826a4f566ba2955
+        image: vitess/logrotate:latest@sha256:e88485803c696e3585794b044d3d86146403902b13e1664949e9d59795577942
         container_name: traefik-logrotate
         restart: unless-stopped
         mem_limit: 64M
