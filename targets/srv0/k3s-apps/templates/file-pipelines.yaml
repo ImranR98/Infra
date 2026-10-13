@@ -100,7 +100,7 @@ spec:
       containers:
         - name: file-pipelines
           # Pin by digest after the first push so Renovate can bump deliberately.
-          image: imranrdev/dscpln-file-pipelines:latest@sha256:a09fe4c94cbff966d17bf00af2b62c4334d6f8c1c71c5eab42e383e0043dc239
+          image: imranrdev/dscpln-file-pipelines:latest@sha256:d92baa3133ec5c3c9212bdf527b5d9b8206b203ba84b624fc785a421dae1a51e
           securityContext:
             {{- include "dscpln.containerSecurityContext" (dict "uid" .Values.MY_UID "readOnlyRootFilesystem" true) | nindent 12 }}
           ports:
