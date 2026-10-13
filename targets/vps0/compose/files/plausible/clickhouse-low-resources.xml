@@ -14,6 +14,7 @@
             <enable_reads_from_query_cache>1</enable_reads_from_query_cache>
             <query_cache_ttl>60</query_cache_ttl>
             <query_cache_system_table_handling>ignore</query_cache_system_table_handling>
+            <query_cache_nondeterministic_function_handling>ignore</query_cache_nondeterministic_function_handling>
         </default>
     </profiles>
 </clickhouse>
