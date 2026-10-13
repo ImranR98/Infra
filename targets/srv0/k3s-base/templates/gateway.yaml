@@ -20,6 +20,7 @@
 - {name: linkwarden-prod-tls, namespace: apps}
 - {name: navidrome-prod-tls, namespace: apps}
 - {name: nextcloud-prod-tls, namespace: apps}
+- {name: opencode-prod-tls, namespace: apps}
 - {name: openwebui-prod-tls, namespace: apps}
 - {name: opodsync-prod-tls, namespace: apps}
 - {name: plik-prod-tls, namespace: apps}
@@ -57,7 +58,6 @@ spec:
           # LAN/VPN-only: not attached to websecure-proxy, so unreachable
           # through the public-exposure tunnel.
           - {name: filebrowser-prod-tls, namespace: apps}
-          - {name: opencode-prod-tls}
           - {name: longhorn-prod-tls}
       allowedRoutes:
         namespaces:

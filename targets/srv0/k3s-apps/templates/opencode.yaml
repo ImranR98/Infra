@@ -1,0 +1,208 @@
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: opencode-prod-tls
+  namespace: apps
+spec:
+  secretName: opencode-prod-tls
+  issuerRef:
+    name: letsencrypt-prod
+    kind: ClusterIssuer
+  dnsNames:
+    - opencode.{{ .Values.SERVICES_DOMAIN }}
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: opencode-ingress
+  namespace: base
+spec:
+  parentRefs:
+    - name: srv0
+      sectionName: websecure
+    - name: srv0
+      sectionName: websecure-proxy
+  hostnames:
+    - opencode.{{ .Values.SERVICES_DOMAIN }}
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      filters:
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: geoblock
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: crowdsec-bouncer
+        # Access is governed by the wildcard `*=admins, two_factor` rule in
+        # authelia.yaml; no per-host Authelia rule is needed.
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: forwardauth-authelia
+      backendRefs:
+        - name: opencode
+          namespace: apps
+          port: 4096
+---
+# The agent's only host access is this NFS share and its home PVC; the server
+# process runs unsecured because only the Traefik edge can reach the pod
+# (namespace baseline + Authelia forward auth), same as a pod-backed app.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: opencode
+  namespace: apps
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: opencode
+  template:
+    metadata:
+      labels:
+        app: opencode
+    spec:
+      securityContext:
+        runAsUser: {{ .Values.MY_UID }}
+        runAsGroup: {{ .Values.MY_UID }}
+        # s0: files written on the NFS share stay category-free for the host
+        # (same reasoning as jellyfin).
+        seLinuxOptions:
+          level: s0
+      initContainers:
+        - name: fix-perms
+          image: busybox:1.38
+          command: ["sh", "-c", "chown -R {{ .Values.MY_UID }}:{{ .Values.MY_UID }} /home/opencode"]
+          securityContext:
+            runAsUser: 0
+          volumeMounts:
+            - name: home
+              mountPath: /home/opencode
+      containers:
+        - name: opencode
+          image: imranrdev/opencode:latest@sha256:bf65820160ece907751e288b5d2d11691a216026487bc761b0bad4a268ac8c70
+          args:
+            - serve
+            - --hostname
+            - 0.0.0.0
+            - --port
+            - "4096"
+          workingDir: /sandbox
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            seccompProfile:
+              type: RuntimeDefault
+          env:
+            # All agent state (config, MCPs, auth, sessions) lives under this
+            # home on the PVC.
+            - name: HOME
+              value: /home/opencode
+            - name: TZ
+              value: "{{ .Values.TZ }}"
+          ports:
+            - containerPort: 4096
+          readinessProbe:
+            httpGet:
+              path: /global/health
+              port: 4096
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+            initialDelaySeconds: 10
+          resources:
+            limits:
+              memory: 4Gi
+            requests:
+              memory: 256Mi
+              cpu: 50m
+          volumeMounts:
+            - name: home
+              mountPath: /home/opencode
+            - name: sandbox
+              mountPath: /sandbox
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: home
+          persistentVolumeClaim:
+            claimName: opencode-home-pvc
+        - name: sandbox
+          persistentVolumeClaim:
+            claimName: opencode-sandbox-pvc
+        - name: tmp
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: opencode
+  namespace: apps
+spec:
+  type: ClusterIP
+  selector:
+    app: opencode
+  ports:
+    - name: http
+      port: 4096
+      targetPort: 4096
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: opencode-home-pvc
+  namespace: apps
+  labels:
+    auto-backup: "true"
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: longhorn
+  resources:
+    requests:
+      storage: 20Gi
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: opencode-sandbox-pv
+spec:
+  capacity:
+    storage: 4096Gi
+  accessModes:
+    - ReadWriteMany
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: nfs
+  csi:
+    driver: nfs.csi.k8s.io
+    volumeHandle: opencode-sandbox
+    volumeAttributes:
+      server: nfs-server.base.svc.cluster.local
+      share: /code-sandbox
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: opencode-sandbox-pvc
+  namespace: apps
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: nfs
+  resources:
+    requests:
+      storage: 4096Gi
+  volumeName: opencode-sandbox-pv
