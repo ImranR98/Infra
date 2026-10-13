@@ -27,6 +27,11 @@ spec:
           ports:
             - name: http
               containerPort: 8080
+          env:
+            # Requests must carry Authelia's Remote-User (stamped by Traefik
+            # forward-auth); a request that bypasses the proxy is refused.
+            - name: AUTH_MODE
+              value: proxy-header
           resources:
             limits:
               memory: 128Mi

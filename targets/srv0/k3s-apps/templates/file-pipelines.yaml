@@ -109,6 +109,8 @@ spec:
           env:
             - name: BASE_PATH
               value: /pipelines
+            - name: AUTH_MODE
+              value: proxy-header
             - name: DSCPLN_ORIGIN
               value: "https://dscpln.{{ .Values.SERVICES_DOMAIN }}"
             # Remote pipeline runs: shared staging volume + the image jobs run.

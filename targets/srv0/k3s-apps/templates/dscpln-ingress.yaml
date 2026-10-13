@@ -39,7 +39,8 @@ spec:
     # The external API is deliberately unauthenticated at the proxy: it is
     # token-protected by the app and called by scripts, not browsers. geoblock
     # and CrowdSec still apply; Authelia does not (the token itself lives on
-    # /balance/settings, which stays behind the catch-all below).
+    # /balance/settings, which stays behind the catch-all below). The app's
+    # Remote-User guard mirrors this with AUTH_EXEMPT_PATHS=/api.
     - matches:
         - path:
             type: PathPrefix

@@ -99,6 +99,10 @@ spec:
               value: {{ .Values.BACKUPCTL_GIT_EMAIL | quote }}
             - name: BASE_PATH
               value: /tasks
+            # Requests must carry Authelia's Remote-User (stamped by Traefik
+            # forward-auth); the raw /browser WS upgrade is checked too.
+            - name: AUTH_MODE
+              value: proxy-header
             # Login-browser sidecar: noVNC viewer proxied at /tasks/browser/,
             # WebDriver for the scraper tools (local Chrome when unset).
             - name: BROWSER_REMOTE
@@ -112,7 +116,7 @@ spec:
               memory: 128Mi
               cpu: 50m
           readinessProbe:
-            {{- include "dscpln.readinessProbe" (dict "path" "/tasks/api/tasks" "port" "http") | nindent 12 }}
+            {{- include "dscpln.readinessProbe" (dict "path" "/tasks/api/health" "port" "http") | nindent 12 }}
           volumeMounts:
             - name: tmp
               mountPath: /tmp

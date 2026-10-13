@@ -40,8 +40,10 @@ spec:
           env:
             - name: BASE_PATH
               value: /watxt
+            - name: AUTH_MODE
+              value: proxy-header
           readinessProbe:
-            {{- include "dscpln.readinessProbe" (dict "path" "/watxt/api/state" "port" "8787" "initialDelaySeconds" 10) | nindent 12 }}
+            {{- include "dscpln.readinessProbe" (dict "path" "/watxt/api/health" "port" "8787" "initialDelaySeconds" 10) | nindent 12 }}
           resources:
             # The whole conversation index is held in memory, and imports merge
             # in-process, so give it room beyond the usual Node baseline.
