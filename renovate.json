@@ -204,6 +204,16 @@
       "enabled": false
     },
     {
+      "description": "D$CPLN app images are built and digest-pinned by the monorepo's scripts/build-all.sh --pin; Renovate PRs for our own :latest digests only add noise",
+      "matchDatasources": [
+        "docker"
+      ],
+      "matchPackageNames": [
+        "/^imranrdev\\/dscpln-/"
+      ],
+      "enabled": false
+    },
+    {
       "description": "immich postgres: same-shape tags only (major-vectorchordX.Y.Z-pgvectorA.B.C), locked to the current postgres major via the compatibility group so pg-major jumps stay manual",
       "matchPackageNames": [
         "ghcr.io/immich-app/postgres"

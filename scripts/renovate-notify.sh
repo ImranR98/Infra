@@ -16,7 +16,8 @@ usage() {
     echo
     echo "  --since <ISO8601>  Only notify for PRs created or refreshed after"
     echo "                     this timestamp (a Renovate run's start time)"
-    echo "  --repo <owner/repo>  Repository to query (default: ImranR98/Infra)"
+    echo "  --repo <owner/repo>  Repository to query; repeat for several"
+    echo "                     (default: ImranR98/Infra)"
     echo "  --dry-run          Print matching PRs instead of publishing"
     echo "  --test             Send a single test notification and exit"
     echo
@@ -29,7 +30,7 @@ usage() {
 }
 
 since=""
-repo="ImranR98/Infra"
+repos=()
 mode="publish"
 while [ $# -gt 0 ]; do
     case "$1" in
@@ -38,7 +39,7 @@ while [ $# -gt 0 ]; do
             shift 2
             ;;
         --repo)
-            repo="${2:-}"
+            repos+=("${2:-}")
             shift 2
             ;;
         --dry-run)
@@ -57,6 +58,10 @@ while [ $# -gt 0 ]; do
             ;;
     esac
 done
+
+if [ "${#repos[@]}" -eq 0 ]; then
+    repos=("ImranR98/Infra")
+fi
 
 if [ "$mode" != "test" ] && [ -z "$since" ]; then
     usage
@@ -77,7 +82,7 @@ if ! command -v node >/dev/null 2>&1; then
     exit 1
 fi
 
-export GH_TOKEN SINCE="$since" REPO="$repo" MODE="$mode"
+export GH_TOKEN SINCE="$since" REPOS="${repos[*]}" MODE="$mode"
 
 # The GitHub response is small (open PRs, one page) and ntfy publishing is a
 # single POST per PR; Node's built-in fetch keeps this dependency-free in both
@@ -103,26 +108,34 @@ node - <<'NODE'
     return;
   }
 
-  const res = await fetch(
-    `https://api.github.com/repos/${process.env.REPO}/pulls?state=open&sort=created&direction=desc&per_page=100`,
-    {
-      headers: {
-        Authorization: `Bearer ${process.env.GH_TOKEN}`,
-        Accept: 'application/vnd.github+json',
-        'User-Agent': 'infra-renovate-notify',
+  const repos = (process.env.REPOS || '').split(/\s+/).filter(Boolean);
+  const fresh = [];
+  for (const repo of repos) {
+    const res = await fetch(
+      `https://api.github.com/repos/${repo}/pulls?state=open&sort=created&direction=desc&per_page=100`,
+      {
+        headers: {
+          Authorization: `Bearer ${process.env.GH_TOKEN}`,
+          Accept: 'application/vnd.github+json',
+          'User-Agent': 'infra-renovate-notify',
+        },
       },
-    },
-  );
-  if (!res.ok) throw new Error(`GitHub API failed: ${res.status} ${await res.text()}`);
+    );
+    if (!res.ok) throw new Error(`GitHub API failed for ${repo}: ${res.status} ${await res.text()}`);
 
-  const prs = await res.json();
-  // updated_at covers reopened PRs and force-pushed branch updates — the run
-  // is the only actor that touches these branches, so it means "this run".
-  const fresh = prs.filter(
-    (pr) =>
-      (pr.created_at > process.env.SINCE || pr.updated_at > process.env.SINCE) &&
-      (pr.labels || []).some((label) => label.name === 'deps'),
-  );
+    const prs = await res.json();
+    // updated_at covers reopened PRs and force-pushed branch updates — the run
+    // is the only actor that touches these branches, so it means "this run".
+    fresh.push(
+      ...prs
+        .filter(
+          (pr) =>
+            (pr.created_at > process.env.SINCE || pr.updated_at > process.env.SINCE) &&
+            (pr.labels || []).some((label) => label.name === 'deps'),
+        )
+        .map((pr) => ({ ...pr, repo })),
+    );
+  }
   if (fresh.length === 0) {
     console.log('no new deps PRs');
     return;
@@ -130,11 +143,11 @@ node - <<'NODE'
 
   for (const pr of fresh) {
     if (process.env.MODE === 'dry-run') {
-      console.log(`#${pr.number} ${pr.created_at} ${pr.html_url}`);
+      console.log(`${pr.repo}#${pr.number} ${pr.created_at} ${pr.html_url}`);
       continue;
     }
     await publish(pr.title, `${pr.title}\n\n${pr.html_url}`, pr.html_url);
-    console.log(`notified PR #${pr.number}: ${pr.title}`);
+    console.log(`notified ${pr.repo} PR #${pr.number}: ${pr.title}`);
   }
 })().catch((err) => {
   console.error(err.message);

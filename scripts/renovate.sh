@@ -38,7 +38,7 @@ if ! command -v go >/dev/null 2>&1; then
 fi
 
 export RENOVATE_TOKEN="$RENOVATE_GITHUB_TOKEN"
-export RENOVATE_REPOSITORIES="ImranR98/Infra"
+export RENOVATE_REPOSITORIES="ImranR98/Infra,ImranR98/DSCPLN-Workflows,ImranR98/DSCPLN"
 export LOG_LEVEL="${LOG_LEVEL:-info}"
 
 # Attribute commits to the repo's configured git identity instead of Renovate's
@@ -98,5 +98,8 @@ fi
 NTFY_URL="https://ntfy.$ntfy_domain" \
     NTFY_TOPIC="${ntfy_target}_services_renovate" \
     NTFY_TOKEN="$ntfy_token" \
-    bash "$INFRA_ROOT/scripts/renovate-notify.sh" --since "$RUN_START" ||
+    bash "$INFRA_ROOT/scripts/renovate-notify.sh" --since "$RUN_START" \
+    --repo ImranR98/Infra \
+    --repo ImranR98/DSCPLN-Workflows \
+    --repo ImranR98/DSCPLN ||
     echo "Warning: Renovate notifier failed." >&2

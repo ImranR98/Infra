@@ -66,7 +66,7 @@ spec:
                   . /repo/config/VARS.env
                   set +a
                   export RENOVATE_TOKEN="$RENOVATE_GITHUB_TOKEN"
-                  export RENOVATE_REPOSITORIES="ImranR98/Infra"
+                  export RENOVATE_REPOSITORIES="ImranR98/Infra,ImranR98/DSCPLN-Workflows,ImranR98/DSCPLN"
                   export LOG_LEVEL="info"
                   # Attribute commits to the repo's configured git identity
                   # (synced .git/config; matches local runs). Read the file
@@ -79,7 +79,10 @@ spec:
                   renovate || rc=$?
                   # Notify once for any PRs this run opened. A notification
                   # failure must not change Renovate's exit code.
-                  bash /repo/scripts/renovate-notify.sh --since "$RUN_START" ||
+                  bash /repo/scripts/renovate-notify.sh --since "$RUN_START" \
+                    --repo ImranR98/Infra \
+                    --repo ImranR98/DSCPLN-Workflows \
+                    --repo ImranR98/DSCPLN ||
                     echo "Warning: Renovate notifier failed" >&2
                   exit "$rc"
               volumeMounts:
