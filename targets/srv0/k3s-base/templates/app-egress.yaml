@@ -1,0 +1,198 @@
+# Egress containment for the apps namespace.
+#
+# The namespace holds ~40 workloads, many of which only ever need to talk to
+# the cluster and the public internet. A default-deny egress plus these
+# baseline allows stops a compromised app pod from reaching LAN hosts (router,
+# NAS, cameras, other devices) — the host firewall trusts the pod CIDR, so
+# without this the pod network is an easy pivot.
+#
+# Exceptions:
+#   - qbittorrent: BitTorrent peers connect to arbitrary public ports.
+#   - compose-state: SSHes to the deployment targets (vps0).
+#   - homeassistant/frigate: LAN integrations and camera RTSP.
+#   - opencanary: a honeypot with its own strict policy; it must NOT inherit
+#     the cluster/internet allows, so the broad policies exclude it.
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: deny-egress
+  namespace: apps
+spec:
+  podSelector: {}
+  policyTypes:
+    - Egress
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-dns-egress
+  namespace: apps
+spec:
+  podSelector:
+    matchExpressions:
+      - key: app
+        operator: NotIn
+        values:
+          - opencanary
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-cluster-egress
+  namespace: apps
+spec:
+  podSelector:
+    matchExpressions:
+      - key: app
+        operator: NotIn
+        values:
+          - opencanary
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - ipBlock:
+            cidr: 10.42.0.0/16
+        - ipBlock:
+            cidr: 10.43.0.0/16
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-internet-egress
+  namespace: apps
+spec:
+  podSelector:
+    matchExpressions:
+      - key: app
+        operator: NotIn
+        values:
+          - opencanary
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except:
+              - 10.0.0.0/8
+              - 172.16.0.0/12
+              - 192.168.0.0/16
+              - 169.254.0.0/16
+              - 100.64.0.0/10
+      ports:
+        - protocol: TCP
+          port: 80
+        - protocol: TCP
+          port: 443
+        # FCM push (firebase) used by some integrations.
+        - protocol: TCP
+          port: 5228
+        - protocol: TCP
+          port: 5229
+        - protocol: TCP
+          port: 5230
+---
+# BitTorrent peers sit on arbitrary (high) public ports.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-qbittorrent-egress
+  namespace: apps
+spec:
+  podSelector:
+    matchLabels:
+      app: qbittorrent
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except:
+              - 10.0.0.0/8
+              - 172.16.0.0/12
+              - 192.168.0.0/16
+              - 169.254.0.0/16
+              - 100.64.0.0/10
+---
+# compose-state backs up other machines over SSH.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-compose-state-egress
+  namespace: apps
+spec:
+  podSelector:
+    matchLabels:
+      app: compose-state
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except:
+              - 10.0.0.0/8
+              - 172.16.0.0/12
+              - 192.168.0.0/16
+              - 169.254.0.0/16
+              - 100.64.0.0/10
+      ports:
+        - protocol: TCP
+          port: 22
+---
+# Home Assistant integrates with devices on the home LAN.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-homeassistant-lan-egress
+  namespace: apps
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: home-assistant
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - ipBlock:
+            cidr: 192.168.8.0/24
+---
+# Frigate pulls camera streams over RTSP.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-frigate-lan-egress
+  namespace: apps
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: frigate
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - ipBlock:
+            cidr: 192.168.8.0/24
+      ports:
+        - protocol: TCP
+          port: 554
+        - protocol: TCP
+          port: 8554
