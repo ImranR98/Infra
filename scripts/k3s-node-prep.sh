@@ -32,7 +32,7 @@ sysctl --system >/dev/null
 # iscsi-initiator-utils come from prereqs.sh).
 systemctl enable --now iscsid
 
-# ---- firewall (K3s ports + pod/service CIDRs + LAN exposure) -----------------
+# ---- firewall (K3s ports + LAN exposure) --------------------------------------
 # Open every port the stack needs explicitly, so this works regardless of the
 # zone's default range (FedoraWorkstation ships 1025-65535 open; minimal
 # installs don't): 80/443 Traefik, 6443 apiserver, 2379/2380 etcd,
@@ -42,28 +42,31 @@ systemctl enable --now iscsid
 # clustered Alloy may scrape a node's kubelet from another node, and that
 # cross-node pod traffic is SNAT'd to the peer's LAN IP (pod-CIDR trust does
 # not apply); kubelet requires auth, so anonymous LAN access is a 401.
-# 9100 stays dropped: node-exporter is unauthenticated and Alloy scrapes it on
-# the pod network. Loopback bypasses firewalld and the pod CIDRs are in the
-# trusted zone, so the plain drop is safe (no source allowlist needed).
-# The VPN subnet gets the same trust as the pod CIDRs: wg0 appears at runtime,
-# so firewalld never binds it to a zone.
-# priority=-10 keeps it in the zone's _pre chain, ahead of any open range.
+# The pod/service CIDRs are deliberately NOT trusted: a compromised pod must
+# not be able to reach arbitrary host listeners (apps-namespace egress policies
+# close the pod-to-LAN path at the CNI). The one exception is 9100 below.
+# 9100 stays dropped for everything except the pod CIDR: node-exporter is
+# unauthenticated and Alloy scrapes it on the pod network; the accept rule
+# (priority=-11, before the drop) keeps that working now that pods are no
+# longer trusted wholesale.
+# The VPN subnet keeps trust: wg0 appears at runtime, so firewalld never binds
+# it to a zone, and VPN clients are LAN clients by design.
 if command -v firewall-cmd >/dev/null 2>&1; then
     zone="$(firewall-cmd --get-default-zone)"
     for port in 80/tcp 443/tcp 6443/tcp 2379/tcp 2380/tcp 5001/tcp 8472/udp 51820/udp 51821/udp 10250/tcp; do
         firewall-cmd --permanent --add-port="$port" >/dev/null
     done
-    for src in 10.42.0.0/16 10.43.0.0/16 10.100.0.0/24; do
-        firewall-cmd --permanent --zone=trusted --add-source="$src" >/dev/null
-    done
+    firewall-cmd --permanent --zone=trusted --add-source=10.100.0.0/24 >/dev/null
+    allow_9100="rule priority=-11 family=ipv4 source address=10.42.0.0/16 port port=9100 protocol=tcp accept"
+    firewall-cmd --permanent --zone="$zone" --query-rich-rule="$allow_9100" >/dev/null 2>&1 ||
+        firewall-cmd --permanent --zone="$zone" --add-rich-rule="$allow_9100" >/dev/null
     rule="rule priority=-10 family=ipv4 port port=9100 protocol=tcp drop"
     firewall-cmd --permanent --zone="$zone" --query-rich-rule="$rule" >/dev/null 2>&1 ||
         firewall-cmd --permanent --zone="$zone" --add-rich-rule="$rule" >/dev/null
     firewall-cmd --reload
 elif command -v ufw >/dev/null 2>&1; then
-    ufw allow from 10.42.0.0/16
-    ufw allow from 10.43.0.0/16
     ufw allow from 10.100.0.0/24
+    ufw allow from 10.42.0.0/16 to any port 9100 proto tcp
     ufw allow 80/tcp
     ufw allow 443/tcp
     ufw allow 6443/tcp
