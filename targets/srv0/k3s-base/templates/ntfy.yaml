@@ -125,10 +125,10 @@ spec:
         - podSelector:
             matchLabels:
               app: renovate
-        # AmneziaWG client-connect notifications (wireguard pod sidecar).
+        # AmneziaWG client-connect notifications (remote-access-amneziawg pod sidecar).
         - podSelector:
             matchLabels:
-              app: wireguard
+              app: remote-access-amneziawg
       ports:
         - port: 3000
   policyTypes:
