@@ -74,8 +74,12 @@ spec:
               mountPath: /tmp
             - name: config
               mountPath: /data
-            - name: main
-              mountPath: /home/imranr/Main/Infra
+            # Only the archives destination, not the whole Infra checkout:
+            # the app writes tars there, and it must not be able to rewrite
+            # scripts/templates/config.
+            - name: infra-backups
+              mountPath: /home/imranr/Main/Infra/compose_state_backups
+              subPath: compose_state_backups
       volumes:
         - name: tmp
           emptyDir:
@@ -84,7 +88,7 @@ spec:
         - name: config
           persistentVolumeClaim:
             claimName: compose-state-pvc
-        - name: main
+        - name: infra-backups
           persistentVolumeClaim:
             claimName: hostpath-main-node-infra-pvc
 ---

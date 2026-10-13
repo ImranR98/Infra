@@ -15,9 +15,22 @@ metadata:
   name: helm-hooks
   namespace: apps
 rules:
+  # immich-seed only: wait for the server pod, exec into it, and persist the
+  # admin password. No secret listing/watching (that would allow bulk reads)
+  # and no pods/log.
   - apiGroups: [""]
-    resources: ["pods", "pods/exec", "pods/log", "secrets"]
-    verbs: ["get", "list", "watch", "create", "patch", "update"]
+    resources: ["pods"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["pods/exec"]
+    verbs: ["create"]
+  - apiGroups: [""]
+    resources: ["secrets"]
+    resourceNames: ["immich-seed-admin"]
+    verbs: ["get", "patch", "update"]
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["create"]
   - apiGroups: ["apps"]
     resources: ["deployments"]
     verbs: ["get"]

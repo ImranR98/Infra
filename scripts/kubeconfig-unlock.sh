@@ -75,9 +75,22 @@ echo "kubeconfig unlocked for $(id -un):"
 echo "  $USER_KUBECONFIG -> $K3S_KUBECONFIG (read ACL)"
 echo "kubectl and helm now work in every shell. Press Ctrl-C to lock."
 # Watchdog: k3s rewrites the kubeconfig on restart/cert rotation and its chmod
-# clears the ACL mask; re-assert whenever our read access disappears.
+# clears the ACL mask; re-assert whenever our read access disappears. The
+# re-assert needs sudo, so when the cached credentials expire and cannot be
+# refreshed (no terminal), exit loudly instead of silently degrading to a
+# watchdog that does nothing.
 while :; do
     sleep 15
     [ -e "$USER_KUBECONFIG" ] || ln -sfn "$K3S_KUBECONFIG" "$USER_KUBECONFIG"
-    [ -r "$K3S_KUBECONFIG" ] || $SU setfacl -m "u:$(id -un):r,m::r" "$K3S_KUBECONFIG" || true
+    [ -r "$K3S_KUBECONFIG" ] && continue
+    if ! $SU -n true 2>/dev/null; then
+        if [ -t 0 ]; then
+            $SU -v || { echo "kubeconfig-unlock: sudo refresh failed; re-run this script." >&2; exit 1; }
+        else
+            echo "kubeconfig-unlock: sudo credentials expired — the ACL cannot be re-asserted." >&2
+            echo "Re-run $(basename "$0") from a terminal to unlock again." >&2
+            exit 1
+        fi
+    fi
+    $SU setfacl -m "u:$(id -un):r,m::r" "$K3S_KUBECONFIG" || true
 done
