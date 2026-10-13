@@ -129,11 +129,11 @@ configs:
                       silentStartUp: false
                       allowLocalRequests: true
                       logLocalRequests: false
-                      logAllowedRequests: true
-                      logApiRequests: true
+                      logAllowedRequests: false
+                      logApiRequests: false
                       api: "https://get.geojs.io/v1/ip/country/{ip}"
                       apiTimeoutMs: 750
-                      cacheSize: 15
+                      cacheSize: 50000
                       forceMonthlyUpdate: true
                       allowUnknownCountries: false
                       unknownCountryApiResponse: "nil"

@@ -1,11 +1,16 @@
 <clickhouse>
     <listen_host>0.0.0.0</listen_host>
     <max_concurrent_queries>8</max_concurrent_queries>
+    <mark_cache_size>524288000</mark_cache_size>
+    <query_cache>
+        <max_size_in_bytes>268435456</max_size_in_bytes>
+        <max_entries>1024</max_entries>
+    </query_cache>
     <logger>
         <level>warning</level>
         <console>true</console>
     </logger>
-    <background_pool_size>4</background_pool_size>
+    <background_pool_size>2</background_pool_size>
     <background_merges_mutations_concurrency_ratio>1</background_merges_mutations_concurrency_ratio>
     <merge_tree>
         <max_bytes_to_merge_at_max_space_in_pool>2147483648</max_bytes_to_merge_at_max_space_in_pool>

@@ -9,6 +9,10 @@
             <max_download_threads>1</max_download_threads>
             <input_format_parallel_parsing>0</input_format_parallel_parsing>
             <output_format_parallel_formatting>0</output_format_parallel_formatting>
+            <use_query_cache>1</use_query_cache>
+            <enable_writes_to_query_cache>1</enable_writes_to_query_cache>
+            <enable_reads_from_query_cache>1</enable_reads_from_query_cache>
+            <query_cache_ttl>60</query_cache_ttl>
         </default>
     </profiles>
 </clickhouse>

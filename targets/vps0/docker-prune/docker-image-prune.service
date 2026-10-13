@@ -1,0 +1,7 @@
+[Unit]
+Description=Prune unused Docker images
+
+[Service]
+Type=oneshot
+# Two-week floor keeps recent pinned digests available for quick rollbacks.
+ExecStart=/usr/bin/docker image prune -af --filter until=336h

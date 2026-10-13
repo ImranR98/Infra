@@ -1,0 +1,9 @@
+[Unit]
+Description=Monthly prune of unused Docker images
+
+[Timer]
+OnCalendar=monthly
+Persistent=true
+
+[Install]
+WantedBy=timers.target

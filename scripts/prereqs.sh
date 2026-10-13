@@ -71,10 +71,6 @@ if ! command -v docker >/dev/null 2>&1 || ! docker compose version >/dev/null 2>
 fi
 $SU systemctl enable --now docker
 
-# Longhorn needs a running iSCSI initiator on every node (volume attach) and
-# NFS client tools for RWX volumes (nfs-utils/nfs-common installed above).
-$SU systemctl enable --now iscsid
-
 # ---- Local compose target prep (hostname-matched target only) ---------------
 local_target="$(hostname)"
 target_dir="$INFRA_ROOT/targets/$local_target"

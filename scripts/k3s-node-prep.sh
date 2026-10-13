@@ -28,6 +28,10 @@ vm.dirty_background_bytes = 16777216
 EOF
 sysctl --system >/dev/null
 
+# Longhorn attaches volumes via the host iSCSI initiator (open-iscsi/
+# iscsi-initiator-utils come from prereqs.sh).
+systemctl enable --now iscsid
+
 # ---- firewall (K3s ports + pod/service CIDRs + LAN exposure) -----------------
 # Open every port the stack needs explicitly, so this works regardless of the
 # zone's default range (FedoraWorkstation ships 1025-65535 open; minimal
