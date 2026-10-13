@@ -71,6 +71,16 @@ spec:
             cidr: 10.42.0.0/16
         - ipBlock:
             cidr: 10.43.0.0/16
+    # kubernetes.default resolves (post-DNAT) to the server node's LAN IP —
+    # k3s runs the apiserver on the host network — so pods on other nodes
+    # would otherwise be refused. 6443 is authenticated; nothing else in the
+    # LAN answers it.
+    - to:
+        - ipBlock:
+            cidr: 192.168.8.0/24
+      ports:
+        - protocol: TCP
+          port: 6443
 ---
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
