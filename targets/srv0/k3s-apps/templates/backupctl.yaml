@@ -6,13 +6,15 @@
 # machine (BACKUPCTL_HOST). The image carries the monorepo (tools/ included) and
 # BACKUPCTL_REPO_DIR=/app makes the repo_dir token point at it.
 ---
+# Deliberately NOT labeled auto-backup: this holds tool venvs plus
+# ~/.backupctl run state (captured scrape output). Archives land in the
+# Syncthing-replicated Main/Infra/k3s_state_backups tree, so backing it up
+# would copy financial/2FA-adjacent data onto every synced device.
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: backupctl-home-pvc
   namespace: apps
-  labels:
-    auto-backup: "true"
 spec:
   accessModes:
     - ReadWriteOnce
@@ -23,13 +25,14 @@ spec:
 ---
 # Chrome profiles for the login-browser sidecar: logins survive pod restarts
 # (the scraper tools point their --user-data-dir under /home/seluser/.config).
+# Deliberately NOT labeled auto-backup: these profiles carry live third-party
+# sessions (bank/Instacart); a plain-tar archive in the Syncthing-replicated
+# k3s_state_backups tree would be a session-hijack kit.
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: backupctl-browser-pvc
   namespace: apps
-  labels:
-    auto-backup: "true"
 spec:
   accessModes:
     - ReadWriteOnce
