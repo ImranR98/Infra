@@ -121,9 +121,14 @@ spec:
           ports:
             - containerPort: 4096
           readinessProbe:
-            httpGet:
-              path: /global/health
-              port: 4096
+            # v2 serves the SPA (200 text/html) on any non-/api path, so the
+            # v1 /global/health probe no longer means anything; hit the real
+            # authenticated info endpoint instead.
+            exec:
+              command:
+                - sh
+                - -c
+                - curl -sf -u "opencode:$OPENCODE_PASSWORD" http://127.0.0.1:4096/api/info > /dev/null
             periodSeconds: 30
             timeoutSeconds: 5
             failureThreshold: 3
