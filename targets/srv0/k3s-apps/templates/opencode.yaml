@@ -48,6 +48,13 @@ spec:
             group: traefik.io
             kind: Middleware
             name: forwardauth-authelia
+        # Injects the pinned opencode server credentials so browsers never hit
+        # the native Basic prompt; Authelia above stays the human gate.
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: opencode-basic-auth
       backendRefs:
         - name: opencode
           namespace: apps

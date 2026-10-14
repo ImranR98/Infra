@@ -108,6 +108,20 @@ spec:
     customResponseHeaders:
       Cache-Control: "no-store"
 ---
+# The opencode v2 server requires Basic auth on its API. Browsers can't attach
+# it to every request type (the UI's fetches do, but streams/subresources fall
+# back to the native browser prompt), so inject the pinned credentials at the
+# proxy. Authelia stays the human gate — this filter runs last on the route.
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: opencode-basic-auth
+  namespace: base
+spec:
+  headers:
+    customRequestHeaders:
+      Authorization: "Basic {{ printf "opencode:%s" .Values.OPENCODE_SERVER_PASSWORD | b64enc }}"
+---
 apiVersion: helm.cattle.io/v1
 kind: HelmChartConfig
 metadata:
