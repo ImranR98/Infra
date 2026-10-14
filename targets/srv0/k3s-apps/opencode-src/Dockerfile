@@ -1,4 +1,4 @@
-FROM ghcr.io/anomalyco/opencode:2.0.28
+FROM ghcr.io/anomalyco/opencode:2.0.29
 RUN apk add --no-cache \
         bash \
         ca-certificates \
