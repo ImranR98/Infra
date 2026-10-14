@@ -113,6 +113,11 @@ spec:
               value: /home/opencode
             - name: TZ
               value: "{{ .Values.TZ }}"
+            # v2 generates a random server password on every boot unless this
+            # is set; pinning it keeps browser/API sessions working across
+            # restarts (the web UI also sits behind Authelia forward-auth).
+            - name: OPENCODE_PASSWORD
+              value: "{{ .Values.OPENCODE_SERVER_PASSWORD }}"
           ports:
             - containerPort: 4096
           readinessProbe:
