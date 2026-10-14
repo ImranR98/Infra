@@ -136,7 +136,7 @@ spec:
         # The Selenium sidecar a scraper task drives; its viewer is embedded
         # in the task cards for manual logins (2FA). One session at a time.
         - name: browser
-          image: selenium/standalone-chromium:4.49.0@sha256:08fd293648e126275782c616a61f4ee1d90cf413b1972ebc35dbd054d6789f55
+          image: selenium/standalone-chromium:4.51.0@sha256:c7c17cd79c62819a8329df00e610dbc4073c279da034a6f37135d454eb0d8870
           securityContext:
             # The image runs Chrome as seluser (1200); the pod fsGroup (MY_UID)
             # owns the profile volume, so join that group for write access.
