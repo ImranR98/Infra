@@ -515,7 +515,7 @@ spec:
         fsGroup: 1001
       containers:
         - name: redis
-          image: docker.io/bitnami/redis:latest@sha256:f4797b37502e6db910d3653368fcfadc171ef605586917774de125ddd05b3e62
+          image: docker.io/bitnami/redis:latest@sha256:33dbb7a4be39e73f0d5178e9040061ecb708946f55169657aa6897ba0a2c71d9
           ports:
             - name: tcp-redis
               containerPort: 6379

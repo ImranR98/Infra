@@ -304,7 +304,7 @@ services:
     # (files/public-exposure/forwards.conf). Host effects are lifecycle-bound:
     # stopping the container removes the interface, DNAT and firewall rules.
     public-exposure-server-wg:
-        image: lscr.io/linuxserver/wireguard:latest@sha256:437a490f7afc6969434251351ba47455a3829e71cef9c6172f3f533332d04063
+        image: lscr.io/linuxserver/wireguard:latest@sha256:6bcf5d2f5a265c7e9835eaadd989938e681aabe8bf8bcd4556b61d463da6555c
         container_name: public-exposure-server-wg
         restart: always
         network_mode: host
@@ -326,7 +326,7 @@ services:
 
     # Prints one line per preboot-client handshake so logtfy can alert on it.
     public-exposure-watch:
-        image: lscr.io/linuxserver/wireguard:latest@sha256:437a490f7afc6969434251351ba47455a3829e71cef9c6172f3f533332d04063
+        image: lscr.io/linuxserver/wireguard:latest@sha256:6bcf5d2f5a265c7e9835eaadd989938e681aabe8bf8bcd4556b61d463da6555c
         container_name: public-exposure-watch
         restart: unless-stopped
         network_mode: host
@@ -494,7 +494,7 @@ services:
 
     # Traefik logrotate - caps the host-mounted access log (CrowdSec's acquisition source)
     traefik-logrotate:
-        image: vitess/logrotate:latest@sha256:0a481700638604599aed214f5d87844875a11c8f55de867ae439f59b70667cf5
+        image: vitess/logrotate:latest@sha256:88a8365d6a9497a2e97070a2aadb09dc3bb628b763072429d56fe2cf921f0dc4
         container_name: traefik-logrotate
         restart: unless-stopped
         mem_limit: 64M
