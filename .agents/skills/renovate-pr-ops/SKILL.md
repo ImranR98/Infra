@@ -101,6 +101,22 @@ then deploy in risk order using
 3. k3s Plan bumps (Tier C): apply `srv0-base`, then follow the upgrade-watch playbook.
 4. pc/bigpc/rpi: emit the `git pull` + compose commands; do not attempt them.
 
+### Rebuilding opencode after a FROM bump
+
+A merged opencode FROM bump is inert until the derived image is rebuilt and its digest
+re-pinned. `opencode-src/build.sh` is docker-based; on srv0 use podman instead (the
+Docker Hub login lives in `~/.docker/config.json`, which podman only reads when passed
+explicitly — a bare `podman push` fails auth):
+
+```bash
+podman build --platform linux/amd64 -t imranrdev/opencode:latest targets/srv0/k3s-apps/opencode-src
+podman push --authfile ~/.docker/config.json imranrdev/opencode:latest
+curl -s https://hub.docker.com/v2/repositories/imranrdev/opencode/tags/latest | jq -r .digest
+```
+
+Pin the digest Docker Hub reports (not the local one) into `opencode.yaml`, commit and
+push the re-pin, then roll the pod with the `srv0-apps` upgrade.
+
 ## Phase 6 — Verify & report
 
 Run the verification checklist and dead-pod cleanup from the deploy reference. Never
