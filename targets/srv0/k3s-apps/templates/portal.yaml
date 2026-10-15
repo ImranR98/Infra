@@ -1,5 +1,49 @@
-# D$CPLN portal — the root landing page listing every function subpath.
-# Stateless: no PVC. Reachable at the host root behind Authelia.
+# D$CPLN portal — the root landing page listing every function subpath, and
+# the owner of the notification settings every app relays through.
+# Reachable at the host root behind Authelia.
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: portal-config-pvc
+  namespace: apps
+  labels:
+    auto-backup: "true"
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: longhorn
+  resources:
+    requests:
+      storage: 1Gi
+---
+# Apps post notifications to the portal; deny-all-ingress otherwise blocks
+# pod-to-pod traffic.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-portal-notify-ingress
+  namespace: apps
+spec:
+  podSelector:
+    matchLabels:
+      app: portal
+  ingress:
+    - from:
+        - podSelector:
+            matchExpressions:
+              - key: app
+                operator: In
+                values:
+                  - balance-xlsx
+                  - file-pipelines
+                  - contacts-calendar
+                  - compose-state
+                  - ytmusic
+      ports:
+        - port: 8080
+  policyTypes:
+    - Ingress
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -8,6 +52,8 @@ metadata:
   namespace: apps
 spec:
   replicas: 1
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app: portal
@@ -21,7 +67,7 @@ spec:
       automountServiceAccountToken: false
       containers:
         - name: portal
-          image: imranrdev/dscpln-portal:latest@sha256:0922abdbd7bdf7dc8edaae4c3bfc024dc3434741db449e7efe3bab24a9c3c9a5
+          image: imranrdev/dscpln-portal:latest@sha256:6b290b3d7cb72de73898461df0fca4fd6ea3f63bccd78806da73a0a10ae69ba8
           securityContext:
             {{- include "dscpln.containerSecurityContext" (dict "uid" .Values.MY_UID "readOnlyRootFilesystem" true) | nindent 12 }}
           ports:
@@ -29,9 +75,17 @@ spec:
               containerPort: 8080
           env:
             # Requests must carry Authelia's Remote-User (stamped by Traefik
-            # forward-auth); a request that bypasses the proxy is refused.
+            # forward-auth); a request that bypasses the proxy is refused. The
+            # notification relay stays exempt so in-cluster apps can post
+            # without a browser session; external /api/notify still passes
+            # through Authelia at the ingress.
             - name: AUTH_MODE
               value: proxy-header
+            - name: AUTH_EXEMPT_PATHS
+              value: /api/notify
+            # Notification settings (ntfy URL + token) live on the portal PVC.
+            - name: DSCPLN_DATA_DIR
+              value: /data
           resources:
             limits:
               memory: 128Mi
@@ -43,10 +97,15 @@ spec:
           volumeMounts:
             - name: tmp
               mountPath: /tmp
+            - name: config
+              mountPath: /data
       volumes:
         - name: tmp
           emptyDir:
             medium: Memory
             sizeLimit: 128Mi
+        - name: config
+          persistentVolumeClaim:
+            claimName: portal-config-pvc
 ---
 {{ include "dscpln.service" (dict "name" "portal" "targetPort" "http" "port" 8080) }}

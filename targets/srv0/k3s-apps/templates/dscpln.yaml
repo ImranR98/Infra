@@ -10,8 +10,6 @@
     }
   },
   "notifications": {
-    "monthlyLimitUrl": "http://ntfy.base.svc.cluster.local:3000/{{ .Values.TARGET }}_services_dscpln",
-    "ntfyToken": {{ .Values.NTFY_WRITE_ONLY_ACCOUNT_TOKEN | quote }},
     "checkIntervalMinutes": 30,
     "onlyWarnOnce": false
   },
@@ -46,7 +44,7 @@ spec:
       automountServiceAccountToken: false
       containers:
         - name: balance-xlsx
-          image: imranrdev/dscpln-balance:latest@sha256:8b4b6dd4713a6a1c4cf08a8dfea26036e2104a911f25faec35ee632e1479b5a8
+          image: imranrdev/dscpln-balance:latest@sha256:02cdec8777ffebbc8d5f09c4fe321cfa3f953b8a1fe389fa29a58062c9e16311
           securityContext:
             {{- include "dscpln.containerSecurityContext" (dict "uid" .Values.MY_UID "readOnlyRootFilesystem" true) | nindent 12 }}
           ports:
@@ -77,6 +75,9 @@ spec:
               value: /api
             - name: DSCPLN_ORIGIN
               value: "https://dscpln.{{ .Values.SERVICES_DOMAIN }}"
+            # Notifications relay through the portal (ntfy URL/token live there).
+            - name: DSCPLN_PORTAL_URL
+              value: http://portal:8080
           volumeMounts:
             - name: tmp
               mountPath: /tmp
