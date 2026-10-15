@@ -14,7 +14,7 @@ source "$INFRA_ROOT/scripts/common.sh"
 set_my_uid
 
 SU="sudo"
-HELM_VERSION="3.22.0"
+HELM_VERSION="3.22.1"
 
 usage() {
     echo "Usage: $(basename "$0")"
