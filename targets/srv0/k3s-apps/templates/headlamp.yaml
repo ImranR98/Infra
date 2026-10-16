@@ -10,7 +10,7 @@ spec:
   failurePolicy: abort
   targetNamespace: apps
   createNamespace: false
-  version: 0.45.0
+  version: 0.46.0
   valuesContent: |-
     # The OIDC secret is an external Secret consumed via envFrom; rotate-on-restart.
     podAnnotations:
