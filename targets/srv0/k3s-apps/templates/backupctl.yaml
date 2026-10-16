@@ -67,7 +67,7 @@ spec:
       automountServiceAccountToken: false
       containers:
         - name: task-runner
-          image: imranrdev/dscpln-task-runner:latest@sha256:372dc5e294ba52059a343fc4330ae878eb82b6d0b2f479eedf6dff5a2c02d65e
+          image: imranrdev/dscpln-task-runner:latest@sha256:6a6a4b3d3106336bfcced78c7cdaf9dd7569e625f3017f24991e484652dabcb7
           securityContext:
             {{- include "dscpln.containerSecurityContext" (dict "uid" .Values.MY_UID) | nindent 12 }}
           ports:
