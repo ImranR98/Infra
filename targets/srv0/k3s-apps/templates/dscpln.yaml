@@ -140,6 +140,27 @@ spec:
       storage: 100Mi
   volumeName: dscpln-ledger-pv
 ---
+# The task-runner's Wealthsimple import calls the external API directly;
+# deny-all-ingress otherwise blocks pod-to-pod traffic.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-task-runner-ingress
+  namespace: apps
+spec:
+  podSelector:
+    matchLabels:
+      app: balance-xlsx
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: task-runner
+      ports:
+        - port: 3300
+  policyTypes:
+    - Ingress
+---
 apiVersion: v1
 kind: Secret
 metadata:
