@@ -2,7 +2,7 @@
 
 ## Full NFS storage (no Longhorn)
 
-The 45 application PVCs were migrated from Longhorn to the NFS-backed `nfs-apps` StorageClass. Longhorn was single-node in practice (all volumes on srv0; bigpc had no Longhorn disk) and added a distributed control plane, iSCSI, and per-volume engine overhead. The app-data export lives at `current_target/k3s_live_state/nfs-apps`; `nfs-apps` is the default StorageClass; sizes are advisory; PVCs are RWX; `no_root_squash` is required for CSI subdir creation and app chowns. The backups are tar archives under `k3s_state_backups` (not snapshots). Rollback is from those archives.
+The 45 application PVCs were migrated from Longhorn to the NFS-backed `nfs-apps` StorageClass. Longhorn was single-node in practice (all volumes on srv0; bigpc had no Longhorn disk) and added a distributed control plane, iSCSI, and per-volume engine overhead. The app-data export lives at `current_target/k3s_live_state/nfs-apps`; `nfs-apps` is the default StorageClass; sizes are advisory; PVCs are RWX; `no_root_squash` is required for CSI subdir creation and app chowns. The active backup is the restic repository under `state_backups/restic`; the old tar archives under `k3s_state_backups` are rollback-only legacy.
 
 **Accepted risk:** SQLite/WAL and Postgres are latency-sensitive on NFS. The benchmark gate measured ~3× SQLite p95 and ~2.6× Postgres latency under disk load; full NFS was chosen anyway. The Immich Postgres image requires `IGNORE_DATABASE_FSTYPE=true` to start on NFS (set in `immich.yaml`).
 
@@ -17,6 +17,10 @@ The GeoIP service, image source, `geoipupdate` secret, and Traefik wait-for-geoi
 ## Header gate removed (`BOOTSTRAP_PRIVATE_APPS`)
 
 The local WASM header-gate plugin and its `authelia-with-optional-header-gate` chain were removed. The six apps with their own authentication (Home Assistant, Immich, Jellyfin, Linkwarden, Navidrome, Opodsync) no longer have an Authelia forward-auth filter. For first boot, set `BOOTSTRAP_PRIVATE_APPS: "true"` so those six routes keep only the `websecure` parentRef (LAN/VPN) until Authelia is Ready. `validate.sh` warns while the flag is true. Jellyfin's chart gets a 120s-startup-tolerant liveness probe (the chart schema has no `livenessProbe.enabled` flag).
+
+## State Backups app (restic)
+
+The backup system is one D$CPLN app (`apps/state-backup`, reusing the Compose State app's settings/schedule UI) writing a single encrypted, deduplicated restic repository at `state_backups/restic`. It captures the `auto-backup=true` PVCs and the srv0/vps0 Compose state; the app is backup-only. The vps0 Compose state uses the existing app-generated SSH key, now carried in the `state-backup-vps0-ssh` Secret; a recovery copy lives outside the cluster. The app runs as root because the NFS app data is owned by fixed Postgres/Redis UIDs. Restore is the manual `scripts/restic-restore.sh` path so a fresh cluster does not depend on the app being deployed. The old tar path (`pvc-backup`, `pvc.sh`, `compose_state_backups/`) is retained only until a restic restore is verified.
 
 ## Prometheus instead of Mimir
 

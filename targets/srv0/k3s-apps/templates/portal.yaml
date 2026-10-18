@@ -38,7 +38,7 @@ spec:
                   - balance-xlsx
                   - file-pipelines
                   - contacts-calendar
-                  - compose-state
+                  - state-backup
                   - ytmusic
                   - task-runner
       ports:

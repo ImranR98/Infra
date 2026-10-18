@@ -173,7 +173,7 @@ spec:
     - matches:
         - path:
             type: PathPrefix
-            value: /compose
+            value: /state-backup
       filters:
         - type: ExtensionRef
           extensionRef:
@@ -191,7 +191,7 @@ spec:
             kind: Middleware
             name: forwardauth-authelia
       backendRefs:
-        - name: compose-state
+        - name: state-backup
           namespace: apps
           port: 8080
     - matches:

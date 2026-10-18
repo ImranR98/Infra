@@ -5,7 +5,7 @@
 | Script | Selects | Acts on | Notes |
 |---|---|---|---|
 | `validate.sh <t>` | target | read-only, any machine | config_template→config completeness/placeholders, helm lint + both-chart render (srv0), compose `../../../config/` mount check, `BOOTSTRAP_PRIVATE_APPS` and static-node-label warnings. Prints variable names only. |
-| `compose-backup.sh <t>` | target | ON the target (local) / any machine (`-e`) | tars compose state via an Alpine container; `-e backup_remote=user@host:path` pulls the remote checkout's state into this machine's `compose_state_backups/`, named `<t>-backup-<ts>.tar` |
+| `restic-restore.sh` | — | this machine (srv0) | lists/restores the State Backups restic repo; `pvc <name>` and `compose srv0|vps0` accept `--live`; defaults to staging |
 | `prereqs.sh` | — | this machine | packages (NFS client), pinned helm, Docker bootstrap, machine-fact `.env`, host bind dirs, acme seed |
 | `kubeconfig-unlock.sh [--lock]` | — | this machine | read ACL on the k3s kubeconfig + `~/.kube/config` symlink; holds until Ctrl-C; `--lock` cleans up |
 | `renovate.sh` | — | this machine (opens GitHub PRs) | needs `RENOVATE_GITHUB_TOKEN` in `config/VARS.env`; Node/npm only |
@@ -17,7 +17,7 @@
 | `k3s-server.sh` | — | this machine (becomes control plane) | node prep + installer + server config + the static `hostpath-main`/`external-exposed` labels |
 | `k3s-join.sh <ip> <user> [...]` | — | control plane + joining node | token travels via stdin over SSH; taint/optional `--hostpath-main` after Ready |
 | `k3s-node-prep.sh` | — | the node (root) | sysctls, firewall, shared by server/join |
-| `pvc.sh` | — | the cluster (or in-cluster pod) | PVC backup/restore (NFS) |
+| `pvc.sh` | — | the cluster (or in-cluster pod) | legacy NFS PVC tar backup/restore, retained until the restic restore is verified |
 | `update-node-ip.sh` | — | the node | K3s node IP change |
 
 ### Writing a script
@@ -62,7 +62,6 @@ The bootstrap self-computes the repo root but honors a pre-set `INFRA_ROOT` (the
 - **State** — `current_target/compose_live_state/` (gitignored) holds runtime state only (acme.json, sqlite DBs, upload dirs), referenced with relative paths (`../../../current_target/compose_live_state/...`, resolved against the compose file's directory). `prereqs.sh` creates missing bind dirs owned by `$MY_UID` (Docker would create them as root, unwritable by containers running as `$MY_UID`) and seeds `traefik/acme.json` (`{}`, 0600, first run). `current_target/k3s_live_state/` holds the NFS app-data tree; both are gitignored and Syncthing-ignored.
 - **Ownership self-heal** — containers with a fixed non-`$MY_UID` user (ClickHouse 101, Plausible 999) have a one-shot `state-fixperms` init service (alpine, `cap_drop: ALL` + `CHOWN`/`FOWNER`/`DAC_OVERRIDE`) that chowns their state dirs before the apps start; dependents gate on it with `condition: service_completed_successfully`. It re-runs after `docker compose down <svc>`, so host-side chown drift is fixed on the next deploy.
 - **Deploy** — see `AGENTS.md`; reboot survival comes from per-service `restart:` policies (no systemd wrapper). `content:` configs are materialized into a container only when it is created and are not part of compose's service hash, so a plain `up -d` after editing one leaves the old config in place — recreate the service with `up -d --force-recreate --no-deps <svc>`. `files/` bind mounts are live and need no recreate.
-- **Backup** — `compose-backup.sh <t>` tars the state locally via an Alpine container (skips FIFOs/sockets; tar exit 1 from live files changing mid-read is accepted as success, and a failed run removes its partial archive) and prunes to `$BACKUP_RETENTION` (default 1). Local mode asserts `hostname == target` via `require_target_host`; with `-e backup_remote=user@host:path` it instead streams the tar over SSH from that checkout's `current_target/compose_live_state` into this machine's `compose_state_backups/<target>-backup-<ts>.tar` (the remote runs docker directly — no scripts needed there), so it runs from any machine, and a remote hostname that differs from `<target>` only warns. Docker access is probed first: local mode falls back to `sudo` (prompting unless `SUDO_PASSWORD` feeds `sudo -S`), remote mode to `sudo -S` with that password or passwordless `sudo -n` since a prompt can't share the tar stream.
-- **PVC backup/restore** — see `docs/storage.md`; `pvc.sh` is NFS-only now (no Longhorn helpers/node pinning), the backup pod runs as root via `PVC_POD_UID=0`, and the `pvc-backup` CronJob sets that env.
+- **Backups** — the State Backups D$CPLN app (`apps/state-backup`) runs the scheduled restic backup of the labelled app PVCs and the srv0/vps0 Compose state. It is backup-only; `scripts/restic-restore.sh` is the manual restore path and works on a fresh cluster. The old `pvc.sh`, `pvc-backup` CronJob, and `compose_state_backups/` are legacy rollback material only; remove them after a successful restic restore.
 
 See `docs/decisions.md` for the accepted duplication list (do not consolidate).

@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Infra is the infrastructure-as-code repo for a multi-machine homelab. Everything a target needs lives in `targets/<t>/`; shared logic sits in `scripts/`; secrets live in the gitignored `config/`. There is no build step. Target-selecting scripts (`validate`, `compose-backup`) take `<target>` as their first argument; machine-local scripts (`prereqs`, `renovate`, `preboot`, `wireguard`, `kubeconfig-unlock`, `k3s-server`, `k3s-join`) act on the machine they run on.
+Infra is the infrastructure-as-code repo for a multi-machine homelab. Everything a target needs lives in `targets/<t>/`; shared logic sits in `scripts/`; secrets live in the gitignored `config/`. There is no build step in this repo. Target-selecting scripts (`validate`) take `<target>` as their first argument; machine-local scripts (`prereqs`, `renovate`, `preboot`, `wireguard`, `kubeconfig-unlock`, `k3s-server`, `k3s-join`, `restic-restore`) act on the machine they run on.
 
 ## Targets
 
@@ -44,11 +44,10 @@ docker compose --env-file config/srv0/compose.env \
 # pc/bigpc/rpi: docker compose -f targets/<t>/compose/compose.yaml up -d
 #   (no --env-file; the project-dir machine-fact .env auto-loads)
 
-# Backups:
-bash scripts/compose-backup.sh vps0
-bash scripts/compose-backup.sh vps0 -e backup_remote=user@host:path
-bash scripts/pvc.sh backup --all -y
-bash scripts/pvc.sh restore --all -y
+# Backups (State Backups app; manual restore):
+bash scripts/restic-restore.sh list
+bash scripts/restic-restore.sh pvc <pvc-name> [snapshot] [--live]
+bash scripts/restic-restore.sh compose srv0|vps0 [snapshot] [--live]
 sudo bash scripts/update-node-ip.sh [--ip X] [--force]
 
 # Machine-local (no target):

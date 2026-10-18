@@ -15,12 +15,16 @@
 
 ## Backups
 
-- `pvc-backup` (base) is a nightly 3AM CronJob running `scripts/pvc.sh backup --all -y` in-cluster (bitnami/kubectl, hostPath mounts of `$INFRA_ROOT` + `$PVC_BACKUP_DIR`, nodeSelector `infra.local/hostpath-main`). It backs up PVCs with `auto-backup: "true"`; the `backup.infra/exclude` annotation adds tar `--exclude` patterns.
-- `pvc.sh` tars the live PVC (no scale-down on backup; scale-down + restore for restore) to the shared `pvc-backup-dest` PV over the `nfs-backup` class — the ROOT of the NFS backups share (= `$PVC_BACKUP_DIR`), so archives land as `<name>.tar.gz` with `__backup_timestamp.txt` inside.
-- The CronJob sets **`PVC_POD_UID=0`** so the backup pod can archive PVCs owned by fixed non-`MY_UID` users (Postgres/Redis). The backup pod runs as root with pod-level `level: s0`; the archive is written over NFS with `no_root_squash`.
-- `pvc.sh` knobs: `PVC_POD_UID` (0 for root backups), `PVC_BACKUP_TIMEOUT` (default 900s), `PVC_RESTORE_TIMEOUT` (900s), `PVC_BACKUP_THROTTLE` (1 = ~10 MB/s, 0 = unrestricted). The restore pod uses `debian:bookworm-slim` and `tar --numeric-owner` to preserve UIDs.
-- Restore scales down every Deployment/StatefulSet that references the PVC (replica counts recorded), waits for pods, restores via a privileged-enough temp pod, then scales back up. `--all` does a bulk scale-down first. Backup and restore pods need pod-level `seLinuxOptions.level: s0`.
-- App PVCs are NFS/RWX and `pvc.sh` has no Longhorn/node-placement logic; backup/restore pods can run anywhere.
+- The **State Backups** D$CPLN app (`apps/state-backup`) is the active backup system. It runs on a schedule (default Sundays 04:00) and has a manual **Run now**. One encrypted, deduplicated restic repository at `state_backups/restic` contains:
+  - every PVC labelled `auto-backup=true` under `current_target/k3s_live_state/nfs-apps/<namespace>/<pvc>`,
+  - the srv0 Compose state,
+  - the vps0 Compose state, fetched over SSH with the existing key.
+- The app runs as root in the `apps` namespace so it can read the Postgres/Redis-owned PVC data; it mounts the Infra tree read-only and only `state_backups/` writable. The vps0 key is the `state-backup-vps0-ssh` Secret (and a recovery copy under `config/state-backup-vps0/`).
+- `retention` maps to `restic forget --keep-last N --prune` (default 7). Each run also does `restic check --read-data-subset=1%`.
+- The repository lives in the Syncthing-replicated `Main/Infra` tree. Only srv0 should write it; wait for Syncthing to settle before restoring from a peer.
+- Restore is intentionally outside the app: `scripts/restic-restore.sh list`, `... pvc <name> [snapshot] [--live]`, and `... compose srv0|vps0 [snapshot] [--live]`. The script works on a fresh cluster and uses the repo/password/key directly.
+- The old tar path remains only as rollback during the transition: `pvc-backup`/`scripts/pvc.sh` and `compose_state_backups/` are legacy. `k3s_state_backups/` is the old PVC-tar directory. Remove them after the new restic restore is verified.
+- The restic password defaults to a built-in value in the app; it is configurable in the app Settings. If changed, record it off-cluster — a fresh restore needs it. Changing it after the repo exists requires `restic key add`/`restic key remove`; the app will not silently recreate the repo.
 
 ## NFS performance note
 

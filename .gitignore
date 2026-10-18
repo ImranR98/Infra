@@ -16,3 +16,5 @@ targets/*/k3s-base/plugins/*/plugin.wasm
 # Syncthing temp files
 **/.syncthing*
 *.sync-conflict*
+
+/state_backups/

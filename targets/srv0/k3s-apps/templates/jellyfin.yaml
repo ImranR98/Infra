@@ -181,6 +181,9 @@ spec:
         - podSelector:
             matchLabels:
               app: sonarr
+        # kubelet readiness probes originate from the node's LAN address.
+        - ipBlock:
+            cidr: 192.168.8.0/24
       ports:
         - port: 8096
   policyTypes:
