@@ -43,12 +43,6 @@ spec:
                 includePreferNoSchedule: true
                 includedTaints:
                   - scheduling-discouraged
-                # Longhorn instance-managers are node-local volume pods that
-                # legitimately run on tainted nodes; excluding them prevents
-                # futile eviction attempts every cycle.
-                namespaces:
-                  exclude:
-                    - longhorn-system
           plugins:
             deschedule:
               enabled:

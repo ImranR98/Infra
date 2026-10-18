@@ -11,6 +11,14 @@ fi
 source "$INFRA_ROOT/scripts/common.sh"
 set_my_uid
 
+# Backup/restore pod identity and limits. Root is needed to archive PVCs whose
+# data is owned by fixed non-MY_UID users (Postgres/Redis) and to preserve
+# those UIDs on restore. The nightly CronJob keeps the MY_UID default.
+PVC_POD_UID="${PVC_POD_UID:-$MY_UID}"
+PVC_BACKUP_TIMEOUT="${PVC_BACKUP_TIMEOUT:-900}"
+PVC_RESTORE_TIMEOUT="${PVC_RESTORE_TIMEOUT:-900}"
+PVC_BACKUP_THROTTLE="${PVC_BACKUP_THROTTLE:-1}"
+
 # pvc_find_namespace <pvc-name> → namespace (stdout)
 # Queries all namespaces. Returns empty if not found.
 pvc_find_namespace() {
@@ -18,17 +26,6 @@ pvc_find_namespace() {
     kubectl get pvc -A -o json 2>/dev/null | \
         jq -r --arg name "$name" \
         '.items[] | select(.metadata.name == $name) | .metadata.namespace' 2>/dev/null || true
-}
-
-# pvc_release_pv <pvc-name> <namespace>
-# Clears claimRef.uid on Released PVs that reference the PVC, making them Available.
-pvc_release_pv() {
-    local pvc_name="${1:?}" ns="${2:?}"
-    kubectl get pv -o json 2>/dev/null | jq -r --arg name "$pvc_name" --arg ns "$ns" \
-        '.items[] | select(.status.phase == "Released" and .spec.claimRef.name == $name and .spec.claimRef.namespace == $ns) | .metadata.name' \
-        | while read -r pv; do
-            kubectl patch pv "$pv" --type=json -p='[{"op": "remove", "path": "/spec/claimRef/uid"}]' 2>/dev/null || true
-        done
 }
 
 # pvc_find_workloads <namespace> <pvc-name> → "kind/name" per line (stdout)
@@ -112,27 +109,6 @@ pvc_scale_restore() {
     done < "$scaled_file"
 }
 
-# pvc_volume_node <pvc-name> <namespace> → node name hosting the volume (stdout)
-# Maps PVC → PV → CSI volume handle → Longhorn volume currentNodeID.
-# Returns empty for non-Longhorn volumes, unattached volumes, or query errors.
-pvc_volume_node() {
-    local pvc="${1:?}" ns="${2:?}"
-    local pv_name handle
-    pv_name=$(kubectl get pvc "$pvc" -n "$ns" -o jsonpath='{.spec.volumeName}' 2>/dev/null || true)
-    [ -n "$pv_name" ] || return 0
-    handle=$(kubectl get pv "$pv_name" -o jsonpath='{.spec.csi.volumeHandle}' 2>/dev/null || true)
-    [ -n "$handle" ] || return 0
-    kubectl -n longhorn-system get volume "$handle" -o jsonpath='{.status.currentNodeID}' 2>/dev/null || true
-}
-
-# pvc_node_ready <node> → 0 if the node reports Ready=True, 1 otherwise.
-pvc_node_ready() {
-    local node="${1:?}"
-    local ready
-    ready=$(kubectl get node "$node" -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}' 2>/dev/null || true)
-    [ "$ready" = "True" ]
-}
-
 # pvc_ensure_backup_dest <namespace>
 # Ensures the shared RWX NFS PVC used as the backup destination exists and is
 # Bound in the given namespace. The PVC binds to the static PV
@@ -168,16 +144,14 @@ PVC_EOF
     return 1
 }
 
-# pvc_backup_pod_yaml <pvc-name> <namespace> <dest-file> <timestamp> [exclude-patterns] [node]
+# pvc_backup_pod_yaml <pvc-name> <namespace> <dest-file> <timestamp> [exclude-patterns] [throttle]
 # Prints the backup pod YAML to stdout (archive written to the shared
 # pvc-backup-dest NFS PVC at /backup). Caller pipes to kubectl apply.
 # exclude-patterns: optional space-separated tar --exclude patterns (e.g. "index-*.db")
-# node: optional node name; the pod is scheduled there (RWO volumes must be
-# mounted where they're currently attached — scheduling elsewhere would force
-# a cross-node Longhorn migration that can hang while the workload holds it).
+# throttle: 1 caps tar output at ~10 MB/s (nightly default); 0 disables it.
 pvc_backup_pod_yaml() {
     local pvc="${1:?}" ns="${2:?}" dest_file="${3:?}" timestamp="${4:?}"
-    local exclude="${5:-}" node="${6:-}"
+    local exclude="${5:-}" throttle="${6:-1}"
     local pod_name
     pod_name="backup-$(echo "$pvc" | tr '_' '-')"
     local excl_flags=""
@@ -186,17 +160,8 @@ pvc_backup_pod_yaml() {
             excl_flags="$excl_flags --exclude=$pat"
         done
     fi
-    local node_selector=""
-    local tolerations=""
-    if [ -n "$node" ]; then
-        node_selector="  nodeSelector:
-    kubernetes.io/hostname: $node"
-        # Tolerate the PreferNoSchedule taint used on desktop nodes.
-        tolerations="  tolerations:
-    - key: scheduling-discouraged
-      operator: Exists
-      effect: PreferNoSchedule"
-    fi
+    local throttle_opts=""
+    [ "$throttle" = "1" ] && throttle_opts="--checkpoint=1000 --checkpoint-action=sleep=1"
     cat <<PODEOF
 apiVersion: v1
 kind: Pod
@@ -207,14 +172,12 @@ metadata:
     app: pvc-backup-temp
 spec:
   securityContext:
-    runAsUser: ${MY_UID}
-    runAsGroup: ${MY_UID}
-    fsGroup: ${MY_UID}
+    runAsUser: ${PVC_POD_UID}
+    runAsGroup: ${PVC_POD_UID}
+    fsGroup: ${PVC_POD_UID}
     seLinuxOptions:
       level: "s0"
   restartPolicy: Never
-$node_selector
-$tolerations
   containers:
   - name: backup
     image: debian:bookworm-slim
@@ -233,7 +196,7 @@ $tolerations
       # are useless here: the NVMe runs the none elevator, which ignores
       # priorities. Tar exit 1 (live files changed mid-read) is tolerated.
       echo "$timestamp" > /data/__backup_timestamp.txt
-      tar czf "/backup/.$dest_file.tmp" -C /data $excl_flags --sparse --warning=no-file-changed --warning=no-file-removed --ignore-failed-read --checkpoint=1000 --checkpoint-action=sleep=1 .
+      tar czf "/backup/.$dest_file.tmp" -C /data $excl_flags --sparse --warning=no-file-changed --warning=no-file-removed --ignore-failed-read $throttle_opts .
       rc=\$?
       if [ "\$rc" -gt 1 ]; then
         echo "ERROR: tar archive creation failed (exit \$rc)" >&2
@@ -279,19 +242,19 @@ metadata:
     app: pvc-restore-temp
 spec:
   securityContext:
-    runAsUser: ${MY_UID}
-    runAsGroup: ${MY_UID}
-    fsGroup: ${MY_UID}
+    runAsUser: ${PVC_POD_UID}
+    runAsGroup: ${PVC_POD_UID}
+    fsGroup: ${PVC_POD_UID}
     seLinuxOptions:
       level: "s0"
   restartPolicy: Never
   containers:
   - name: restore
-    image: alpine:3.24
+    image: debian:bookworm-slim
     securityContext:
       # Not privileged: deleting root-owned files inside the PVC needs
-      # CAP_DAC_OVERRIDE/CAP_FOWNER (the pod runs as $MY_UID); spc_t covers
-      # SELinux labels left by older pods.
+      # CAP_DAC_OVERRIDE/CAP_FOWNER (the pod runs as $PVC_POD_UID); spc_t
+      # covers SELinux labels left by older pods.
       allowPrivilegeEscalation: false
       capabilities:
         add:
@@ -316,12 +279,12 @@ spec:
       fi
       # Refuse absolute or ../ member paths: busybox tar would happily write
       # through them (the archive comes from a PVC, which an app could poison).
-      if tar tzf /backup/"$src_file" | grep -Eq '(^/|(^|/)\.\.(/|$))'; then
+      if [ "${PVC_RESTORE_SKIP_SAFETY:-0}" != "1" ] && tar tzf /backup/"$src_file" | grep -Eq '(^/|(^|/)\.\.(/|$))'; then
         echo "ERROR: archive contains unsafe paths; refusing to extract" >&2
         exit 1
       fi
       find /data -mindepth 1 -delete
-      tar xzf /backup/"$src_file" -C /data
+      tar xzf /backup/"$src_file" --numeric-owner -C /data
     volumeMounts:
     - name: data
       mountPath: /data
@@ -341,20 +304,8 @@ PODEOF
 # Creates backup pod, waits for success, cleans up. Returns 0 on success.
 pvc_backup_data() {
     local pvc="${1:?}" ns="${2:?}" dest_file="${3:?}" timestamp="${4:?}" exclude="${5:-}"
-    local pod_name node
+    local pod_name
     pod_name="backup-$(echo "$pvc" | tr '_' '-')"
-
-    # Schedule the backup pod on the node currently hosting the volume (RWO).
-    # Fail fast if that node is not Ready instead of hanging in ContainerCreating
-    # for the full wait timeout.
-    node=$(pvc_volume_node "$pvc" "$ns")
-    if [ -n "$node" ]; then
-        if ! pvc_node_ready "$node"; then
-            echo "  ERROR: volume for $ns/$pvc is attached to node '$node' which is not Ready; skipping" >&2
-            return 1
-        fi
-        echo "  Volume hosted on node $node — backup pod scheduled there"
-    fi
 
     # Archive destination is a shared NFS PVC so any node can write it.
     if ! pvc_ensure_backup_dest "$ns"; then
@@ -362,8 +313,9 @@ pvc_backup_data() {
         return 1
     fi
 
-    pvc_backup_pod_yaml "$pvc" "$ns" "$dest_file" "$timestamp" "$exclude" "$node" | kubectl apply -f -
-    if ! kubectl wait --for=jsonpath='{.status.phase}'=Succeeded "pod/$pod_name" -n "$ns" --timeout=900s 2>/dev/null; then
+    local throttle="${PVC_BACKUP_THROTTLE:-1}"
+    pvc_backup_pod_yaml "$pvc" "$ns" "$dest_file" "$timestamp" "$exclude" "$throttle" | kubectl apply -f -
+    if ! kubectl wait --for=jsonpath='{.status.phase}'=Succeeded "pod/$pod_name" -n "$ns" --timeout="${PVC_BACKUP_TIMEOUT:-900}s" 2>/dev/null; then
         echo "  ERROR: backup pod failed for $ns/$pvc" >&2
         echo "  --- pod status ---" >&2
         kubectl describe pod "$pod_name" -n "$ns" 2>&1 || true
@@ -444,7 +396,7 @@ pvc_restore_data() {
     fi
     pod_name="restore-$(echo "$pvc" | tr '_' '-')"
     pvc_restore_pod_yaml "$pvc" "$ns" "$src_file" | kubectl apply -f -
-    if ! kubectl wait --for=jsonpath='{.status.phase}'=Succeeded "pod/$pod_name" -n "$ns" --timeout=900s 2>/dev/null; then
+    if ! kubectl wait --for=jsonpath='{.status.phase}'=Succeeded "pod/$pod_name" -n "$ns" --timeout="${PVC_RESTORE_TIMEOUT:-900}s" 2>/dev/null; then
         echo "  ERROR: restore pod failed for $ns/$pvc" >&2
         kubectl delete pod "$pod_name" -n "$ns" --ignore-not-found 2>/dev/null || true
         return 1
@@ -505,7 +457,7 @@ pvc_restore_all() {
 
         pvc_wait_bound "$ns" "$name" 150 || { failed=$((failed + 1)); continue; }
 
-        timestamp=$(tar xzf "$backup_file" __backup_timestamp.txt -O 2>/dev/null || echo "unknown")
+        timestamp=$(tar xzf "$backup_file" ./__backup_timestamp.txt -O 2>/dev/null || echo "unknown")
         echo "  Restoring from backup taken at: $timestamp"
 
         if pvc_restore_data "$name" "$ns" "${name}.tar.gz"; then
@@ -634,7 +586,7 @@ pvc_restore_one() {
     echo "Waiting for PVC to be ready for mounting..."
     pvc_wait_bound "$pvc_ns" "$pvc_name" 150 || exit 1
 
-    timestamp=$(tar xzf "$backup_file" __backup_timestamp.txt -O 2>/dev/null || echo "unknown")
+    timestamp=$(tar xzf "$backup_file" ./__backup_timestamp.txt -O 2>/dev/null || echo "unknown")
     echo ""
     echo "Restoring from backup taken at: $timestamp"
 

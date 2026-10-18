@@ -13,9 +13,9 @@ spec:
       logLocalRequests: false
       logAllowedRequests: true
       logApiRequests: true
-      api: "http://geoip-service.base.svc.cluster.local:8080/country/{ip}"
-      apiTimeoutMs: 500
-      cacheSize: 10
+      api: "https://get.geojs.io/v1/ip/country/{ip}"
+      apiTimeoutMs: 2000
+      cacheSize: 1000
       forceMonthlyUpdate: true
       allowUnknownCountries: false
       unknownCountryApiResponse: "nil"
@@ -64,34 +64,6 @@ spec:
       - 'Remote-Groups'
       - 'Remote-Email'
       - 'Remote-Name'
----
-# Header gate: blocks requests lacking trusted Authelia headers while enabled.
-apiVersion: traefik.io/v1alpha1
-kind: Middleware
-metadata:
-  name: authelia-header-gate
-  namespace: base
-spec:
-  plugin:
-    authelia-header-gate:
-      trustedHeaders:
-        - Remote-User
-      blocking: "{{ .Values.AUTHELIA_HEADER_GATE_ENABLED }}"
----
-# Chain used by services that are publicly accessible normally but protected
-# during bootstrap (their Authelia rule stays `bypass`; the gate does the work).
-apiVersion: traefik.io/v1alpha1
-kind: Middleware
-metadata:
-  name: authelia-with-optional-header-gate
-  namespace: base
-spec:
-  chain:
-    middlewares:
-      - name: forwardauth-authelia
-        namespace: base
-      - name: authelia-header-gate
-        namespace: base
 ---
 # Static custom-card assets under /local/community: mark responses
 # uncacheable. HA's service worker caches /local files via its catch-all
@@ -175,44 +147,14 @@ spec:
       - "--experimental.plugins.geoblock.version=v0.3.8"
       - "--experimental.plugins.crowdsec-bouncer-traefik-plugin.modulename=github.com/maxlerebourg/crowdsec-bouncer-traefik-plugin"
       - "--experimental.plugins.crowdsec-bouncer-traefik-plugin.version=v1.7.1"
-      - "--experimental.localplugins.authelia-header-gate.modulename=github.com/imranr/authelia-header-gate"
     additionalVolumeMounts:
       - name: plugins
         mountPath: /plugins-storage
-      - name: local-plugins
-        mountPath: /plugins-local/src/github.com/imranr/authelia-header-gate
-        readOnly: true
     deployment:
       kind: DaemonSet
-      # Local WASM plugins are read at startup; a rebuilt plugin.wasm or
-      # manifest change must roll the pod (the ConfigMap alone does not).
-      podAnnotations:
-        checksum/local-plugins: {{ printf "%s%s" (.Files.Get "files/traefik-plugin-config.yaml") (.Files.Get "files/plugin.wasm") | sha256sum }}
-      # Geoblock fails closed while geoip-service is unreachable, so hold
-      # Traefik's start until the service answers readyz — bounded, then start
-      # anyway. The image is the chart's own and carries busybox wget.
-      initContainers:
-        - name: wait-for-geoip
-          image: rancher/mirrored-library-traefik:3.7.14
-          command:
-            - sh
-            - -c
-            - |
-              i=0
-              until wget -q -O /dev/null http://geoip-service.base.svc.cluster.local:8080/readyz; do
-                i=$((i+1))
-                [ "$i" -ge 150 ] && break
-                sleep 2
-              done
-              exit 0
-          securityContext:
-            allowPrivilegeEscalation: false
       additionalVolumes:
         - name: plugins
           emptyDir: {}
-        - name: local-plugins
-          configMap:
-            name: traefik-local-plugins
     resources:
       limits:
         memory: 1Gi
@@ -284,18 +226,3 @@ spec:
         - group: traefik.io
           kind: TraefikService
           name: api@internal
----
-# Local WASM plugin (authelia-header-gate), loaded via --experimental.localplugins.
-# The manifest key MUST stay .traefik.yml: Traefik hardcodes that filename for
-# local plugins (app-contract, like authelia's configuration.yml) and aborts
-# startup on a missing manifest under --experimental.abortonpluginfailure.
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: traefik-local-plugins
-  namespace: kube-system
-data:
-  .traefik.yml: |
-    {{- .Files.Get "files/traefik-plugin-config.yaml" | nindent 4 }}
-binaryData:
-  plugin.wasm: {{ .Files.Get "files/plugin.wasm" | b64enc }}

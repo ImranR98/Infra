@@ -21,8 +21,10 @@ spec:
   parentRefs:
     - name: srv0
       sectionName: websecure
+    {{- if ne .Values.BOOTSTRAP_PRIVATE_APPS "true" }}
     - name: srv0
       sectionName: websecure-proxy
+    {{- end }}
   hostnames:
     - links.{{ .Values.SERVICES_DOMAIN }}
   rules:
@@ -41,11 +43,6 @@ spec:
             group: traefik.io
             kind: Middleware
             name: crowdsec-bouncer
-        - type: ExtensionRef
-          extensionRef:
-            group: traefik.io
-            kind: Middleware
-            name: authelia-with-optional-header-gate
       backendRefs:
         - name: linkwarden
           namespace: apps
@@ -388,11 +385,11 @@ metadata:
     auto-backup: "true"
 spec:
   accessModes:
-    - ReadWriteOnce
+    - ReadWriteMany
   resources:
     requests:
       storage: 5Gi
-  storageClassName: longhorn
+  storageClassName: nfs-apps
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -403,11 +400,11 @@ metadata:
     auto-backup: "true"
 spec:
   accessModes:
-    - ReadWriteOnce
+    - ReadWriteMany
   resources:
     requests:
       storage: 5Gi
-  storageClassName: longhorn
+  storageClassName: nfs-apps
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -418,8 +415,8 @@ metadata:
     auto-backup: "true"
 spec:
   accessModes:
-    - ReadWriteOnce
+    - ReadWriteMany
   resources:
     requests:
       storage: 5Gi
-  storageClassName: longhorn
+  storageClassName: nfs-apps

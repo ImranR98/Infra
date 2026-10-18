@@ -58,7 +58,6 @@ spec:
           # LAN/VPN-only: not attached to websecure-proxy, so unreachable
           # through the public-exposure tunnel.
           - {name: filebrowser-prod-tls, namespace: apps}
-          - {name: longhorn-prod-tls}
       allowedRoutes:
         namespaces:
           from: Same

@@ -272,23 +272,6 @@ check_helm() {
             ok=0
         fi
         all_out+="$out"$'\n'
-
-        # The chart ships one local Traefik plugin via files/, copied from the
-        # plugin sources by the plugin's build.sh — keep the copies in sync.
-        local plug
-        for plug in "$chart_dir"/plugins/*/; do
-            [ -d "$plug" ] || continue
-            if [ -f "${plug}.traefik.yml" ] && [ -f "$chart_dir/files/traefik-plugin-config.yaml" ] &&
-                ! cmp -s "${plug}.traefik.yml" "$chart_dir/files/traefik-plugin-config.yaml"; then
-                _err "ERROR: $chart_dir/files/traefik-plugin-config.yaml is out of date vs ${plug}.traefik.yml"
-                ok=0
-            fi
-            if [ -f "${plug}plugin.wasm" ] && [ -f "$chart_dir/files/plugin.wasm" ] &&
-                ! cmp -s "${plug}plugin.wasm" "$chart_dir/files/plugin.wasm"; then
-                _err "ERROR: $chart_dir/files/plugin.wasm is out of date vs ${plug}plugin.wasm"
-                ok=0
-            fi
-        done
     done
 
     check_gateway_certrefs "$all_out" || ok=0
@@ -310,6 +293,23 @@ fi
 [ -d "$target_dir/k3s-base" ] && { check_helm "$target_dir" || ok=0; }
 
 [ -d "$target_dir/compose" ] && { check_compose_mounts "$target_dir" || ok=0; }
+
+# First-boot safety: the six user-facing apps are LAN/VPN-only while this is on.
+config_values="$INFRA_ROOT/config/$TARGET/values.yaml"
+if [ -f "$config_values" ]; then
+    bootstrap=$(yq '.BOOTSTRAP_PRIVATE_APPS // "false"' "$config_values" 2>/dev/null || echo "false")
+    if [ "$bootstrap" = "true" ]; then
+        echo "WARNING: BOOTSTRAP_PRIVATE_APPS=true — Home Assistant/Immich/Jellyfin/Linkwarden/Navidrome/Opodsync are LAN/VPN-only; set it to false after Authelia is Ready." >&2
+    fi
+fi
+
+# Static node labels replace NFD; warn if the target node is missing them.
+if command -v kubectl >/dev/null 2>&1 && kubectl get node "$TARGET" >/dev/null 2>&1; then
+    for label in hostpath-main external-exposed; do
+        value=$(kubectl get node "$TARGET" -o jsonpath="{.metadata.labels.infra\.local/$label}" 2>/dev/null || true)
+        [ "$value" = "true" ] || echo "WARNING: node $TARGET is missing infra.local/$label=true" >&2
+    done
+fi
 
 if [ "$ok" = 1 ]; then
     echo "validate: OK ($TARGET)"

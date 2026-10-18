@@ -62,8 +62,9 @@ for _ in $(seq 1 24); do
 done
 $SU "$kubectl_bin" get nodes >/dev/null 2>&1 || { echo "Error: Kubernetes API never became reachable" >&2; exit 1; }
 
-echo "==> Longhorn default-disk label"
-$SU "$kubectl_bin" patch node "$(hostname)" --type=merge \
-    -p '{"metadata":{"labels":{"node.longhorn.io/create-default-disk":"true"}}}'
+echo "==> Static node labels"
+$SU "$kubectl_bin" label node "$(hostname)" \
+    infra.local/hostpath-main=true \
+    infra.local/external-exposed=true --overwrite
 
 echo "k3s-server: control plane ready."

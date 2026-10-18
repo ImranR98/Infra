@@ -21,7 +21,7 @@ Usage: $(basename "$0") <node_ip> <node_user> [options]
 
   --role agent|server          joining role (default: agent)
   --scheduling-discouraged     add the PreferNoSchedule taint
-  --longhorn-replicas          enable the Longhorn default disk + bump replica count
+  --hostpath-main              label the node infra.local/hostpath-main=true
 
 Run ON the control plane. The first SSH to the node prompts to accept the host
 key — the same trust model as plain ssh.
@@ -36,12 +36,12 @@ shift 2
 
 k3s_role=agent
 scheduling_discouraged=false
-longhorn_replicas=false
+hostpath_main=false
 while [ $# -gt 0 ]; do
     case "$1" in
         --role) k3s_role="${2:?--role needs agent|server}"; shift 2 ;;
         --scheduling-discouraged) scheduling_discouraged=true; shift ;;
-        --longhorn-replicas) longhorn_replicas=true; shift ;;
+        --hostpath-main) hostpath_main=true; shift ;;
         -h | --help) usage ;;
         *) echo "Error: unknown option '$1'" >&2; usage ;;
     esac
@@ -117,17 +117,8 @@ done
 [ -n "$node_name" ] || { echo "Error: the joining node never registered" >&2; exit 1; }
 echo "Node '$node_name' is Ready."
 
-# Longhorn default-disk label; bump the replica count only when newly enabled.
-longhorn_wanted=false
-[ "$longhorn_replicas" = true ] && longhorn_wanted=true
-current=$($SU "$kubectl_bin" get node "$node_name" -o json | jq -r '.metadata.labels["node.longhorn.io/create-default-disk"] // ""')
-if [ "$current" != "$longhorn_wanted" ]; then
-    $SU "$kubectl_bin" label node "$node_name" "node.longhorn.io/create-default-disk=$longhorn_wanted" --overwrite
-    if [ "$longhorn_wanted" = true ]; then
-        count=$($SU "$kubectl_bin" -n longhorn-system get setting.longhorn.io default-replica-count -o jsonpath='{.value}' 2>/dev/null || echo 0)
-        $SU "$kubectl_bin" -n longhorn-system patch setting.longhorn.io default-replica-count \
-            --type=merge -p "{\"value\":\"$((count + 1))\"}"
-    fi
+if [ "$hostpath_main" = true ]; then
+    $SU "$kubectl_bin" label node "$node_name" infra.local/hostpath-main=true --overwrite
 fi
 
 if [ "$scheduling_discouraged" = true ]; then

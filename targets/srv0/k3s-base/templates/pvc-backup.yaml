@@ -43,6 +43,10 @@ spec:
                   value: "{{ .Values.MY_UID }}"
                 - name: PVC_BACKUP_DIR
                   value: "{{ .Values.PVC_BACKUP_DIR }}"
+                # Root backup pods: several PVCs are owned by fixed non-MY_UID
+                # users (Postgres/Redis); a MY_UID pod cannot archive them.
+                - name: PVC_POD_UID
+                  value: "0"
               command:
                 - bash
                 - -c
@@ -77,20 +81,10 @@ kind: ClusterRole
 metadata:
   name: pvc-backup
 rules:
-  # Cluster-wide reads only: PVC discovery (auto-backup labels), PV info,
-  # node names (volume placement), Longhorn volumes.
+  # Cluster-wide reads only: PVC discovery (auto-backup labels).
   - apiGroups: [""]
     resources: ["persistentvolumeclaims"]
     verbs: ["get", "list"]
-  - apiGroups: [""]
-    resources: ["persistentvolumes"]
-    verbs: ["get", "list"]
-  - apiGroups: [""]
-    resources: ["nodes"]
-    verbs: ["get"]
-  - apiGroups: ["longhorn.io"]
-    resources: ["volumes"]
-    verbs: ["get"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding

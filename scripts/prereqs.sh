@@ -1,6 +1,6 @@
 #!/bin/bash
 # DESC: Install system prerequisites on THIS machine: packages (incl. the
-# Longhorn iSCSI/NFS dependencies), the pinned helm binary, Docker (official
+# NFS client dependencies), the pinned helm binary, Docker (official
 # bootstrap), and the machine-fact .env + host bind dirs for the local compose
 # target (hostname == target). Idempotent — re-run after repo changes that add
 # compose bind dirs.
@@ -19,8 +19,8 @@ HELM_VERSION="3.22.1"
 usage() {
     echo "Usage: $(basename "$0")"
     echo
-    echo "Machine-local (no target): installs packages (incl. the Longhorn"
-    echo "iSCSI/NFS deps), helm, Docker, then prepares the compose state for this"
+    echo "Machine-local (no target): installs packages (incl. the NFS"
+    echo "client deps), helm, Docker, then prepares the compose state for this"
     echo "machine's target (hostname-matched): machine-fact .env, host bind dirs"
     echo "owned by \$MY_UID, and the traefik acme.json seed."
     exit 1
@@ -30,11 +30,11 @@ usage() {
 
 if command -v dnf >/dev/null 2>&1; then
     PKG_CMD=(dnf install -y)
-    PACKAGES=(yq jq curl python3 golang openssl shellcheck yamllint git acl iscsi-initiator-utils nfs-utils nodejs npm wireguard-tools)
+    PACKAGES=(yq jq curl python3 openssl shellcheck yamllint git acl nfs-utils nodejs npm wireguard-tools)
 elif command -v apt-get >/dev/null 2>&1; then
     $SU apt-get update -y
     PKG_CMD=(apt-get install -y)
-    PACKAGES=(yq jq curl python3 golang-go openssl shellcheck yamllint git acl open-iscsi nfs-common nodejs npm wireguard-tools)
+    PACKAGES=(yq jq curl python3 openssl shellcheck yamllint git acl nfs-common nodejs npm wireguard-tools)
 else
     echo "Error: neither dnf nor apt-get found — cannot install packages" >&2
     exit 1
@@ -147,7 +147,7 @@ fi
 
 echo "==> Verifying prerequisites"
 missing=0
-for tool in helm docker yq jq curl python3 go openssl shellcheck yamllint node; do
+for tool in helm docker yq jq curl python3 openssl shellcheck yamllint node; do
     if command -v "$tool" >/dev/null 2>&1; then
         echo "  [OK] $tool"
     else
@@ -159,12 +159,6 @@ if docker compose version >/dev/null 2>&1; then
     echo "  [OK] docker compose"
 else
     echo "  [MISSING] docker compose"
-    missing=1
-fi
-if systemctl is-active --quiet iscsid; then
-    echo "  [OK] iscsid"
-else
-    echo "  [MISSING] iscsid"
     missing=1
 fi
 exit $missing

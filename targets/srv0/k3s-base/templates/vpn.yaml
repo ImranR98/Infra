@@ -34,7 +34,7 @@ metadata:
     auto-backup: "true"
 spec:
   accessModes:
-    - ReadWriteOnce
+    - ReadWriteMany
   resources:
     requests:
       storage: 16Mi

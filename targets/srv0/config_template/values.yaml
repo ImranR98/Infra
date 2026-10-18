@@ -39,11 +39,6 @@ GEOBLOCK_CONFIG_SUBSET: |
     - CN
     - CU
 
-# ====== GeoIP (self-hosted MaxMind GeoLite2) ======
-# Register at https://www.maxmind.com and generate a GeoLite2 license key
-GEOIPUPDATE_ACCOUNT_ID: "change_me"
-GEOIPUPDATE_LICENSE_KEY: "change_me"
-
 # ====== Host Paths ======
 # Ensure these exist before starting services
 MAIN_PARENT_DIR: "/path/to/data"
@@ -87,10 +82,11 @@ AUTHELIA_HEADLAMP_CLIENT_SECRET_HASHED: "change_me"
 AUTHELIA_LINKWARDEN_CLIENT_SECRET_HASHED: "change_me"
 AUTHELIA_FILEBROWSER_CLIENT_SECRET_HASHED: "change_me" # hash of the filebrowser plaintext above
 
-# ====== Authelia header gate ======
-# Set to "true" to force the gate on (blocking all requests without a valid
-# Authelia session). Auto-enabled on first deploy; leave "false" otherwise.
-AUTHELIA_HEADER_GATE_ENABLED: "false"
+# ====== Bootstrap-private apps (optional) ======
+# Set BOOTSTRAP_PRIVATE_APPS: "true" in config/srv0/values.yaml during a
+# first bootstrap to keep Home Assistant, Immich, Jellyfin, Linkwarden,
+# Navidrome and Opodsync on the LAN/VPN listener only until Authelia is
+# Ready. Leave it unset (default false) afterwards.
 
 # ====== Crowdsec ======
 CROWDSEC_BOUNCER_KEY: "change_me" # openssl rand -hex 32

@@ -20,6 +20,31 @@ spec:
       enabled: true
 ---
 ---
+# Default storage class for application PVCs. The NFS server exports the
+# app-data tree from current_target/k3s_live_state/nfs-apps; the CSI driver
+# creates a subdirectory per PVC. Sizes are advisory (NFS has no quota).
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: nfs-apps
+  annotations:
+    storageclass.kubernetes.io/is-default-class: "true"
+provisioner: nfs.csi.k8s.io
+parameters:
+  server: nfs-server.base.svc.cluster.local
+  share: /apps
+  subDir: ${pvc.metadata.namespace}/${pvc.metadata.name}
+  onDelete: retain
+  mountPermissions: "0777"
+mountOptions:
+  - nfsvers=4.2
+  - hard
+  - noatime
+  - nconnect=4
+reclaimPolicy: Retain
+volumeBindingMode: Immediate
+allowVolumeExpansion: false
+---
 # RWX NFS-backed storage class for the shared PVC backup destination.
 # No provisioner: the pvc-backup-dest PVC binds to the static PV
 # pvc-backup-dest-pv, which mounts the ROOT of the NFS backups share

@@ -151,11 +151,11 @@ metadata:
   namespace: apps
 spec:
   accessModes:
-    - ReadWriteOnce
+    - ReadWriteMany
   resources:
     requests:
       storage: 5Gi
-  storageClassName: longhorn
+  storageClassName: nfs-apps
 ---
 apiVersion: v1
 kind: ConfigMap

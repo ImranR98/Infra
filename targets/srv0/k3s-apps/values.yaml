@@ -2,3 +2,8 @@
 # and target-specific config live in the gitignored config/srv0/values.yaml
 # (passed as a later -f, so it wins on conflicts).
 MY_UID: 1000
+
+# First-boot switch: "true" keeps the user-facing apps (Home Assistant,
+# Immich, Jellyfin, Linkwarden, Navidrome, Opodsync) on the LAN/VPN listener
+# only until Authelia is Ready. Normally false.
+BOOTSTRAP_PRIVATE_APPS: "false"

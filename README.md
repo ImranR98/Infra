@@ -65,4 +65,4 @@ bash scripts/renovate.sh
 
 ## More
 
-Detailed documentation lives in [AGENTS.md](AGENTS.md). Note that while LLMs are used in development, the LLM isn't the one putting its data on the line. [It is just a tool](https://www.normaltech.ai/p/ai-as-normal-technology) and is used like one.
+Detailed documentation lives in [`docs/`](docs/) (index in [AGENTS.md](AGENTS.md)). Note that while LLMs are used in development, the LLM isn't the one putting its data on the line. [It is just a tool](https://www.normaltech.ai/p/ai-as-normal-technology) and is used like one.

@@ -156,8 +156,10 @@ spec:
   parentRefs:
     - name: srv0
       sectionName: websecure
+    {{- if ne .Values.BOOTSTRAP_PRIVATE_APPS "true" }}
     - name: srv0
       sectionName: websecure-proxy
+    {{- end }}
   hostnames:
     - immich.{{ .Values.SERVICES_DOMAIN }}
   rules:
@@ -176,11 +178,6 @@ spec:
             group: traefik.io
             kind: Middleware
             name: crowdsec-bouncer
-        - type: ExtensionRef
-          extensionRef:
-            group: traefik.io
-            kind: Middleware
-            name: authelia-with-optional-header-gate
       backendRefs:
         - name: immich-server
           namespace: apps
@@ -255,11 +252,11 @@ metadata:
     auto-backup: "true"
 spec:
   accessModes:
-    - ReadWriteOnce
+    - ReadWriteMany
   resources:
     requests:
       storage: 5Gi
-  storageClassName: longhorn
+  storageClassName: nfs-apps
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -268,11 +265,11 @@ metadata:
   namespace: apps
 spec:
   accessModes:
-    - ReadWriteOnce
+    - ReadWriteMany
   resources:
     requests:
       storage: 50Gi
-  storageClassName: longhorn
+  storageClassName: nfs-apps
 ---
 apiVersion: v1
 kind: Secret
@@ -334,6 +331,10 @@ spec:
               value: /var/lib/postgresql/data/pgdata
             - name: POSTGRES_INITDB_ARGS
               value: --data-checksums
+            # The Immich Postgres image refuses NFS-backed PGDATA unless this
+            # is set. The app-data share is intentionally NFS (no Longhorn).
+            - name: IGNORE_DATABASE_FSTYPE
+              value: "true"
           ports:
             - containerPort: 5432
           resources:

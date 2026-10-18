@@ -6,6 +6,7 @@
 /exports/arrstack-media *(rw,fsid=4,no_subtree_check,insecure,no_root_squash)
 /exports/frigate *(rw,fsid=6,no_subtree_check,insecure,no_root_squash)
 /exports/backups *(rw,fsid=5,no_subtree_check,insecure,no_root_squash)
+/exports/apps *(rw,fsid=8,crossmnt,no_subtree_check,insecure,no_root_squash)
 /exports/code-sandbox *(rw,fsid=7,no_subtree_check,insecure,root_squash)
 {{- end -}}
 ---
@@ -88,6 +89,8 @@ spec:
               name: frigate-storage
             - mountPath: /exports/backups
               name: backups-storage
+            - mountPath: /exports/apps
+              name: apps-storage
             - mountPath: /exports/code-sandbox
               name: code-sandbox-storage
 
@@ -136,6 +139,10 @@ spec:
         - name: backups-storage
           hostPath:
             path: {{ .Values.PVC_BACKUP_DIR }}
+            type: DirectoryOrCreate
+        - name: apps-storage
+          hostPath:
+            path: {{ .Values.INFRA_ROOT }}/current_target/k3s_live_state/nfs-apps
             type: DirectoryOrCreate
         - name: code-sandbox-storage
           hostPath:

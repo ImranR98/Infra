@@ -17,8 +17,8 @@ metadata:
   namespace: apps
 spec:
   accessModes:
-    - ReadWriteOnce
-  storageClassName: longhorn
+    - ReadWriteMany
+  storageClassName: nfs-apps
   resources:
     requests:
       storage: 1Gi
@@ -35,8 +35,8 @@ metadata:
   namespace: apps
 spec:
   accessModes:
-    - ReadWriteOnce
-  storageClassName: longhorn
+    - ReadWriteMany
+  storageClassName: nfs-apps
   resources:
     requests:
       storage: 1Gi

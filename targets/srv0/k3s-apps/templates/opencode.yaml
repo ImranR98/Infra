@@ -186,8 +186,8 @@ metadata:
     auto-backup: "true"
 spec:
   accessModes:
-    - ReadWriteOnce
-  storageClassName: longhorn
+    - ReadWriteMany
+  storageClassName: nfs-apps
   resources:
     requests:
       storage: 20Gi

@@ -9,8 +9,8 @@ metadata:
     backup.infra/exclude: "index-*.db index-v2"
 spec:
   accessModes:
-    - ReadWriteOnce
-  storageClassName: longhorn
+    - ReadWriteMany
+  storageClassName: nfs-apps
   resources:
     requests:
       storage: 50Gi

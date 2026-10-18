@@ -22,6 +22,19 @@ spec:
       media:
         enabled: false
 
+    # Jellyfin returns 503 on /health while it loads libraries/plugins; the
+    # chart's default liveness probe restarts it before it can become ready.
+    # Use a long startup tolerance instead (the chart passes this map straight
+    # to the container probe; it has no `enabled` flag).
+    livenessProbe:
+      httpGet:
+        path: /health
+        port: 8096
+      initialDelaySeconds: 120
+      periodSeconds: 30
+      timeoutSeconds: 10
+      failureThreshold: 10
+
     # Jellyfin applies X-Forwarded-For only when KnownProxies is non-empty —
     # otherwise it reports the reverse proxy's pod IP. Traefik's pod IP is
     # dynamic, so trust the k3s pod CIDR. Idempotent: patches an existing
@@ -134,8 +147,10 @@ spec:
   parentRefs:
     - name: srv0
       sectionName: websecure
+    {{- if ne .Values.BOOTSTRAP_PRIVATE_APPS "true" }}
     - name: srv0
       sectionName: websecure-proxy
+    {{- end }}
   hostnames:
     - tv.{{ .Values.SERVICES_DOMAIN }}
   rules:
@@ -149,11 +164,6 @@ spec:
             group: traefik.io
             kind: Middleware
             name: crowdsec-bouncer
-        - type: ExtensionRef
-          extensionRef:
-            group: traefik.io
-            kind: Middleware
-            name: authelia-with-optional-header-gate
         - type: ExtensionRef
           extensionRef:
             group: traefik.io
@@ -198,11 +208,11 @@ metadata:
     auto-backup: "true"
 spec:
   accessModes:
-    - ReadWriteOnce
+    - ReadWriteMany
   resources:
     requests:
       storage: 5Gi
-  storageClassName: longhorn
+  storageClassName: nfs-apps
 ---
 apiVersion: v1
 kind: PersistentVolume

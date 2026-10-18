@@ -197,8 +197,8 @@ metadata:
     backup.infra/exclude: "cache"
 spec:
   accessModes:
-    - ReadWriteOnce
-  storageClassName: longhorn
+    - ReadWriteMany
+  storageClassName: nfs-apps
   resources:
     requests:
       storage: 10Gi
