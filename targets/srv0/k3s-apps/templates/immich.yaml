@@ -289,6 +289,9 @@ spec:
     spec:
       securityContext:
         fsGroup: {{ .Values.MY_UID }}
+        # The DB PVC is NFS-backed and its pgdata tree is owned by the
+        # postgres image user; avoid a recursive chown on every pod start.
+        fsGroupChangePolicy: OnRootMismatch
       containers:
         - name: postgresql
           image: ghcr.io/immich-app/postgres:18-vectorchord1.1.1-pgvector0.8.5
