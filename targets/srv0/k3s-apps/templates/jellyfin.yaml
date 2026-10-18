@@ -51,13 +51,17 @@ spec:
       timeoutSeconds: 3
       failureThreshold: 3
     livenessProbe:
-      httpGet:
-        path: /health
+      # Liveness must not depend on /health: that opens the SQLite DB and can
+      # block for the whole library scan on NFS, restarting the pod mid-scan.
+      # The startup probe already gates on /health; after that, only the port
+      # matters for liveness. A wedged app can still be restarted manually.
+      httpGet: null
+      tcpSocket:
         port: 8096
       initialDelaySeconds: 120
       periodSeconds: 30
-      timeoutSeconds: 30
-      failureThreshold: 20    # ~10 min; tolerate a long first 12.2 scan
+      timeoutSeconds: 3
+      failureThreshold: 3
 
     # Jellyfin applies X-Forwarded-For only when KnownProxies is non-empty —
     # otherwise it reports the reverse proxy's pod IP. Traefik's pod IP is
