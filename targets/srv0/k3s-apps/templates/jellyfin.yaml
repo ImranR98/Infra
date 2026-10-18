@@ -19,6 +19,7 @@ spec:
     # 12.2 carries the SyncPlay fixes 10.11.x lacks (stale-position correction,
     # lost-WebSocket zombie groups, bounded group wait).
     image:
+      repository: docker.io/jellyfin/jellyfin
       tag: "12.2"
     persistence:
       config:
