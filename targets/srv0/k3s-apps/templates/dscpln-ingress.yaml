@@ -8,19 +8,6 @@
 # Rule order matters: the token-protected external API bypasses Authelia and
 # must be matched before the /balance catch-all.
 ---
-apiVersion: cert-manager.io/v1
-kind: Certificate
-metadata:
-  name: dscpln-prod-tls
-  namespace: apps
-spec:
-  secretName: dscpln-prod-tls
-  issuerRef:
-    name: letsencrypt-prod
-    kind: ClusterIssuer
-  dnsNames:
-    - dscpln.{{ .Values.SERVICES_DOMAIN }}
----
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:

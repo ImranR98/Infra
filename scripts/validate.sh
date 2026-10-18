@@ -29,8 +29,9 @@ usage() {
     echo "  - helm lint + helm template of each k3s chart (targets/<target>/k3s-base,"
     echo "    k3s-apps), rejecting '<no value>' renders"
     echo "  - local Traefik plugin copies under files/ match their plugins/ sources"
-    echo "  - Gateway certificateRefs resolve to rendered Certificates and"
-    echo "    cross-namespace refs are covered by a ReferenceGrant"
+    echo "  - Gateway certificateRefs resolve to rendered Certificates (the two"
+    echo "    shared edge Certificates) and cross-namespace refs are covered by a"
+    echo "    ReferenceGrant"
     echo "  - compose mounts under ../../../config/ point at existing files"
     exit 1
 }
@@ -234,6 +235,17 @@ check_gateway_certrefs() {
             awk 'NF {print "  " $0}' <<<"$ungranted" >&2
             ok=0
         fi
+    fi
+
+    # The edge TLS inventory is exactly the two shared Certificates.
+    local edge edge_missing=""
+    for edge in edge-public-tls edge-private-tls; do
+        grep -qx "base/$edge" <<<"$certs" || edge_missing+="$edge"$'\n'
+    done
+    if [ -n "$edge_missing" ]; then
+        _err "ERROR: missing shared edge Certificate(s):"
+        awk 'NF {print "  " $0}' <<<"$edge_missing" >&2
+        ok=0
     fi
 
     [ "$ok" = 1 ]

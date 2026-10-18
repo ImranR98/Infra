@@ -1,17 +1,4 @@
 ---
-apiVersion: cert-manager.io/v1
-kind: Certificate
-metadata:
-  name: qbittorrent-prod-tls
-  namespace: apps
-spec:
-  secretName: qbittorrent-prod-tls
-  issuerRef:
-    name: letsencrypt-prod
-    kind: ClusterIssuer
-  dnsNames:
-    - qbittorrent.{{ .Values.SERVICES_DOMAIN }}
----
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:

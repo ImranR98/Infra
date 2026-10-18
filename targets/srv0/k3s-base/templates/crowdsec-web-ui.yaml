@@ -1,17 +1,4 @@
 ---
-apiVersion: cert-manager.io/v1
-kind: Certificate
-metadata:
-  name: crowdsec-web-ui-prod-tls
-  namespace: base
-spec:
-  secretName: crowdsec-web-ui-prod-tls
-  issuerRef:
-    name: letsencrypt-prod
-    kind: ClusterIssuer
-  dnsNames:
-    - crowdsec.{{ .Values.SERVICES_DOMAIN }}
----
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:

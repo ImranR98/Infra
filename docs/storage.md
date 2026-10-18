@@ -24,4 +24,4 @@
 
 ## NFS performance note
 
-NFS is excellent for read-heavy/sequential workloads and media. SQLite/WAL and Postgres are latency-sensitive: on the migrated NFS volumes they are measurably slower than the old block storage (the benchmark measured ~3× SQLite p95 and ~2.6× Postgres latency under load). The full-NFS migration was chosen with that tradeoff accepted. The Immich Postgres image requires `IGNORE_DATABASE_FSTYPE=true` to start on NFS; it is set in `immich.yaml`.
+NFS is excellent for read-heavy/sequential workloads and media. SQLite/WAL and Postgres are latency-sensitive: on the migrated NFS volumes they are measurably slower than the old block storage (the benchmark measured ~3× SQLite p95 and ~2.6× Postgres latency under load). The full-NFS migration was chosen with that tradeoff accepted. The Immich Postgres image requires `IGNORE_DATABASE_FSTYPE=true` to start on NFS; it is set in `immich.yaml`. Prometheus also runs on `nfs-apps`; it logs an unsupported-filesystem warning (accepted, mirroring the old Mimir PVC) and its TSDB starts fresh with the Mimir cutover.

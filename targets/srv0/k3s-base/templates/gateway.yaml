@@ -2,39 +2,11 @@
 # because Traefik resolves Middleware ExtensionRefs only in the route's
 # namespace (and the shared Middlewares live there).
 #
-# `gateway.certRefs` is the platform's edge TLS inventory — one entry per
-# component Certificate exposed on both secure listeners. scripts/validate.sh
-# checks every ref against the rendered Certificates; add a new app's certRef
-# only after its Certificate is Ready. The `websecure`-only certs (LAN/VPN apps
-# that must never be reachable through the public-exposure tunnel) are appended
-# explicitly next to the include.
-{{- define "gateway.certRefs" -}}
-- {name: dscpln-prod-tls, namespace: apps}
-- {name: fmd-prod-tls, namespace: apps}
-- {name: freshrss-prod-tls, namespace: apps}
-- {name: frigate-prod-tls, namespace: apps}
-- {name: headlamp-prod-tls, namespace: apps}
-- {name: homeassistant-prod-tls, namespace: apps}
-- {name: immich-prod-tls, namespace: apps}
-- {name: jellyfin-prod-tls, namespace: apps}
-- {name: linkwarden-prod-tls, namespace: apps}
-- {name: navidrome-prod-tls, namespace: apps}
-- {name: nextcloud-prod-tls, namespace: apps}
-- {name: opencode-prod-tls, namespace: apps}
-- {name: openwebui-prod-tls, namespace: apps}
-- {name: opodsync-prod-tls, namespace: apps}
-- {name: plik-prod-tls, namespace: apps}
-- {name: prowlarr-prod-tls, namespace: apps}
-- {name: qbittorrent-prod-tls, namespace: apps}
-- {name: radarr-prod-tls, namespace: apps}
-- {name: seerr-prod-tls, namespace: apps}
-- {name: sonarr-prod-tls, namespace: apps}
-- {name: authelia-prod-tls}
-- {name: crowdsec-web-ui-prod-tls}
-- {name: grafana-prod-tls}
-- {name: ntfy-prod-tls}
-- {name: traefik-prod-tls, namespace: kube-system}
-{{- end }}
+# TLS is two shared exact-name certificates in this namespace (see
+# edge-certs.yaml): edge-public-tls is attached to both secure listeners and
+# edge-private-tls only to websecure, so files/traefik never reach the
+# public-exposure listener. scripts/validate.sh checks every ref against the
+# rendered Certificates.
 apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
 metadata:
@@ -54,10 +26,9 @@ spec:
       port: 443
       tls:
         mode: Terminate
-        certificateRefs:{{ include "gateway.certRefs" . | nindent 10 }}
-          # LAN/VPN-only: not attached to websecure-proxy, so unreachable
-          # through the public-exposure tunnel.
-          - {name: filebrowser-prod-tls, namespace: apps}
+        certificateRefs:
+          - {name: edge-public-tls}
+          - {name: edge-private-tls}
       allowedRoutes:
         namespaces:
           from: Same
@@ -66,13 +37,14 @@ spec:
       port: 8443
       tls:
         mode: Terminate
-        certificateRefs:{{ include "gateway.certRefs" . | nindent 10 }}
+        certificateRefs:
+          - {name: edge-public-tls}
       allowedRoutes:
         namespaces:
           from: Same
 ---
-# Lets the base-namespace Gateway read app TLS secrets and base-namespace
-# HTTPRoutes reach app Services.
+# Lets base-namespace HTTPRoutes reach app Services. The edge certificates live
+# in base, so the Gateway no longer reads Secrets from apps.
 apiVersion: gateway.networking.k8s.io/v1
 kind: ReferenceGrant
 metadata:
@@ -81,30 +53,8 @@ metadata:
 spec:
   from:
     - group: gateway.networking.k8s.io
-      kind: Gateway
-      namespace: base
-    - group: gateway.networking.k8s.io
       kind: HTTPRoute
       namespace: base
   to:
     - group: ""
-      kind: Secret
-    - group: ""
       kind: Service
----
-# Lets the base-namespace Gateway read the Traefik dashboard cert (certificate
-# stays in kube-system next to the Traefik install).
-apiVersion: gateway.networking.k8s.io/v1
-kind: ReferenceGrant
-metadata:
-  name: allow-edge-from-base
-  namespace: kube-system
-spec:
-  from:
-    - group: gateway.networking.k8s.io
-      kind: Gateway
-      namespace: base
-  to:
-    - group: ""
-      kind: Secret
-      name: traefik-prod-tls

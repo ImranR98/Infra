@@ -1,17 +1,4 @@
 ---
-apiVersion: cert-manager.io/v1
-kind: Certificate
-metadata:
-  name: prowlarr-prod-tls
-  namespace: apps
-spec:
-  secretName: prowlarr-prod-tls
-  issuerRef:
-    name: letsencrypt-prod
-    kind: ClusterIssuer
-  dnsNames:
-    - prowlarr.{{ .Values.SERVICES_DOMAIN }}
----
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:

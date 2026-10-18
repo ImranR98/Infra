@@ -18,15 +18,23 @@ The GeoIP service, image source, `geoipupdate` secret, and Traefik wait-for-geoi
 
 The local WASM header-gate plugin and its `authelia-with-optional-header-gate` chain were removed. The six apps with their own authentication (Home Assistant, Immich, Jellyfin, Linkwarden, Navidrome, Opodsync) no longer have an Authelia forward-auth filter. For first boot, set `BOOTSTRAP_PRIVATE_APPS: "true"` so those six routes keep only the `websecure` parentRef (LAN/VPN) until Authelia is Ready. `validate.sh` warns while the flag is true. Jellyfin's chart gets a 120s-startup-tolerant liveness probe (the chart schema has no `livenessProbe.enabled` flag).
 
+## Prometheus instead of Mimir
+
+The metrics store is Prometheus (`prom/prometheus`, 180-day retention, remote-write receiver) instead of Mimir. Alloy still scrapes and remote-writes; Loki, Grafana, the dashboards, and the 18 alert rules are unchanged. Prometheus runs on the `nfs-apps` PVC, which it warns is an unsupported filesystem — the same NFS tradeoff the Mimir PVC had. Mimir's historical metrics were not migrated; the TSDB starts fresh. The Mimir Deployment/Service/PVC/NetworkPolicy were removed after Prometheus was verified.
+
+## Shared multi-SAN edge certificates
+
+The per-app Let's Encrypt Certificates were replaced by `edge-public-tls` (the 24 exact public hostnames) and `edge-private-tls` (`files`, `traefik`). The public cert is attached to both secure listeners; the private cert only to `websecure`, so the private names never reach the public-exposure listener. The names are exact (not a wildcard), but all public names share one key, so a key compromise has wildcard-like blast radius; per-host key isolation was traded for fewer Orders and secrets. Adding a public app means adding its SAN and re-issuing.
+
 ## Docs split
 
 The 72KB `AGENTS.md` was split into this `docs/` tree; `AGENTS.md` keeps the target table, commands, rules, and links. The detailed design/tradeoff notes live here and in `docs/security.md`.
 
 ## Accepted duplication (do not consolidate)
 
-A simplification review triaged the repeated structures below and deliberately kept them as-is — don't propose helpers, `range` loops, anchors, or shared fragments for them again. The Gateway `certificateRefs` inventory was the one consolidation accepted (shared `gateway.certRefs` define + explicit `websecure`-only extras).
+A simplification review triaged the repeated structures below and deliberately kept them as-is — don't propose helpers, `range` loops, anchors, or shared fragments for them again. The edge TLS certificates are the two shared multi-SAN Certificates above; the rest stay as-is.
 
-- **k3s-apps per-app blocks** — the same-shape `Certificate`s, Longhorn PVCs (now NFS PVCs), the `ExtensionRef` entries across the HTTPRoutes, and the probe stanzas: each app file is the per-app security/ownership record (issuer, size, middleware chain, probe type), and a generator would hide the one-line differences that matter. The PVCs are now `nfs-apps`/RWX, but the per-app blocks stay.
+- **k3s-apps per-app blocks** — the NFS PVCs, the `ExtensionRef` entries across the HTTPRoutes, and the probe stanzas: each app file is the per-app security/ownership record (size, middleware chain, probe type), and a generator would hide the one-line differences that matter. The PVCs are `nfs-apps`/RWX, but the per-app blocks stay.
 - **`host-volumes.yaml`'s 11 PV/PVC pairs** (only name/path/size/node-label differ) — mechanical but stable; the explicit list keeps each host path auditable in place.
 - **`radarr.yaml`/`sonarr.yaml`** (byte-identical apart from the image digest) and `prowlarr.yaml`: stable, and explicit image literals keep Renovate's extraction obvious.
 - **`targets/pc` vs `targets/bigpc` compose** (~75 duplicated lines): `include:`/`extends:` would change project-dir and `.env` resolution for marginal gain.

@@ -14,19 +14,6 @@ auth-tokens: "service:{{ .Values.NTFY_WRITE_ONLY_ACCOUNT_TOKEN }}"
 auth-access: "service:*:write-only"
 {{- end -}}
 ---
-apiVersion: cert-manager.io/v1
-kind: Certificate
-metadata:
-  name: ntfy-prod-tls
-  namespace: base
-spec:
-  secretName: ntfy-prod-tls
-  issuerRef:
-    name: letsencrypt-prod
-    kind: ClusterIssuer
-  dnsNames:
-    - ntfy.{{ .Values.SERVICES_DOMAIN }}
----
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:

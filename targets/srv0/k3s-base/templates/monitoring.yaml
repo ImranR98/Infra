@@ -1,3 +1,8 @@
+{{- define "prometheus.config" -}}
+global:
+  scrape_interval: 60s
+scrape_configs: []
+{{- end -}}
 {{- define "grafana.alerting.contactpoints" -}}
 apiVersion: 1
 contactPoints:
@@ -37,13 +42,13 @@ spec:
     # collector configs for cluster metrics (kubelet/cadvisor/ksm/api-server/
     # coredns), host metrics (node-exporter) and pod logs (tail from the node's
     # /var/log via a read-only host mount), shipping to the in-cluster
-    # Mimir/Loki.
+    # Prometheus/Loki.
     cluster:
       name: k3s
     destinations:
       prometheus:
         type: prometheus
-        url: http://mimir.base.svc.cluster.local:8080/api/v1/push
+        url: http://prometheus.base.svc.cluster.local:9090/api/v1/write
       loki:
         type: loki
         url: http://loki.base.svc.cluster.local:3100/loki/api/v1/push
@@ -296,7 +301,7 @@ spec:
           - name: Prometheus
             type: prometheus
             uid: prometheus
-            url: http://mimir.base.svc.cluster.local:8080/prometheus
+            url: http://prometheus.base.svc.cluster.local:9090
             access: proxy
             isDefault: true
             jsonData:
@@ -377,19 +382,6 @@ metadata:
 data:
   kubernetes-logs.json: |-
 {{ .Files.Get "files/dashboards/kubernetes-logs.json" | indent 4 }}
----
-apiVersion: cert-manager.io/v1
-kind: Certificate
-metadata:
-  name: grafana-prod-tls
-  namespace: base
-spec:
-  secretName: grafana-prod-tls
-  issuerRef:
-    name: letsencrypt-prod
-    kind: ClusterIssuer
-  dnsNames:
-    - grafana.{{ .Values.SERVICES_DOMAIN }}
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
@@ -524,16 +516,27 @@ spec:
       rules:
         enabled: false
 ---
+# Prometheus is the metrics store: Alloy remote-writes the scraped samples
+# (the empty scrape config is intentional). The PVC uses the same NFS storage
+# class as the rest of the app data; metric history starts fresh.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-config
+  namespace: base
+data:
+  prometheus.yml: |
+{{ include "prometheus.config" . | indent 4 }}
+---
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: mimir-data-pvc
+  name: prometheus-data-pvc
   namespace: base
 spec:
   accessModes:
     - ReadWriteMany
   resources:
-    # Longhorn volumes cannot shrink, so this matches the live size.
     requests:
       storage: 200Gi
   storageClassName: nfs-apps
@@ -541,111 +544,98 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: mimir
+  name: prometheus
   namespace: base
   labels:
-    app: mimir
+    app: prometheus
 spec:
   replicas: 1
-  # Single replica + RWO PVC: Recreate avoids two pods fighting for the volume.
   strategy:
     type: Recreate
   selector:
     matchLabels:
-      app: mimir
+      app: prometheus
   template:
     metadata:
       labels:
-        app: mimir
+        app: prometheus
+      annotations:
+        checksum/config: {{ include "prometheus.config" . | sha256sum }}
     spec:
       securityContext:
-        fsGroup: 10001
-        # Shared with the migration pod: pod-level s0 (container-level is
-        # ignored) so filesystem-storage files stay readable across pods.
+        fsGroup: 65534
+        # NFS volumes are shared across pods; pod-level s0 keeps the files
+        # readable without MCS relabeling.
         seLinuxOptions:
           level: s0
       containers:
-        - name: mimir
-          image: grafana/mimir:3.2.2
+        - name: prometheus
+          image: prom/prometheus:v3.15.0@sha256:efd719c99d83b060d9daefdcf00360461adf279f45ef5391f8d111892118753e
           args:
-            # Flags instead of a config file: any config change is a
-            # Deployment change, so the pod rolls automatically on apply.
-            - -server.http-listen-port=8080
-            - -auth.multitenancy-enabled=false
-            # Filesystem object store: blocks/ruler/alertmanager live on the
-            # mimir-data PVC.
-            - -common.storage.backend=filesystem
-            - -blocks-storage.filesystem.dir=/data/blocks
-            - -ruler-storage.filesystem.dir=/data/ruler
-            - -alertmanager-storage.filesystem.dir=/data/alertmanager
-            - -blocks-storage.tsdb.dir=/data/tsdb
-            - -blocks-storage.bucket-store.sync-dir=/data/tsdb-sync
-            - -compactor.data-dir=/data/compactor
-            # Single ingester: the whole write path is one replica.
-            - -ingester.ring.replication-factor=1
-            # 180 days of blocks.
-            - -compactor.blocks-retention-period=4320h
-            # Single trusted tenant: generous limits so backlog flushes after
-            # downtime are never rejected, and the series the cluster scrapes
-            # fit under the per-user cap.
-            - -distributor.ingestion-rate-limit=1000000
-            - -distributor.ingestion-burst-size=1000000
-            - -ingester.max-global-series-per-user=1000000
-            # Query sharding turns one dashboard load into hundreds of
-            # subqueries, which overflow the 100-deep per-tenant scheduler
-            # queue and surface as 429s in panels.
-            - -query-scheduler.max-outstanding-requests-per-tenant=5000
+            - --config.file=/etc/prometheus/prometheus.yml
+            - --storage.tsdb.path=/data
+            - --storage.tsdb.retention.time=180d
+            - --web.enable-remote-write-receiver
           ports:
             - name: http
-              containerPort: 8080
+              containerPort: 9090
           volumeMounts:
+            - name: config
+              mountPath: /etc/prometheus/prometheus.yml
+              subPath: prometheus.yml
+              readOnly: true
             - name: data
               mountPath: /data
           resources:
             requests:
-              memory: 1Gi
+              cpu: 100m
+              memory: 512Mi
             limits:
-              memory: 3Gi
+              cpu: "1"
+              memory: 2Gi
           readinessProbe:
             httpGet:
-              path: /ready
+              path: /-/ready
               port: http
-            initialDelaySeconds: 30
+            initialDelaySeconds: 10
             periodSeconds: 10
       volumes:
+        - name: config
+          configMap:
+            name: prometheus-config
         - name: data
           persistentVolumeClaim:
-            claimName: mimir-data-pvc
+            claimName: prometheus-data-pvc
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: mimir
+  name: prometheus
   namespace: base
 spec:
   selector:
-    app: mimir
+    app: prometheus
   ports:
     - name: http
-      port: 8080
+      port: 9090
       targetPort: http
 ---
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: allow-mimir-ingress
+  name: allow-prometheus-ingress
   namespace: base
 spec:
   podSelector:
     matchLabels:
-      app: mimir
+      app: prometheus
   ingress:
     - from:
         - namespaceSelector:
             matchLabels:
               kubernetes.io/metadata.name: base
       ports:
-        - port: 8080
+        - port: 9090
   policyTypes:
     - Ingress
 ---
@@ -710,8 +700,8 @@ spec:
 ---
 # Alloy clustering (ckit transport on 12345): without this the collectors can
 # never join the memberlist (deny-all-ingress blocks it), so every instance
-# scrapes all cluster-wide targets and Mimir rejects the duplicate samples as
-# out-of-order.
+# scrapes all cluster-wide targets and Prometheus rejects the duplicate samples
+# as out-of-order.
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:

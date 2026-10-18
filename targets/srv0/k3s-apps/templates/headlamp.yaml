@@ -53,19 +53,6 @@ spec:
         memory: 64Mi
 ---
 ---
-apiVersion: cert-manager.io/v1
-kind: Certificate
-metadata:
-  name: headlamp-prod-tls
-  namespace: apps
-spec:
-  secretName: headlamp-prod-tls
-  issuerRef:
-    name: letsencrypt-prod
-    kind: ClusterIssuer
-  dnsNames:
-    - k8s.{{ .Values.SERVICES_DOMAIN }}
----
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:

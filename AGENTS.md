@@ -91,3 +91,4 @@ Scripts warn or hard-fail (`require_target_host`) on hostname/target mismatches.
 - The six user-facing apps (Home Assistant, Immich, Jellyfin, Linkwarden, Navidrome, Opodsync) have no Authelia forward-auth filter; use `BOOTSTRAP_PRIVATE_APPS` for first-boot LAN/VPN containment.
 - Node labels are static: `k3s-server.sh` sets both; `k3s-join.sh --hostpath-main` for a joined node. Do not reintroduce NFD/node-facts.
 - Geoblock uses `get.geojs.io`; do not reintroduce the self-hosted GeoIP service/`geoip-src`.
+- TLS is `edge-public-tls` (24 exact public SANs) plus `edge-private-tls` (`files`/`traefik`, `websecure` only). Adding a public app means adding its SAN and re-issuing; no per-app certs or wildcards.

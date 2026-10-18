@@ -32,19 +32,6 @@ spec:
       runAsGroup: {{ .Values.MY_UID }}
 ---
 ---
-apiVersion: cert-manager.io/v1
-kind: Certificate
-metadata:
-  name: seerr-prod-tls
-  namespace: apps
-spec:
-  secretName: seerr-prod-tls
-  issuerRef:
-    name: letsencrypt-prod
-    kind: ClusterIssuer
-  dnsNames:
-    - seerr.{{ .Values.SERVICES_DOMAIN }}
----
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:

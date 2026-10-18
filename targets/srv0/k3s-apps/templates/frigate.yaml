@@ -105,19 +105,6 @@ spec:
         infra.local/dri: "1"
 ---
 ---
-apiVersion: cert-manager.io/v1
-kind: Certificate
-metadata:
-  name: frigate-prod-tls
-  namespace: apps
-spec:
-  secretName: frigate-prod-tls
-  issuerRef:
-    name: letsencrypt-prod
-    kind: ClusterIssuer
-  dnsNames:
-    - frigate.{{ .Values.SERVICES_DOMAIN }}
----
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
