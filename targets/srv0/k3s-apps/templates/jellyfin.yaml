@@ -16,24 +16,48 @@ spec:
     # can't attach while the old one holds the volume, e.g. after node moves).
     deploymentStrategy:
       type: Recreate
+    # 12.2 carries the SyncPlay fixes 10.11.x lacks (stale-position correction,
+    # lost-WebSocket zombie groups, bounded group wait).
+    image:
+      tag: "12.2"
     persistence:
       config:
         existingClaim: jellyfin-config-pvc
       media:
         enabled: false
 
-    # Jellyfin returns 503 on /health while it loads libraries/plugins; the
-    # chart's default liveness probe restarts it before it can become ready.
-    # Use a long startup tolerance instead (the chart passes this map straight
-    # to the container probe; it has no `enabled` flag).
+    # /health opens the SQLite DB (DbContextFactoryHealthCheck), which lives on
+    # NFS and can block for >10s during a library scan. The chart's 1s readiness
+    # probe drops the only Traefik endpoint when that happens, so gate startup
+    # on /health and use a TCP readiness probe: once the app is initialized, a
+    # slow DB must not take it out of service.
+    startupProbe:
+      # The chart default is tcpSocket; null removes it before Helm merges
+      # this map, otherwise both handlers are rendered and the API rejects it.
+      tcpSocket: null
+      httpGet:
+        path: /health
+        port: 8096
+      initialDelaySeconds: 10
+      periodSeconds: 10
+      timeoutSeconds: 5
+      failureThreshold: 120   # up to 20 min for the 12.2 DB migration
+    readinessProbe:
+      # The chart default is httpGet; remove it so only the TCP handler remains.
+      httpGet: null
+      tcpSocket:
+        port: 8096
+      periodSeconds: 10
+      timeoutSeconds: 3
+      failureThreshold: 3
     livenessProbe:
       httpGet:
         path: /health
         port: 8096
       initialDelaySeconds: 120
       periodSeconds: 30
-      timeoutSeconds: 10
-      failureThreshold: 10
+      timeoutSeconds: 30
+      failureThreshold: 20    # ~10 min; tolerate a long first 12.2 scan
 
     # Jellyfin applies X-Forwarded-For only when KnownProxies is non-empty —
     # otherwise it reports the reverse proxy's pod IP. Traefik's pod IP is
