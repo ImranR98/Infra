@@ -44,7 +44,7 @@ spec:
       automountServiceAccountToken: false
       containers:
         - name: balance-xlsx
-          image: imranrdev/dscpln-balance:latest@sha256:ab5fdd676ad34566a6fc3630a4df3ec24dbbc6c6917b10c06f5b5b680301bf57
+          image: imranrdev/dscpln-balance:latest@sha256:undefined
           securityContext:
             {{- include "dscpln.containerSecurityContext" (dict "uid" .Values.MY_UID "readOnlyRootFilesystem" true) | nindent 12 }}
           ports:
