@@ -276,6 +276,7 @@ spec:
         memory: 1Gi
     grafana.ini:
       server:
+        http_addr: 0.0.0.0
         root_url: https://grafana.{{ .Values.SERVICES_DOMAIN }}
       auth:
         # OIDC-only UI: no local username/password form. Recovery if
@@ -438,11 +439,6 @@ spec:
   createNamespace: false
   version: 7.3.0
   valuesContent: |-
-    loki:
-      image:
-        registry: docker.io
-        repository: grafana/loki
-        tag: 3.7.8
     deploymentMode: SingleBinary
     singleBinary:
       replicas: 1
@@ -480,6 +476,10 @@ spec:
     gateway:
       enabled: false
     loki:
+      image:
+        registry: docker.io
+        repository: grafana/loki
+        tag: 3.7.8
       auth_enabled: false
       ingester:
         lifecycler:
