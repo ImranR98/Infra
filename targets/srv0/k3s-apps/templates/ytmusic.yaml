@@ -86,7 +86,6 @@ spec:
               mountPath: /data
             - name: config-src
               mountPath: /config
-              readOnly: true
             - name: main
               mountPath: /home/imranr/Main/Media/Music
       volumes:
