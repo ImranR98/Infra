@@ -15,7 +15,8 @@ K3s/Helm sections before a first run.
 
 ## Hard rules
 
-- Never read `config/` or anything in it — secrets are private by design.
+- Never print, commit, or inspect secret values. `list-prs.sh` may source
+  `config/VARS.env` only to populate the GitHub token; do not `cat` or echo it.
 - Never merge in the GitHub platform UI. Merge locally, then push `origin master`.
 - Run `bash scripts/validate.sh <target>` before every `helm upgrade --install`.
 - Never commit the user's in-progress work; stash it for merges and restore it after.

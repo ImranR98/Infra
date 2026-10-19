@@ -1,6 +1,6 @@
 #!/bin/bash
 # DESC: List open Renovate dependency PRs for the repo containing this skill.
-# Uses the anonymous GitHub API, or GITHUB_TOKEN when set (higher rate limit).
+# Resolves GITHUB_TOKEN, then RENOVATE_GITHUB_TOKEN, then config/VARS.env (never printed).
 # Prints one block per PR (number, updated, files, branch, labels, title, diff URL);
 # --json prints the raw API objects instead.
 set -euo pipefail
@@ -10,7 +10,8 @@ usage() {
     echo
     echo "Lists open PRs for the repo's origin remote, flagging Renovate PRs"
     echo "(renovate/* branch or deps label). Requires curl + python3."
-    echo "Set GITHUB_TOKEN to avoid the anonymous 60 requests/hour limit."
+    echo "Resolves GITHUB_TOKEN, then RENOVATE_GITHUB_TOKEN, then config/VARS.env automatically;"
+    echo "set GITHUB_TOKEN to override."
     exit 1
 }
 
@@ -43,6 +44,22 @@ PY
 body="$(mktemp)"
 headers="$(mktemp)"
 trap 'rm -f "$body" "$headers"' EXIT
+
+# Resolve the token without printing it. Prefer an explicit GITHUB_TOKEN,
+# then RENOVATE_GITHUB_TOKEN, then the local gitignored token file.
+if [ -z "${GITHUB_TOKEN:-}" ] && [ -n "${RENOVATE_GITHUB_TOKEN:-}" ]; then
+    GITHUB_TOKEN="$RENOVATE_GITHUB_TOKEN"
+fi
+if [ -z "${GITHUB_TOKEN:-}" ] && [ -f "$repo_root/config/VARS.env" ]; then
+    set -a
+    # shellcheck disable=SC1091
+    . "$repo_root/config/VARS.env"
+    set +a
+    GITHUB_TOKEN="${RENOVATE_GITHUB_TOKEN:-}"
+fi
+if [ -n "${GITHUB_TOKEN:-}" ]; then
+    export GITHUB_TOKEN
+fi
 
 auth=()
 if [ -n "${GITHUB_TOKEN:-}" ]; then
