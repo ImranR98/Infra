@@ -57,7 +57,7 @@ Tier assignment (change magnitude × component criticality) is documented in
 
 ## Phase 2 — Triage
 
-1. List PRs: `bash .agents/skills/renovate-pr-ops/scripts/list-prs.sh` (`--json` for raw).
+1. List PRs: `bash .agents/skills/renovate-pr-ops/scripts/list-prs.sh` (`--json` for raw). The script also reports open Dependabot alerts and failed/pending PR checks; include them in the triage and final report.
 2. Diff locally: `git fetch origin pull/<n>/head:renovate/pr-<n>`, then
    `git diff master...renovate/pr-<n>`. `gh` is not installed; fetching the PR ref
    avoids the diff endpoint and the anonymous API limit (60 requests/hour, enough for
@@ -128,3 +128,4 @@ Report format:
 - **Deployed** — target, what changed, verification result.
 - **Held** — PR plus reason and evidence; what the next run should re-check.
 - **Pending commands** — for machines this agent cannot reach.
+- **Alerts** — open Dependabot alerts and failed/pending PR checks; say "none" if clean.

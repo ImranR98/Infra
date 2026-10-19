@@ -96,4 +96,56 @@ PY
     if [ -n "$remaining" ]; then
         echo "rate-limit remaining: $remaining"
     fi
+    python3 - "$body" "$repo_slug" <<'PY'
+import json
+import os
+import sys
+import urllib.request
+
+prs = json.load(open(sys.argv[1]))
+repo = sys.argv[2]
+token = os.environ.get("GITHUB_TOKEN")
+
+
+def get(url):
+    headers = {"Accept": "application/vnd.github+json"}
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+    req = urllib.request.Request(url, headers=headers)
+    return json.load(urllib.request.urlopen(req, timeout=15))
+
+
+try:
+    alerts = get(f"https://api.github.com/repos/{repo}/dependabot/alerts?state=open&per_page=100")
+    if not alerts:
+        print("Dependabot alerts: none")
+    else:
+        print(f"Dependabot alerts: {len(alerts)} open")
+        for alert in alerts[:10]:
+            advisory = alert.get("security_advisory") or {}
+            package = (alert.get("dependency") or {}).get("package") or {}
+            print(
+                f"  - {package.get('name', '?')} {advisory.get('severity', '?')} "
+                f"{advisory.get('ghsa_id', '?')}: {advisory.get('summary', '')}"
+            )
+except Exception as exc:
+    print(f"Dependabot alerts: unavailable ({exc})")
+
+for pr in prs:
+    sha = pr["head"]["sha"]
+    try:
+        data = get(f"https://api.github.com/repos/{repo}/commits/{sha}/check-runs")
+        checks = data.get("check_runs", [])
+        failed = [
+            c for c in checks
+            if c.get("conclusion") in ("failure", "timed_out", "cancelled", "action_required")
+        ]
+        pending = [c for c in checks if c.get("status") != "completed"]
+        if failed or pending:
+            print(f"#{pr['number']} checks: {len(failed)} failed, {len(pending)} pending")
+            for check in failed[:5]:
+                print(f"  - {check.get('name')}: {check.get('conclusion')}")
+    except Exception as exc:
+        print(f"#{pr['number']} checks: unavailable ({exc})")
+PY
 fi
