@@ -304,6 +304,7 @@ check_chart_repos() {
         "https://raw.githubusercontent.com/kubernetes-csi/csi-driver-nfs/master/charts"
         "https://kubernetes-sigs.github.io/descheduler"
         "https://grafana.github.io/helm-charts"
+        "https://grafana-community.github.io/helm-charts"
         "https://kubernetes-sigs.github.io/headlamp"
         "oci://ghcr.io/immich-app/immich-charts/immich"
         "oci://ghcr.io/seerr-team/seerr/seerr-chart"

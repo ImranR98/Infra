@@ -290,19 +290,6 @@
         "ghcr.io/immich-app/immich-machine-learning"
       ],
       "enabled": false
-    },
-    {
-      "description": "Loki chart 7.3.0 is 3.6-only; hold the 3.7 minor until a compatible chart (memberlist/service changes) exists",
-      "matchDatasources": [
-        "docker"
-      ],
-      "matchPackageNames": [
-        "grafana/loki"
-      ],
-      "matchUpdateTypes": [
-        "minor"
-      ],
-      "enabled": false
     }
   ]
 }

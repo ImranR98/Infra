@@ -35,7 +35,7 @@ Three distinct "helm" layers:
 - **Frigate, Ollama and Jellyfin run as raw manifests** in `targets/srv0/k3s-apps/templates/` with the official images; their Helm charts are gone.
 - A chart that controls an app image must pin `image.repository` + `image.tag` (or the chart's equivalent) so Renovate tracks the app. The chart's `appVersion` alone is not a Renovate dependency; if the chart project lags, the app goes stale invisibly. The chart version is tracked separately.
 - Chart-specific sidecars not pinned in `valuesContent` remain chart-managed; pin them only when their version matters.
-- **Grafana/Loki chart skew:** the official Grafana chart is pinned at 10.5.15 (latest; chart appVersion 12.3.1) with the Grafana 13.2.4 image; the Loki chart is 7.3.0 (latest; chart appVersion 3.6.12) with Loki 3.6.18 while 3.7 is held. Upgrade when the upstream charts support the newer app lines; do not pin the chart sidecars individually.
+- **Grafana/Loki chart source:** the OSS Grafana and Loki charts moved to `grafana-community/helm-charts` (#4087); the current pins are Grafana chart 14.0.1 (app 13.2.4) and Loki chart 18.17.1 (app 3.7.8). The old `grafana/helm-charts` copies are frozen/GEL-only for Loki; `k8s-monitoring` remains on `grafana/helm-charts`. Do not pin the chart sidecars individually.
 
 ### Pitfalls
 
