@@ -74,6 +74,10 @@ spec:
               port: health
             initialDelaySeconds: 5
             periodSeconds: 10
+          # /dev is mounted read-only, so the default /dev/termination-log
+          # cannot be created after a node reboot. Keep the root filesystem
+          # read-only but put the termination message in a writable tmpfs.
+          terminationMessagePath: /tmp/termination-log
           volumeMounts:
             - name: device-plugins
               mountPath: /var/lib/kubelet/device-plugins
@@ -85,6 +89,8 @@ spec:
             - name: config
               mountPath: /etc/generic-device-plugin
               readOnly: true
+            - name: tmp
+              mountPath: /tmp
       volumes:
         - name: device-plugins
           hostPath:
@@ -96,3 +102,5 @@ spec:
         - name: config
           configMap:
             name: generic-device-plugin
+        - name: tmp
+          emptyDir: {}

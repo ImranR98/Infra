@@ -33,7 +33,7 @@ rules:
     verbs: ["create"]
   - apiGroups: ["apps"]
     resources: ["deployments"]
-    verbs: ["get"]
+    verbs: ["get", "list", "watch"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
@@ -99,7 +99,11 @@ spec:
             - |
               set -euo pipefail
               echo "=== Checking Immich configuration ==="
-              kubectl -n apps wait --for=condition=Ready pod -l app.kubernetes.io/name=server,app.kubernetes.io/instance=immich --timeout=600s
+              # Wait on the Deployment rather than every matching Pod. A
+              # node reboot can leave an old ReplicaSet pod in a failed
+              # state; a pod-label wait would then hang forever even though
+              # the current server is Ready.
+              kubectl -n apps wait --for=condition=Available deployment/immich-server --timeout=60s
 
               ADMIN_EMAIL="{{ .Values.DOMAIN_OWNER_EMAIL }}"
               TOKEN=""
