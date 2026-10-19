@@ -80,10 +80,6 @@ spec:
               value: ""
           resources:
             limits:
-              # A first-time hash of the now-readable restic repo hit 5.6
-              # cores and helped starve etcd's fdatasyncs. Cap background
-              # scans/syncs; normal operation is far below this.
-              cpu: 1500m
               memory: 4Gi
             requests:
               memory: 2Gi
