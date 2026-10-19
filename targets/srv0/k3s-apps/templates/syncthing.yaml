@@ -46,25 +46,44 @@ spec:
       initContainers:
         - name: fix-perms
           image: busybox:1.38
-          command: ["sh", "-c", "chown -R {{ .Values.MY_UID }}:{{ .Values.MY_UID }} /var/syncthing/config"]
+          command: ["sh", "-c", "chown -R {{ .Values.MY_UID }}:{{ .Values.MY_UID }} /var/syncthing/config; chown {{ .Values.MY_UID }}:{{ .Values.MY_UID }} /var/syncthing/data"]
           securityContext:
             runAsUser: 0
           volumeMounts:
             - name: syncthing-config
               mountPath: /var/syncthing/config
+            - name: syncthing-data
+              mountPath: /var/syncthing/data
       containers:
         - name: syncthing
           image: syncthing/syncthing:2.1.6
+          # The image entrypoint injects --home; bypass it so the explicit
+          # config/data split below is accepted. The init container performs
+          # the only setup the entrypoint did for us (permissions).
+          command: ["/bin/syncthing"]
+          # Config/certs/keys stay on the backed-up NFS PVC. The database
+          # (index-v2) and logs live on local disk: it is the only random-I/O
+          # part of the config tree and is excluded from PVC backups anyway.
           args:
-            - "--home"
+            - "--config"
             - "/var/syncthing/config"
+            - "--data"
+            - "/var/syncthing/data"
           securityContext:
             allowPrivilegeEscalation: false
           env:
             - name: STGUIADDRESS
               value: "127.0.0.1:8384"
+            # The image sets STHOMEDIR, which Syncthing treats like --home.
+            # Clear it when using the explicit --config/--data split.
+            - name: STHOMEDIR
+              value: ""
           resources:
             limits:
+              # A first-time hash of the now-readable restic repo hit 5.6
+              # cores and helped starve etcd's fdatasyncs. Cap background
+              # scans/syncs; normal operation is far below this.
+              cpu: 1500m
               memory: 4Gi
             requests:
               memory: 2Gi
@@ -88,6 +107,8 @@ spec:
               mountPath: /var/syncthing/hostmainparent/deviceSync
             - name: syncthing-config
               mountPath: /var/syncthing/config
+            - name: syncthing-data
+              mountPath: /var/syncthing/data
       volumes:
         - name: host-maindir
           persistentVolumeClaim:
@@ -98,3 +119,10 @@ spec:
         - name: syncthing-config
           persistentVolumeClaim:
             claimName: syncthing-config-pvc
+        # The pod is already pinned to srv0 by the two local PVs above, so
+        # this disposable index can live on srv0's local disk without reducing
+        # scheduling flexibility.
+        - name: syncthing-data
+          hostPath:
+            path: {{ .Values.MAIN_PARENT_DIR }}/.local/share/syncthing-data
+            type: DirectoryOrCreate

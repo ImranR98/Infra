@@ -7,6 +7,13 @@ server:
     - path: /main
       config:
         defaultEnabled: true
+        rules:
+          # The restic repo is Syncthing's source, not a user browsing target;
+          # indexing ~66GB of pack files on startup is pure overhead.
+          - folderPath: "Infra/state_backups"
+          # Runtime NFS/Compose state is root/PVC-owned and full of permission
+          # errors; it is not a browsing target either.
+          - folderPath: "Infra/current_target"
 http:
   port: 80
   # Single boolean in v2 (was trustedHeaders in v1); honors X-Forwarded-*.

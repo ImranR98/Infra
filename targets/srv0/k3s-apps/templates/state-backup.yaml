@@ -68,20 +68,22 @@ spec:
       automountServiceAccountToken: true
       securityContext:
         # Root is required to read the Postgres/Redis-owned PVC data and the
-        # host paths. No fsGroup: the shared hostpath-main PV is GID 1000, and
-        # setting a pod fsGroup would recursively chgrp the whole Infra tree.
+        # host paths. The primary group is the Syncthing GID: the repo root is
+        # explicitly chowned to it by backup.mjs and kept setgid, so every
+        # restic-created directory/file is group-readable by Syncthing. No
+        # fsGroup: that would recursively chgrp the whole Infra tree.
         runAsUser: 0
-        runAsGroup: 0
+        runAsGroup: {{ .Values.MY_UID }}
         seLinuxOptions:
           type: spc_t
           level: s0
       containers:
         - name: state-backup
-          image: imranrdev/dscpln-state-backup:latest@sha256:e9861fd022f75882d248db6db03c3d833a51e9367a42449d0fe96786200d0dc9
+          image: imranrdev/dscpln-state-backup:latest@sha256:911d3a9c1ed3ad6cd6ec65dd3a7160a440dce2caee1d9abd180c13b83906f7eb
           imagePullPolicy: IfNotPresent
           securityContext:
             runAsUser: 0
-            runAsGroup: 0
+            runAsGroup: {{ .Values.MY_UID }}
             allowPrivilegeEscalation: false
             capabilities:
               drop:
@@ -123,6 +125,8 @@ spec:
               value: /data/restic-cache
             - name: RESTIC_STAGING_DIR
               value: /staging
+            - name: RESTIC_GID
+              value: "{{ .Values.MY_UID }}"
           resources:
             limits:
               memory: 1Gi

@@ -16,11 +16,15 @@ spec:
       repository: registry.k8s.io/descheduler/descheduler
       tag: v0.37.0
     kind: CronJob
-    schedule: "*/2 * * * *"
+    # Every 2 minutes created 720 job pods/day for a descheduler that usually
+    # evicts nothing. Ten minutes still rebalances promptly after node drift,
+    # while cutting k3s/containerd/etcd churn by 5x. minPodAge is 15m, so
+    # effective eviction checks are roughly every 20 minutes.
+    schedule: "*/10 * * * *"
     # A failed run (e.g. apiserver down during a k3s restart) retries up to
-    # backoffLimit times, leaving a trail of Error pods. The schedule is only
-    # 2 minutes, so the next run supersedes any failure — keep only the most
-    # recent failed job (its pods' logs) for debugging.
+    # backoffLimit times, leaving a trail of Error pods. The next run
+    # supersedes any failure — keep only the most recent failed job (its
+    # pods' logs) for debugging.
     failedJobsHistoryLimit: 1
     # Rebalances pods that drifted due to the PreferNoSchedule taint being
     # evaluated only at scheduling time:
