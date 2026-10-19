@@ -248,6 +248,21 @@
       "overridePackageName": "ghcr.io/seerr-team/seerr"
     },
     {
+      "description": "Authelia DB images use explicit Bitnami major tags; Renovate cannot resolve their digests reliably, so refresh the digest manually with the tag",
+      "matchDatasources": [
+        "docker"
+      ],
+      "matchPackageNames": [
+        "docker.io/bitnami/postgresql",
+        "docker.io/bitnami/redis"
+      ],
+      "matchUpdateTypes": [
+        "digest",
+        "pinDigest"
+      ],
+      "enabled": false
+    },
+    {
       "description": "immich postgres: same-shape tags only (major-vectorchordX.Y.Z-pgvectorA.B.C), locked to the current postgres major via the compatibility group so pg-major jumps stay manual",
       "matchPackageNames": [
         "ghcr.io/immich-app/postgres"

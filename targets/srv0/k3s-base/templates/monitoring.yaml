@@ -192,6 +192,16 @@ spec:
     telemetryServices:
       kube-state-metrics:
         deploy: true
+        # /livez checks the API server, so transient API blips restart KSM.
+        # Use the KSM process readiness endpoint for liveness instead.
+        livenessProbe:
+          httpGet:
+            path: /readyz
+            port: metrics
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 6
       node-exporter:
         deploy: true
         # Pod-network (not hostNetwork): clustered Alloy may assign a node's

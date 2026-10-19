@@ -26,7 +26,7 @@ data:
     detectors:
       openvino:
         type: openvino
-        device: GPU
+        device: CPU
     # Bundled OpenVINO default model (SSDLite MobileNet v2, FP16 IR).
     # device: GPU = the Iris Xe iGPU via OpenVINO.
     model:
@@ -38,7 +38,7 @@ data:
       labelmap_path: /openvino-model/coco_91cl_bkgr.txt
     # Deployment-specific config (go2rtc streams, cameras) comes from
     # FRIGATE_ADDITIONAL_CONFIG in targets/srv0/config_template/values.yaml
-{{ .Values.FRIGATE_ADDITIONAL_CONFIG | indent 6 }}
+{{ .Values.FRIGATE_ADDITIONAL_CONFIG | indent 4 }}
 ---
 apiVersion: v1
 kind: Service
@@ -106,7 +106,7 @@ spec:
         app.kubernetes.io/instance: frigate
         app.kubernetes.io/version: "0.18.2"
       annotations:
-        checksum/config: {{ .Values.FRIGATE_ADDITIONAL_CONFIG | sha256sum }}
+        checksum/config: {{ printf "%s-%s" (.Values.FRIGATE_ADDITIONAL_CONFIG | sha256sum) "openvino-cpu-2" | sha256sum }}
     spec:
       initContainers:
         - name: copyconfig
