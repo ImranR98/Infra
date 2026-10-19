@@ -67,8 +67,8 @@ restore_to_staging() {
     local snapshot="$1" source_path="$2"
     local staging
     staging=$(mktemp -d "${TMPDIR:-/tmp}/restic-restore.XXXXXX")
-    echo "Restoring $source_path from snapshot $snapshot to $staging"
-    restic restore "$snapshot" --target "$staging" --include "$source_path" --verify
+    echo "Restoring $source_path from snapshot $snapshot to $staging" >&2
+    restic restore "$snapshot" --target "$staging" --include "$source_path" --verify >&2
     printf '%s\n' "$staging"
 }
 
