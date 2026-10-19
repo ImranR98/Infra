@@ -953,7 +953,7 @@ services:
             - "traefik.http.routers.home-sale.entrypoints=websecure"
             - "traefik.http.routers.home-sale.tls.certresolver=le"
             - "traefik.http.routers.home-sale.tls=true"
-            - "traefik.http.routers.home-sale.middlewares=crowdsec-bouncer@file,authelia@file,geoblock@file"
+            - "traefik.http.routers.home-sale.middlewares=crowdsec-bouncer@file,authelia@file"
             - "traefik.http.services.home-sale.loadbalancer.server.port=3000"
         environment:
             - ADMIN_PASSWORD=$HOME_SALE_ADMIN_PASSWORD
