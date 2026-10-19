@@ -120,6 +120,16 @@ spec:
               name: config
           command: ["cp"]
           args: ["-v", "/config.yml", "/config/config.yml"]
+        # Frigate writes a preview restart cache on shutdown, then on the next
+        # start tries to move it into the tmpfs preview dir and logs a
+        # non-fatal error. Clear it before the app starts; previews simply
+        # restart instead of restoring stale frames.
+        - name: clear-preview-cache
+          image: busybox:1.38
+          command: ["sh", "-c", "rm -rf /media/frigate/clips/preview_restart_cache"]
+          volumeMounts:
+            - name: frigate-media
+              mountPath: /media/frigate
       containers:
         - name: frigate
           image: ghcr.io/blakeblackshear/frigate:0.18.2
