@@ -1,4 +1,172 @@
 ---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: jellyfin
+  namespace: apps
+  labels:
+    app.kubernetes.io/name: jellyfin
+    app.kubernetes.io/instance: jellyfin
+    app.kubernetes.io/version: "12.2"
+automountServiceAccountToken: true
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: jellyfin
+  namespace: apps
+  labels:
+    app.kubernetes.io/name: jellyfin
+    app.kubernetes.io/instance: jellyfin
+    app.kubernetes.io/version: "12.2"
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 8096
+      protocol: TCP
+      targetPort: http
+  selector:
+    app.kubernetes.io/name: jellyfin
+    app.kubernetes.io/instance: jellyfin
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jellyfin
+  namespace: apps
+  labels:
+    app.kubernetes.io/name: jellyfin
+    app.kubernetes.io/instance: jellyfin
+    app.kubernetes.io/version: "12.2"
+spec:
+  strategy:
+    type: Recreate
+  replicas: 1
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: jellyfin
+      app.kubernetes.io/instance: jellyfin
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: jellyfin
+        app.kubernetes.io/instance: jellyfin
+        app.kubernetes.io/version: "12.2"
+    spec:
+      serviceAccountName: jellyfin
+      securityContext:
+        runAsUser: {{ .Values.MY_UID }}
+        runAsGroup: {{ .Values.MY_UID }}
+        seLinuxOptions:
+          level: s0
+      initContainers:
+        # Jellyfin applies X-Forwarded-For only when KnownProxies is non-empty.
+        # Traefik's pod IP is dynamic, so trust the k3s pod CIDR. Idempotent:
+        # patches an existing network.xml, seeds a minimal one on a fresh volume.
+        - name: known-proxies
+          image: busybox:1.38
+          command:
+            - sh
+            - -c
+            - |
+              set -eu
+              file=/config/config/network.xml
+              proxy=10.42.0.0/16
+              if [ ! -f "$file" ]; then
+                mkdir -p /config/config
+                printf '%s\n' \
+                  '<?xml version="1.0" encoding="utf-8"?>' \
+                  '<NetworkConfiguration>' \
+                  "  <KnownProxies><string>$proxy</string></KnownProxies>" \
+                  '</NetworkConfiguration>' > "$file"
+                exit 0
+              fi
+              if grep -q "<string>$proxy</string>" "$file"; then
+                exit 0
+              fi
+              if grep -q '<KnownProxies />' "$file"; then
+                sed -i "s#<KnownProxies />#<KnownProxies><string>$proxy</string></KnownProxies>#" "$file"
+              else
+                sed -i "s#<KnownProxies>#<KnownProxies><string>$proxy</string>#" "$file"
+              fi
+          volumeMounts:
+            - name: config
+              mountPath: /config
+      containers:
+        - name: jellyfin
+          securityContext:
+            allowPrivilegeEscalation: false
+          image: docker.io/jellyfin/jellyfin:12.2
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8096
+              protocol: TCP
+          startupProbe:
+            httpGet:
+              path: /health
+              port: 8096
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 120
+          livenessProbe:
+            tcpSocket:
+              port: 8096
+            initialDelaySeconds: 120
+            periodSeconds: 30
+            timeoutSeconds: 3
+            failureThreshold: 3
+          readinessProbe:
+            tcpSocket:
+              port: 8096
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          resources:
+            limits:
+              memory: 1.5Gi
+              infra.local/dri: "1"
+            requests:
+              memory: 512Mi
+              cpu: 20m
+              infra.local/dri: "1"
+          volumeMounts:
+            - mountPath: /config
+              name: config
+            - mountPath: /media
+              name: media
+            - mountPath: /cache
+              name: cache
+            - mountPath: /media/TV
+              name: tv
+              readOnly: true
+            - mountPath: /media/YouTube
+              name: youtube
+              readOnly: true
+            - mountPath: /media/Arrstack
+              name: arrstack-media
+      volumes:
+        - name: config
+          persistentVolumeClaim:
+            claimName: jellyfin-config-pvc
+        - name: media
+          emptyDir: {}
+        - name: cache
+          emptyDir: {}
+        - name: tv
+          persistentVolumeClaim:
+            claimName: jellyfin-tv-pvc
+        - name: youtube
+          persistentVolumeClaim:
+            claimName: jellyfin-youtube-pvc
+        - name: arrstack-media
+          persistentVolumeClaim:
+            claimName: arrstack-media-pvc
+---
 apiVersion: traefik.io/v1alpha1
 kind: Middleware
 metadata:
