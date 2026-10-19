@@ -18,9 +18,11 @@ The GeoIP service, image source, `geoipupdate` secret, and Traefik wait-for-geoi
 
 The local WASM header-gate plugin and its `authelia-with-optional-header-gate` chain were removed. The six apps with their own authentication (Home Assistant, Immich, Jellyfin, Linkwarden, Navidrome, Opodsync) no longer have an Authelia forward-auth filter. For first boot, set `BOOTSTRAP_PRIVATE_APPS: "true"` so those six routes keep only the `websecure` parentRef (LAN/VPN) until Authelia is Ready. `validate.sh` warns while the flag is true. Jellyfin's chart gets a 120s-startup-tolerant liveness probe (the chart schema has no `livenessProbe.enabled` flag).
 
-## State Backups app (restic)
+## State Backups task (restic)
 
-The backup system is one D$CPLN app (`apps/state-backup`, reusing the Compose State app's settings/schedule UI) writing a single encrypted, deduplicated restic repository at `state_backups/restic`. It captures the `auto-backup=true` PVCs and the srv0/vps0 Compose state; the app is backup-only. The vps0 Compose state uses the existing app-generated SSH key, now carried in the `state-backup-vps0-ssh` Secret; a recovery copy lives outside the cluster. The app runs as root because the NFS app data is owned by fixed Postgres/Redis UIDs. Restore is the manual `scripts/restic-restore.sh` path so a fresh cluster does not depend on the app being deployed. The old tar path (`pvc-backup`, `pvc.sh`, `compose_state_backups/`) is retained only until a restic restore is verified.
+The backup system is the scheduled `State Backups` task in the D$CPLN Task Runner, driven by the private `dscpln-config` repo (`apps/state-backup/config.json` + `tools/backup/state-backup.sh`). It writes a single encrypted, deduplicated restic repository at `state_backups/restic`, capturing the `auto-backup=true` PVCs and the srv0/vps0 Compose state; the task is backup-only. The vps0 Compose state uses the existing app-generated SSH key, now carried in the `state-backup-vps0-ssh` Secret; a recovery copy lives outside the cluster. The Task Runner backup instance runs as root because the NFS app data is owned by fixed Postgres/Redis UIDs. Restore is the manual `scripts/restic-restore.sh` path so a fresh cluster does not depend on Task Runner being deployed. The old tar path (`pvc-backup`, `pvc.sh`, `compose_state_backups/`) is retained only until a restic restore is verified.
+
+The restic repository was re-initialized on 2026-10-19 after the old key was lost during the migration; the previous repository is preserved as `state_backups/restic-lost-key-20261019-165529` until the new history is verified.
 
 ## Prometheus instead of Mimir
 

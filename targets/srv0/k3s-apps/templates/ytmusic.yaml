@@ -38,11 +38,11 @@ spec:
         infra.local/hostpath-main: "true"
       securityContext:
         # s0: downloads are written into the shared Main tree.
-        {{- include "dscpln.podSecurityContext" (dict "uid" .Values.MY_UID "seLevel" "s0") | nindent 8 }}
+        {{- include "dscpln.podSecurityContext" (dict "uid" .Values.MY_UID "seType" "spc_t" "seLevel" "s0") | nindent 8 }}
       automountServiceAccountToken: false
       containers:
         - name: ytmusic
-          image: imranrdev/dscpln-ytmusic:latest@sha256:63f8148c1852bba16e6727148f6c5497a723b0a4d0c55671ea00ae65a770beea
+          image: imranrdev/dscpln-ytmusic:latest@sha256:c0ff84bf8a8f1482be7fd758b7830c1820022aaeee485d6aa50795c202d64dc0
           securityContext:
             {{- include "dscpln.containerSecurityContext" (dict "uid" .Values.MY_UID "readOnlyRootFilesystem" true) | nindent 12 }}
           ports:
@@ -53,6 +53,10 @@ spec:
               value: /home/imranr
             - name: DSCPLN_DATA_DIR
               value: /data
+            - name: DSCPLN_CONFIG_FILE
+              value: /config/config.json
+            - name: DSCPLN_STATE_FILE
+              value: /data/state.json
             - name: XDG_CACHE_HOME
               value: /data/cache
             - name: TZ
@@ -80,6 +84,9 @@ spec:
               mountPath: /tmp
             - name: config
               mountPath: /data
+            - name: config-src
+              mountPath: /config
+              readOnly: true
             - name: main
               mountPath: /home/imranr/Main/Media/Music
       volumes:
@@ -90,6 +97,10 @@ spec:
         - name: config
           persistentVolumeClaim:
             claimName: ytmusic-pvc
+        - name: config-src
+          hostPath:
+            path: {{ .Values.MAIN_PARENT_DIR }}/Main/Code/Automation/dscpln-config/apps/ytmusic
+            type: Directory
         - name: main
           persistentVolumeClaim:
             claimName: hostpath-main-node-music-pvc

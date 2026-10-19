@@ -3,23 +3,8 @@
 # copies into the Main/Media tree, serves a web UI, and cleans up processed
 # originals into trash only after verifying the destination copy.
 #
-# Config lives on a Longhorn volume (auto-backed-up) and is edited from the UI;
-# trash + logs live on a host path outside any synced tree.
----
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: file-pipelines-config-pvc
-  namespace: apps
-  labels:
-    auto-backup: "true"
-spec:
-  accessModes:
-    - ReadWriteMany
-  storageClassName: nfs-apps
-  resources:
-    requests:
-      storage: 1Gi
+# Config is the private dscpln-config checkout (edited from the UI); trash and
+# logs live on a host path outside any synced tree.
 ---
 # Scoped access for remote pipeline runs: create/watch/delete Jobs, read their
 # pod logs (streamed into the app log) and check node readiness.
@@ -94,13 +79,13 @@ spec:
       securityContext:
         # s0: the pod reads Syncthing-written trees and writes files that host
         # processes and other containers must be able to read back.
-        {{- include "dscpln.podSecurityContext" (dict "uid" .Values.MY_UID "seLevel" "s0") | nindent 8 }}
+        {{- include "dscpln.podSecurityContext" (dict "uid" .Values.MY_UID "seType" "spc_t" "seLevel" "s0") | nindent 8 }}
       serviceAccountName: file-pipelines
       automountServiceAccountToken: true
       containers:
         - name: file-pipelines
           # Pin by digest after the first push so Renovate can bump deliberately.
-          image: imranrdev/dscpln-file-pipelines:latest@sha256:fa1ad68f7c3be050404a3fb149fe28f47c4f3a7aa5c4c02acacf1c4e17842f40
+          image: imranrdev/dscpln-file-pipelines:latest@sha256:75370dd3529b42d4a1c4fde9fdf00ad38b9a438a7fa34c7e77defe2231c1d1c2
           securityContext:
             {{- include "dscpln.containerSecurityContext" (dict "uid" .Values.MY_UID "readOnlyRootFilesystem" true) | nindent 12 }}
           ports:
@@ -175,8 +160,9 @@ spec:
           persistentVolumeClaim:
             claimName: hostpath-main-node-whatsapp-pvc
         - name: config
-          persistentVolumeClaim:
-            claimName: file-pipelines-config-pvc
+          hostPath:
+            path: {{ .Values.MAIN_PARENT_DIR }}/Main/Code/Automation/dscpln-config/apps/file-pipelines
+            type: Directory
         - name: appdata
           persistentVolumeClaim:
             claimName: hostpath-main-node-file-pipelines-pvc

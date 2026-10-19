@@ -8,7 +8,7 @@
 #
 # Exceptions:
 #   - qbittorrent: BitTorrent peers connect to arbitrary public ports.
-#   - state-backup: SSHes to the Compose state target (vps0).
+#   - task-runner: SSHes to the Compose state target (vps0).
 #   - homeassistant/frigate: LAN integrations and camera RTSP.
 #   - opencanary: a honeypot with its own strict policy; it must NOT inherit
 #     the cluster/internet allows, so the broad policies exclude it.
@@ -142,16 +142,16 @@ spec:
               - 169.254.0.0/16
               - 100.64.0.0/10
 ---
-# state-backup backs up the vps0 Compose state over SSH.
+# task-runner (the backup instance) backs up the vps0 Compose state over SSH.
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: allow-state-backup-egress
+  name: allow-task-runner-ssh-egress
   namespace: apps
 spec:
   podSelector:
     matchLabels:
-      app: state-backup
+      app: task-runner
   policyTypes:
     - Egress
   egress:

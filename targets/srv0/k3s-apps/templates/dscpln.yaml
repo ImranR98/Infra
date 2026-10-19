@@ -1,24 +1,3 @@
-{{- define "dscpln.config" -}}
-{
-  "port": 3300,
-  "dataProvider": "excelDataProvider",
-  "providers": {
-    "excelDataProvider": {
-      "workbookFile": "{{ .Values.DSCPLN_LEDGER_PATH }}/{{ .Values.DSCPLN_WORKBOOK_FILE }}",
-      "transactionsSheet": "Transactions",
-      "constantsSheet": "Constants"
-    }
-  },
-  "notifications": {
-    "checkIntervalMinutes": 30,
-    "onlyWarnOnce": false
-  },
-  "api": {
-    "stateFile": "{{ .Values.DSCPLN_LEDGER_PATH }}/.dscpln-api-state.json"
-  }
-}
-{{- end }}
----
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -35,16 +14,13 @@ spec:
     metadata:
       labels:
         app: balance-xlsx
-      annotations:
-        # Mounted Secret contents only refresh on restart.
-        checksum/dscpln-config: {{ include "dscpln.config" . | sha256sum }}
     spec:
       securityContext:
-        {{- include "dscpln.podSecurityContext" (dict "uid" .Values.MY_UID "seLevel" "s0") | nindent 8 }}
+        {{- include "dscpln.podSecurityContext" (dict "uid" .Values.MY_UID "seType" "spc_t" "seLevel" "s0") | nindent 8 }}
       automountServiceAccountToken: false
       containers:
         - name: balance-xlsx
-          image: imranrdev/dscpln-balance:latest@sha256:5d5aed0b1df4b1d3d995e27b2cd43340ee47739b08dca9728fb0320d261c636f
+          image: imranrdev/dscpln-balance:latest@sha256:f833b55d50856f073a412d41f2f1388decce60bcfea9f3c8778f17d0bc108951
           securityContext:
             {{- include "dscpln.containerSecurityContext" (dict "uid" .Values.MY_UID "readOnlyRootFilesystem" true) | nindent 12 }}
           ports:
@@ -66,6 +42,8 @@ spec:
               value: "--max-old-space-size=1536"
             - name: BASE_PATH
               value: /balance
+            - name: DSCPLN_CONFIG
+              value: /config/config.json
             - name: AUTH_MODE
               value: proxy-header
             # The whole /balance/api prefix bypasses Authelia (scripts call it
@@ -82,8 +60,7 @@ spec:
             - name: tmp
               mountPath: /tmp
             - name: config
-              mountPath: /app/config.json
-              subPath: config.json
+              mountPath: /config
               readOnly: true
             # The git-tracked ledger repo is mounted at its host path so the
             # app can read Balance.xlsx and commit changes to it.
@@ -95,8 +72,9 @@ spec:
             medium: Memory
             sizeLimit: 256Mi
         - name: config
-          secret:
-            secretName: dscpln-config
+          hostPath:
+            path: {{ .Values.MAIN_PARENT_DIR }}/Main/Code/Automation/dscpln-config/apps/balance-xlsx
+            type: Directory
         - name: dscpln-ledger
           persistentVolumeClaim:
             claimName: dscpln-ledger-pvc
@@ -160,12 +138,3 @@ spec:
         - port: 3300
   policyTypes:
     - Ingress
----
-apiVersion: v1
-kind: Secret
-metadata:
-  name: dscpln-config
-  namespace: apps
-type: Opaque
-stringData:
-  config.json: {{ include "dscpln.config" . | quote }}

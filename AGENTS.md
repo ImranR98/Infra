@@ -44,7 +44,7 @@ docker compose --env-file config/srv0/compose.env \
 # pc/bigpc/rpi: docker compose -f targets/<t>/compose/compose.yaml up -d
 #   (no --env-file; the project-dir machine-fact .env auto-loads)
 
-# Backups (State Backups app; manual restore):
+# Backups (Task Runner scheduled task; manual restore):
 bash scripts/restic-restore.sh list
 bash scripts/restic-restore.sh pvc <pvc-name> [snapshot] [--live]
 bash scripts/restic-restore.sh compose srv0|vps0 [snapshot] [--live]

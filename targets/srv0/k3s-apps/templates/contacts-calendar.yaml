@@ -39,11 +39,11 @@ spec:
         infra.local/hostpath-main: "true"
       securityContext:
         # s0: git commits and exports land in the shared Main tree.
-        {{- include "dscpln.podSecurityContext" (dict "uid" .Values.MY_UID "seLevel" "s0") | nindent 8 }}
+        {{- include "dscpln.podSecurityContext" (dict "uid" .Values.MY_UID "seType" "spc_t" "seLevel" "s0") | nindent 8 }}
       automountServiceAccountToken: false
       containers:
         - name: contacts-calendar
-          image: imranrdev/dscpln-contacts:latest@sha256:77c98bdff2052fc01dd7b636212a4be31acb41b7b88a3953bb6ab2541db74d05
+          image: imranrdev/dscpln-contacts:latest@sha256:544884fb5ce0f35ee1958a4fa692e4868da9c82d1189226bcace4445152c67e1
           securityContext:
             {{- include "dscpln.containerSecurityContext" (dict "uid" .Values.MY_UID "readOnlyRootFilesystem" true) | nindent 12 }}
           ports:
@@ -54,6 +54,10 @@ spec:
               value: /home/imranr
             - name: DSCPLN_DATA_DIR
               value: /data
+            - name: DSCPLN_CONFIG_FILE
+              value: /config/config.json
+            - name: DSCPLN_STATE_FILE
+              value: /data/state.json
             - name: TZ
               value: America/Toronto
             - name: BASE_PATH
@@ -87,6 +91,9 @@ spec:
               mountPath: /tmp
             - name: config
               mountPath: /data
+            - name: config-src
+              mountPath: /config
+              readOnly: true
             - name: main
               mountPath: /home/imranr/Main/Backups
       volumes:
@@ -97,6 +104,10 @@ spec:
         - name: config
           persistentVolumeClaim:
             claimName: contacts-config-pvc
+        - name: config-src
+          hostPath:
+            path: {{ .Values.MAIN_PARENT_DIR }}/Main/Code/Automation/dscpln-config/apps/contacts-calendar
+            type: Directory
         - name: main
           persistentVolumeClaim:
             claimName: hostpath-main-node-backups-pvc

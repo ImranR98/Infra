@@ -261,7 +261,8 @@ FILEBROWSER_JWT_TOKEN_SECRET: "change_me" # openssl rand -base64 32
 # Directory of the git-tracked Excel ledger (mounted at the same path in the
 # pod so the app can read the workbook and commit its changes).
 DSCPLN_LEDGER_PATH: "/path/to/data/Main/Documents/Balance"
-DSCPLN_WORKBOOK_FILE: "Balance.xlsx"
+# Balance app config (workbook path, sheets, API state) lives in the private
+# dscpln-config repo under apps/balance-xlsx/.
 
 # ====== backupctl (bridge instance) ======
 # Git identity for commits made by backupctl tasks (the app also runs on srv0;

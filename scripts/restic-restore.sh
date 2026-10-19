@@ -23,12 +23,26 @@ source "$INFRA_ROOT/scripts/common.sh"
 
 STATE_BACKUP_DIR="${STATE_BACKUP_DIR:-$INFRA_ROOT/state_backups}"
 RESTIC_REPOSITORY="${RESTIC_REPOSITORY:-$STATE_BACKUP_DIR/restic}"
-RESTIC_PASSWORD="${RESTIC_PASSWORD:-dscpln-state-backups-default-2026}"
+DSCPLN_CONFIG_DIR="${DSCPLN_CONFIG_DIR:-$(cd "$INFRA_ROOT/.." && pwd)/Code/Automation/dscpln-config}"
 RESTIC_CACHE_DIR="${RESTIC_CACHE_DIR:-$HOME/.cache/restic}"
 SSH_KEY_FILE="${SSH_KEY_FILE:-$INFRA_ROOT/config/state-backup-vps0/id_ed25519}"
 KNOWN_HOSTS="${KNOWN_HOSTS:-$HOME/.ssh/known_hosts}"
 VPS0_HOST="${VPS0_HOST:-vps0.imranr.dev}"
 VPS0_USER="${VPS0_USER:-root}"
+
+# The repository password lives outside git in the private dscpln-config
+# checkout; the old public default was removed during the 2026-10 migration.
+if [ -z "${RESTIC_PASSWORD:-}" ]; then
+    if [ -r "$DSCPLN_CONFIG_DIR/secrets/restic-password" ]; then
+        RESTIC_PASSWORD="$(cat "$DSCPLN_CONFIG_DIR/secrets/restic-password")"
+    elif [ -r "$DSCPLN_CONFIG_DIR/secrets.json" ] && command -v jq >/dev/null 2>&1; then
+        RESTIC_PASSWORD="$(jq -r '.restic_password // empty' "$DSCPLN_CONFIG_DIR/secrets.json")"
+    fi
+fi
+[ -n "${RESTIC_PASSWORD:-}" ] || {
+    echo "RESTIC_PASSWORD is not set and $DSCPLN_CONFIG_DIR/secrets/restic-password is missing" >&2
+    exit 1
+}
 
 export RESTIC_REPOSITORY RESTIC_PASSWORD RESTIC_CACHE_DIR
 

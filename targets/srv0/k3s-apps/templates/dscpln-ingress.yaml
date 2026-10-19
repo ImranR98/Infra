@@ -173,30 +173,6 @@ spec:
     - matches:
         - path:
             type: PathPrefix
-            value: /state-backup
-      filters:
-        - type: ExtensionRef
-          extensionRef:
-            group: traefik.io
-            kind: Middleware
-            name: geoblock
-        - type: ExtensionRef
-          extensionRef:
-            group: traefik.io
-            kind: Middleware
-            name: crowdsec-bouncer
-        - type: ExtensionRef
-          extensionRef:
-            group: traefik.io
-            kind: Middleware
-            name: forwardauth-authelia
-      backendRefs:
-        - name: state-backup
-          namespace: apps
-          port: 8080
-    - matches:
-        - path:
-            type: PathPrefix
             value: /ytmusic
       filters:
         - type: ExtensionRef

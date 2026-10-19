@@ -2,21 +2,6 @@
 # the owner of the notification settings every app relays through.
 # Reachable at the host root behind Authelia.
 ---
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: portal-config-pvc
-  namespace: apps
-  labels:
-    auto-backup: "true"
-spec:
-  accessModes:
-    - ReadWriteMany
-  storageClassName: nfs-apps
-  resources:
-    requests:
-      storage: 1Gi
----
 # Apps post notifications to the portal; deny-all-ingress otherwise blocks
 # pod-to-pod traffic.
 apiVersion: networking.k8s.io/v1
@@ -38,7 +23,6 @@ spec:
                   - balance-xlsx
                   - file-pipelines
                   - contacts-calendar
-                  - state-backup
                   - ytmusic
                   - task-runner
       ports:
@@ -64,11 +48,11 @@ spec:
         app: portal
     spec:
       securityContext:
-        {{- include "dscpln.podSecurityContext" (dict "uid" .Values.MY_UID) | nindent 8 }}
+        {{- include "dscpln.podSecurityContext" (dict "uid" .Values.MY_UID "seType" "spc_t" "seLevel" "s0") | nindent 8 }}
       automountServiceAccountToken: false
       containers:
         - name: portal
-          image: imranrdev/dscpln-portal:latest@sha256:57498b48c2f1c42ced8228ca76692a77e73cce2f2f8be3ed65a202eceab3a762
+          image: imranrdev/dscpln-portal:latest@sha256:5864aad4e4cdb0837d339cb784368d278da2d511fe1df4f6c95ca98ba911c993
           securityContext:
             {{- include "dscpln.containerSecurityContext" (dict "uid" .Values.MY_UID "readOnlyRootFilesystem" true) | nindent 12 }}
           ports:
@@ -85,8 +69,8 @@ spec:
             - name: AUTH_EXEMPT_PATHS
               value: /api/notify
             # Notification settings (ntfy URL + token) live on the portal PVC.
-            - name: DSCPLN_DATA_DIR
-              value: /data
+            - name: DSCPLN_CONFIG_FILE
+              value: /config/config.json
           resources:
             limits:
               memory: 128Mi
@@ -98,15 +82,16 @@ spec:
           volumeMounts:
             - name: tmp
               mountPath: /tmp
-            - name: config
-              mountPath: /data
+            - name: config-src
+              mountPath: /config
       volumes:
         - name: tmp
           emptyDir:
             medium: Memory
             sizeLimit: 128Mi
-        - name: config
-          persistentVolumeClaim:
-            claimName: portal-config-pvc
+        - name: config-src
+          hostPath:
+            path: {{ .Values.MAIN_PARENT_DIR }}/Main/Code/Automation/dscpln-config/apps/portal
+            type: Directory
 ---
 {{ include "dscpln.service" (dict "name" "portal" "targetPort" "http" "port" 8080) }}
