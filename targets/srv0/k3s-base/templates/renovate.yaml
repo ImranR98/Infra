@@ -40,7 +40,7 @@ spec:
               level: s0
           containers:
             - name: renovate
-              image: renovate/renovate:44.166.0
+              image: renovate/renovate:44.167.5
               env:
                 - name: NTFY_URL
                   value: "http://ntfy.base.svc.cluster.local:3000"
