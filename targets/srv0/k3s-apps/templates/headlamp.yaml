@@ -12,6 +12,10 @@ spec:
   createNamespace: false
   version: 0.46.0
   valuesContent: |-
+    image:
+      registry: ghcr.io
+      repository: headlamp-k8s/headlamp
+      tag: v0.46.0
     # The OIDC secret is an external Secret consumed via envFrom; rotate-on-restart.
     podAnnotations:
       checksum/headlamp-oidc: {{ .Values.AUTHELIA_HEADLAMP_CLIENT_SECRET_HASHABLE | sha256sum }}

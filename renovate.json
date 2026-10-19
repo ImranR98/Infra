@@ -204,14 +204,48 @@
       "enabled": false
     },
     {
-      "description": "D$CPLN app images are built and digest-pinned by the monorepo's scripts/build-all.sh --pin; Renovate PRs for our own :latest digests only add noise",
+      "description": "D$CPLN app images are built/pushed by the monorepo; Renovate refreshes the :latest digest as a safety net",
       "matchDatasources": [
         "docker"
       ],
       "matchPackageNames": [
         "/^imranrdev\\/dscpln-/"
       ],
-      "enabled": false
+      "matchUpdateTypes": [
+        "digest",
+        "pinDigest"
+      ],
+      "groupName": "D$CPLN image digests"
+    },
+    {
+      "description": "Authelia charts use the ghcr.io registry; track the actual image, not the registry-less Docker Hub name",
+      "matchDatasources": [
+        "docker"
+      ],
+      "matchPackageNames": [
+        "authelia/authelia"
+      ],
+      "overridePackageName": "ghcr.io/authelia/authelia"
+    },
+    {
+      "description": "Headlamp charts use the ghcr.io registry; track the actual image",
+      "matchDatasources": [
+        "docker"
+      ],
+      "matchPackageNames": [
+        "headlamp-k8s/headlamp"
+      ],
+      "overridePackageName": "ghcr.io/headlamp-k8s/headlamp"
+    },
+    {
+      "description": "Seerr charts use the ghcr.io registry; track the actual image",
+      "matchDatasources": [
+        "docker"
+      ],
+      "matchPackageNames": [
+        "seerr-team/seerr"
+      ],
+      "overridePackageName": "ghcr.io/seerr-team/seerr"
     },
     {
       "description": "immich postgres: same-shape tags only (major-vectorchordX.Y.Z-pgvectorA.B.C), locked to the current postgres major via the compatibility group so pg-major jumps stay manual",

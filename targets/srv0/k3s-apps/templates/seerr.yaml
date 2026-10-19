@@ -11,6 +11,10 @@ spec:
   createNamespace: false
   version: 3.10.0
   valuesContent: |-
+    image:
+      registry: ghcr.io
+      repository: seerr-team/seerr
+      tag: v3.5.0
     fullnameOverride: seerr
     config:
       persistence:

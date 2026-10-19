@@ -11,6 +11,9 @@ spec:
   targetNamespace: base
   version: 0.24.2
   valuesContent: |-
+    image:
+      repository: crowdsecurity/crowdsec
+      tag: v1.8.1
     container_runtime: containerd
 
     tls:

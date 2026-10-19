@@ -28,6 +28,7 @@ usage() {
     echo "    and placeholder values"
     echo "  - helm lint + helm template of each k3s chart (targets/<target>/k3s-base,"
     echo "    k3s-apps), rejecting '<no value>' renders"
+    echo "  - every HelmChart repo is in the approved project-maintained allowlist"
     echo "  - local Traefik plugin copies under files/ match their plugins/ sources"
     echo "  - Gateway certificateRefs resolve to rendered Certificates (the two"
     echo "    shared edge Certificates) and cross-namespace refs are covered by a"
@@ -290,6 +291,61 @@ check_helm() {
     [ "$ok" = 1 ]
 }
 
+# check_chart_repos <target_dir> — only project-maintained Helm chart repos are
+# allowed. Home Assistant is the single approved third-party exception (no
+# official Home Assistant chart exists). Apps with version-sensitive charts
+# should pin image.repository/image.tag so Renovate tracks the app image.
+check_chart_repos() {
+    local target_dir="$1"
+    local allowed=(
+        "https://charts.authelia.com"
+        "https://charts.jetstack.io"
+        "https://crowdsecurity.github.io/helm-charts"
+        "https://raw.githubusercontent.com/kubernetes-csi/csi-driver-nfs/master/charts"
+        "https://kubernetes-sigs.github.io/descheduler"
+        "https://grafana.github.io/helm-charts"
+        "https://kubernetes-sigs.github.io/headlamp"
+        "oci://ghcr.io/immich-app/immich-charts/immich"
+        "oci://ghcr.io/seerr-team/seerr/seerr-chart"
+        "https://helm.openwebui.com"
+        "https://blog.pavelsklenar.com/home-assistant-helm-chart"
+    )
+    local ok=1 f repo chart a found
+    for f in "$target_dir"/k3s-base/templates/*.yaml "$target_dir"/k3s-apps/templates/*.yaml; do
+        [ -f "$f" ] || continue
+        while IFS= read -r repo; do
+            repo="${repo#"${repo%%[![:space:]]*}"}"
+            repo="${repo#repo: }"
+            repo="${repo%/}"
+            found=0
+            for a in "${allowed[@]}"; do
+                [ "$repo" = "$a" ] && { found=1; break; }
+            done
+            if [ "$found" = 0 ]; then
+                _err "ERROR: unapproved Helm chart repo in ${f#"$INFRA_ROOT"/}: $repo"
+                ok=0
+            fi
+        done < <(grep -hE '^  repo: ' "$f" || true)
+        while IFS= read -r chart; do
+            chart="${chart#"${chart%%[![:space:]]*}"}"
+            chart="${chart#chart: }"
+            case "$chart" in
+                oci://*) ;;
+                *) continue ;;
+            esac
+            found=0
+            for a in "${allowed[@]}"; do
+                [ "$chart" = "$a" ] && { found=1; break; }
+            done
+            if [ "$found" = 0 ]; then
+                _err "ERROR: unapproved Helm OCI chart in ${f#"$INFRA_ROOT"/}: $chart"
+                ok=0
+            fi
+        done < <(grep -hE '^  chart: oci://' "$f" || true)
+    done
+    [ "$ok" = 1 ]
+}
+
 [ $# -ge 1 ] || usage
 require_target "$1"
 target_dir="$INFRA_ROOT/targets/$TARGET"
@@ -302,7 +358,7 @@ else
     echo "validate: target '$TARGET' has no config_template (no secret variables) — nothing to check"
 fi
 
-[ -d "$target_dir/k3s-base" ] && { check_helm "$target_dir" || ok=0; }
+[ -d "$target_dir/k3s-base" ] && { check_helm "$target_dir" || ok=0; check_chart_repos "$target_dir" || ok=0; }
 
 [ -d "$target_dir/compose" ] && { check_compose_mounts "$target_dir" || ok=0; }
 

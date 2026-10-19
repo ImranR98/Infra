@@ -12,6 +12,9 @@ spec:
   createNamespace: false
   version: 0.37.0
   valuesContent: |-
+    image:
+      repository: registry.k8s.io/descheduler/descheduler
+      tag: v0.37.0
     kind: CronJob
     schedule: "*/2 * * * *"
     # A failed run (e.g. apiserver down during a k3s restart) retries up to

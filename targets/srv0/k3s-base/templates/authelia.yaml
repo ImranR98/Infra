@@ -12,6 +12,10 @@ spec:
   createNamespace: false
   version: 0.11.22
   valuesContent: |-
+    image:
+      registry: ghcr.io
+      repository: authelia/authelia
+      tag: 4.39.28
     pod:
       kind: Deployment
       # The external Secrets this chart mounts (users DB, OIDC secrets, DB
