@@ -1,4 +1,149 @@
 ---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: ollama
+  namespace: apps
+  labels:
+    app.kubernetes.io/name: ollama
+    app.kubernetes.io/instance: ollama
+    app.kubernetes.io/version: "0.40.6"
+automountServiceAccountToken: true
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ollama
+  namespace: apps
+  labels:
+    app.kubernetes.io/name: ollama
+    app.kubernetes.io/instance: ollama
+    app.kubernetes.io/version: "0.40.6"
+spec:
+  type: ClusterIP
+  ports:
+    - port: 11434
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    app.kubernetes.io/name: ollama
+    app.kubernetes.io/instance: ollama
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ollama
+  namespace: apps
+  labels:
+    app.kubernetes.io/name: ollama
+    app.kubernetes.io/instance: ollama
+    app.kubernetes.io/version: "0.40.6"
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: ollama
+      app.kubernetes.io/instance: ollama
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: ollama
+        app.kubernetes.io/instance: ollama
+        app.kubernetes.io/version: "0.40.6"
+    spec:
+      serviceAccountName: ollama
+      terminationGracePeriodSeconds: 120
+      securityContext:
+        fsGroup: {{ .Values.MY_UID }}
+        runAsGroup: {{ .Values.MY_UID }}
+        runAsUser: {{ .Values.MY_UID }}
+        seLinuxOptions:
+          level: s0
+      initContainers:
+        # hostPath volumes do not get fsGroup ownership management, and
+        # DirectoryOrCreate leaves the dir root-owned with var_lib_t label.
+        # Fix ownership for the uid-1000 container and SELinux label so the
+        # container can write, on whichever node the pod is scheduled.
+        - name: ollama-models-prep
+          image: fedora:44
+          command:
+            - sh
+            - -c
+            - |
+              chown -R {{ .Values.MY_UID }}:{{ .Values.MY_UID }} /var/lib/ollama
+              chcon -R -t container_file_t /var/lib/ollama
+          securityContext:
+            runAsUser: 0
+            runAsGroup: 0
+            seLinuxOptions:
+              level: s0
+              type: spc_t
+          volumeMounts:
+            - name: ollama-models
+              mountPath: /var/lib/ollama
+      containers:
+        - name: ollama
+          securityContext:
+            allowPrivilegeEscalation: false
+          image: ollama/ollama:0.40.6-rocm
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 11434
+              protocol: TCP
+          env:
+            - name: OLLAMA_HOST
+              value: "0.0.0.0:11434"
+            - name: OLLAMA_MODELS
+              value: /.ollama
+          resources:
+            limits:
+              infra.local/amd: "1"
+            requests:
+              infra.local/amd: "1"
+              memory: 2Gi
+          volumeMounts:
+            # The chart rendered its own emptyDir at this path; keep it
+            # mounted out of the way. Real model storage is the hostPath.
+            - name: ollama-data
+              mountPath: /.ollama-unused
+            - name: ollama-models
+              mountPath: /.ollama
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 60
+            periodSeconds: 10
+            timeoutSeconds: 5
+            successThreshold: 1
+            failureThreshold: 6
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 5
+            timeoutSeconds: 3
+            successThreshold: 1
+            failureThreshold: 6
+      volumes:
+        - name: ollama-data
+          emptyDir: {}
+        - name: ollama-models
+          hostPath:
+            path: /var/lib/ollama
+            type: DirectoryOrCreate
+      tolerations:
+        - effect: PreferNoSchedule
+          key: scheduling-discouraged
+          operator: Equal
+          value: "true"
+---
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
