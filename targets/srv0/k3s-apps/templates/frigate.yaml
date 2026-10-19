@@ -1,4 +1,231 @@
 ---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: frigate
+  namespace: apps
+  labels:
+    app.kubernetes.io/name: frigate
+    app.kubernetes.io/instance: frigate
+    app.kubernetes.io/version: "0.18.2"
+data:
+  config.yml: |-
+    mqtt:
+      host: mosquitto
+      port: 1883
+      user: frigate
+      password: '{FRIGATE_MQTT_PASSWORD}'
+    ffmpeg:
+      # VAAPI decode on srv0's Iris Xe (renderD128). Explicit device because
+      # the auto-selector probes devices in arbitrary order. -hwaccel_output_format
+      # nv12: decode on the GPU but deliver CPU frames, so the detect/record
+      # filter chains (fps, scale) work. The standard image auto-detects
+      # OpenVINO on the Intel GPU for the detector and enrichments.
+      hwaccel_args: -hwaccel_flags allow_profile_mismatch -hwaccel vaapi -hwaccel_device /dev/dri/renderD128 -hwaccel_output_format nv12
+      retry_interval: 5
+    detectors:
+      openvino:
+        type: openvino
+        device: GPU
+    # Bundled OpenVINO default model (SSDLite MobileNet v2, FP16 IR).
+    # device: GPU = the Iris Xe iGPU via OpenVINO.
+    model:
+      width: 300
+      height: 300
+      input_tensor: nhwc
+      input_pixel_format: bgr
+      path: /openvino-model/ssdlite_mobilenet_v2.xml
+      labelmap_path: /openvino-model/coco_91cl_bkgr.txt
+    # Deployment-specific config (go2rtc streams, cameras) comes from
+    # FRIGATE_ADDITIONAL_CONFIG in targets/srv0/config_template/values.yaml
+{{ .Values.FRIGATE_ADDITIONAL_CONFIG | indent 6 }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: frigate
+  namespace: apps
+  labels:
+    app.kubernetes.io/name: frigate
+    app.kubernetes.io/instance: frigate
+    app.kubernetes.io/version: "0.18.2"
+spec:
+  type: ClusterIP
+  ipFamilyPolicy: SingleStack
+  ports:
+    - name: http
+      port: 5000
+      protocol: TCP
+      targetPort: http
+    - name: http-auth
+      port: 8971
+      protocol: TCP
+      targetPort: http-auth
+    - name: rtmp
+      port: 1935
+      protocol: TCP
+      targetPort: rtmp
+    - name: rtsp
+      port: 8554
+      protocol: TCP
+      targetPort: rtsp
+    - name: webrtc-tcp
+      port: 8555
+      protocol: TCP
+      targetPort: webrtc-tcp
+    - name: webrtc-udp
+      port: 8555
+      protocol: UDP
+      targetPort: webrtc-udp
+  selector:
+    app.kubernetes.io/name: frigate
+    app.kubernetes.io/instance: frigate
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frigate
+  namespace: apps
+  labels:
+    app.kubernetes.io/name: frigate
+    app.kubernetes.io/instance: frigate
+    app.kubernetes.io/version: "0.18.2"
+spec:
+  replicas: 1
+  revisionHistoryLimit: 3
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: frigate
+      app.kubernetes.io/instance: frigate
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: frigate
+        app.kubernetes.io/instance: frigate
+        app.kubernetes.io/version: "0.18.2"
+      annotations:
+        checksum/config: {{ .Values.FRIGATE_ADDITIONAL_CONFIG | sha256sum }}
+    spec:
+      initContainers:
+        - name: copyconfig
+          image: ghcr.io/blakeblackshear/frigate:0.18.2
+          imagePullPolicy: IfNotPresent
+          volumeMounts:
+            - mountPath: /config.yml
+              subPath: config.yml
+              name: configmap
+            - mountPath: /config
+              name: config
+          command: ["cp"]
+          args: ["-v", "/config.yml", "/config/config.yml"]
+      containers:
+        - name: frigate
+          image: ghcr.io/blakeblackshear/frigate:0.18.2
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              add:
+                - PERFMON
+            seLinuxOptions:
+              level: s0
+          ports:
+            - name: http
+              containerPort: 5000
+              protocol: TCP
+            - name: http-auth
+              containerPort: 8971
+              protocol: TCP
+            - name: rtmp
+              containerPort: 1935
+              protocol: TCP
+            - name: rtsp
+              containerPort: 8554
+              protocol: TCP
+            - name: webrtc-udp
+              containerPort: 8555
+              protocol: UDP
+            - name: webrtc-tcp
+              containerPort: 8555
+              protocol: TCP
+            - name: go2rtc-admin
+              containerPort: 1984
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+              scheme: HTTP
+            initialDelaySeconds: 30
+            failureThreshold: 5
+            timeoutSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+              scheme: HTTP
+            initialDelaySeconds: 30
+            failureThreshold: 5
+            timeoutSeconds: 10
+          env:
+            - name: FRIGATE_MQTT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: frigate-values
+                  key: FRIGATE_MQTT_PASSWORD
+            - name: FRIGATE_RTSP_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: frigate-values
+                  key: FRIGATE_RTSP_PASSWORD
+          volumeMounts:
+            - mountPath: /config
+              name: config
+            - mountPath: /data
+              name: data
+            - mountPath: /media
+              name: media
+            - name: dshm
+              mountPath: /dev/shm
+            - name: tmp
+              mountPath: /tmp
+            - mountPath: /media/frigate
+              name: frigate-media
+          resources:
+            limits:
+              infra.local/dri: "1"
+              memory: 3Gi
+            requests:
+              cpu: 50m
+              infra.local/dri: "1"
+              memory: 1.5Gi
+      volumes:
+        - name: configmap
+          configMap:
+            name: frigate
+        - name: config
+          persistentVolumeClaim:
+            claimName: frigate-config-pvc
+        - name: data
+          emptyDir: {}
+        - name: media
+          emptyDir: {}
+        - name: dshm
+          emptyDir:
+            medium: Memory
+            sizeLimit: 1Gi
+        - name: tmp
+          emptyDir:
+            medium: Memory
+            sizeLimit: 1Gi
+        - name: frigate-media
+          persistentVolumeClaim:
+            claimName: frigate-media-pvc
+      nodeSelector:
+        infra.local/hostpath-main: "true"
+---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
@@ -118,13 +345,5 @@ metadata:
   namespace: apps
 type: Opaque
 stringData:
-  values.yaml: |-
-    env:
-      # {FRIGATE_*_PASSWORD} tokens in `config` are substituted by Frigate
-      # from these env vars. NOTE: this chart's `env` key only supports plain
-      # string values — secretKeyRef cannot be used here (chart limitation).
-      # The values ride in this Secret via spec.valuesSecrets instead, so they
-      # stay out of the HelmChart CR (same namespace-scoped Secret surface as
-      # the app's other secrets).
-      FRIGATE_RTSP_PASSWORD: "{{ .Values.FRIGATE_RTSP_PASSWORD }}"
-      FRIGATE_MQTT_PASSWORD: "{{ .Values.FRIGATE_MQTT_PASSWORD }}"
+  FRIGATE_RTSP_PASSWORD: "{{ .Values.FRIGATE_RTSP_PASSWORD }}"
+  FRIGATE_MQTT_PASSWORD: "{{ .Values.FRIGATE_MQTT_PASSWORD }}"
