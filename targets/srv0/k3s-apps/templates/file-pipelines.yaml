@@ -85,7 +85,7 @@ spec:
       containers:
         - name: file-pipelines
           # Pin by digest after the first push so Renovate can bump deliberately.
-          image: imranrdev/dscpln-file-pipelines:latest@sha256:bfd3052e888d68a254d281bb92b93205b8250b6efd1f837729727b9e4acfd537
+          image: imranrdev/dscpln-file-pipelines:latest@sha256:2cf81f60b1d4f5b6e0b1c2859331b5278eac08a0abd681785a476e5cf6b6378d
           securityContext:
             {{- include "dscpln.containerSecurityContext" (dict "uid" .Values.MY_UID "readOnlyRootFilesystem" true) | nindent 12 }}
           ports:
@@ -107,7 +107,7 @@ spec:
             - name: PIPELINES_STAGING_CLAIM
               value: file-pipelines-staging-pvc
             - name: PIPELINES_IMAGE
-              value: imranrdev/dscpln-file-pipelines:latest@sha256:bfd3052e888d68a254d281bb92b93205b8250b6efd1f837729727b9e4acfd537
+              value: imranrdev/dscpln-file-pipelines:latest@sha256:2cf81f60b1d4f5b6e0b1c2859331b5278eac08a0abd681785a476e5cf6b6378d
             # bigpc's game dirs carry user_home_t, which container_t cannot
             # read; spc_t reads them without relabeling (s0 keeps written
             # files category-free for the host), same as syncthing/filebrowser.
