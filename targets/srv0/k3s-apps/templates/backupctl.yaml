@@ -146,7 +146,7 @@ spec:
               mountPath: /run
       containers:
         - name: task-runner
-          image: imranrdev/dscpln-task-runner:latest@sha256:c71ac3fec6fe3acad64253ee8917933720d1ee234444193f8d3f5f7db22305da
+          image: imranrdev/dscpln-task-runner:latest@sha256:8132b36783a5b4d9bedce1e0b3001c8c58e7359ee12795116da6142ddab3c300
           imagePullPolicy: IfNotPresent
           securityContext:
             runAsUser: 0
@@ -208,6 +208,8 @@ spec:
             # forward-auth); the raw /browser WS upgrade is checked too.
             - name: AUTH_MODE
               value: proxy-header
+            - name: AUTH_EXEMPT_PATHS
+              value: /api/metrics
             # Login-browser sidecar: noVNC viewer proxied at /tasks/browser/,
             # WebDriver for the scraper tools (local Chrome when unset).
             - name: BROWSER_REMOTE
@@ -367,3 +369,41 @@ spec:
             sizeLimit: 1Gi
 ---
 {{ include "dscpln.service" (dict "name" "task-runner" "targetPort" "http" "port" 8085) }}
+---
+# Scrape the Task Runner's per-task run gauges (the dead-man switch).
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: task-runner
+  namespace: apps
+spec:
+  selector:
+    matchLabels:
+      app: task-runner
+  podMetricsEndpoints:
+    - port: http
+      path: /tasks/api/metrics
+      interval: 60s
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-task-runner-metrics-ingress
+  namespace: apps
+spec:
+  podSelector:
+    matchLabels:
+      app: task-runner
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: base
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: alloy-metrics
+      ports:
+        - protocol: TCP
+          port: 8085
+  policyTypes:
+    - Ingress

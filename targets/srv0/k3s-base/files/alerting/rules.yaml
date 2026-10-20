@@ -823,3 +823,388 @@ groups:
           summary: geoip-service has no available replica, so geoblock rejects all geoblocked hosts
         labels:
           severity: critical
+
+      - uid: task-runner-metrics-missing
+        title: Task Runner scheduled-task metrics are missing
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange: {from: 600, to: 0}
+            datasourceUid: prometheus
+            model:
+              editorMode: code
+              expr: task_runner_schedules_enabled
+              instant: true
+              intervalMs: 1000
+              maxDataPoints: 43200
+              range: false
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              datasource: {type: __expr__, uid: __expr__}
+              expression: A
+              intervalMs: 1000
+              maxDataPoints: 43200
+              reducer: last
+              refId: B
+              type: reduce
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator: {params: [1], type: lt}
+                  operator: {type: and}
+                  query: {params: [C]}
+                  reducer: {type: last}
+                  type: query
+              datasource: {type: __expr__, uid: __expr__}
+              expression: B
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: C
+              type: threshold
+        noDataState: Alerting
+        execErrState: Alerting
+        for: 10m
+        annotations:
+          summary: Task Runner is not exposing its scheduled-task metrics; it may be down or the metrics endpoint is unreachable.
+        labels:
+          severity: critical
+
+      - uid: task-runner-no-tasks
+        title: Task Runner loaded no tasks
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange: {from: 600, to: 0}
+            datasourceUid: prometheus
+            model:
+              editorMode: code
+              expr: 1 - task_runner_configured_tasks
+              instant: true
+              intervalMs: 1000
+              maxDataPoints: 43200
+              range: false
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              datasource: {type: __expr__, uid: __expr__}
+              expression: A
+              intervalMs: 1000
+              maxDataPoints: 43200
+              reducer: last
+              refId: B
+              type: reduce
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator: {params: [0], type: gt}
+                  operator: {type: and}
+                  query: {params: [C]}
+                  reducer: {type: last}
+                  type: query
+              datasource: {type: __expr__, uid: __expr__}
+              expression: B
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: C
+              type: threshold
+        noDataState: Alerting
+        execErrState: Alerting
+        for: 15m
+        annotations:
+          summary: Task Runner has no configured tasks; check config.mjs and the config mount.
+        labels:
+          severity: critical
+
+      - uid: task-runner-deployment-down
+        title: Task Runner has no available replica
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange: {from: 600, to: 0}
+            datasourceUid: prometheus
+            model:
+              editorMode: code
+              expr: kube_deployment_status_replicas_available{namespace="apps",deployment="task-runner"} < 1
+              instant: true
+              intervalMs: 1000
+              maxDataPoints: 43200
+              range: false
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              datasource: {type: __expr__, uid: __expr__}
+              expression: A
+              intervalMs: 1000
+              maxDataPoints: 43200
+              reducer: last
+              refId: B
+              type: reduce
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator: {params: [0], type: gt}
+                  operator: {type: and}
+                  query: {params: [C]}
+                  reducer: {type: last}
+                  type: query
+              datasource: {type: __expr__, uid: __expr__}
+              expression: B
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: C
+              type: threshold
+        noDataState: Alerting
+        execErrState: Alerting
+        for: 5m
+        annotations:
+          summary: Task Runner has no available replica, so no scheduled backup or export will run.
+        labels:
+          severity: critical
+
+      - uid: task-runner-state-backups-stale
+        title: State Backups has not run for 8 days
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange: {from: 600, to: 0}
+            datasourceUid: prometheus
+            model:
+              editorMode: code
+              expr: time() - task_runner_task_last_run_timestamp_seconds{task="State Backups"}
+              instant: true
+              intervalMs: 1000
+              maxDataPoints: 43200
+              range: false
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              datasource: {type: __expr__, uid: __expr__}
+              expression: A
+              intervalMs: 1000
+              maxDataPoints: 43200
+              reducer: last
+              refId: B
+              type: reduce
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator: {params: [691200], type: gt}
+                  operator: {type: and}
+                  query: {params: [C]}
+                  reducer: {type: last}
+                  type: query
+              datasource: {type: __expr__, uid: __expr__}
+              expression: B
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: C
+              type: threshold
+        noDataState: OK
+        execErrState: Alerting
+        for: 15m
+        annotations:
+          summary: The weekly State Backups task has not completed successfully in over 8 days.
+        labels:
+          severity: warning
+
+      - uid: task-runner-contacts-stale
+        title: Contacts export has not run for 8 days
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange: {from: 600, to: 0}
+            datasourceUid: prometheus
+            model:
+              editorMode: code
+              expr: time() - task_runner_task_last_run_timestamp_seconds{task="Contacts + Calendar"}
+              instant: true
+              intervalMs: 1000
+              maxDataPoints: 43200
+              range: false
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              datasource: {type: __expr__, uid: __expr__}
+              expression: A
+              intervalMs: 1000
+              maxDataPoints: 43200
+              reducer: last
+              refId: B
+              type: reduce
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator: {params: [691200], type: gt}
+                  operator: {type: and}
+                  query: {params: [C]}
+                  reducer: {type: last}
+                  type: query
+              datasource: {type: __expr__, uid: __expr__}
+              expression: B
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: C
+              type: threshold
+        noDataState: OK
+        execErrState: Alerting
+        for: 15m
+        annotations:
+          summary: The weekly Contacts + Calendar export has not completed in over 8 days.
+        labels:
+          severity: warning
+
+      - uid: task-runner-ytmusic-stale
+        title: YTMusic has not run for 2 days
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange: {from: 600, to: 0}
+            datasourceUid: prometheus
+            model:
+              editorMode: code
+              expr: time() - task_runner_task_last_run_timestamp_seconds{task="YTMusic Downloads"}
+              instant: true
+              intervalMs: 1000
+              maxDataPoints: 43200
+              range: false
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              datasource: {type: __expr__, uid: __expr__}
+              expression: A
+              intervalMs: 1000
+              maxDataPoints: 43200
+              reducer: last
+              refId: B
+              type: reduce
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator: {params: [172800], type: gt}
+                  operator: {type: and}
+                  query: {params: [C]}
+                  reducer: {type: last}
+                  type: query
+              datasource: {type: __expr__, uid: __expr__}
+              expression: B
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: C
+              type: threshold
+        noDataState: OK
+        execErrState: Alerting
+        for: 15m
+        annotations:
+          summary: The daily YTMusic Downloads task has not completed in over 2 days.
+        labels:
+          severity: warning
+
+      - uid: task-runner-wine-stale
+        title: Wine game saves have not run for 8 days
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange: {from: 600, to: 0}
+            datasourceUid: prometheus
+            model:
+              editorMode: code
+              expr: time() - task_runner_task_last_run_timestamp_seconds{task="Wine Game Saves"}
+              instant: true
+              intervalMs: 1000
+              maxDataPoints: 43200
+              range: false
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              datasource: {type: __expr__, uid: __expr__}
+              expression: A
+              intervalMs: 1000
+              maxDataPoints: 43200
+              reducer: last
+              refId: B
+              type: reduce
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator: {params: [691200], type: gt}
+                  operator: {type: and}
+                  query: {params: [C]}
+                  reducer: {type: last}
+                  type: query
+              datasource: {type: __expr__, uid: __expr__}
+              expression: B
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: C
+              type: threshold
+        noDataState: OK
+        execErrState: Alerting
+        for: 15m
+        annotations:
+          summary: The weekly Wine Game Saves task has not completed in over 8 days.
+        labels:
+          severity: warning
+
+      - uid: task-runner-scheduled-run-failed
+        title: A scheduled Task Runner task failed
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange: {from: 600, to: 0}
+            datasourceUid: prometheus
+            model:
+              editorMode: code
+              expr: 1 - task_runner_task_last_run_ok{task=~"State Backups|Contacts.*|YTMusic.*|Wine Game Saves"}
+              instant: true
+              intervalMs: 1000
+              maxDataPoints: 43200
+              range: false
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              datasource: {type: __expr__, uid: __expr__}
+              expression: A
+              intervalMs: 1000
+              maxDataPoints: 43200
+              reducer: last
+              refId: B
+              type: reduce
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator: {params: [0], type: gt}
+                  operator: {type: and}
+                  query: {params: [C]}
+                  reducer: {type: last}
+                  type: query
+              datasource: {type: __expr__, uid: __expr__}
+              expression: B
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: C
+              type: threshold
+        noDataState: OK
+        execErrState: Alerting
+        for: 10m
+        annotations:
+          summary: A scheduled Task Runner task reported a failed last run.
+        labels:
+          severity: critical
+
