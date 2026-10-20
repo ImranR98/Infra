@@ -1160,6 +1160,54 @@ groups:
         labels:
           severity: warning
 
+      - uid: task-runner-restic-drill-stale
+        title: Restic restore drill has not run for 8 days
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange: {from: 600, to: 0}
+            datasourceUid: prometheus
+            model:
+              editorMode: code
+              expr: time() - task_runner_task_last_run_timestamp_seconds{task="Restic Restore Drill"}
+              instant: true
+              intervalMs: 1000
+              maxDataPoints: 43200
+              range: false
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              datasource: {type: __expr__, uid: __expr__}
+              expression: A
+              intervalMs: 1000
+              maxDataPoints: 43200
+              reducer: last
+              refId: B
+              type: reduce
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator: {params: [691200], type: gt}
+                  operator: {type: and}
+                  query: {params: [C]}
+                  reducer: {type: last}
+                  type: query
+              datasource: {type: __expr__, uid: __expr__}
+              expression: B
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: C
+              type: threshold
+        noDataState: OK
+        execErrState: Alerting
+        for: 15m
+        annotations:
+          summary: The weekly staged restic restore drill has not completed in over 8 days.
+        labels:
+          severity: warning
+
       - uid: task-runner-scheduled-run-failed
         title: A scheduled Task Runner task failed
         condition: C
@@ -1169,7 +1217,7 @@ groups:
             datasourceUid: prometheus
             model:
               editorMode: code
-              expr: 1 - task_runner_task_last_run_ok{task=~"State Backups|Contacts.*|YTMusic.*|Wine Game Saves"}
+              expr: 1 - task_runner_task_last_run_ok{task=~"State Backups|Contacts.*|YTMusic.*|Wine Game Saves|Restic Restore Drill"}
               instant: true
               intervalMs: 1000
               maxDataPoints: 43200

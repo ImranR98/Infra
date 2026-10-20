@@ -90,6 +90,7 @@ metadata:
   namespace: apps
 spec:
   replicas: 1
+  revisionHistoryLimit: 3
   strategy:
     type: Recreate
   selector:
@@ -146,7 +147,7 @@ spec:
               mountPath: /run
       containers:
         - name: task-runner
-          image: imranrdev/dscpln-task-runner:latest@sha256:fd8380c275070f0bae9519e23e3a6a4d1b85c68c0e8dd0bf1fe3693fe5c362bf
+          image: imranrdev/dscpln-task-runner:latest@sha256:0b56a8b7eb80439b5c8cc7ddcb65e0e0c4d33f98cab5687ceba460a3fa5e14aa
           imagePullPolicy: IfNotPresent
           securityContext:
             runAsUser: 0
