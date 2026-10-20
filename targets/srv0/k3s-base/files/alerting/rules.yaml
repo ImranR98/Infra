@@ -929,7 +929,7 @@ groups:
             datasourceUid: prometheus
             model:
               editorMode: code
-              expr: kube_deployment_status_replicas_available{namespace="apps",deployment="task-runner"} < 1
+              expr: kube_deployment_status_replicas_available{namespace="apps",deployment="task-runner"}
               instant: true
               intervalMs: 1000
               maxDataPoints: 43200
@@ -949,7 +949,7 @@ groups:
             datasourceUid: __expr__
             model:
               conditions:
-                - evaluator: {params: [0], type: gt}
+                - evaluator: {params: [1], type: lt}
                   operator: {type: and}
                   query: {params: [C]}
                   reducer: {type: last}
