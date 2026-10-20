@@ -26,7 +26,7 @@ spec:
       automountServiceAccountToken: false
       containers:
         - name: whatsapp-txt
-          image: imranrdev/dscpln-watxt:latest@sha256:c0c08edf2ea00511d28805152c8d8b9ac63e4f198bf2b5777d5937e0a473b172
+          image: imranrdev/dscpln-watxt:latest@sha256:f8fb673f0b0a25fa3c4b83feb1029b6ffa84ef9f78993f2e32dcc6ec09c8d137
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
@@ -38,6 +38,8 @@ spec:
           ports:
             - containerPort: 8787
           env:
+            - name: APP
+              value: whatsapp-txt
             - name: BASE_PATH
               value: /watxt
             - name: AUTH_MODE

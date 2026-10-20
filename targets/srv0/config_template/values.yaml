@@ -17,7 +17,7 @@
 # file) holds the output of `openssl passwd -6` (or `authelia crypto hash
 # generate pbkdf2 ...`); the *_HASHABLE plaintext stays for reference.
 # NOTE: the final "Infra paths" section holds machine/env paths (INFRA_ROOT,
-# TARGET, PVC_BACKUP_DIR) — k3s-chart-only.
+# TARGET) — k3s-chart-only.
 
 # ====== Domain ======
 SERVICES_DOMAIN: "home.example.org"
@@ -261,6 +261,8 @@ FILEBROWSER_JWT_TOKEN_SECRET: "change_me" # openssl rand -base64 32
 # Directory of the git-tracked Excel ledger (mounted at the same path in the
 # pod so the app can read the workbook and commit its changes).
 DSCPLN_LEDGER_PATH: "/path/to/data/Main/Documents/Balance"
+# bigpc's LAN address for the Task Runner Wine game-save sync.
+BIGPC_IP: "192.168.8.226"
 # Balance app config (workbook path, sheets, API state) lives in the private
 # dscpln-config repo under apps/balance-xlsx/.
 
@@ -325,8 +327,6 @@ AUTHELIA_GRAFANA_CLIENT_SECRET_HASHABLE: "change_me" # docker run authelia/authe
 AUTHELIA_GRAFANA_CLIENT_SECRET_HASHED: "change_me"
 
 # ====== Infra paths (k3s-chart-only, machine/env layout) ======
-# Repo + state paths used by the in-cluster pvc-backup CronJob and the
-# renovate CronJob (hostPath mounts of the synced repo).
+# Repo path used by the renovate CronJob (hostPath mount of the synced repo).
 INFRA_ROOT: "/home/imranr/Main/Infra"
 TARGET: "srv0"
-PVC_BACKUP_DIR: "/home/imranr/Main/Infra/k3s_state_backups"

@@ -5,12 +5,12 @@
 - The `nfs-server` pod (base) exports host paths; `csi-driver-nfs` mounts them. The **app-data export** is `/exports/apps` → `{{ .Values.INFRA_ROOT }}/current_target/k3s_live_state/nfs-apps`, with `no_root_squash` (needed by CSI subdir creation and Postgres chowns).
 - The dynamic StorageClass **`nfs-apps`** is the **default** (`storageclass.kubernetes.io/is-default-class: "true"`). It provisions `subDir: ${pvc.metadata.namespace}/${pvc.metadata.name}`, `mountPermissions: "0777"`, `reclaimPolicy: Retain`, `onDelete: retain`, `volumeBindingMode: Immediate`, `allowVolumeExpansion: false` (sizes are advisory; NFS has no quota).
 - Migrated PVCs use **`ReadWriteMany`** so backup/restore pods can run on any node. The CSI driver is the only NFS client (hostNetwork node plugin); `nfs-server` ingress is allowlisted to the LAN CIDR (`allow-nfs-ingress`), all mounts use `nfsvers=4.2`.
-- `local-path` and `nfs-backup` remain available but are not defaults. The old Longhorn SCs/PVs/volumes are gone; rollback is via the tar backups, not Longhorn snapshots.
+- `local-path` remains available but is not a default. The legacy `nfs-backup` class and tar rollback path were removed after the restic restore was verified; the old Longhorn SCs/PVs/volumes are gone.
 
 ## Shared media / static host paths
 
 - `host-volumes` (base) defines the static `hostpath` PV/PVC pairs for the Main tree (media, music, documents, WhatsApp, backups, infra) pinned by `infra.local/hostpath-main=true`.
-- The NFS media shares (`music`, `jellyfin-tv`, `jellyfin-youtube`, `arrstack-media`, `frigate`, `backups`, `code-sandbox`) are static PVs using the `nfs`/`nfs-backup` class names; they are not dynamically provisioned.
+- The NFS media shares (`music`, `jellyfin-tv`, `jellyfin-youtube`, `arrstack-media`, `frigate`, `code-sandbox`) are static PVs using the `nfs` class name; they are not dynamically provisioned.
 - Media deliberately stays on NFS (Frigate recordings, Jellyfin libraries, Immich external library) so pods can move nodes.
 
 ## Backups
@@ -24,7 +24,7 @@
 - The repository lives in the Syncthing-replicated `Main/Infra` tree. Only srv0 should write it; wait for Syncthing to settle before restoring from a peer. The backup task keeps the repo root group-owned by `MY_UID` with the setgid bit, so every restic-created directory/file is readable by Syncthing; it also performs the one-time group migration of an existing repo. `restic/locks` is intentionally excluded from Syncthing.
 - Syncthing's database/logs (`index-v2`) live on srv0 local disk at `~/.local/share/syncthing-data`, not on the `syncthing-config-pvc`. The config, certs and keys stay on the NFS PVC and are included in backups; the index is disposable and excluded from them.
 - Restore is intentionally outside the app: `scripts/restic-restore.sh list`, `... pvc <name> [snapshot] [--live]`, and `... compose srv0|vps0 [snapshot] [--live]`. The script works on a fresh cluster and uses the repo/password/key directly.
-- The old tar path remains only as rollback during the transition: `pvc-backup`/`scripts/pvc.sh` and `compose_state_backups/` are legacy. `k3s_state_backups/` is the old PVC-tar directory. Remove them after the new restic restore is verified.
+- The old tar path (`pvc-backup`/`scripts/pvc.sh`, `compose_state_backups/`, `k3s_state_backups/`) was removed after the restic staged restore was verified on 2026-10-19.
 - The restic password lives in the private `dscpln-config` checkout (`secrets/restic-password`, also mirrored into `secrets.json`); it is not in git or the public app repo. Record it off-cluster — a fresh restore needs it. Changing it after the repo exists requires `restic key add`/`restic key remove`; the backup task will not silently recreate the repo.
 
 ## NFS performance note

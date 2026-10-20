@@ -1,3 +1,4 @@
 # Files to never include in the chart package/render (syncthing sync artifacts).
 *.tmp
 .syncthing.*
+*.sync-conflict*

@@ -22,8 +22,6 @@ spec:
                 values:
                   - balance-xlsx
                   - file-pipelines
-                  - contacts-calendar
-                  - ytmusic
                   - task-runner
       ports:
         - port: 8080
@@ -47,18 +45,22 @@ spec:
       labels:
         app: portal
     spec:
+      nodeSelector:
+        infra.local/hostpath-main: "true"
       securityContext:
         {{- include "dscpln.podSecurityContext" (dict "uid" .Values.MY_UID "seType" "spc_t" "seLevel" "s0") | nindent 8 }}
       automountServiceAccountToken: false
       containers:
         - name: portal
-          image: imranrdev/dscpln-portal:latest@sha256:5864aad4e4cdb0837d339cb784368d278da2d511fe1df4f6c95ca98ba911c993
+          image: imranrdev/dscpln-portal:latest@sha256:f8fb673f0b0a25fa3c4b83feb1029b6ffa84ef9f78993f2e32dcc6ec09c8d137
           securityContext:
             {{- include "dscpln.containerSecurityContext" (dict "uid" .Values.MY_UID "readOnlyRootFilesystem" true) | nindent 12 }}
           ports:
             - name: http
               containerPort: 8080
           env:
+            - name: APP
+              value: portal
             # Requests must carry Authelia's Remote-User (stamped by Traefik
             # forward-auth); a request that bypasses the proxy is refused. The
             # notification relay stays exempt so in-cluster apps can post

@@ -440,54 +440,6 @@ groups:
         labels:
           severity: critical
 
-      - uid: cronjob-stale-pvc-backup
-        title: pvc-backup has not succeeded in 26h
-        condition: C
-        data:
-          - refId: A
-            relativeTimeRange: {from: 600, to: 0}
-            datasourceUid: prometheus
-            model:
-              editorMode: code
-              expr: time() - kube_cronjob_status_last_successful_time{cronjob="pvc-backup"} > 93600
-              instant: true
-              intervalMs: 1000
-              maxDataPoints: 43200
-              range: false
-              refId: A
-          - refId: B
-            datasourceUid: __expr__
-            model:
-              datasource: {type: __expr__, uid: __expr__}
-              expression: A
-              intervalMs: 1000
-              maxDataPoints: 43200
-              reducer: last
-              refId: B
-              type: reduce
-          - refId: C
-            datasourceUid: __expr__
-            model:
-              conditions:
-                - evaluator: {params: [0], type: gt}
-                  operator: {type: and}
-                  query: {params: [C]}
-                  reducer: {type: last}
-                  type: query
-              datasource: {type: __expr__, uid: __expr__}
-              expression: B
-              intervalMs: 1000
-              maxDataPoints: 43200
-              refId: C
-              type: threshold
-        noDataState: OK
-        execErrState: Alerting
-        for: 10m
-        annotations:
-          summary: The nightly pvc-backup CronJob has not completed successfully in 26 hours
-        labels:
-          severity: warning
-
       - uid: cronjob-stale-renovate
         title: renovate has not succeeded in 26h
         condition: C

@@ -20,7 +20,7 @@ spec:
       automountServiceAccountToken: false
       containers:
         - name: balance-xlsx
-          image: imranrdev/dscpln-balance:latest@sha256:f833b55d50856f073a412d41f2f1388decce60bcfea9f3c8778f17d0bc108951
+          image: imranrdev/dscpln-balance:latest@sha256:f8fb673f0b0a25fa3c4b83feb1029b6ffa84ef9f78993f2e32dcc6ec09c8d137
           securityContext:
             {{- include "dscpln.containerSecurityContext" (dict "uid" .Values.MY_UID "readOnlyRootFilesystem" true) | nindent 12 }}
           ports:
@@ -35,6 +35,8 @@ spec:
           readinessProbe:
             {{- include "dscpln.readinessProbe" (dict "path" "/balance/api/health" "port" "3300") | nindent 12 }}
           env:
+            - name: APP
+              value: balance
             # Silence Node/libuv io_uring SELinux denials on Fedora nodes.
             - name: UV_USE_IO_URING
               value: "0"

@@ -107,14 +107,46 @@ spec:
       securityContext:
         # Root is required to read the Postgres/Redis-owned PVC data; spc_t
         # lets the pod read the user-home config checkout without relabeling.
+        # User-data tasks drop to MY_UID via their run_as field.
         runAsUser: 0
         runAsGroup: {{ .Values.MY_UID }}
         seLinuxOptions:
           type: spc_t
           level: s0
+      initContainers:
+        # The bigpc key is a root-only Secret. Copy it into an emptyDir owned
+        # by the host UID so the Wine task can run as UID 1000 without root.
+        - name: bigpc-key
+          image: busybox:1.38.0-uclibc
+          imagePullPolicy: IfNotPresent
+          command:
+            - sh
+            - -c
+            - cp /src/id_ed25519 /run/id_ed25519 && chown {{ .Values.MY_UID }}:{{ .Values.MY_UID }} /run/id_ed25519 && chmod 0400 /run/id_ed25519
+          securityContext:
+            runAsUser: 0
+            runAsGroup: {{ .Values.MY_UID }}
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+              add:
+                - CHOWN
+                - FOWNER
+                - DAC_OVERRIDE
+            seccompProfile:
+              type: RuntimeDefault
+            seLinuxOptions:
+              level: s0
+          volumeMounts:
+            - name: bigpc-ssh
+              mountPath: /src
+              readOnly: true
+            - name: bigpc-ssh-run
+              mountPath: /run
       containers:
         - name: task-runner
-          image: imranrdev/dscpln-task-runner:latest@sha256:ab52dad4375c4ae67250d9862c39db32ec19ecf5cbab0d8d52744a13fe92cedb
+          image: imranrdev/dscpln-task-runner:latest@sha256:f8fb673f0b0a25fa3c4b83feb1029b6ffa84ef9f78993f2e32dcc6ec09c8d137
           imagePullPolicy: IfNotPresent
           securityContext:
             runAsUser: 0
@@ -128,6 +160,10 @@ spec:
                 - DAC_OVERRIDE
                 - FOWNER
                 - CHOWN
+                # Drop user-data tasks to the host UID/GID; the server stays
+                # root so backup tasks can still read every app PVC.
+                - SETUID
+                - SETGID
             seccompProfile:
               type: RuntimeDefault
             seLinuxOptions:
@@ -136,6 +172,8 @@ spec:
             - name: http
               containerPort: 8085
           env:
+            - name: APP
+              value: task-runner
             - name: HOME
               value: /home/imranr
             - name: TZ
@@ -227,6 +265,9 @@ spec:
             - name: vps0-ssh
               mountPath: /ssh
               readOnly: true
+            - name: bigpc-ssh-run
+              mountPath: /ssh-bigpc
+              readOnly: true
             # The Syncthing-synced private config checkout; a directory mount
             # (not a file) so atomic config replacements are seen.
             - name: config-src
@@ -306,6 +347,12 @@ spec:
           secret:
             secretName: state-backup-vps0-ssh
             defaultMode: 0400
+        - name: bigpc-ssh
+          secret:
+            secretName: state-backup-bigpc-ssh
+            defaultMode: 0400
+        - name: bigpc-ssh-run
+          emptyDir: {}
         # The private config checkout (config.mjs + apps/ + tools/).
         - name: config-src
           hostPath:

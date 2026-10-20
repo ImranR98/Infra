@@ -5,7 +5,6 @@
 /exports/jellyfin-youtube *(ro,fsid=3,no_subtree_check,insecure,root_squash)
 /exports/arrstack-media *(rw,fsid=4,no_subtree_check,insecure,no_root_squash)
 /exports/frigate *(rw,fsid=6,no_subtree_check,insecure,no_root_squash)
-/exports/backups *(rw,fsid=5,no_subtree_check,insecure,no_root_squash)
 /exports/apps *(rw,fsid=8,crossmnt,no_subtree_check,insecure,no_root_squash)
 /exports/code-sandbox *(rw,fsid=7,no_subtree_check,insecure,root_squash)
 {{- end -}}
@@ -87,8 +86,6 @@ spec:
               name: arrstack-media-storage
             - mountPath: /exports/frigate
               name: frigate-storage
-            - mountPath: /exports/backups
-              name: backups-storage
             - mountPath: /exports/apps
               name: apps-storage
             - mountPath: /exports/code-sandbox
@@ -135,10 +132,6 @@ spec:
         - name: frigate-storage
           hostPath:
             path: {{ .Values.SECONDARY_STORAGE_PATH }}/frigate
-            type: DirectoryOrCreate
-        - name: backups-storage
-          hostPath:
-            path: {{ .Values.PVC_BACKUP_DIR }}
             type: DirectoryOrCreate
         - name: apps-storage
           hostPath:

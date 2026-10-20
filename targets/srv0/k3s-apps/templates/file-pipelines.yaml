@@ -6,59 +6,6 @@
 # Config is the private dscpln-config checkout (edited from the UI); trash and
 # logs live on a host path outside any synced tree.
 ---
-# Scoped access for remote pipeline runs: create/watch/delete Jobs, read their
-# pod logs (streamed into the app log) and check node readiness.
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  name: file-pipelines
-  namespace: apps
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: Role
-metadata:
-  name: file-pipelines
-  namespace: apps
-rules:
-  - apiGroups: ["batch"]
-    resources: ["jobs"]
-    verbs: ["create", "get", "list", "watch", "delete"]
-  - apiGroups: [""]
-    resources: ["pods", "pods/log"]
-    verbs: ["get", "list", "watch"]
-  - apiGroups: [""]
-    resources: ["nodes"]
-    verbs: ["get", "list"]
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: RoleBinding
-metadata:
-  name: file-pipelines
-  namespace: apps
-subjects:
-  - kind: ServiceAccount
-    name: file-pipelines
-    namespace: apps
-roleRef:
-  kind: Role
-  name: file-pipelines
-  apiGroup: rbac.authorization.k8s.io
----
-# Shared scratch space for remote pipeline jobs (RWX so pods on bigpc can
-# write the output the app then moves into the destination).
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: file-pipelines-staging-pvc
-  namespace: apps
-spec:
-  accessModes:
-    - ReadWriteMany
-  storageClassName: nfs-apps
-  resources:
-    requests:
-      storage: 10Gi
----
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -80,18 +27,18 @@ spec:
         # s0: the pod reads Syncthing-written trees and writes files that host
         # processes and other containers must be able to read back.
         {{- include "dscpln.podSecurityContext" (dict "uid" .Values.MY_UID "seType" "spc_t" "seLevel" "s0") | nindent 8 }}
-      serviceAccountName: file-pipelines
-      automountServiceAccountToken: true
       containers:
         - name: file-pipelines
           # Pin by digest after the first push so Renovate can bump deliberately.
-          image: imranrdev/dscpln-file-pipelines:latest@sha256:2cf81f60b1d4f5b6e0b1c2859331b5278eac08a0abd681785a476e5cf6b6378d
+          image: imranrdev/dscpln-file-pipelines:latest@sha256:f8fb673f0b0a25fa3c4b83feb1029b6ffa84ef9f78993f2e32dcc6ec09c8d137
           securityContext:
             {{- include "dscpln.containerSecurityContext" (dict "uid" .Values.MY_UID "readOnlyRootFilesystem" true) | nindent 12 }}
           ports:
             - name: http
               containerPort: 8791
           env:
+            - name: APP
+              value: file-pipelines
             - name: BASE_PATH
               value: /pipelines
             - name: AUTH_MODE
@@ -101,20 +48,6 @@ spec:
             # Notifications relay through the portal (ntfy URL/token live there).
             - name: DSCPLN_PORTAL_URL
               value: http://portal:8080
-            # Remote pipeline runs: shared staging volume + the image jobs run.
-            - name: PIPELINES_STAGING_DIR
-              value: /staging
-            - name: PIPELINES_STAGING_CLAIM
-              value: file-pipelines-staging-pvc
-            - name: PIPELINES_IMAGE
-              value: imranrdev/dscpln-file-pipelines:latest@sha256:2cf81f60b1d4f5b6e0b1c2859331b5278eac08a0abd681785a476e5cf6b6378d
-            # bigpc's game dirs carry user_home_t, which container_t cannot
-            # read; spc_t reads them without relabeling (s0 keeps written
-            # files category-free for the host), same as syncthing/filebrowser.
-            - name: PIPELINES_SELINUX_TYPE
-              value: spc_t
-            - name: PIPELINES_SELINUX_LEVEL
-              value: s0
           resources:
             limits:
               memory: 2Gi
@@ -140,8 +73,6 @@ spec:
               mountPath: /config
             - name: appdata
               mountPath: /appdata
-            - name: pipeline-staging
-              mountPath: /staging
       volumes:
         - name: tmp
           emptyDir:
@@ -166,8 +97,5 @@ spec:
         - name: appdata
           persistentVolumeClaim:
             claimName: hostpath-main-node-file-pipelines-pvc
-        - name: pipeline-staging
-          persistentVolumeClaim:
-            claimName: file-pipelines-staging-pvc
 ---
 {{ include "dscpln.service" (dict "name" "file-pipelines" "targetPort" "http" "port" 8791) }}

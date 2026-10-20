@@ -4,3 +4,4 @@
 .syncthing.*
 geoip-src/
 plugins/
+*.sync-conflict*

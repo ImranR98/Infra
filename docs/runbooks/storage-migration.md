@@ -1,3 +1,5 @@
+> **Historical:** this records the 2026 Longhorn -> NFS migration. The legacy `scripts/pvc.sh` tar backup/restore commands below no longer exist; use `scripts/restic-restore.sh` for current restores.
+
 # Runbook: NFS storage migration (Longhorn → NFS)
 
 This is the procedure that was used for the full migration; keep it for future storage moves.

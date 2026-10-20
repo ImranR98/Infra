@@ -40,7 +40,6 @@ targets/<t>/
 current_target/compose_live_state/   # gitignored Compose runtime state
 current_target/k3s_live_state/       # gitignored K3s/NFS app-data state (nfs-apps/)
 state_backups/restic/                 # gitignored restic repository (Syncthing tree)
-compose_state_backups/ k3s_state_backups/   # legacy tar backups (rollback only)
 architecture.svg|.excalidraw  # architecture diagram
 ```
 
@@ -50,7 +49,7 @@ For a from-scratch setup:
 
 1. **DNS first** — `$SERVICES_DOMAIN` must point at vps0, with `home.$SERVICES_DOMAIN` and `*.home.$SERVICES_DOMAIN` for the tunnel; run `scripts/public-exposure-keygen.sh` on srv0 and copy `config/vps0/public-exposure/` to vps0 (the template documents it). cert-manager uses HTTP-01, so it cannot issue certs until the public path through the vps0 hub exists.
 2. **`scripts/prereqs.sh` on every machine** — packages (NFS client), pinned helm, Docker, the machine-fact `.env`, host bind dirs, and the seeded `acme.json`.
-3. **Config** — `cp -r targets/<t>/config_template config/<t>` and fill every value; `cp config_template/VARS.env config/VARS.env`; point `INFRA_ROOT`, `PVC_BACKUP_DIR`, `MAIN_PARENT_DIR`, `MEDIA_DIR_PATH` etc. at the machine layout.
+3. **Config** — `cp -r targets/<t>/config_template config/<t>` and fill every value; `cp config_template/VARS.env config/VARS.env`; point `INFRA_ROOT`, `MAIN_PARENT_DIR`, `MEDIA_DIR_PATH` etc. at the machine layout.
 4. **Bring vps0 up before srv0** — `validate.sh vps0`, then compose up: srv0's ACME challenges need the edge already serving.
 5. **srv0** — `validate.sh srv0` → `k3s-server.sh` → `kubeconfig-unlock.sh` → the public-exposure client compose sidecar → `srv0-base` → `srv0-apps`. On a first bootstrap, set `BOOTSTRAP_PRIVATE_APPS: "true"` in `config/srv0/values.yaml`; the six user-facing apps stay on the LAN/VPN listener until Authelia is Ready, then set it back to `"false"`.
 6. **Add the other nodes** — run `k3s-join.sh` on the control plane once the nfs-server/csi-driver are up. `--hostpath-main` labels a node that owns the Main host paths; `--scheduling-discouraged` adds the desktop taint.
