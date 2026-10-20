@@ -117,7 +117,7 @@ spec:
         # The bigpc key is a root-only Secret. Copy it into an emptyDir owned
         # by the host UID so the Wine task can run as UID 1000 without root.
         - name: bigpc-key
-          image: busybox:1.38.0-uclibc
+          image: busybox:1.38.0-uclibc@sha256:b699b0c739b2d039afd8e2488a3ccfc0b9a86301d87633448d4a93c57bee8c76
           imagePullPolicy: IfNotPresent
           command:
             - sh
@@ -146,7 +146,7 @@ spec:
               mountPath: /run
       containers:
         - name: task-runner
-          image: imranrdev/dscpln-task-runner:latest@sha256:f8fb673f0b0a25fa3c4b83feb1029b6ffa84ef9f78993f2e32dcc6ec09c8d137
+          image: imranrdev/dscpln-task-runner:latest@sha256:c71ac3fec6fe3acad64253ee8917933720d1ee234444193f8d3f5f7db22305da
           imagePullPolicy: IfNotPresent
           securityContext:
             runAsUser: 0
