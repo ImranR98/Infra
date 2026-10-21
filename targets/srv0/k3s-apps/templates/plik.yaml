@@ -96,7 +96,7 @@ spec:
               mountPath: /data/state
       containers:
         - name: plik
-          image: rootgg/plik:1.4.2
+          image: rootgg/plik:1.4.3
           ports:
             - containerPort: 8080
           securityContext:
