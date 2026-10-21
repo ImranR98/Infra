@@ -85,7 +85,7 @@ spec:
               mountPath: /home/opencode
       containers:
         - name: opencode
-          image: imranrdev/opencode:latest@sha256:4c780a3755d9397ebcf431b2379e15cb316380f93f6e4a94c862e9e23bcd3714
+          image: imranrdev/opencode:latest@sha256:798b73467019426442750d2228e74ad51b4fefff3aca4b0b58db6f9ef6c0f282
           args:
             - serve
             - --hostname
