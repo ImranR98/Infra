@@ -148,7 +148,7 @@ spec:
               mountPath: /run
       containers:
         - name: task-runner
-          image: imranrdev/dscpln-task-runner:latest@sha256:f5940ca73365444bc4c2b1d644a7d90f84d5e7a90b3fbed9d9c522068eccaf74
+          image: imranrdev/dscpln-task-runner:latest@sha256:405cd7f58bd9297a7996cae8b6177e656c4d67e52333e735863e00a72a237636
           imagePullPolicy: IfNotPresent
           securityContext:
             runAsUser: 0
