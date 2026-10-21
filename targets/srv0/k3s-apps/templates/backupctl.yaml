@@ -2,12 +2,13 @@
 # the scheduled state-backup task as root (the PVC data is owned by fixed
 # Postgres/Redis UIDs) and serves the same UI behind Authelia. The private
 # dscpln-config checkout supplies config.mjs, apps/ and tools/; it is mounted
-# read-only and edits need a pod restart, not an image rebuild. `host:` fields
-# pin tasks to a machine (BACKUPCTL_HOST).
+# read-write so the UI can persist task-meta.json and Contacts Discover can
+# update tools/contacts/config.json. `host:` fields pin tasks to a machine
+# (BACKUPCTL_HOST).
 ---
-# Deliberately NOT labeled auto-backup: this holds tool venvs plus
-# ~/.backupctl run state (captured scrape output). Backing it up would copy
-# financial/2FA-adjacent data onto every synced device.
+# Deliberately NOT labeled auto-backup: this holds tool venvs (captured scrape
+# output). Backing it up would copy financial/2FA-adjacent data onto every
+# synced device. Task Runner state lives in the gitignored config-repo folder.
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -147,7 +148,7 @@ spec:
               mountPath: /run
       containers:
         - name: task-runner
-          image: imranrdev/dscpln-task-runner:latest@sha256:a2f460b4d0a678c53c81dec27b06c3be42b0c672fd6005dd68e0c8e4b9a79711
+          image: imranrdev/dscpln-task-runner:latest@sha256:f5940ca73365444bc4c2b1d644a7d90f84d5e7a90b3fbed9d9c522068eccaf74
           imagePullPolicy: IfNotPresent
           securityContext:
             runAsUser: 0
@@ -187,8 +188,14 @@ spec:
             # The monorepo root baked into the image (the repo_dir token).
             - name: BACKUPCTL_REPO_DIR
               value: /app
+            # Gitignored state folder in the config repo; owned by the host
+            # user so Syncthing can carry run/schedule state.
             - name: BACKUPCTL_STATE_DIR
-              value: /home/imranr/.backupctl
+              value: /config-src/.task-runner
+            - name: BACKUPCTL_STATE_UID
+              value: "{{ .Values.MY_UID }}"
+            - name: BACKUPCTL_STATE_GID
+              value: "{{ .Values.MY_UID }}"
             - name: BACKUPCTL_TMP_DIR
               value: /home/imranr/tmp
             # Scheduled workflows (State Backups) run on this instance.
@@ -272,10 +279,11 @@ spec:
               mountPath: /ssh-bigpc
               readOnly: true
             # The Syncthing-synced private config checkout; a directory mount
-            # (not a file) so atomic config replacements are seen.
+            # (not a file) so atomic config replacements are seen. Writable:
+            # the UI commits task-meta.json and Contacts Discover edits its
+            # collection list here.
             - name: config-src
               mountPath: /config-src
-              readOnly: true
         # The Selenium sidecar a scraper task drives; its viewer is embedded
         # in the task cards for manual logins (2FA). One session at a time.
         - name: browser
