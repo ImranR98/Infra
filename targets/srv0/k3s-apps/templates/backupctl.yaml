@@ -119,7 +119,7 @@ spec:
         # The bigpc key is a root-only Secret. Copy it into an emptyDir owned
         # by the host UID so the Wine task can run as UID 1000 without root.
         - name: bigpc-key
-          image: busybox:1.38.0-uclibc@sha256:b699b0c739b2d039afd8e2488a3ccfc0b9a86301d87633448d4a93c57bee8c76
+          image: busybox:1.38.0-uclibc@sha256:bab8ad5d692782cc01cf5092d8c60f17baaa5c0a6bdd92ae56a042d1c7a9220b
           imagePullPolicy: IfNotPresent
           command:
             - sh
