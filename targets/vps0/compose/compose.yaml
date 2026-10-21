@@ -1057,77 +1057,77 @@ services:
             - "22070:22070"
         logging: *logging
 
-    # Shlink - URL Shortener
-    shlink:
-        image: shlinkio/shlink:stable@sha256:844e1f2b6455331c5b49207bad3a2455ccd65e62bb9daa09a6c57afff26bd9c8
-        container_name: shlink
-        environment:
-            - SHORT_DOMAIN_HOST=ln.$BASE_SERVICES_DOMAIN
-            - SHORT_DOMAIN_SCHEMA=https
-            - DB_DRIVER=postgres
-            - DB_HOST=shlink_db
-            - DB_USER=postgres
-            - DB_PASSWORD=$SHLINK_DB_PASSWORD
-            - INITIAL_API_KEY=$SHLINK_API_KEY
-            - GEOLITE_LICENSE_KEY=$GEOLITE_LICENSE_KEY
-        networks:
-            - traefik
-        depends_on:
-            - traefik
-            - shlink_db
-        restart: unless-stopped
-        mem_limit: 512M
-        cpus: 0.5
-        labels:
-            - "traefik.enable=true"
-            - "traefik.http.routers.shlink.rule=Host(`ln.$BASE_SERVICES_DOMAIN`)"
-            - "traefik.http.routers.shlink.entrypoints=websecure"
-            - "traefik.http.routers.shlink.tls.certresolver=le"
-            - "traefik.http.routers.shlink.tls=true"
-            - "traefik.http.routers.shlink.middlewares=crowdsec-bouncer@file"
-            - "traefik.http.services.shlink.loadbalancer.server.port=8080"
-        logging: *logging
-    shlink_db:
-        image: postgres:17-alpine
-        container_name: shlink_db
-        restart: unless-stopped
-        user: "$MY_UID:$MY_UID"
-        mem_limit: 256M
-        cpus: 0.5
-        volumes:
-            - ../../../current_target/compose_live_state/shlink/db:/var/lib/postgresql/data
-        environment:
-            - POSTGRES_PASSWORD=$SHLINK_DB_PASSWORD
-        healthcheck:
-            test: ["CMD-SHELL", "pg_isready -U postgres"]
-            start_period: 1m
-        networks:
-            - traefik
-        logging: *logging
-    shlink_web_client:
-        image: shlinkio/shlink-web-client:stable@sha256:dc8bf3565a25bd0602ff11ee352920830ce457ab58a2b2c62f2ebb23e8c8b9ee
-        container_name: shlink_web_client
-        environment:
-            - SHLINK_SERVER_URL=https://ln.$BASE_SERVICES_DOMAIN
-            - SHLINK_SERVER_NAME=ln.$BASE_SERVICES_DOMAIN
-            - SHLINK_SERVER_API_KEY=$SHLINK_API_KEY
-        networks:
-            - traefik
-        depends_on:
-            - traefik
-            - shlink
-        restart: unless-stopped
-        mem_limit: 64M
-        cpus: 0.25
-        labels:
-            - "traefik.enable=true"
-            - "traefik.http.routers.shlink_web_client.rule=Host(`ui.ln.$CLOUD_SERVICES_DOMAIN`)"
-            - "traefik.http.routers.shlink_web_client.entrypoints=websecure"
-            - "traefik.http.routers.shlink_web_client.tls.certresolver=le"
-            - "traefik.http.routers.shlink_web_client.tls=true"
-            - "traefik.http.routers.shlink_web_client.middlewares=crowdsec-bouncer@file,authelia@file,geoblock@file"
-            - "traefik.http.services.shlink_web_client.loadbalancer.server.port=8080"
-        logging: *logging
+    # Shlink - URL Shortener (temporarily disabled)
+    # shlink:
+    #     image: shlinkio/shlink:stable@sha256:844e1f2b6455331c5b49207bad3a2455ccd65e62bb9daa09a6c57afff26bd9c8
+    #     container_name: shlink
+    #     environment:
+    #         - SHORT_DOMAIN_HOST=ln.$BASE_SERVICES_DOMAIN
+    #         - SHORT_DOMAIN_SCHEMA=https
+    #         - DB_DRIVER=postgres
+    #         - DB_HOST=shlink_db
+    #         - DB_USER=postgres
+    #         - DB_PASSWORD=$SHLINK_DB_PASSWORD
+    #         - INITIAL_API_KEY=$SHLINK_API_KEY
+    #         - GEOLITE_LICENSE_KEY=$GEOLITE_LICENSE_KEY
+    #     networks:
+    #         - traefik
+    #     depends_on:
+    #         - traefik
+    #         - shlink_db
+    #     restart: unless-stopped
+    #     mem_limit: 512M
+    #     cpus: 0.5
+    #     labels:
+    #         - "traefik.enable=true"
+    #         - "traefik.http.routers.shlink.rule=Host(`ln.$BASE_SERVICES_DOMAIN`)"
+    #         - "traefik.http.routers.shlink.entrypoints=websecure"
+    #         - "traefik.http.routers.shlink.tls.certresolver=le"
+    #         - "traefik.http.routers.shlink.tls=true"
+    #         - "traefik.http.routers.shlink.middlewares=crowdsec-bouncer@file"
+    #         - "traefik.http.services.shlink.loadbalancer.server.port=8080"
+    #     logging: *logging
+    # shlink_db:
+    #     image: postgres:17-alpine
+    #     container_name: shlink_db
+    #     restart: unless-stopped
+    #     user: "$MY_UID:$MY_UID"
+    #     mem_limit: 256M
+    #     cpus: 0.5
+    #     volumes:
+    #         - ../../../current_target/compose_live_state/shlink/db:/var/lib/postgresql/data
+    #     environment:
+    #         - POSTGRES_PASSWORD=$SHLINK_DB_PASSWORD
+    #     healthcheck:
+    #         test: ["CMD-SHELL", "pg_isready -U postgres"]
+    #         start_period: 1m
+    #     networks:
+    #         - traefik
+    #     logging: *logging
+    # shlink_web_client:
+    #     image: shlinkio/shlink-web-client:stable@sha256:dc8bf3565a25bd0602ff11ee352920830ce457ab58a2b2c62f2ebb23e8c8b9ee
+    #     container_name: shlink_web_client
+    #     environment:
+    #         - SHLINK_SERVER_URL=https://ln.$BASE_SERVICES_DOMAIN
+    #         - SHLINK_SERVER_NAME=ln.$BASE_SERVICES_DOMAIN
+    #         - SHLINK_SERVER_API_KEY=$SHLINK_API_KEY
+    #     networks:
+    #         - traefik
+    #     depends_on:
+    #         - traefik
+    #         - shlink
+    #     restart: unless-stopped
+    #     mem_limit: 64M
+    #     cpus: 0.25
+    #     labels:
+    #         - "traefik.enable=true"
+    #         - "traefik.http.routers.shlink_web_client.rule=Host(`ui.ln.$CLOUD_SERVICES_DOMAIN`)"
+    #         - "traefik.http.routers.shlink_web_client.entrypoints=websecure"
+    #         - "traefik.http.routers.shlink_web_client.tls.certresolver=le"
+    #         - "traefik.http.routers.shlink_web_client.tls=true"
+    #         - "traefik.http.routers.shlink_web_client.middlewares=crowdsec-bouncer@file,authelia@file,geoblock@file"
+    #         - "traefik.http.services.shlink_web_client.loadbalancer.server.port=8080"
+    #     logging: *logging
 
     # Dozzle - Docker container health/log viewer (headlamp equivalent for the
     # compose stack). Read-only: talks to the existing dockerproxy socket proxy
