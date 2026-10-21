@@ -56,7 +56,7 @@ spec:
               mountPath: /var/syncthing/data
       containers:
         - name: syncthing
-          image: syncthing/syncthing:2.1.6
+          image: syncthing/syncthing:2.1.7
           # The image entrypoint injects --home; bypass it so the explicit
           # config/data split below is accepted. The init container performs
           # the only setup the entrypoint did for us (permissions).
