@@ -447,7 +447,7 @@ spec:
   failurePolicy: abort
   targetNamespace: base
   createNamespace: false
-  version: 18.17.1
+  version: 19.0.3
   valuesContent: |-
     deploymentMode: SingleBinary
     singleBinary:
