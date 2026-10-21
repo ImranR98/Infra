@@ -494,7 +494,7 @@ services:
 
     # Traefik logrotate - caps the host-mounted access log (CrowdSec's acquisition source)
     traefik-logrotate:
-        image: vitess/logrotate:latest@sha256:d578d6a701a090b962546a1546c766ca0954382c6dbabb894f3a3158ade2b6e5
+        image: vitess/logrotate:latest@sha256:2b1c7e898b87c98dafbc4a460bf58b241c2b57eadf86ad327ce962bd96fb13a6
         container_name: traefik-logrotate
         restart: unless-stopped
         mem_limit: 64M
@@ -728,7 +728,7 @@ services:
 
     # MeTube - YouTube Downloader
     metube:
-        image: ghcr.io/alexta69/metube:latest@sha256:df929ef2453fd75c1f1cbd8dafb309ee03ff18d8705c7c1e01642b1202d4a650
+        image: ghcr.io/alexta69/metube:latest@sha256:392208fd46aba4479815aaeb71240a02e75fd3e06a8bcec32af78dfd666c7d2a
         container_name: metube
         volumes:
             - ../../../current_target/compose_live_state/metube:/downloads
@@ -1021,7 +1021,7 @@ services:
 
     # Logtfy - Log Monitoring and ntfy Alerting
     logtfy:
-        image: imranrdev/logtfy:latest@sha256:1ff68c631abbc78e6518a1cd61b030dd8c95bb940b838813799f016749be3524
+        image: imranrdev/logtfy:latest@sha256:589688b127888ab5b9ccb63d9803b32ec2dc29a6ab3c81dd70cbab2be11b413f
         container_name: logtfy
         hostname: $TARGET
         restart: unless-stopped
@@ -1042,7 +1042,7 @@ services:
 
     # strelaysrv - Syncthing Relay Server
     strelaysrv:
-        image: syncthing/relaysrv:latest@sha256:2a0ca161dc5237f47a5758b85408dddb596a2838a172cff18c66340efa80ed00
+        image: syncthing/relaysrv:latest@sha256:300b85361ff06f46940e24912c67d6230af3e74d84c6edc38a640d847ac76828
         container_name: strelaysrv
         restart: unless-stopped
         mem_limit: 128M
