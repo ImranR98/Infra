@@ -36,6 +36,10 @@ The per-app Let's Encrypt Certificates were replaced by `edge-public-tls` (the 2
 
 The 72KB `AGENTS.md` was split into this `docs/` tree; `AGENTS.md` keeps the target table, commands, rules, and links. The detailed design/tradeoff notes live here and in `docs/security.md`.
 
+## Sale site subdomain audiences
+
+`sale-site` is one container/database serving `home.sale`, `tech.sale`, and `sale` hosts. Item visibility is assigned in the app, not by deploying separate instances. The root host is the distinct `@`/main audience; the Traefik routers keep the old `home-sale`/`tech-sale` names so their ACME certificates survive the consolidation. All three hosts share the app's `hs_vid` analytics cookie on `.cloud.imranr.dev`, while the app's admin session cookie remains host-scoped.
+
 ## Accepted duplication (do not consolidate)
 
 A simplification review triaged the repeated structures below and deliberately kept them as-is — don't propose helpers, `range` loops, anchors, or shared fragments for them again. The edge TLS certificates are the two shared multi-SAN Certificates above; the rest stay as-is.
@@ -44,7 +48,7 @@ A simplification review triaged the repeated structures below and deliberately k
 - **`host-volumes.yaml`'s 11 PV/PVC pairs** (only name/path/size/node-label differ) — mechanical but stable; the explicit list keeps each host path auditable in place.
 - **`radarr.yaml`/`sonarr.yaml`** (byte-identical apart from the image digest) and `prowlarr.yaml`: stable, and explicit image literals keep Renovate's extraction obvious.
 - **`targets/pc` vs `targets/bigpc` compose** (~75 duplicated lines): `include:`/`extends:` would change project-dir and `.env` resolution for marginal gain.
-- **vps0 compose repetition** — `x-logging` anchors are file-scoped and can't be shared across files; the public-exposure/authelia and postgres healthcheck stanzas, the `tech-sale`/`home-sale` service blocks, and the vps0 vs pc/bigpc socket-proxy variants stay explicit.
+- **vps0 compose repetition** — `x-logging` anchors are file-scoped and can't be shared across files; the public-exposure/authelia and postgres healthcheck stanzas, the `sale-site` service blocks, and the vps0 vs pc/bigpc socket-proxy variants stay explicit.
 - **Small in-template repetition** — the chown/init containers, the Home Assistant `integration-update` downloader, and Authelia's 6 OIDC client blocks: a helper would add a second convention for marginal savings.
 - **Already-correct repetition** — HTTPRoute `parentRefs` (the public vs LAN/VPN listener choice is the security boundary), the ReferenceGrants, and Grafana's alert-rule pipelines are per-item configuration. The `alerting/templates.yaml` label blocks (`volume`/`node`/`pod`/`cronjob`) are live: query series labels flow into alert labels.
 
