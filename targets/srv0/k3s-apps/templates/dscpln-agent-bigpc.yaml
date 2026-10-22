@@ -1,0 +1,109 @@
+# Generic D$CPLN archive agent on bigpc. The agent program and image are
+# generic; the job paths and token state live in the host-local private config
+# and state directories.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dscpln-agent-bigpc
+  namespace: apps
+spec:
+  replicas: 1
+  revisionHistoryLimit: 2
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: dscpln-agent-bigpc
+  template:
+    metadata:
+      labels:
+        app: dscpln-agent-bigpc
+    spec:
+      automountServiceAccountToken: false
+      nodeSelector:
+        kubernetes.io/hostname: bigpc
+      tolerations:
+        - key: scheduling-discouraged
+          operator: Equal
+          value: "true"
+          effect: PreferNoSchedule
+      securityContext:
+        runAsUser: {{ .Values.MY_UID }}
+        runAsGroup: {{ .Values.MY_UID }}
+        fsGroup: {{ .Values.MY_UID }}
+        seLinuxOptions:
+          type: spc_t
+          level: s0
+      containers:
+        - name: agent
+          image: ghcr.io/imranr98/dscpln-agent@sha256:de92a7223ca0cf133af9ccd96f8bef12e4ec4e6fcd545a14df9a8d17ac45fa94
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+            seccompProfile:
+              type: RuntimeDefault
+          ports:
+            - name: http
+              containerPort: 8788
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 2
+            periodSeconds: 30
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 60
+          resources:
+            limits:
+              memory: 512Mi
+            requests:
+              memory: 64Mi
+              cpu: 10m
+          volumeMounts:
+            - name: agent-config
+              mountPath: /config/agent.json
+              subPath: agent.json
+              readOnly: true
+            - name: agent-state
+              mountPath: /state
+            - name: installs
+              mountPath: /data/installs
+              readOnly: true
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: agent-config
+          hostPath:
+            path: {{ .Values.MAIN_PARENT_DIR }}/dscpln-agent/agent.json
+            type: File
+        - name: agent-state
+          hostPath:
+            path: {{ .Values.MAIN_PARENT_DIR }}/dscpln-agent/state
+            type: Directory
+        - name: installs
+          hostPath:
+            path: {{ .Values.MAIN_PARENT_DIR }}/Games/Installs
+            type: Directory
+        - name: tmp
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: dscpln-agent-bigpc
+  namespace: apps
+spec:
+  selector:
+    app: dscpln-agent-bigpc
+  ports:
+    - name: http
+      port: 8788
+      targetPort: http
