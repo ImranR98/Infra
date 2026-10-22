@@ -149,6 +149,30 @@ spec:
     - matches:
         - path:
             type: PathPrefix
+            value: /lockdown
+      filters:
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: geoblock
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: crowdsec-bouncer
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: forwardauth-authelia
+      backendRefs:
+        - name: lockdown
+          namespace: apps
+          port: 8086
+    - matches:
+        - path:
+            type: PathPrefix
             value: /
       filters:
         - type: ExtensionRef

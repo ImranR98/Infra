@@ -1,0 +1,170 @@
+# Lockdown UI and its privileged port blocker.
+#
+# The UI is a normal D$CPLN app behind the shared ingress. The blocker is a
+# separate host-network pod pinned to srv0. It listens only on the flannel
+# bridge address and requires a token held in the Secret below. The UI server
+# is the only client; the browser never receives the token.
+---
+{{- $secret := lookup "v1" "Secret" .Release.Namespace "lockdown-port-blocker-token" -}}
+{{- $token := "" -}}
+{{- if and $secret $secret.data (index $secret.data "token") -}}
+{{- $token = index $secret.data "token" | b64dec -}}
+{{- else -}}
+{{- $token = randAlphaNum 48 -}}
+{{- end }}
+apiVersion: v1
+kind: Secret
+metadata:
+  name: lockdown-port-blocker-token
+  namespace: apps
+type: Opaque
+data:
+  token: {{ $token | b64enc | quote }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: lockdown
+  namespace: apps
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: lockdown
+  template:
+    metadata:
+      labels:
+        app: lockdown
+    spec:
+      # The blocker is reachable at srv0's flannel bridge address, so the UI
+      # must run on srv0.
+      nodeSelector:
+        infra.local/external-exposed: "true"
+      securityContext:
+        {{- include "dscpln.podSecurityContext" (dict "uid" .Values.MY_UID) | nindent 8 }}
+      automountServiceAccountToken: false
+      containers:
+        - name: lockdown
+          image: ghcr.io/imranr98/dscpln-lockdown:latest@sha256:5b4765efc80fd3c34ecf1d2dc064e157d3153e9e4b630d4a6a1a38b1624249f0
+          securityContext:
+            {{- include "dscpln.containerSecurityContext" (dict "uid" .Values.MY_UID "readOnlyRootFilesystem" true) | nindent 12 }}
+          ports:
+            - name: http
+              containerPort: 8086
+          env:
+            - name: APP
+              value: lockdown
+            - name: PORT
+              value: "8086"
+            - name: BASE_PATH
+              value: /lockdown
+            - name: AUTH_MODE
+              value: proxy-header
+            - name: PORT_BLOCKER_URL
+              value: http://10.42.0.1:8794
+            - name: PORT_BLOCKER_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: lockdown-port-blocker-token
+                  key: token
+            - name: UV_USE_IO_URING
+              value: "0"
+          resources:
+            limits:
+              memory: 128Mi
+            requests:
+              memory: 32Mi
+              cpu: 10m
+          readinessProbe:
+            {{- include "dscpln.readinessProbe" (dict "path" "/lockdown/api/health" "port" "http") | nindent 12 }}
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir:
+            medium: Memory
+            sizeLimit: 64Mi
+---
+{{ include "dscpln.service" (dict "name" "lockdown" "targetPort" "http" "port" 8086) }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: port-blocker
+  namespace: apps
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: port-blocker
+  template:
+    metadata:
+      labels:
+        app: port-blocker
+    spec:
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      nodeSelector:
+        infra.local/external-exposed: "true"
+      automountServiceAccountToken: false
+      securityContext:
+        seLinuxOptions:
+          type: spc_t
+          level: s0
+      containers:
+        - name: port-blocker
+          image: ghcr.io/imranr98/dscpln-lockdown:latest@sha256:5b4765efc80fd3c34ecf1d2dc064e157d3153e9e4b630d4a6a1a38b1624249f0
+          securityContext:
+            runAsUser: 0
+            runAsGroup: 0
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+              add:
+                - NET_ADMIN
+            seccompProfile:
+              type: RuntimeDefault
+          ports:
+            - name: http
+              containerPort: 8794
+          env:
+            - name: APP
+              value: port-blocker
+            - name: PORT
+              value: "8794"
+            - name: PORT_BLOCKER_HOST
+              value: 10.42.0.1
+            - name: PORT_BLOCKER_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: lockdown-port-blocker-token
+                  key: token
+          resources:
+            limits:
+              memory: 64Mi
+            requests:
+              memory: 16Mi
+              cpu: 5m
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8794
+              host: 10.42.0.1
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir:
+            medium: Memory
+            sizeLimit: 16Mi
