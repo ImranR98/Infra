@@ -126,3 +126,22 @@ spec:
       ports:
         - protocol: TCP
           port: 8788
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-task-runner-vps0-agent-egress
+  namespace: apps
+spec:
+  podSelector:
+    matchLabels:
+      app: task-runner
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - ipBlock:
+            cidr: 10.99.0.1/32
+      ports:
+        - protocol: TCP
+          port: 8788
