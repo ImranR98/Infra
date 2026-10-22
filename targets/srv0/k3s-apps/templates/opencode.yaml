@@ -47,9 +47,10 @@ spec:
           namespace: apps
           port: 4096
 ---
-# The agent's only host access is this NFS share and its home PVC; the server
-# process runs unsecured because only the Traefik edge can reach the pod
-# (namespace baseline + Authelia forward auth), same as a pod-backed app.
+# The agent's only host access is its home PVC, the unbacked tools PVC
+# (Homebrew + nvm/Node), and the sandbox NFS share; the server process runs
+# unsecured because only the Traefik edge can reach the pod (namespace baseline
+# + Authelia forward auth), same as a pod-backed app.
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -75,17 +76,48 @@ spec:
         seLinuxOptions:
           level: s0
       initContainers:
+        # One-shot root container: NFS CSI volumes are created root-owned, so
+        # the app user cannot write to them until this chown runs. The marker
+        # makes the recursive walk a first-start cost instead of a per-restart
+        # cost (Homebrew/nvm trees get large quickly).
         - name: fix-perms
           image: busybox:1.38
-          command: ["sh", "-c", "chown -R {{ .Values.MY_UID }}:{{ .Values.MY_UID }} /home/opencode"]
+          command:
+            - sh
+            - -c
+            - |
+              set -eu
+              uid="{{ .Values.MY_UID }}"
+              home_marker="/home/opencode/.owner-${uid}"
+              if [ ! -e "$home_marker" ] || [ "$(stat -c %u /home/opencode)" != "$uid" ]; then
+                chown -R "${uid}:${uid}" /home/opencode
+                touch "$home_marker"
+                chown "${uid}:${uid}" "$home_marker"
+              fi
+              tools_marker="/home/linuxbrew/.owner-${uid}"
+              if [ ! -e "$tools_marker" ] || [ "$(stat -c %u /home/linuxbrew)" != "$uid" ]; then
+                chown -R "${uid}:${uid}" /home/linuxbrew
+                touch "$tools_marker"
+                chown "${uid}:${uid}" "$tools_marker"
+              fi
           securityContext:
             runAsUser: 0
+            runAsGroup: 0
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+              add:
+                - CHOWN
+                - DAC_OVERRIDE
           volumeMounts:
             - name: home
               mountPath: /home/opencode
+            - name: tools
+              mountPath: /home/linuxbrew
       containers:
         - name: opencode
-          image: imranrdev/opencode:latest@sha256:798b73467019426442750d2228e74ad51b4fefff3aca4b0b58db6f9ef6c0f282
+          image: imranrdev/opencode:latest@sha256:be21f4bfbe630fc551ff35efcc7f5088fa923dca27bfc7929acc78fd9d190dc5
           args:
             - serve
             - --hostname
@@ -94,6 +126,7 @@ spec:
             - "4096"
           workingDir: /sandbox
           securityContext:
+            runAsNonRoot: true
             allowPrivilegeEscalation: false
             capabilities:
               drop:
@@ -114,6 +147,17 @@ spec:
               value: "{{ .Values.OPENCODE_SERVER_PASSWORD }}"
           ports:
             - containerPort: 4096
+          startupProbe:
+            # The first start seeds Homebrew and nvm into the tools PVC before
+            # serving; allow up to five minutes for that one-time copy.
+            exec:
+              command:
+                - sh
+                - -c
+                - curl -sf -u "opencode:$OPENCODE_PASSWORD" http://127.0.0.1:4096/api/info > /dev/null
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 30
           readinessProbe:
             # v2 serves the SPA (200 text/html) on any non-/api path, so the
             # v1 /global/health probe no longer means anything; hit the real
@@ -136,6 +180,8 @@ spec:
           volumeMounts:
             - name: home
               mountPath: /home/opencode
+            - name: tools
+              mountPath: /home/linuxbrew
             - name: sandbox
               mountPath: /sandbox
             - name: tmp
@@ -144,6 +190,9 @@ spec:
         - name: home
           persistentVolumeClaim:
             claimName: opencode-home-pvc
+        - name: tools
+          persistentVolumeClaim:
+            claimName: opencode-tools-pvc
         - name: sandbox
           persistentVolumeClaim:
             claimName: opencode-sandbox-pvc
@@ -171,6 +220,21 @@ metadata:
   namespace: apps
   labels:
     auto-backup: "true"
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: nfs-apps
+  resources:
+    requests:
+      storage: 20Gi
+---
+# Homebrew + nvm/Node versions. Both are reproducible and reseeded from the
+# image on first start, so this PVC is deliberately NOT labelled auto-backup.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: opencode-tools-pvc
+  namespace: apps
 spec:
   accessModes:
     - ReadWriteMany

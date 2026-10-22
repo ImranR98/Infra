@@ -5,6 +5,7 @@
 - The `nfs-server` pod (base) exports host paths; `csi-driver-nfs` mounts them. The **app-data export** is `/exports/apps` → `{{ .Values.INFRA_ROOT }}/current_target/k3s_live_state/nfs-apps`, with `no_root_squash` (needed by CSI subdir creation and Postgres chowns).
 - The dynamic StorageClass **`nfs-apps`** is the **default** (`storageclass.kubernetes.io/is-default-class: "true"`). It provisions `subDir: ${pvc.metadata.namespace}/${pvc.metadata.name}`, `mountPermissions: "0777"`, `reclaimPolicy: Retain`, `onDelete: retain`, `volumeBindingMode: Immediate`, `allowVolumeExpansion: false` (sizes are advisory; NFS has no quota).
 - Migrated PVCs use **`ReadWriteMany`** so backup/restore pods can run on any node. The CSI driver is the only NFS client (hostNetwork node plugin); `nfs-server` ingress is allowlisted to the LAN CIDR (`allow-nfs-ingress`), all mounts use `nfsvers=4.2`.
+- `opencode` splits its state: `opencode-home-pvc` is auto-backed-up (config, sessions, auth, SSH keys), while `opencode-tools-pvc` is intentionally unbacked and holds the Homebrew prefix/cache and nvm/Node versions under `/home/linuxbrew`; both toolchains are re-seeded from the image on first start after a loss.
 - `local-path` remains available but is not a default. The legacy `nfs-backup` class and tar rollback path were removed after the restic restore was verified; the old Longhorn SCs/PVs/volumes are gone.
 
 ## Shared media / static host paths

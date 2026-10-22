@@ -154,6 +154,46 @@
       "depNameTemplate": "helm/helm",
       "datasourceTemplate": "github-releases",
       "versioningTemplate": "semver"
+    },
+    {
+      "customType": "regex",
+      "description": "opencode glibc CLI version baked into the derived image",
+      "managerFilePatterns": [
+        "/targets\\/srv0\\/k3s-apps\\/opencode-src\\/Dockerfile$/"
+      ],
+      "matchStrings": [
+        "ARG OPENCODE_VERSION=(?<currentValue>\\S+)"
+      ],
+      "depNameTemplate": "@opencode/cli",
+      "datasourceTemplate": "npm",
+      "versioningTemplate": "semver"
+    },
+    {
+      "customType": "regex",
+      "description": "Node LTS version installed by nvm in the derived opencode image",
+      "managerFilePatterns": [
+        "/targets\\/srv0\\/k3s-apps\\/opencode-src\\/Dockerfile$/"
+      ],
+      "matchStrings": [
+        "ARG NODE_VERSION=(?<currentValue>\\S+)"
+      ],
+      "depNameTemplate": "node",
+      "datasourceTemplate": "node-version",
+      "versioningTemplate": "semver"
+    },
+    {
+      "customType": "regex",
+      "description": "nvm version baked into the derived opencode image",
+      "managerFilePatterns": [
+        "/targets\\/srv0\\/k3s-apps\\/opencode-src\\/Dockerfile$/"
+      ],
+      "matchStrings": [
+        "ARG NVM_VERSION=(?<currentValue>\\S+)"
+      ],
+      "depNameTemplate": "nvm-sh/nvm",
+      "datasourceTemplate": "github-releases",
+      "extractVersionTemplate": "^v?(?<version>\\d+\\.\\d+\\.\\d+)$",
+      "versioningTemplate": "semver"
     }
   ],
   "packageRules": [
