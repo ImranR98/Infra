@@ -106,3 +106,23 @@ spec:
     - name: http
       port: 8788
       targetPort: http
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-task-runner-agent-ingress
+  namespace: apps
+spec:
+  podSelector:
+    matchLabels:
+      app: dscpln-agent-bigpc
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: task-runner
+      ports:
+        - protocol: TCP
+          port: 8788
