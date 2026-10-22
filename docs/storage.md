@@ -19,7 +19,7 @@
   - every PVC labelled `auto-backup=true` under `current_target/k3s_live_state/nfs-apps/<namespace>/<pvc>`,
   - the srv0 Compose state,
   - the vps0 Compose state, fetched over SSH with the existing key.
-- The Task Runner backup instance runs as root in the `apps` namespace so it can read the Postgres/Redis-owned PVC data; it mounts the Infra tree read-only and only `state_backups/` writable. The vps0 key is the `state-backup-vps0-ssh` Secret (and a recovery copy under `config/state-backup-vps0/`).
+- The Task Runner backup instance runs as root in the `apps` namespace so it can read the Postgres/Redis-owned PVC data; it mounts the Infra tree read-only and only `state_backups/` writable. The vps0 Compose state is served by the generic `dscpln-agent` archive service; it holds no SSH key. The bigpc archive agent runs as a K3s Deployment.
 - `retention` maps to `restic forget --keep-last N --prune` (default 7). Each run also does `restic check --read-data-subset=1%`.
 - The repository lives in the Syncthing-replicated `Main/Infra` tree. Only srv0 should write it; wait for Syncthing to settle before restoring from a peer. The backup task keeps the repo root group-owned by `MY_UID` with the setgid bit, so every restic-created directory/file is readable by Syncthing; it also performs the one-time group migration of an existing repo. `restic/locks` is intentionally excluded from Syncthing.
 - Syncthing's database/logs (`index-v2`) live on srv0 local disk at `~/.local/share/syncthing-data`, not on the `syncthing-config-pvc`. The config, certs and keys stay on the NFS PVC and are included in backups; the index is disposable and excluded from them.
