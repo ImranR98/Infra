@@ -47,7 +47,7 @@ spec:
       automountServiceAccountToken: false
       containers:
         - name: lockdown
-          image: ghcr.io/imranr98/dscpln-lockdown:latest@sha256:5b4765efc80fd3c34ecf1d2dc064e157d3153e9e4b630d4a6a1a38b1624249f0
+          image: ghcr.io/imranr98/dscpln-lockdown:latest@sha256:27e6d1423b56facb3373bf769da11e8d1f4705f4635422c2ab44a91cf5afad9a
           securityContext:
             {{- include "dscpln.containerSecurityContext" (dict "uid" .Values.MY_UID "readOnlyRootFilesystem" true) | nindent 12 }}
           ports:
@@ -118,7 +118,7 @@ spec:
           level: s0
       containers:
         - name: port-blocker
-          image: ghcr.io/imranr98/dscpln-lockdown:latest@sha256:5b4765efc80fd3c34ecf1d2dc064e157d3153e9e4b630d4a6a1a38b1624249f0
+          image: ghcr.io/imranr98/dscpln-lockdown:latest@sha256:27e6d1423b56facb3373bf769da11e8d1f4705f4635422c2ab44a91cf5afad9a
           securityContext:
             runAsUser: 0
             runAsGroup: 0
