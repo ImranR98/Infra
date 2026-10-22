@@ -151,11 +151,8 @@ spec:
             type: PathPrefix
             value: /lockdown
       filters:
-        - type: ExtensionRef
-          extensionRef:
-            group: traefik.io
-            kind: Middleware
-            name: geoblock
+        # Deliberately no geoblock: this is the out-of-house break-glass page,
+        # and the operator travels outside the normal country allowlist.
         - type: ExtensionRef
           extensionRef:
             group: traefik.io
