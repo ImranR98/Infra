@@ -37,6 +37,8 @@ spec:
     metadata:
       labels:
         app: lockdown
+      annotations:
+        checksum/token: {{ $token | sha256sum }}
     spec:
       # The blocker is reachable at srv0's flannel bridge address, so the UI
       # must run on srv0.
@@ -106,6 +108,8 @@ spec:
     metadata:
       labels:
         app: port-blocker
+      annotations:
+        checksum/token: {{ $token | sha256sum }}
     spec:
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet
