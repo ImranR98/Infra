@@ -115,37 +115,6 @@ spec:
         seLinuxOptions:
           type: spc_t
           level: s0
-      initContainers:
-        # The bigpc key is a root-only Secret. Copy it into an emptyDir owned
-        # by the host UID so the Wine task can run as UID 1000 without root.
-        - name: bigpc-key
-          image: busybox:1.38.0-uclibc@sha256:b699b0c739b2d039afd8e2488a3ccfc0b9a86301d87633448d4a93c57bee8c76
-          imagePullPolicy: IfNotPresent
-          command:
-            - sh
-            - -c
-            - cp /src/id_ed25519 /run/id_ed25519 && chown {{ .Values.MY_UID }}:{{ .Values.MY_UID }} /run/id_ed25519 && chmod 0400 /run/id_ed25519
-          securityContext:
-            runAsUser: 0
-            runAsGroup: {{ .Values.MY_UID }}
-            allowPrivilegeEscalation: false
-            capabilities:
-              drop:
-                - ALL
-              add:
-                - CHOWN
-                - FOWNER
-                - DAC_OVERRIDE
-            seccompProfile:
-              type: RuntimeDefault
-            seLinuxOptions:
-              level: s0
-          volumeMounts:
-            - name: bigpc-ssh
-              mountPath: /src
-              readOnly: true
-            - name: bigpc-ssh-run
-              mountPath: /run
       containers:
         - name: task-runner
           image: ghcr.io/imranr98/dscpln-task-runner:latest@sha256:ae1fdcbbe7ae032b37b3dc23ea5ed0861941bc21ae5b8dfa440118de5f1124d1
@@ -229,10 +198,8 @@ spec:
               value: http://portal:8080
             - name: DSCPLN_ORIGIN
               value: "https://dscpln.{{ .Values.SERVICES_DOMAIN }}"
-            # State backups: mounted vps0 key, restic staging/cache and the
-            # target GID for the setgid restic repository.
-            - name: SSH_KEY_FILE
-              value: /ssh/id_ed25519
+            # State backups: restic staging/cache and the target GID for the
+            # setgid restic repository.
             - name: RESTIC_STAGING_DIR
               value: /staging
             - name: RESTIC_CACHE_DIR
@@ -272,12 +239,6 @@ spec:
               mountPath: /home/imranr/Main/Infra/state_backups
             - name: backup-data
               mountPath: /backup-data
-            - name: vps0-ssh
-              mountPath: /ssh
-              readOnly: true
-            - name: bigpc-ssh-run
-              mountPath: /ssh-bigpc
-              readOnly: true
             # The Syncthing-synced private config checkout; a directory mount
             # (not a file) so atomic config replacements are seen. Writable:
             # the UI commits task-meta.json and Contacts Discover edits its
@@ -354,16 +315,6 @@ spec:
         - name: backup-data
           persistentVolumeClaim:
             claimName: task-runner-backup-pvc
-        - name: vps0-ssh
-          secret:
-            secretName: state-backup-vps0-ssh
-            defaultMode: 0400
-        - name: bigpc-ssh
-          secret:
-            secretName: state-backup-bigpc-ssh
-            defaultMode: 0400
-        - name: bigpc-ssh-run
-          emptyDir: {}
         # The private config checkout (config.mjs + apps/ + tools/).
         - name: config-src
           hostPath:
