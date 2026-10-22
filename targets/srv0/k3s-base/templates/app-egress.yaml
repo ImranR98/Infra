@@ -142,39 +142,6 @@ spec:
               - 169.254.0.0/16
               - 100.64.0.0/10
 ---
-# task-runner (the backup instance) backs up the vps0 Compose state over SSH.
-apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
-metadata:
-  name: allow-task-runner-ssh-egress
-  namespace: apps
-spec:
-  podSelector:
-    matchLabels:
-      app: task-runner
-  policyTypes:
-    - Egress
-  egress:
-    - to:
-        - ipBlock:
-            cidr: 0.0.0.0/0
-            except:
-              - 10.0.0.0/8
-              - 172.16.0.0/12
-              - 192.168.0.0/16
-              - 169.254.0.0/16
-              - 100.64.0.0/10
-      ports:
-        - protocol: TCP
-          port: 22
-    # The Wine game-save task also syncs from bigpc over SSH (LAN).
-    - to:
-        - ipBlock:
-            cidr: {{ .Values.BIGPC_IP }}/32
-      ports:
-        - protocol: TCP
-          port: 22
----
 # Home Assistant integrates with devices on the home LAN.
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
