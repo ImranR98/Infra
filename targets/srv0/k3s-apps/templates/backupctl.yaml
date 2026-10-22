@@ -117,7 +117,7 @@ spec:
           level: s0
       containers:
         - name: task-runner
-          image: ghcr.io/imranr98/dscpln-task-runner:latest@sha256:c4acecf0227cec897807d31afb2cca86c87d90db470de8956800ad74de6fb648
+          image: ghcr.io/imranr98/dscpln-task-runner:latest@sha256:fb40893feed1be541bf6bf474e80cdfd1e2335268a05412b21f5a8f90b691bff
           imagePullPolicy: IfNotPresent
           securityContext:
             runAsUser: 0
