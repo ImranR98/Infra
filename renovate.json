@@ -250,7 +250,7 @@
         "docker"
       ],
       "matchPackageNames": [
-        "/^imranrdev\\/dscpln-/"
+        "/^ghcr\\.io\\/imranr98\\/dscpln-/"
       ],
       "matchUpdateTypes": [
         "digest",
