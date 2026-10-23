@@ -89,7 +89,7 @@ spec:
         - name: ollama
           securityContext:
             allowPrivilegeEscalation: false
-          image: ollama/ollama:0.40.8-rocm
+          image: ollama/ollama:0.40.10-rocm
           imagePullPolicy: IfNotPresent
           ports:
             - name: http
