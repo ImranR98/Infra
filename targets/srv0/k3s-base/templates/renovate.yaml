@@ -4,10 +4,11 @@
 # scripts/ (mounted read-only); only config/VARS.env, .git/config, and the
 # scripts are mounted. Automerge policy lives in each repo's renovate.json.
 {{- $appsRepos := "ImranR98/DSCPLN-Workflows,ImranR98/DSCPLN,ImranR98/PixelNtfy,ImranR98/ISBN-Lookup,ImranR98/apps.obtainium.imranr.dev,ImranR98/our-times,ImranR98/order-manager,ImranR98/Logtfy" -}}
-{{- $ciRepos := "ImranR98/PixelNtfy,ImranR98/ISBN-Lookup,ImranR98/apps.obtainium.imranr.dev,ImranR98/our-times,ImranR98/order-manager,ImranR98/Logtfy" -}}
+{{- $ciRepos := $appsRepos -}}
 {{- $jobs := list
     (dict "name" "renovate-apps" "schedule" "0 16 * * *" "repos" $appsRepos "label" "apps" "ci" "false")
-    (dict "name" "renovate-infra" "schedule" "0 17 * * *" "repos" "ImranR98/Infra" "label" "infra" "ci" "true") -}}
+    (dict "name" "renovate-infra" "schedule" "0 17 * * *" "repos" "ImranR98/Infra" "label" "infra" "ci" "true")
+    (dict "name" "renovate-pr-watch" "schedule" "0 18 * * *" "repos" $appsRepos "label" "watch" "ci" "false") -}}
 {{- range $job := $jobs }}
 ---
 apiVersion: batch/v1
@@ -71,6 +72,8 @@ spec:
                   value: {{ $job.ci | quote }}
                 - name: CI_REPOS
                   value: {{ $ciRepos | quote }}
+                - name: APP_REPOS
+                  value: {{ $appsRepos | quote }}
               resources:
                 limits:
                   memory: 2Gi
@@ -79,7 +82,7 @@ spec:
                   cpu: 100m
               command:
                 - bash
-                - /repo/scripts/renovate-in-cluster.sh
+                - {{ if eq $job.label "watch" }}/repo/scripts/app-renovate-watch.sh{{ else }}/repo/scripts/renovate-in-cluster.sh{{ end }}
               volumeMounts:
                 - name: vars-file
                   mountPath: /repo/config/VARS.env

@@ -461,7 +461,7 @@ groups:
           severity: critical
 
       - uid: cronjob-stale-renovate
-        title: Renovate has not succeeded in 26h
+        title: Renovate automation has not succeeded in 26h
         condition: C
         data:
           - refId: A
@@ -469,7 +469,7 @@ groups:
             datasourceUid: prometheus
             model:
               editorMode: code
-              expr: time() - kube_cronjob_status_last_successful_time{cronjob=~"renovate-apps|renovate-infra"} > 93600
+              expr: time() - kube_cronjob_status_last_successful_time{cronjob=~"renovate-apps|renovate-infra|renovate-pr-watch"} > 93600
               instant: true
               intervalMs: 1000
               maxDataPoints: 43200
@@ -504,7 +504,7 @@ groups:
         execErrState: Alerting
         for: 10m
         annotations:
-          summary: A Renovate CronJob (apps or infra) has not completed successfully in 26 hours
+          summary: A Renovate job (apps, infra, or PR watch) has not completed successfully in 26 hours
         labels:
           severity: warning
 
