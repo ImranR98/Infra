@@ -60,7 +60,7 @@ jobs:
           set -euo pipefail
           expected_opencode="$(sed -n 's/^ARG OPENCODE_VERSION=//p' targets/srv0/k3s-apps/opencode-src/Dockerfile | head -1)"
           expected_node="$(sed -n 's/^ARG NODE_VERSION=//p' targets/srv0/k3s-apps/opencode-src/Dockerfile | head -1)"
-          docker run --rm --entrypoint /bin/bash imranrdev/opencode:latest -c '
+          docker run --rm --entrypoint /usr/local/bin/docker-entrypoint.sh imranrdev/opencode:latest /bin/bash -c '
             set -eu
             opencode --version | tee /tmp/opencode-version
             node --version | tee /tmp/node-version
