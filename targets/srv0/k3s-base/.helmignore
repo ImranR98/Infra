@@ -4,3 +4,5 @@
 .syncthing.*
 plugins/
 *.sync-conflict*
+# Source for the locally built NFS server image; not part of the chart.
+nfs-server-src/

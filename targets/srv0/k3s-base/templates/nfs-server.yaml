@@ -49,7 +49,7 @@ spec:
               readOnly: true
       containers:
         - name: nfs-server
-          image: ghcr.io/trexx/docker-nfs-server:v3.22.2-2
+          image: imranrdev/nfs-server:v3.22.2-2@sha256:1b394575edc5e4dfa4aa9abf19ba3ed03483d9b7adead89d011611a145b60102
           ports:
             - name: nfsv4
               containerPort: 2049
