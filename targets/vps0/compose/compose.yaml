@@ -812,37 +812,6 @@ services:
         cpus: 0.5
         logging: *logging
 
-    # CCT26 - Reddit + LLM tool
-    cct26:
-        container_name: cct26
-        image: imranrdev/cct26:latest@sha256:a280a9651c9e43dd72e3df085c664be05ee8367d98e1b93e2d73947e484b65f1
-        restart: unless-stopped
-        mem_limit: 128M
-        cpus: 0.5
-        depends_on:
-            - traefik
-        volumes:
-            - ../../../current_target/compose_live_state/cct26:/app/data
-        environment:
-            - REDDIT_COOKIE=$CCT26_REDDIT_COOKIE
-            - LLM_BASE_URL=$CCT26_LLM_BASE_URL
-            - LLM_MODEL=$CCT26_LLM_MODEL
-            - LLM_API_KEY=$CCT26_LLM_API_KEY
-            - NTFY_URL=$CCT26_NTFY_URL
-            - NTFY_AUTH=$CCT26_NTFY_AUTH
-            - SCRAPE_INTERVAL_HOURS=168
-        labels:
-            - "traefik.enable=true"
-            - "traefik.http.routers.cct26.rule=Host(`cct26.$CLOUD_SERVICES_DOMAIN`)"
-            - "traefik.http.routers.cct26.entrypoints=websecure"
-            - "traefik.http.routers.cct26.tls.certresolver=le"
-            - "traefik.http.routers.cct26.tls=true"
-            - "traefik.http.routers.cct26.middlewares=crowdsec-bouncer@file"
-            - "traefik.http.services.cct26.loadbalancer.server.port=3000"
-        networks:
-            - traefik
-        logging: *logging
-
     # Attention Game
     attentiongame:
         container_name: attentiongame
