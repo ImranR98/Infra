@@ -42,7 +42,7 @@ if [ -n "${DOCKERHUB_USER:-}" ] && [ -n "${DOCKERHUB_TOKEN:-}" ]; then
     RENOVATE_HOST_RULES="$(node -e 'console.log(JSON.stringify([{matchHost:"docker.io",hostType:"docker",username:process.env.DOCKERHUB_USER,password:process.env.DOCKERHUB_TOKEN}]))')"
     export RENOVATE_HOST_RULES
 fi
-export RENOVATE_REPOSITORIES="ImranR98/DSCPLN-Workflows,ImranR98/DSCPLN,ImranR98/PixelNtfy,ImranR98/ISBN-Lookup,ImranR98/apps.obtainium.imranr.dev,ImranR98/our-times,ImranR98/order-manager,ImranR98/Logtfy,ImranR98/Infra"
+export RENOVATE_REPOSITORIES="ImranR98/dscpln-config,ImranR98/DSCPLN,ImranR98/PixelNtfy,ImranR98/ISBN-Lookup,ImranR98/apps.obtainium.imranr.dev,ImranR98/our-times,ImranR98/order-manager,ImranR98/Logtfy,ImranR98/Infra"
 export LOG_LEVEL="${LOG_LEVEL:-info}"
 
 # Attribute commits to the repo's configured git identity instead of Renovate's
@@ -104,7 +104,7 @@ NTFY_URL="https://ntfy.$ntfy_domain" \
     NTFY_TOKEN="$ntfy_token" \
     bash "$INFRA_ROOT/scripts/renovate-notify.sh" --since "$RUN_START" \
     --repo ImranR98/Infra \
-    --repo ImranR98/DSCPLN-Workflows \
+    --repo ImranR98/dscpln-config \
     --repo ImranR98/DSCPLN \
     --repo ImranR98/PixelNtfy \
     --repo ImranR98/ISBN-Lookup \

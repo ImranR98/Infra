@@ -431,7 +431,16 @@
         "targets/srv0/k3s-base/nfs-server-src/Dockerfile"
       ],
       "prBodyNotes": [
-        "After merging, run `bash targets/srv0/k3s-base/nfs-server-src/build.sh` and deploy `srv0-base`; the Dockerfile bump alone does not change the running image."
+        "After merging, the NFS server image workflow rebuilds and opens a digest re-pin PR; deploy `srv0-base` after that PR merges. The Dockerfile bump alone does not change the running image."
+      ]
+    },
+    {
+      "description": "opencode image source: a Dockerfile bump is inert until the image is rebuilt and the digest re-pinned",
+      "matchFileNames": [
+        "targets/srv0/k3s-apps/opencode-src/Dockerfile"
+      ],
+      "prBodyNotes": [
+        "After merging, the opencode image workflow rebuilds and opens a digest re-pin PR; deploy `srv0-apps` after that PR merges. The Dockerfile bump alone does not change the running image."
       ]
     }
   ]

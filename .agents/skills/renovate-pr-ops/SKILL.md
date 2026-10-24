@@ -102,12 +102,19 @@ then deploy in risk order using
 3. k3s Plan bumps (Tier C): apply `srv0-base`, then follow the upgrade-watch playbook.
 4. pc/bigpc/rpi: emit the `git pull` + compose commands; do not attempt them.
 
-### Rebuilding opencode after a FROM bump
+### Derived images (opencode, NFS server)
 
-A merged opencode FROM bump is inert until the derived image is rebuilt and its digest
-re-pinned. `opencode-src/build.sh` is docker-based; on srv0 use podman instead (the
-Docker Hub login lives in `~/.docker/config.json`, which podman only reads when passed
-explicitly — a bare `podman push` fails auth):
+A merged source/FROM bump is inert until the derived image is rebuilt and its digest
+re-pinned. The GitHub workflows do this automatically on `master`:
+
+- `opencode-src/**` → `.github/workflows/opencode-image.yml` → `automation/opencode-digest` (also weekly)
+- `nfs-server-src/**` → `.github/workflows/nfs-server-image.yml` → `automation/nfs-server-digest`
+
+Review and merge the digest PR in the normal Infra pass, then deploy. The workflow
+verifies the baked versions before opening the PR. Only fall back to the local
+`build.sh` when the workflow is broken or an out-of-band rebuild is needed. On srv0 the
+opencode build is podman-based (the Docker Hub login in `~/.docker/config.json` must be
+passed explicitly — a bare `podman push` fails auth):
 
 ```bash
 podman build --platform linux/amd64 -t imranrdev/opencode:latest targets/srv0/k3s-apps/opencode-src
@@ -115,8 +122,9 @@ podman push --authfile ~/.docker/config.json imranrdev/opencode:latest
 curl -s https://hub.docker.com/v2/repositories/imranrdev/opencode/tags/latest | jq -r .digest
 ```
 
-Pin the digest Docker Hub reports (not the local one) into `opencode.yaml`, commit and
-push the re-pin, then roll the pod with the `srv0-apps` upgrade.
+Pin the index digest Docker Hub reports (not the local/platform digest) into
+`opencode.yaml`, commit and push the re-pin, then roll the pod with the `srv0-apps`
+upgrade.
 
 ## Phase 6 — Verify & report
 

@@ -3,7 +3,7 @@
 # publishes finish before the Infra digest refresh. The runner script lives in
 # scripts/ (mounted read-only); only config/VARS.env, .git/config, and the
 # scripts are mounted. Automerge policy lives in each repo's renovate.json.
-{{- $appsRepos := "ImranR98/DSCPLN-Workflows,ImranR98/DSCPLN,ImranR98/PixelNtfy,ImranR98/ISBN-Lookup,ImranR98/apps.obtainium.imranr.dev,ImranR98/our-times,ImranR98/order-manager,ImranR98/Logtfy" -}}
+{{- $appsRepos := "ImranR98/dscpln-config,ImranR98/DSCPLN,ImranR98/PixelNtfy,ImranR98/ISBN-Lookup,ImranR98/apps.obtainium.imranr.dev,ImranR98/our-times,ImranR98/order-manager,ImranR98/Logtfy" -}}
 {{- $ciRepos := $appsRepos -}}
 {{- $jobs := list
     (dict "name" "renovate-apps" "schedule" "0 16 * * *" "repos" $appsRepos "label" "apps" "ci" "false")

@@ -22,7 +22,7 @@ if [ -z "$GH_TOKEN" ]; then
     exit 1
 fi
 
-APP_REPOS="${APP_REPOS:-ImranR98/DSCPLN-Workflows,ImranR98/DSCPLN,ImranR98/PixelNtfy,ImranR98/ISBN-Lookup,ImranR98/apps.obtainium.imranr.dev,ImranR98/our-times,ImranR98/order-manager,ImranR98/Logtfy}"
+APP_REPOS="${APP_REPOS:-ImranR98/dscpln-config,ImranR98/DSCPLN,ImranR98/PixelNtfy,ImranR98/ISBN-Lookup,ImranR98/apps.obtainium.imranr.dev,ImranR98/our-times,ImranR98/order-manager,ImranR98/Logtfy}"
 MODE="${MODE:-publish}"
 if [ "${1:-}" = "--dry-run" ]; then
     MODE=dry-run
