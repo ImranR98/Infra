@@ -501,7 +501,7 @@ services:
 
     # Traefik logrotate - caps the host-mounted access log (CrowdSec's acquisition source)
     traefik-logrotate:
-        image: vitess/logrotate:latest@sha256:a808e39a307c1a9b7236f3aa7d3f9e80bfa54b1a03d8daff545efc1e41e12f38
+        image: vitess/logrotate:latest@sha256:3bc22472691d70b0802b0c574be9d0896853ca083aa0ba5597c955fdf0fbf0a3
         container_name: traefik-logrotate
         restart: unless-stopped
         mem_limit: 64M
@@ -630,7 +630,7 @@ services:
     # non-MY_UID user (ClickHouse 101, Plausible 999) — self-heals ownership
     # drift (e.g. a host-side chown). Re-runs on every up after a down.
     state-fixperms:
-        image: alpine:latest@sha256:71e9b7bae160ba167fa17414401b94cbcdaf3c32feeab9298bd794a2a0614c35
+        image: alpine:latest@sha256:be2656061b536c1883c4034790e21d0a09c5aaaf51968b89368a3c0371ea2c9a
         container_name: state-fixperms
         restart: no
         cap_drop:
@@ -735,7 +735,7 @@ services:
 
     # MeTube - YouTube Downloader
     metube:
-        image: ghcr.io/alexta69/metube:latest@sha256:7749cb1ee1efe0c56e32475fcf8648c278fb41fd158be13946a1759f7884654a
+        image: ghcr.io/alexta69/metube:latest@sha256:367d9d1b5122f2e88263a689998f8b11c4e9a188c9cbdace0ace8bd197935ad8
         container_name: metube
         volumes:
             - ../../../current_target/compose_live_state/metube:/downloads
