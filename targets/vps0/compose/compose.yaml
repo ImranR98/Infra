@@ -686,7 +686,7 @@ services:
     # PixelNtfy - Tracking Pixels
     pixelntfy:
         container_name: pixelntfy
-        image: ghcr.io/imranr98/pixel-ntfy:latest@sha256:4e15576f8fb86c2a1ebaeedf3607ee2977064ea5862dc57d170f183f05ede50d
+        image: ghcr.io/imranr98/pixel-ntfy:latest@sha256:ebc52e93f4b4e53cc487e602dfa7739d0af9af52db4e3af607b570f4010dbacf
         restart: unless-stopped
         mem_limit: 128M
         cpus: 0.25
