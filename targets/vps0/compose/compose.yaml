@@ -784,8 +784,7 @@ services:
     # IKOM - Kitchen order manager
     ikom:
         container_name: ikom
-        # GHCR image is published; switch after vps0 has GHCR read auth.
-        image: imranrdev/order-manager:latest@sha256:32b9961588be61da8775fe9dd8cb8446c9e9464b17df4ef0d2817d79c57f62f2
+        image: ghcr.io/imranr98/order-manager:latest@sha256:96e984caee9733cd357789b3aa3260091963623dc4b6152dca05dba932d6e7d1
         depends_on:
             - traefik
         labels:
@@ -840,8 +839,7 @@ services:
     # Our Times - long-term countdown timers (Authelia headers carry the identity)
     our-times:
         container_name: our-times
-        # GHCR image is published; switch after vps0 has GHCR read auth.
-        image: imranrdev/our-times:latest@sha256:0484c1d1238829d0f83e98b82bd699ba91f53e1b32bfd797a4f87574e0144801
+        image: ghcr.io/imranr98/our-times:latest@sha256:215aa487ffa7b4c1f27464e437e1d93ae7f1c67f9efcf2b6fae9f7837e877ea4
         user: "$MY_UID:$MY_UID"
         depends_on:
             - traefik

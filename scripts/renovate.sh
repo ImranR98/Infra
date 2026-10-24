@@ -38,7 +38,6 @@ if ! command -v go >/dev/null 2>&1; then
 fi
 
 export RENOVATE_TOKEN="$RENOVATE_GITHUB_TOKEN"
-# Private app packages (our-times, order-manager) also need read:packages on the token.
 export RENOVATE_REPOSITORIES="ImranR98/Infra,ImranR98/DSCPLN-Workflows,ImranR98/DSCPLN,ImranR98/PixelNtfy,ImranR98/ISBN-Lookup,ImranR98/apps.obtainium.imranr.dev,ImranR98/our-times,ImranR98/order-manager,ImranR98/Logtfy"
 export LOG_LEVEL="${LOG_LEVEL:-info}"
 

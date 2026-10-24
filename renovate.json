@@ -308,6 +308,34 @@
       "groupName": "Logtfy image digests"
     },
     {
+      "description": "Our Times image digests",
+      "matchDatasources": [
+        "docker"
+      ],
+      "matchPackageNames": [
+        "ghcr.io/imranr98/our-times"
+      ],
+      "matchUpdateTypes": [
+        "digest",
+        "pinDigest"
+      ],
+      "groupName": "Our Times image digests"
+    },
+    {
+      "description": "Order Manager image digests",
+      "matchDatasources": [
+        "docker"
+      ],
+      "matchPackageNames": [
+        "ghcr.io/imranr98/order-manager"
+      ],
+      "matchUpdateTypes": [
+        "digest",
+        "pinDigest"
+      ],
+      "groupName": "Order Manager image digests"
+    },
+    {
       "description": "D$CPLN app images are built/pushed by the monorepo; Renovate refreshes the :latest digest as a safety net",
       "matchDatasources": [
         "docker"

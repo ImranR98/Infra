@@ -36,9 +36,9 @@ The per-app Let's Encrypt Certificates were replaced by `edge-public-tls` (the 2
 
 The 72KB `AGENTS.md` was split into this `docs/` tree; `AGENTS.md` keeps the target table, commands, rules, and links. The detailed design/tradeoff notes live here and in `docs/security.md`.
 
-## Private GHCR packages for our-times and order-manager
+## Public GHCR packages for app images
 
-`our-times` and `order-manager` publish code-only images, but their source repos are private and the images contain readable app code. Their GHCR packages stay private. vps0 must authenticate with a `read:packages` PAT via `docker login ghcr.io` (credentials live only in `/root/.docker/config.json`); the Renovate token needs `read:packages` to refresh their digests. Until both exist, their Compose refs remain on Docker Hub. The other app packages (`PixelNtfy`, `ISBN-Lookup`, `apps.obtainium.imranr.dev`, `Logtfy`) are public and need no auth.
+All six app images (`PixelNtfy`, `ISBN-Lookup`, `apps.obtainium.imranr.dev`, `our-times`, `order-manager`, `Logtfy`) publish to public GHCR packages. `our-times` and `order-manager` keep their source repos private, but the images contain only code and dependencies; public packages avoid vps0 registry auth and let Renovate refresh digests without `read:packages`. The tradeoff is that the image layers expose the compiled/readable app code.
 
 ## Sale site subdomain audiences
 
