@@ -6,7 +6,7 @@ x-logging: &logging
         max-file: 5
 
 x-socket-proxy: &socket-proxy
-    image: wollomatic/socket-proxy:1
+    image: wollomatic/socket-proxy:1@sha256:ff95d6ff6c27853005ef85eb8f4ab5923dc3d2f1e055f98fb6aeeaceec3fe848
     restart: unless-stopped
     read_only: true
     mem_limit: 128M
@@ -647,7 +647,7 @@ services:
             - ../../../current_target/compose_live_state/plausible/data:/var/lib/plausible
         command: chown -R 101:101 /var/lib/clickhouse /var/log/clickhouse-server && chown -R 999:999 /var/lib/plausible
     plausible:
-        image: ghcr.io/plausible/community-edition:v3
+        image: ghcr.io/plausible/community-edition:v3@sha256:33e60bfb40f2df5da00f8753b76fad04f67dba3abe6d73eb516e440e3fb62985
         restart: unless-stopped
         mem_limit: 768M
         cpus: 1.0
@@ -938,7 +938,7 @@ services:
 
     # Owncast Auth - Token-based access control for Owncast viewer
     owncast-auth:
-        image: python:3-alpine
+        image: python:3-alpine@sha256:d44b1254cb92329418d164b22b20d86bbd3869d48e80e09e476531a409a728bb
         container_name: owncast-auth
         restart: unless-stopped
         mem_limit: 64M
@@ -1123,11 +1123,17 @@ services:
 
     # Uptime Kuma - Service Uptime Monitoring
     uptime:
-        image: louislam/uptime-kuma:2
+        image: louislam/uptime-kuma:2@sha256:4b95dbe7ac5343b768f8e04e3035ccd59997872b1a35ab9b0f082d2cc279070e
         container_name: uptime
         restart: unless-stopped
         mem_limit: 512M
         cpus: 0.5
+        healthcheck:
+            test: ["CMD", "node", "-e", "const net=require('net');const s=net.connect(3001,'127.0.0.1');s.on('connect',()=>{s.end();process.exit(0)});s.on('error',()=>process.exit(1));setTimeout(()=>process.exit(1),4000)"]
+            interval: 30s
+            timeout: 5s
+            retries: 3
+            start_period: 30s
         depends_on:
             - traefik
         environment:

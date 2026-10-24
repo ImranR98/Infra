@@ -49,6 +49,8 @@ jobs:
           file: targets/srv0/k3s-base/nfs-server-src/Dockerfile
           platforms: linux/amd64
           push: true
+          provenance: true
+          sbom: true
           tags: imranrdev/nfs-server:${{ env.IMAGE_TAG }}
           labels: |
             org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}

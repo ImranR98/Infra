@@ -7,7 +7,7 @@ metadata:
   labels:
     app.kubernetes.io/name: ollama
     app.kubernetes.io/instance: ollama
-    app.kubernetes.io/version: "0.40.6"
+    app.kubernetes.io/version: "0.40.11"
 automountServiceAccountToken: true
 ---
 apiVersion: v1
@@ -18,7 +18,7 @@ metadata:
   labels:
     app.kubernetes.io/name: ollama
     app.kubernetes.io/instance: ollama
-    app.kubernetes.io/version: "0.40.6"
+    app.kubernetes.io/version: "0.40.11"
 spec:
   type: ClusterIP
   ports:
@@ -38,7 +38,7 @@ metadata:
   labels:
     app.kubernetes.io/name: ollama
     app.kubernetes.io/instance: ollama
-    app.kubernetes.io/version: "0.40.6"
+    app.kubernetes.io/version: "0.40.11"
 spec:
   replicas: 1
   strategy:
@@ -53,7 +53,7 @@ spec:
       labels:
         app.kubernetes.io/name: ollama
         app.kubernetes.io/instance: ollama
-        app.kubernetes.io/version: "0.40.6"
+        app.kubernetes.io/version: "0.40.11"
     spec:
       serviceAccountName: ollama
       terminationGracePeriodSeconds: 120
@@ -89,7 +89,7 @@ spec:
         - name: ollama
           securityContext:
             allowPrivilegeEscalation: false
-          image: ollama/ollama:0.40.11-rocm
+          image: ollama/ollama:0.40.11-rocm@sha256:c57155dfdd87acadac039c2679482db7f761960dfe0419b3072e1cfd52cb5167
           imagePullPolicy: IfNotPresent
           ports:
             - name: http
