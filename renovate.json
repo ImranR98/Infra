@@ -252,6 +252,62 @@
       "groupName": "sale-site image digests"
     },
     {
+      "description": "PixelNtfy image digests",
+      "matchDatasources": [
+        "docker"
+      ],
+      "matchPackageNames": [
+        "ghcr.io/imranr98/pixel-ntfy"
+      ],
+      "matchUpdateTypes": [
+        "digest",
+        "pinDigest"
+      ],
+      "groupName": "PixelNtfy image digests"
+    },
+    {
+      "description": "ISBN-Lookup image digests",
+      "matchDatasources": [
+        "docker"
+      ],
+      "matchPackageNames": [
+        "ghcr.io/imranr98/isbn-lookup"
+      ],
+      "matchUpdateTypes": [
+        "digest",
+        "pinDigest"
+      ],
+      "groupName": "ISBN-Lookup image digests"
+    },
+    {
+      "description": "Obtainium apps image digests",
+      "matchDatasources": [
+        "docker"
+      ],
+      "matchPackageNames": [
+        "ghcr.io/imranr98/apps.obtainium.imranr.dev"
+      ],
+      "matchUpdateTypes": [
+        "digest",
+        "pinDigest"
+      ],
+      "groupName": "Obtainium apps image digests"
+    },
+    {
+      "description": "Logtfy image digests",
+      "matchDatasources": [
+        "docker"
+      ],
+      "matchPackageNames": [
+        "ghcr.io/imranr98/logtfy"
+      ],
+      "matchUpdateTypes": [
+        "digest",
+        "pinDigest"
+      ],
+      "groupName": "Logtfy image digests"
+    },
+    {
       "description": "D$CPLN app images are built/pushed by the monorepo; Renovate refreshes the :latest digest as a safety net",
       "matchDatasources": [
         "docker"

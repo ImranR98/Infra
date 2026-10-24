@@ -686,7 +686,7 @@ services:
     # PixelNtfy - Tracking Pixels
     pixelntfy:
         container_name: pixelntfy
-        image: imranrdev/pixel-ntfy:latest@sha256:b6facde3707bbacae686ac7de2b41ca9190fe52a0f828aa8fe8be0505d9118e3
+        image: ghcr.io/imranr98/pixel-ntfy:latest@sha256:4e15576f8fb86c2a1ebaeedf3607ee2977064ea5862dc57d170f183f05ede50d
         restart: unless-stopped
         mem_limit: 128M
         cpus: 0.25
@@ -712,7 +712,7 @@ services:
     # ISBN Lookup
     isbn-lookup:
         container_name: isbn-lookup
-        image: imranrdev/isbn-lookup:latest@sha256:d3132424eeec7d432fead4adddd501f519d972110578bbc719a96c41d3097ba9
+        image: ghcr.io/imranr98/isbn-lookup:latest@sha256:d95e2d96370e5c54c3ea554cbaf7d01eb68c08f30727da2ce2e1071491db1750
         restart: unless-stopped
         mem_limit: 128M
         cpus: 0.25
@@ -759,7 +759,7 @@ services:
     # Obtainium Apps
     obtainium_apps:
         container_name: obtainium_apps
-        image: imranrdev/apps.obtainium.imranr.dev:latest@sha256:50a9cde3811a60fed21a8775f1417ba45b0b05d321d68a452d85708d7ac1608c
+        image: ghcr.io/imranr98/apps.obtainium.imranr.dev:latest@sha256:ac6f8bf1f48c1421d7ae5216fb9cc0fd3b7e5155b78e220cdf0a3f63bfb277c4
         depends_on:
             - traefik
         # Fetch Plausible stats over the local edge, not Cloudflare (Bot Fight Mode
@@ -784,6 +784,7 @@ services:
     # IKOM - Kitchen order manager
     ikom:
         container_name: ikom
+        # GHCR image is published; switch after vps0 has GHCR read auth.
         image: imranrdev/order-manager:latest@sha256:32b9961588be61da8775fe9dd8cb8446c9e9464b17df4ef0d2817d79c57f62f2
         depends_on:
             - traefik
@@ -839,6 +840,7 @@ services:
     # Our Times - long-term countdown timers (Authelia headers carry the identity)
     our-times:
         container_name: our-times
+        # GHCR image is published; switch after vps0 has GHCR read auth.
         image: imranrdev/our-times:latest@sha256:0484c1d1238829d0f83e98b82bd699ba91f53e1b32bfd797a4f87574e0144801
         user: "$MY_UID:$MY_UID"
         depends_on:
@@ -984,7 +986,7 @@ services:
 
     # Logtfy - Log Monitoring and ntfy Alerting
     logtfy:
-        image: imranrdev/logtfy:latest@sha256:589688b127888ab5b9ccb63d9803b32ec2dc29a6ab3c81dd70cbab2be11b413f
+        image: ghcr.io/imranr98/logtfy:latest@sha256:ffe2a2e21b0ca82e2d05ff20f9a08d411f99a3960564dff33b716f683bf36ea4
         container_name: logtfy
         hostname: $TARGET
         restart: unless-stopped

@@ -36,6 +36,10 @@ The per-app Let's Encrypt Certificates were replaced by `edge-public-tls` (the 2
 
 The 72KB `AGENTS.md` was split into this `docs/` tree; `AGENTS.md` keeps the target table, commands, rules, and links. The detailed design/tradeoff notes live here and in `docs/security.md`.
 
+## Private GHCR packages for our-times and order-manager
+
+`our-times` and `order-manager` publish code-only images, but their source repos are private and the images contain readable app code. Their GHCR packages stay private. vps0 must authenticate with a `read:packages` PAT via `docker login ghcr.io` (credentials live only in `/root/.docker/config.json`); the Renovate token needs `read:packages` to refresh their digests. Until both exist, their Compose refs remain on Docker Hub. The other app packages (`PixelNtfy`, `ISBN-Lookup`, `apps.obtainium.imranr.dev`, `Logtfy`) are public and need no auth.
+
 ## Sale site subdomain audiences
 
 `sale-site` is one container/database serving `home.sale`, `tech.sale`, and `sale` hosts. Item visibility is assigned in the app, not by deploying separate instances. The root host is the distinct `@`/main audience; the Traefik routers keep the old `home-sale`/`tech-sale` names so their ACME certificates survive the consolidation. All three hosts share the app's `hs_vid` analytics cookie on `.cloud.imranr.dev`, while the app's admin session cookie remains host-scoped.

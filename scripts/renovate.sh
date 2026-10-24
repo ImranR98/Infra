@@ -38,7 +38,8 @@ if ! command -v go >/dev/null 2>&1; then
 fi
 
 export RENOVATE_TOKEN="$RENOVATE_GITHUB_TOKEN"
-export RENOVATE_REPOSITORIES="ImranR98/Infra,ImranR98/DSCPLN-Workflows,ImranR98/DSCPLN"
+# Private app packages (our-times, order-manager) also need read:packages on the token.
+export RENOVATE_REPOSITORIES="ImranR98/Infra,ImranR98/DSCPLN-Workflows,ImranR98/DSCPLN,ImranR98/PixelNtfy,ImranR98/ISBN-Lookup,ImranR98/apps.obtainium.imranr.dev,ImranR98/our-times,ImranR98/order-manager,ImranR98/Logtfy"
 export LOG_LEVEL="${LOG_LEVEL:-info}"
 
 # Attribute commits to the repo's configured git identity instead of Renovate's
@@ -101,5 +102,11 @@ NTFY_URL="https://ntfy.$ntfy_domain" \
     bash "$INFRA_ROOT/scripts/renovate-notify.sh" --since "$RUN_START" \
     --repo ImranR98/Infra \
     --repo ImranR98/DSCPLN-Workflows \
-    --repo ImranR98/DSCPLN ||
+    --repo ImranR98/DSCPLN \
+    --repo ImranR98/PixelNtfy \
+    --repo ImranR98/ISBN-Lookup \
+    --repo ImranR98/apps.obtainium.imranr.dev \
+    --repo ImranR98/our-times \
+    --repo ImranR98/order-manager \
+    --repo ImranR98/Logtfy ||
     echo "Warning: Renovate notifier failed." >&2
