@@ -56,4 +56,4 @@ For a from-scratch setup:
 7. **Machine-local extras** — `wireguard.sh`, `preboot.sh`.
 8. **Post-deploy** — the manual first-time setup below (app seeding, crowdsec-web-ui machine registration).
 
-The `renovate` job mounts this repo from `INFRA_ROOT`, so the checkout can live anywhere (it need not be under `MAIN_PARENT_DIR/Main`). Task Runner instead mounts the private `dscpln-config` checkout at `$MAIN_PARENT_DIR/Main/Code/Automation/dscpln-config`.
+The Renovate jobs (`renovate-apps`, `renovate-infra`, `renovate-pr-watch`) mount this repo from `INFRA_ROOT`, so the checkout can live anywhere (it need not be under `MAIN_PARENT_DIR/Main`). Task Runner instead mounts the private `dscpln-config` checkout at `$MAIN_PARENT_DIR/Main/Code/Automation/dscpln-config`.
