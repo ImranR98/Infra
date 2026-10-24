@@ -128,3 +128,31 @@ metadata:
 spec:
   ca:
     secretName: k3s-local-ca-secret
+---
+# k8s-monitoring's Alloy collector scrapes the cert-manager ServiceMonitor.
+# The base namespace has a deny-all-ingress default; KSM/node-exporter have
+# equivalent explicit allows.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-cert-manager-metrics-ingress
+  namespace: base
+spec:
+  podSelector:
+    matchExpressions:
+      - key: app.kubernetes.io/instance
+        operator: In
+        values: ["cert-manager"]
+      - key: app.kubernetes.io/name
+        operator: In
+        values: ["cert-manager", "cainjector", "webhook"]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: alloy-metrics
+      ports:
+        - protocol: TCP
+          port: 9402
+  policyTypes:
+    - Ingress
