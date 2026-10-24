@@ -24,7 +24,10 @@ jobs:
     timeout-minutes: 90
     permissions:
       contents: write
+      packages: write
       pull-requests: write
+    env:
+      IMAGE: ghcr.io/imranr98/opencode:latest
     steps:
       - name: Check out
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -32,11 +35,12 @@ jobs:
       - name: Set up Buildx
         uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4
 
-      - name: Log in to Docker Hub
+      - name: Log in to GHCR
         uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4
         with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and push
         id: build
@@ -48,7 +52,7 @@ jobs:
           push: true
           provenance: true
           sbom: true
-          tags: imranrdev/opencode:latest
+          tags: ${{ env.IMAGE }}
           labels: |
             org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
             org.opencontainers.image.revision=${{ github.sha }}
@@ -60,7 +64,7 @@ jobs:
           set -euo pipefail
           expected_opencode="$(sed -n 's/^ARG OPENCODE_VERSION=//p' targets/srv0/k3s-apps/opencode-src/Dockerfile | head -1)"
           expected_node="$(sed -n 's/^ARG NODE_VERSION=//p' targets/srv0/k3s-apps/opencode-src/Dockerfile | head -1)"
-          docker run --rm --entrypoint /usr/local/bin/docker-entrypoint.sh imranrdev/opencode:latest /bin/bash -c '
+          docker run --rm --entrypoint /usr/local/bin/docker-entrypoint.sh "$IMAGE" /bin/bash -c '
             set -eu
             opencode --version | tee /tmp/opencode-version
             node --version | tee /tmp/node-version
@@ -81,7 +85,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           sed -i -E \
-            "s#image: imranrdev/opencode:latest(@sha256:[a-f0-9]+)?#image: imranrdev/opencode:latest@${DIGEST}#" \
+            "s#image: (imranrdev/opencode|ghcr\\.io/imranr98/opencode):latest(@sha256:[a-f0-9]+)?#image: ghcr.io/imranr98/opencode:latest@${DIGEST}#" \
             targets/srv0/k3s-apps/templates/opencode.yaml
           if git diff --quiet; then
             echo "digest unchanged; no PR needed"

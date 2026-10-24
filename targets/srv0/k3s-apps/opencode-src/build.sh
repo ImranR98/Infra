@@ -9,7 +9,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
 INFRA_ROOT="$(cd "$SCRIPT_DIR/../../../.." && pwd)"
-IMAGE="imranrdev/opencode:latest"
+IMAGE="ghcr.io/imranr98/opencode:latest"
 OPENCODE_YAML="$INFRA_ROOT/targets/srv0/k3s-apps/templates/opencode.yaml"
 
 if docker info >/dev/null 2>&1; then
@@ -26,10 +26,14 @@ echo "==> Building $IMAGE (linux/amd64) with $ENGINE"
 
 echo "==> Pushing $IMAGE"
 if [ "$ENGINE" = podman ]; then
-    # Podman's local RepoDigests is the pre-push manifest digest; --digestfile
-    # reports the digest the registry actually stores.
+    # The GHCR login lives in ~/.docker/config.json; podman only reads it when
+    # passed explicitly. --digestfile reports the registry manifest digest, not
+    # the pre-push local RepoDigest.
+    authfile="${DOCKER_CONFIG:-$HOME/.docker}/config.json"
+    push_args=()
+    [ -f "$authfile" ] && push_args+=(--authfile "$authfile")
     digestfile="$(mktemp)"
-    "$ENGINE" push --digestfile "$digestfile" "$IMAGE"
+    "$ENGINE" push "${push_args[@]}" --digestfile "$digestfile" "$IMAGE"
     digest="$(cat "$digestfile")"
     rm -f "$digestfile"
 else
@@ -39,7 +43,10 @@ fi
 [ -n "$digest" ] || { echo "Error: no pushed digest found for $IMAGE" >&2; exit 1; }
 
 echo "==> Re-pinning $OPENCODE_YAML to $digest"
-sed -i "s|imranrdev/opencode:latest\(@sha256:[a-f0-9]*\)\?|imranrdev/opencode:latest@$digest|" "$OPENCODE_YAML"
+sed -i -E \
+    -e "s|imranrdev/opencode:latest(@sha256:[a-f0-9]+)?|ghcr.io/imranr98/opencode:latest@$digest|" \
+    -e "s|ghcr.io/imranr98/opencode:latest(@sha256:[a-f0-9]+)?|ghcr.io/imranr98/opencode:latest@$digest|" \
+    "$OPENCODE_YAML"
 
 echo "Pushed $IMAGE@$digest and re-pinned opencode.yaml."
 echo "Next: bash scripts/validate.sh srv0 && helm upgrade --install srv0-apps targets/srv0/k3s-apps -n apps --create-namespace -f targets/srv0/k3s-apps/values.yaml -f config/srv0/values.yaml"

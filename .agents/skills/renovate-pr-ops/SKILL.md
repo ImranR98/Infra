@@ -113,16 +113,16 @@ re-pinned. The GitHub workflows do this automatically on `master`:
 Review and merge the digest PR in the normal Infra pass, then deploy. The workflow
 verifies the baked versions before opening the PR. Only fall back to the local
 `build.sh` when the workflow is broken or an out-of-band rebuild is needed. On srv0 the
-opencode build is podman-based (the Docker Hub login in `~/.docker/config.json` must be
-passed explicitly — a bare `podman push` fails auth):
+opencode build is podman-based (log in to GHCR once, then pass the Docker config file to
+podman — a bare `podman push` fails auth):
 
 ```bash
-podman build --platform linux/amd64 -t imranrdev/opencode:latest targets/srv0/k3s-apps/opencode-src
-podman push --authfile ~/.docker/config.json imranrdev/opencode:latest
-curl -s https://hub.docker.com/v2/repositories/imranrdev/opencode/tags/latest | jq -r .digest
+podman build --platform linux/amd64 -t ghcr.io/imranr98/opencode:latest targets/srv0/k3s-apps/opencode-src
+podman push --authfile ~/.docker/config.json ghcr.io/imranr98/opencode:latest
+skopeo inspect docker://ghcr.io/imranr98/opencode:latest | jq -r .Digest
 ```
 
-Pin the index digest Docker Hub reports (not the local/platform digest) into
+Pin the index digest GHCR reports (not the local/platform digest) into
 `opencode.yaml`, commit and push the re-pin, then roll the pod with the `srv0-apps`
 upgrade.
 
