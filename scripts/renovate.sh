@@ -1,5 +1,5 @@
 #!/bin/bash
-# DESC: Run Renovate against ImranR98/Infra — opens update PRs on GitHub (manual). The in-cluster renovate CronJob runs this automatically; use this for on-demand runs.
+# DESC: Run Renovate against ImranR98/Infra — opens update PRs on GitHub (manual). The in-cluster renovate-apps/renovate-infra CronJobs run this automatically; use this for on-demand runs.
 set -euo pipefail
 
 if [ -z "${INFRA_ROOT:-}" ]; then
@@ -34,7 +34,7 @@ fi
 # pending — install it with scripts/prereqs.sh.
 if ! command -v go >/dev/null 2>&1; then
     echo "Warning: 'go' not found — pending gomod updates will crash the run." >&2
-    echo "Install with: scripts/prereqs.sh (or let the in-cluster renovate CronJob handle it)." >&2
+    echo "Install with: scripts/prereqs.sh (or let the in-cluster renovate-apps/renovate-infra CronJobs handle it)." >&2
 fi
 
 export RENOVATE_TOKEN="$RENOVATE_GITHUB_TOKEN"
