@@ -40,6 +40,10 @@ The 72KB `AGENTS.md` was split into this `docs/` tree; `AGENTS.md` keeps the tar
 
 All six app images (`PixelNtfy`, `ISBN-Lookup`, `apps.obtainium.imranr.dev`, `our-times`, `order-manager`, `Logtfy`) publish to public GHCR packages. `our-times` and `order-manager` keep their source repos private, but the images contain only code and dependencies; public packages avoid vps0 registry auth and let Renovate refresh digests without `read:packages`. The tradeoff is that the image layers expose the compiled/readable app code.
 
+## Infra-built images on GHCR
+
+The two images built in this repo publish to public GHCR packages: `ghcr.io/imranr98/opencode` (weekly and on `opencode-src` changes) and `ghcr.io/imranr98/nfs-server` (on `nfs-server-src` changes). Both workflows use the workflow `GITHUB_TOKEN` with `packages: write`; the packages are public, so srv0 pulls anonymously and Renovate needs no `read:packages`. The old Docker Hub repositories are deprecated but not deleted. Docker Hub credentials remain only in `config/VARS.env` for Renovate's upstream lookups; the GitHub Actions Docker Hub secrets were removed.
+
 ## Sale site subdomain audiences
 
 `sale-site` is one container/database serving `home.sale`, `tech.sale`, and `sale` hosts. Item visibility is assigned in the app, not by deploying separate instances. The root host is the distinct `@`/main audience; the Traefik routers keep the old `home-sale`/`tech-sale` names so their ACME certificates survive the consolidation. All three hosts share the app's `hs_vid` analytics cookie on `.cloud.imranr.dev`, while the app's admin session cookie remains host-scoped.
