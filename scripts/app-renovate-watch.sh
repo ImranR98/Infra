@@ -48,7 +48,10 @@ node - <<'NODE'
     }
     const res = await fetch(`${process.env.NTFY_URL.replace(/\/+$/, '')}/`, {
       method: 'POST',
-      headers: { Authorization: `Bearer ${process.env.NTFY_TOKEN}` },
+      headers: {
+        Authorization: `Bearer ${process.env.NTFY_TOKEN}`,
+        'Content-Type': 'application/json',
+      },
       body: JSON.stringify({
         topic: process.env.NTFY_TOPIC,
         title,
