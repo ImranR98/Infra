@@ -154,7 +154,7 @@ if [ -d /var/lib/rancher/k3s/server/db/etcd ]; then
 fi
 
 echo "Waiting for cluster to be ready..."
-wait_for_k3s_cluster
+wait_for_k3s_cluster 150
 
 node_name=$(kubectl get node "$(hostname)" -o jsonpath='{.metadata.name}' 2>/dev/null)
 if [ -n "$node_name" ]; then

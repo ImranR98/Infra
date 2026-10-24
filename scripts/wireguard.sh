@@ -36,8 +36,10 @@ endpoint=$(get Endpoint)
 endpoint_ip=$(grep -oE '^Endpoint[[:space:]]*=[[:space:]]*[0-9]+(\.[0-9]+){3}' "$conf_src" | grep -oE '[0-9]+(\.[0-9]+){3}' | head -1)
 gateway=$(ip route show default 2>/dev/null | awk '{print $3; exit}')
 
-[ -n "$private_key" ] && [ -n "$peer_public_key" ] && [ -n "$endpoint" ] ||
-    { echo "Error: wg0.conf must contain PrivateKey, PublicKey and Endpoint" >&2; exit 1; }
+if [ -z "$private_key" ] || [ -z "$peer_public_key" ] || [ -z "$endpoint" ]; then
+    echo "Error: wg0.conf must contain PrivateKey, PublicKey and Endpoint" >&2
+    exit 1
+fi
 
 if command -v dnf >/dev/null 2>&1; then
     sudo dnf install -y wireguard-tools
