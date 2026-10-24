@@ -10,6 +10,8 @@
 | `kubeconfig-unlock.sh [--lock]` | — | this machine | read ACL on the k3s kubeconfig + `~/.kube/config` symlink; holds until Ctrl-C; `--lock` cleans up |
 | `renovate.sh` | — | this machine (opens GitHub PRs) | needs `RENOVATE_GITHUB_TOKEN` in `config/VARS.env`; Node/npm only |
 | `renovate-notify.sh` | — | this machine / in-cluster | posts newly opened or refreshed `deps` PRs to ntfy; called by `renovate.sh` and the `renovate-apps`/`renovate-infra` CronJobs |
+| `app-renovate-watch.sh [--dry-run]` | — | this machine / in-cluster | posts a digest for open app Renovate PRs whose `test` check failed; exits non-zero and posts an incomplete-watch notice on GitHub API errors |
+| `ci-notify.sh` | — | this machine / in-cluster | posts failed app GitHub Actions runs from the last 24h; called by the `renovate-infra` CronJob |
 | `preboot.sh public-exposure\|crypt-ssh` | — | this machine | initramfs LUKS unlock; preboot key from `config/<hostname>/public-exposure/` |
 | `public-exposure-keygen.sh` | — | srv0 | generates the public-exposure keys/confs into `config/` (idempotent; `--force` rotates) |
 | `wireguard.sh <conf>` | — | this machine | deploys a provider wg0.conf (split-/1 routes, endpoint dead-loop route) |

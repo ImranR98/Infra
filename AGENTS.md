@@ -53,6 +53,7 @@ sudo bash scripts/update-node-ip.sh [--ip X] [--force]
 # Machine-local (no target):
 bash scripts/prereqs.sh
 bash scripts/renovate.sh [--dry-run]
+bash scripts/app-renovate-watch.sh [--dry-run]
 bash scripts/preboot.sh public-exposure|crypt-ssh
 bash scripts/wireguard.sh <path/to/wg0.conf>
 bash scripts/k3s-server.sh
