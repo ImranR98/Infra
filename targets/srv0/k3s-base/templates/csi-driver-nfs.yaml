@@ -14,7 +14,7 @@ spec:
     image:
       nfs:
         repository: registry.k8s.io/sig-storage/nfsplugin
-        tag: v4.13.5
+        tag: v4.13.6
     node:
       dnsPolicy: ClusterFirstWithHostNet
     # Ships the snapshot.storage.k8s.io CRDs + snapshot-controller. The
