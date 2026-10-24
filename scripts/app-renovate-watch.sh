@@ -105,7 +105,7 @@ node - <<'NODE'
         return bt - at || (b.id || 0) - (a.id || 0);
       });
       const test = testRuns[0];
-      if (test?.conclusion === 'failure') {
+      if (test?.conclusion === 'failure' || test?.conclusion === 'timed_out') {
         failures.push({
           repo,
           number: pr.number,
