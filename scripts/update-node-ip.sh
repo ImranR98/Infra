@@ -52,6 +52,7 @@ else
     echo "No previous node-ip config found; setting IP to $new_ip."
 fi
 
+# shellcheck disable=SC2016 # $1 is expanded by the inner bash, not this shell.
 $SU bash -c 'mkdir -p "$1"' _ "/etc/rancher/k3s/config.yaml.d"
 
 for f in /etc/rancher/k3s/config.yaml /etc/rancher/k3s/config.yaml.d/*.yaml; do
@@ -59,6 +60,7 @@ for f in /etc/rancher/k3s/config.yaml /etc/rancher/k3s/config.yaml.d/*.yaml; do
     $SU sed -i "s/^\([[:space:]]*\)node-ip: .*/\1node-ip: ${new_ip}/" "$f"
 done
 
+# shellcheck disable=SC2016 # $1 is expanded by the inner bash, not this shell.
 printf 'node-ip: %s\n' "$new_ip" | $SU bash -c 'tee "$1" >/dev/null' _ "/etc/rancher/k3s/config.yaml.d/50-node-ip.yaml"
 
 $SU bash -c 'systemctl daemon-reload'

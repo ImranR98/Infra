@@ -183,7 +183,7 @@ spec:
       enabled: true
       destinations: [prometheus]
       collector: alloy-metrics
-    # Scrape Prometheus-Operator objects (the Longhorn chart's ServiceMonitor);
+    # Scrape Prometheus-Operator objects (e.g. the cert-manager ServiceMonitor);
     # the CRDs are already installed in the cluster.
     prometheusOperatorObjects:
       enabled: true

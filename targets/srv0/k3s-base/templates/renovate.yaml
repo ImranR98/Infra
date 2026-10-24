@@ -1,26 +1,31 @@
 ---
-# Renovate self-hosted runner: proposes updates as PRs on GitHub.
-# Runs the full renovate image (ships the Go toolchain, so the gomod manager
-# for the WASM plugin works here). Only two files of the synced repo are
-# mounted (read-only): config/VARS.env (the GitHub token) and .git/config
-# (author identity) — Renovate itself clones from GitHub. The PR notifier
-# also mounts scripts/ (public code) and takes the ntfy write token from the
-# renovate-ntfy-token Secret. Minimizes what a compromised Renovate image can
-# read.
-# Automerge policy lives in renovate.json (repo config).
+# Renovate self-hosted runners. Apps/ops run an hour before Infra so app
+# publishes finish before the Infra digest refresh. The runner script lives in
+# scripts/ (mounted read-only); only config/VARS.env, .git/config, and the
+# scripts are mounted. Automerge policy lives in each repo's renovate.json.
+{{- $appsRepos := "ImranR98/DSCPLN-Workflows,ImranR98/DSCPLN,ImranR98/PixelNtfy,ImranR98/ISBN-Lookup,ImranR98/apps.obtainium.imranr.dev,ImranR98/our-times,ImranR98/order-manager,ImranR98/Logtfy" -}}
+{{- $ciRepos := "ImranR98/PixelNtfy,ImranR98/ISBN-Lookup,ImranR98/apps.obtainium.imranr.dev,ImranR98/our-times,ImranR98/order-manager,ImranR98/Logtfy" -}}
+{{- $jobs := list
+    (dict "name" "renovate-apps" "schedule" "0 16 * * *" "repos" $appsRepos "label" "apps" "ci" "false")
+    (dict "name" "renovate-infra" "schedule" "0 17 * * *" "repos" "ImranR98/Infra" "label" "infra" "ci" "true") -}}
+{{- range $job := $jobs }}
+---
 apiVersion: batch/v1
 kind: CronJob
 metadata:
-  name: renovate
+  name: {{ $job.name }}
   namespace: base
 spec:
-  schedule: "0 17 * * *"
+  schedule: {{ $job.schedule | quote }}
   timeZone: America/Toronto
+  startingDeadlineSeconds: 3600
   concurrencyPolicy: Forbid
   successfulJobsHistoryLimit: 1
   failedJobsHistoryLimit: 1
   jobTemplate:
     spec:
+      # A hung run must not block the next day's run (concurrencyPolicy: Forbid).
+      activeDeadlineSeconds: 7200
       backoffLimit: 2
       template:
         metadata:
@@ -30,7 +35,7 @@ spec:
         spec:
           restartPolicy: Never
           securityContext:
-            runAsUser: {{ .Values.MY_UID }}
+            runAsUser: {{ $.Values.MY_UID }}
             # Containerbase's /opt/containerbase tree is root:root 775, so the
             # dynamic tool installs (install-tool node/npm: lockfile updates)
             # need group 0; the uid stays unprivileged for the hostPath mounts.
@@ -40,17 +45,32 @@ spec:
               level: s0
           containers:
             - name: renovate
-              image: renovate/renovate:44.181.3
+              image: renovate/renovate:44.181.3@sha256:00f4f69be3060d6ad1ff3481a0e44490aba37ab17c501cbf2de179bc3751dc78
+              imagePullPolicy: IfNotPresent
+              securityContext:
+                allowPrivilegeEscalation: false
+                capabilities:
+                  drop: ["ALL"]
+                seccompProfile:
+                  type: RuntimeDefault
               env:
                 - name: NTFY_URL
                   value: "http://ntfy.base.svc.cluster.local:3000"
                 - name: NTFY_TOPIC
-                  value: "{{ .Values.TARGET }}_services_renovate"
+                  value: "{{ $.Values.TARGET }}_services_renovate"
                 - name: NTFY_TOKEN
                   valueFrom:
                     secretKeyRef:
                       name: renovate-ntfy-token
                       key: token
+                - name: RENOVATE_REPOSITORIES
+                  value: {{ $job.repos | quote }}
+                - name: RUN_LABEL
+                  value: {{ $job.label | quote }}
+                - name: RUN_CI_NOTIFY
+                  value: {{ $job.ci | quote }}
+                - name: CI_REPOS
+                  value: {{ $ciRepos | quote }}
               resources:
                 limits:
                   memory: 2Gi
@@ -59,44 +79,7 @@ spec:
                   cpu: 100m
               command:
                 - bash
-                - -c
-                - |
-                  set -eu
-                  # Notifications only cover PRs opened after this timestamp.
-                  RUN_START="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-                  # VARS.env is dotenv: set -a exports the simple KEY="value" lines.
-                  set -a
-                  . /repo/config/VARS.env
-                  set +a
-                  export RENOVATE_TOKEN="$RENOVATE_GITHUB_TOKEN"
-                  if [ -n "${DOCKERHUB_USER:-}" ] && [ -n "${DOCKERHUB_TOKEN:-}" ]; then
-                    export RENOVATE_HOST_RULES="$(node -e 'console.log(JSON.stringify([{matchHost:"docker.io",hostType:"docker",username:process.env.DOCKERHUB_USER,password:process.env.DOCKERHUB_TOKEN}]))')"
-                  fi
-                  export RENOVATE_REPOSITORIES="ImranR98/DSCPLN-Workflows,ImranR98/DSCPLN,ImranR98/PixelNtfy,ImranR98/ISBN-Lookup,ImranR98/apps.obtainium.imranr.dev,ImranR98/our-times,ImranR98/order-manager,ImranR98/Logtfy,ImranR98/Infra"
-                  export LOG_LEVEL="info"
-                  # Attribute commits to the repo's configured git identity
-                  # (synced .git/config; matches local runs). Read the file
-                  # directly: `git -C /repo` trips git's dubious-ownership check
-                  # (root-owned mount parents, unprivileged pod).
-                  if git config -f /repo/.git/config user.name >/dev/null 2>&1 && git config -f /repo/.git/config user.email >/dev/null 2>&1; then
-                    export RENOVATE_GIT_AUTHOR="$(git config -f /repo/.git/config user.name) <$(git config -f /repo/.git/config user.email)>"
-                  fi
-                  rc=0
-                  renovate || rc=$?
-                  # Notify once for any PRs this run opened. A notification
-                  # failure must not change Renovate's exit code.
-                  bash /repo/scripts/renovate-notify.sh --since "$RUN_START" \
-                    --repo ImranR98/Infra \
-                    --repo ImranR98/DSCPLN-Workflows \
-                    --repo ImranR98/DSCPLN \
-                    --repo ImranR98/PixelNtfy \
-                    --repo ImranR98/ISBN-Lookup \
-                    --repo ImranR98/apps.obtainium.imranr.dev \
-                    --repo ImranR98/our-times \
-                    --repo ImranR98/order-manager \
-                    --repo ImranR98/Logtfy ||
-                    echo "Warning: Renovate notifier failed" >&2
-                  exit "$rc"
+                - /repo/scripts/renovate-in-cluster.sh
               volumeMounts:
                 - name: vars-file
                   mountPath: /repo/config/VARS.env
@@ -110,18 +93,19 @@ spec:
           volumes:
             - name: vars-file
               hostPath:
-                path: "{{ .Values.INFRA_ROOT }}/config/VARS.env"
+                path: "{{ $.Values.INFRA_ROOT }}/config/VARS.env"
                 type: File
             - name: git-config
               hostPath:
-                path: "{{ .Values.INFRA_ROOT }}/.git/config"
+                path: "{{ $.Values.INFRA_ROOT }}/.git/config"
                 type: File
             - name: scripts-dir
               hostPath:
-                path: "{{ .Values.INFRA_ROOT }}/scripts"
+                path: "{{ $.Values.INFRA_ROOT }}/scripts"
                 type: Directory
+{{- end }}
 ---
-# Write-only ntfy token for the PR notifier (same value the Grafana contact
+# Write-only ntfy token for the PR/CI notifier (same value the Grafana contact
 # point uses).
 apiVersion: v1
 kind: Secret

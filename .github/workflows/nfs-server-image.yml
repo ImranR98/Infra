@@ -1,0 +1,106 @@
+name: NFS server image
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - targets/srv0/k3s-base/nfs-server-src/**
+      - .github/workflows/nfs-server-image.yml
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: Docker Hub tag to push
+        required: true
+        default: v3.22.2-2
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nfs-server-image
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: write
+      pull-requests: write
+    env:
+      IMAGE_TAG: ${{ inputs.image_tag || 'v3.22.2-2' }}
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push
+        id: build
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
+        with:
+          context: targets/srv0/k3s-base/nfs-server-src
+          file: targets/srv0/k3s-base/nfs-server-src/Dockerfile
+          platforms: linux/amd64
+          push: true
+          tags: imranrdev/nfs-server:${{ env.IMAGE_TAG }}
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+          cache-from: type=gha,scope=nfs-server
+          cache-to: type=gha,mode=max,scope=nfs-server
+
+      - name: Verify image
+        run: |
+          set -euo pipefail
+          docker run --rm --entrypoint sh "imranrdev/nfs-server:${IMAGE_TAG}" -c '
+            set -eu
+            grep -E "^(ID|VERSION_ID)=" /etc/os-release
+            test -x /usr/sbin/rpc.nfsd
+            test -x /usr/sbin/rpc.mountd
+            test -x /usr/sbin/exportfs
+            sh -n /usr/local/bin/entrypoint.sh
+            echo image-ok
+          '
+
+      - name: Update digest and open PR
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DIGEST: ${{ steps.build.outputs.digest }}
+        run: |
+          set -euo pipefail
+          [ -n "$DIGEST" ] || { echo "no image digest" >&2; exit 1; }
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          sed -i -E \
+            "s#image: imranrdev/nfs-server:[^@[:space:]]+(@sha256:[a-f0-9]+)?#image: imranrdev/nfs-server:${IMAGE_TAG}@${DIGEST}#" \
+            targets/srv0/k3s-base/templates/nfs-server.yaml
+          if git diff --quiet; then
+            echo "digest unchanged; no PR needed"
+            exit 0
+          fi
+          git checkout -B automation/nfs-server-digest
+          git add targets/srv0/k3s-base/templates/nfs-server.yaml
+          git commit -m "nfs: re-pin image digest to ${DIGEST}"
+          git push --force origin automation/nfs-server-digest
+          pr="$(gh pr list --head automation/nfs-server-digest --state open --json number --jq '.[0].number // empty')"
+          if [ -n "$pr" ]; then
+            gh pr comment "$pr" --body "Rebuilt the NFS server image at ${DIGEST}."
+          else
+            gh pr create \
+              --base master \
+              --head automation/nfs-server-digest \
+              --title "nfs: re-pin image digest" \
+              --body "Rebuilt the NFS server image from \`nfs-server-src\` and re-pinned the digest.
+
+          Digest: \`${DIGEST}\`
+
+          Run the Infra review workflow before merging."
+          fi

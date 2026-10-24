@@ -74,9 +74,10 @@ HelmChart CRs can pull values from a namespaced Secret via `spec.valuesSecrets: 
 
 ## Alerting (Grafana → ntfy)
 
-- Grafana provisions one webhook contact point (`ntfy`, write-only token in the `grafana-alerting-contact` Secret from `NTFY_WRITE_ONLY_ACCOUNT_TOKEN`) plus file-backed alerting config from the `grafana-alerting-rules` ConfigMap: 18 rules (`files/alerting/rules.yaml`), the policy tree (`policies.yaml` — receiver ntfy, `group_by: alertname`, 12h repeat), and the markdown body template group (`templates.yaml`, `ntfy.body`). Longhorn's ServiceMonitor/dashboard and its monitoring NetworkPolicy were removed with Longhorn.
+- Grafana provisions one webhook contact point (`ntfy`, write-only token in the `grafana-alerting-contact` Secret from `NTFY_WRITE_ONLY_ACCOUNT_TOKEN`) plus file-backed alerting config from the `grafana-alerting-rules` ConfigMap: 21 rules (`files/alerting/rules.yaml`), the policy tree (`policies.yaml` — receiver ntfy, `group_by: alertname`, 12h repeat), and the markdown body template group (`templates.yaml`, `ntfy.body`). The cert-manager ServiceMonitor is scraped for certificate expiry/readiness alerts; the stale Longhorn rules were removed with Longhorn.
 - The templated webhook URL carries the dynamic ntfy fields (Extra Headers can't change per alert): `title` = alertname, `priority` = low on resolved / high on warning / urgent on critical / default otherwise, `markdown=yes`. `ntfy.body` renders the markdown body — state + name, summary, and the labels worth seeing — instead of the default `Value:`/`Labels:` dump.
 - Title URL-encoding order matters: `%`→`%25` first, then spaces→`%20` (the reverse re-escapes the `%` of `%20`).
+- Certificate/NFS rules: `cert-manager-expiry` warns when a certificate has less than 21 days left, `cert-manager-not-ready` is critical, and `nfs-server-unavailable` fires when the NFS Deployment has no available replicas. cert-manager metrics are enabled via its ServiceMonitor and scraped by k8s-monitoring's `prometheusOperatorObjects`; the NFS rule uses kube-state-metrics.
 
 ## Manual first-time setup
 
@@ -91,13 +92,13 @@ One-time web-UI steps for apps with no API seeding:
 
 ## Updates (Renovate)
 
-Renovate runs daily at 17:00 America/Toronto as the `renovate` K3s CronJob on srv0 (base, `targets/srv0/k3s-base/templates/renovate.yaml`) using the full `renovate/renovate` image (it ships the Go toolchain, though the repo no longer has a `go.mod`). The pod mounts only two files from the synced repo (`{{ INFRA_ROOT }}/config/VARS.env` and `{{ INFRA_ROOT }}/.git/config`, read-only) to source `RENOVATE_GITHUB_TOKEN` (auto-rotates on sync) and to infer `RENOVATE_GIT_AUTHOR` — the identity must be set **repo-locally** (`git config user.name/user.email`), since a global-only `~/.gitconfig` is invisible to the pod, and a default Renovate author makes the next run treat its own branches as foreign (autoclose skipped, rebases blocked). Renovate clones from GitHub itself. `bash scripts/renovate.sh [--dry-run]` is the manual equivalent for other machines (needs Node/npm; runs on the current machine and opens PRs directly on GitHub).
+Renovate runs as two K3s CronJobs on srv0 (base, `targets/srv0/k3s-base/templates/renovate.yaml`): `renovate-apps` at 16:00 America/Toronto for the app/ops repos, and `renovate-infra` at 17:00 for `ImranR98/Infra`. The hourly gap lets app publishes finish before the Infra digest refresh. Both use the full `renovate/renovate` image (digest-pinned; ships the Go toolchain, though the repo no longer has a `go.mod`) and run `scripts/renovate-in-cluster.sh`. The pod mounts only `{{ INFRA_ROOT }}/config/VARS.env`, `{{ INFRA_ROOT }}/.git/config`, and `scripts/` (read-only). The script sources `RENOVATE_GITHUB_TOKEN`, builds `RENOVATE_HOST_RULES` from the Docker Hub credentials, sets the repo-local git author, runs Renovate for `RENOVATE_REPOSITORIES`, then calls the notifier. `startingDeadlineSeconds`/`activeDeadlineSeconds` keep a hung run from blocking the next day. `bash scripts/renovate.sh [--dry-run]` remains the manual all-repo equivalent for other machines (needs Node/npm; opens PRs directly on GitHub).
 
-Both run paths publish a notification per PR the run opened or refreshed: `scripts/renovate-notify.sh` queries the GitHub API for open `deps`-labeled PRs created or updated after the run start and posts each to ntfy topic `srv0_services_renovate` (the run is the only actor touching these PRs, so an update means the run reopened it or force-pushed new content). The CronJob mounts `scripts/` read-only, gets `NTFY_URL`/`NTFY_TOPIC` from its env and the write token from the `renovate-ntfy-token` Secret, and its `app: renovate` pod label is admitted by ntfy's `allow-notification-ingress` policy; `renovate.sh` reads the ntfy settings from `config/srv0/values.yaml`. A notifier failure logs a warning without changing Renovate's exit code.
+Both run paths publish a notification per PR the run opened or refreshed: `scripts/renovate-notify.sh` queries the GitHub API for open `deps`-labeled PRs created or updated after the run start and posts each to ntfy topic `srv0_services_renovate` (the run is the only actor touching these PRs, so an update means the run reopened it or force-pushed new content). The `renovate-infra` run also calls `scripts/ci-notify.sh`, which posts failed app GitHub Actions runs from the last 24 hours. A Renovate failure posts an ntfy failure message. The CronJob mounts `scripts/` read-only, gets `NTFY_URL`/`NTFY_TOPIC` from its env and the write token from the `renovate-ntfy-token` Secret, and its `app: renovate` pod label is admitted by ntfy's `allow-notification-ingress` policy; `renovate.sh` reads the ntfy settings from `config/srv0/values.yaml`. A notifier failure logs a warning without changing Renovate's exit code.
 
-Every PR is manual: `git fetch origin pull/<n>/head:renovate/pr-<n>`, `git checkout renovate/pr-<n>`, run `bash scripts/validate.sh <target>`, merge locally, then `git push origin master`. Never merge in the platform UI — origin remains the source of truth. Renovate rebases its own open PRs and closes them automatically once `master` contains the change (on its next run).
+Infra PRs are manual: `git fetch origin pull/<n>/head:renovate/pr-<n>`, `git checkout renovate/pr-<n>`, run `bash scripts/validate.sh <target>`, merge locally, then `git push origin master`. Never merge in the platform UI — origin remains the source of truth. Renovate rebases its own open PRs and closes them automatically once `master` contains the change (on its next run). App-repo PRs are not merged here: each app repo has its own all-updates auto-merge policy and required `test` check.
 
-**Automerge is off** — `automerge: false` globally in `renovate.json`, so every PR waits for a human (patch/minor and the grouped docker-digests batch included). Nothing gates on CI, and merging only deploys the next time the deploy commands run (`docker compose up -d` / `helm upgrade --install`).
+**Automerge is off** in Infra `renovate.json` (`automerge: false` globally), so every Infra PR waits for a human (patch/minor and the grouped docker-digests batch included). The app repos have their own all-updates auto-merge policy; their publish workflows gate on `test`. Merging Infra only deploys the next time the deploy commands run (`docker compose up -d` / `helm upgrade --install`).
 
 **Watchtower vs Renovate** — only pc/bigpc run watchtower, and it updates any local container lacking `com.centurylinklabs.watchtower.enable=false` — effectively just compose `syncthing/syncthing` (left untagged; socket-proxy carries the false label). Renovate's docker-compose manager skips `syncthing/syncthing`, which leaves the srv0 K3s syncthing (pinned tag) under Renovate. Everything else belongs to Renovate (srv0/vps0/rpi run no watchtower). Watchtower's own image is digest-pinned by Renovate (`nickfedor/watchtower:latest`) because it never updates itself.
 
@@ -105,9 +106,32 @@ Every PR is manual: `git fetch origin pull/<n>/head:renovate/pr-<n>`, `git check
 
 App repos `ImranR98/PixelNtfy`, `ImranR98/ISBN-Lookup`, `ImranR98/apps.obtainium.imranr.dev`, `ImranR98/our-times`, `ImranR98/order-manager`, and `ImranR98/Logtfy` are in the Renovate runner and notifier lists. All six GHCR packages are public, so vps0 pulls without registry auth and Renovate needs no `read:packages`; each image has a per-app digest group.
 
-Artifacts built in-repo are handled manually: `targets/srv0/k3s-apps/opencode-src/build.sh` builds/pushes the opencode image (Debian base + pinned opencode npm binary, Node/nvm and dev tooling + Homebrew seed; rebuild it by hand after a Renovate bump of the Debian base or the version ARGs) and re-pins its digest in `opencode.yaml`; the D$CPLN images are built and pushed from their own repo (the task-runner/other images have their own builds); run the build manually and pin the printed digest in the matching template (`backupctl.yaml`, `dscpln.yaml`). Renovate also opens a grouped digest-bump PR as a safety net for manual pushes or failed pin runs.
+Artifacts: the NFS server image is built by `.github/workflows/nfs-server-image.yml` on changes to `targets/srv0/k3s-base/nfs-server-src/**`, pushed to Docker Hub, and a digest re-pin PR is opened; `nfs-server-src/build.sh` remains the local/emergency path. The opencode image is still manual: `targets/srv0/k3s-apps/opencode-src/build.sh` builds/pushes it (Debian base + pinned opencode npm binary, Node/nvm and dev tooling + Homebrew seed; rebuild it by hand after a Renovate bump of the Debian base or the version ARGs) and re-pins its digest in `opencode.yaml`; the D$CPLN images are built and pushed from their own repo (the task-runner/other images have their own builds). Run those manually and pin the printed digest in the matching template (`backupctl.yaml`, `dscpln.yaml`). Renovate also opens a grouped digest-bump PR as a safety net for manual pushes or failed pin runs.
 
 Post-update: `git diff` → `bash scripts/validate.sh <target>` → deploy.
+
+## CI
+
+`.github/workflows/validate.yml` runs on every push/PR: shellcheck, yamllint, helm lint/template with the committed `config_template` as a non-secret values overlay, `renovate-config-validator`, actionlint, and `git diff --check`. The full `validate.sh` remains the local review gate because it needs the filled `config/` tree. `.github/workflows/nfs-server-image.yml` builds/pushes the NFS image on `nfs-server-src` changes and opens the digest re-pin PR.
+
+## Host security updates
+
+- **vps0 (Ubuntu 24.04):** `unattended-upgrades` is enabled and active.
+- **srv0 / bigpc (Fedora 44, DNF5):** `dnf5-plugin-automatic` is not installed. To enable security-only updates without automatic reboots:
+
+  ```bash
+  sudo dnf install -y dnf5-plugin-automatic
+  sudoedit /etc/dnf/automatic.conf
+  # [commands]
+  # upgrade_type = security
+  # apply_updates = yes
+  # download_updates = yes
+  # reboot = never
+  sudo systemctl enable --now dnf5-automatic.timer
+  sudo systemctl list-timers dnf5-automatic.timer
+  ```
+
+  Then check `dnf5 needs-restarting -r` (or `needs-restarting -r`) periodically and reboot in a maintenance window; srv0's LUKS/K3s boot needs the normal unlock flow.
 
 ## Environment variables
 

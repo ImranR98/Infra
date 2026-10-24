@@ -1,0 +1,81 @@
+name: Validate
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: validate-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Install lint and render tools
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends shellcheck
+          python3 -m pip install --user "yamllint==1.38.0"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          curl -fsSLO "https://get.helm.sh/helm-v3.22.1-linux-amd64.tar.gz"
+          curl -fsSLO "https://get.helm.sh/helm-v3.22.1-linux-amd64.tar.gz.sha256sum"
+          sha256sum -c "helm-v3.22.1-linux-amd64.tar.gz.sha256sum"
+          tar -xzf "helm-v3.22.1-linux-amd64.tar.gz"
+          sudo mv linux-amd64/helm /usr/local/bin/helm
+          go install github.com/rhysd/actionlint/cmd/actionlint@v1.7.12
+          echo "$HOME/go/bin" >> "$GITHUB_PATH"
+
+      - name: Shellcheck
+        run: find scripts targets -name '*.sh' -print0 | xargs -0 shellcheck
+
+      - name: Yamllint
+        run: |
+          yamllint -c .yamllint \
+            targets/*/config_template \
+            targets/srv0/k3s-base/values.yaml \
+            targets/srv0/k3s-base/Chart.yaml \
+            targets/srv0/k3s-base/files \
+            targets/srv0/k3s-apps/values.yaml \
+            targets/srv0/k3s-apps/Chart.yaml
+
+      - name: Helm lint and render
+        run: |
+          set -euo pipefail
+          # config_template is the committed, non-secret values overlay. The
+          # full validate.sh (which rejects placeholders) stays local.
+          helm lint targets/srv0/k3s-base \
+            -f targets/srv0/k3s-base/values.yaml \
+            -f targets/srv0/config_template/values.yaml
+          helm lint targets/srv0/k3s-apps \
+            -f targets/srv0/k3s-apps/values.yaml \
+            -f targets/srv0/config_template/values.yaml
+          helm template ci-base targets/srv0/k3s-base -n base \
+            -f targets/srv0/k3s-base/values.yaml \
+            -f targets/srv0/config_template/values.yaml > /tmp/base.yaml
+          helm template ci-apps targets/srv0/k3s-apps -n apps \
+            -f targets/srv0/k3s-apps/values.yaml \
+            -f targets/srv0/config_template/values.yaml > /tmp/apps.yaml
+          if grep -R '<no value>' /tmp/base.yaml /tmp/apps.yaml; then
+            echo "::error::Helm rendered a missing value"
+            exit 1
+          fi
+
+      - name: Renovate config
+        run: npx --yes -p renovate@44.181.3 renovate-config-validator --strict renovate.json
+
+      - name: Actionlint
+        run: actionlint
+
+      - name: Diff check
+        run: git diff --check

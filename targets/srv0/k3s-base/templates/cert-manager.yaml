@@ -47,6 +47,12 @@ spec:
       image:
         repository: quay.io/jetstack/cert-manager-acmesolver
         tag: v1.21.3
+    # Expose controller metrics and let the k8s-monitoring Alloy collector
+    # discover the ServiceMonitor (prometheusOperatorObjects is enabled).
+    prometheus:
+      enabled: true
+      servicemonitor:
+        enabled: true
 ---
 apiVersion: cert-manager.io/v1
 kind: ClusterIssuer

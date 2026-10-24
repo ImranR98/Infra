@@ -441,7 +441,7 @@ groups:
           severity: critical
 
       - uid: cronjob-stale-renovate
-        title: renovate has not succeeded in 26h
+        title: Renovate has not succeeded in 26h
         condition: C
         data:
           - refId: A
@@ -449,7 +449,7 @@ groups:
             datasourceUid: prometheus
             model:
               editorMode: code
-              expr: time() - kube_cronjob_status_last_successful_time{cronjob="renovate"} > 93600
+              expr: time() - kube_cronjob_status_last_successful_time{cronjob=~"renovate-apps|renovate-infra"} > 93600
               instant: true
               intervalMs: 1000
               maxDataPoints: 43200
@@ -484,297 +484,9 @@ groups:
         execErrState: Alerting
         for: 10m
         annotations:
-          summary: The daily renovate CronJob has not completed successfully in 26 hours
+          summary: A Renovate CronJob (apps or infra) has not completed successfully in 26 hours
         labels:
           severity: warning
-
-      - uid: longhorn-volume-space
-        title: Longhorn volume over 90% full
-        condition: C
-        data:
-          - refId: A
-            relativeTimeRange: {from: 600, to: 0}
-            datasourceUid: prometheus
-            model:
-              editorMode: code
-              expr: (longhorn_volume_actual_size_bytes / longhorn_volume_capacity_bytes) * 100 > 90
-              instant: true
-              intervalMs: 1000
-              maxDataPoints: 43200
-              range: false
-              refId: A
-          - refId: B
-            datasourceUid: __expr__
-            model:
-              datasource: {type: __expr__, uid: __expr__}
-              expression: A
-              intervalMs: 1000
-              maxDataPoints: 43200
-              reducer: last
-              refId: B
-              type: reduce
-          - refId: C
-            datasourceUid: __expr__
-            model:
-              conditions:
-                - evaluator: {params: [0], type: gt}
-                  operator: {type: and}
-                  query: {params: [C]}
-                  reducer: {type: last}
-                  type: query
-              datasource: {type: __expr__, uid: __expr__}
-              expression: B
-              intervalMs: 1000
-              maxDataPoints: 43200
-              refId: C
-              type: threshold
-        noDataState: OK
-        execErrState: Alerting
-        for: 5m
-        annotations:
-          summary: A Longhorn volume is over 90% of its capacity
-        labels:
-          severity: warning
-
-      - uid: longhorn-volume-fault
-        title: Longhorn volume faulted
-        condition: C
-        data:
-          - refId: A
-            relativeTimeRange: {from: 600, to: 0}
-            datasourceUid: prometheus
-            model:
-              editorMode: code
-              expr: longhorn_volume_robustness == 3
-              instant: true
-              intervalMs: 1000
-              maxDataPoints: 43200
-              range: false
-              refId: A
-          - refId: B
-            datasourceUid: __expr__
-            model:
-              datasource: {type: __expr__, uid: __expr__}
-              expression: A
-              intervalMs: 1000
-              maxDataPoints: 43200
-              reducer: last
-              refId: B
-              type: reduce
-          - refId: C
-            datasourceUid: __expr__
-            model:
-              conditions:
-                - evaluator: {params: [0], type: gt}
-                  operator: {type: and}
-                  query: {params: [C]}
-                  reducer: {type: last}
-                  type: query
-              datasource: {type: __expr__, uid: __expr__}
-              expression: B
-              intervalMs: 1000
-              maxDataPoints: 43200
-              refId: C
-              type: threshold
-        noDataState: OK
-        execErrState: Alerting
-        for: 5m
-        annotations:
-          summary: A Longhorn volume is in the Fault state
-        labels:
-          severity: critical
-
-      - uid: longhorn-volume-degraded
-        title: Longhorn volume degraded
-        condition: C
-        data:
-          - refId: A
-            relativeTimeRange: {from: 600, to: 0}
-            datasourceUid: prometheus
-            model:
-              editorMode: code
-              expr: longhorn_volume_robustness == 2
-              instant: true
-              intervalMs: 1000
-              maxDataPoints: 43200
-              range: false
-              refId: A
-          - refId: B
-            datasourceUid: __expr__
-            model:
-              datasource: {type: __expr__, uid: __expr__}
-              expression: A
-              intervalMs: 1000
-              maxDataPoints: 43200
-              reducer: last
-              refId: B
-              type: reduce
-          - refId: C
-            datasourceUid: __expr__
-            model:
-              conditions:
-                - evaluator: {params: [0], type: gt}
-                  operator: {type: and}
-                  query: {params: [C]}
-                  reducer: {type: last}
-                  type: query
-              datasource: {type: __expr__, uid: __expr__}
-              expression: B
-              intervalMs: 1000
-              maxDataPoints: 43200
-              refId: C
-              type: threshold
-        noDataState: OK
-        execErrState: Alerting
-        for: 5m
-        annotations:
-          summary: A Longhorn volume is Degraded
-        labels:
-          severity: warning
-
-      - uid: longhorn-node-storage
-        title: Longhorn node storage over 70%
-        condition: C
-        data:
-          - refId: A
-            relativeTimeRange: {from: 600, to: 0}
-            datasourceUid: prometheus
-            model:
-              editorMode: code
-              expr: (longhorn_node_storage_usage_bytes / longhorn_node_storage_capacity_bytes) * 100 > 70
-              instant: true
-              intervalMs: 1000
-              maxDataPoints: 43200
-              range: false
-              refId: A
-          - refId: B
-            datasourceUid: __expr__
-            model:
-              datasource: {type: __expr__, uid: __expr__}
-              expression: A
-              intervalMs: 1000
-              maxDataPoints: 43200
-              reducer: last
-              refId: B
-              type: reduce
-          - refId: C
-            datasourceUid: __expr__
-            model:
-              conditions:
-                - evaluator: {params: [0], type: gt}
-                  operator: {type: and}
-                  query: {params: [C]}
-                  reducer: {type: last}
-                  type: query
-              datasource: {type: __expr__, uid: __expr__}
-              expression: B
-              intervalMs: 1000
-              maxDataPoints: 43200
-              refId: C
-              type: threshold
-        noDataState: OK
-        execErrState: Alerting
-        for: 5m
-        annotations:
-          summary: A Longhorn node is over 70% of its storage capacity
-        labels:
-          severity: warning
-
-      - uid: longhorn-disk-storage
-        title: Longhorn disk storage over 70%
-        condition: C
-        data:
-          - refId: A
-            relativeTimeRange: {from: 600, to: 0}
-            datasourceUid: prometheus
-            model:
-              editorMode: code
-              expr: (longhorn_disk_usage_bytes / longhorn_disk_capacity_bytes) * 100 > 70
-              instant: true
-              intervalMs: 1000
-              maxDataPoints: 43200
-              range: false
-              refId: A
-          - refId: B
-            datasourceUid: __expr__
-            model:
-              datasource: {type: __expr__, uid: __expr__}
-              expression: A
-              intervalMs: 1000
-              maxDataPoints: 43200
-              reducer: last
-              refId: B
-              type: reduce
-          - refId: C
-            datasourceUid: __expr__
-            model:
-              conditions:
-                - evaluator: {params: [0], type: gt}
-                  operator: {type: and}
-                  query: {params: [C]}
-                  reducer: {type: last}
-                  type: query
-              datasource: {type: __expr__, uid: __expr__}
-              expression: B
-              intervalMs: 1000
-              maxDataPoints: 43200
-              refId: C
-              type: threshold
-        noDataState: OK
-        execErrState: Alerting
-        for: 5m
-        annotations:
-          summary: A Longhorn disk is over 70% of its capacity
-        labels:
-          severity: warning
-
-      - uid: longhorn-node-down
-        title: Longhorn node down
-        condition: C
-        data:
-          - refId: A
-            relativeTimeRange: {from: 600, to: 0}
-            datasourceUid: prometheus
-            model:
-              editorMode: code
-              expr: (avg(longhorn_node_count_total) or on() vector(0)) - (count(longhorn_node_status{condition="ready"} == 1) or on() vector(0)) > 0
-              instant: true
-              intervalMs: 1000
-              maxDataPoints: 43200
-              range: false
-              refId: A
-          - refId: B
-            datasourceUid: __expr__
-            model:
-              datasource: {type: __expr__, uid: __expr__}
-              expression: A
-              intervalMs: 1000
-              maxDataPoints: 43200
-              reducer: last
-              refId: B
-              type: reduce
-          - refId: C
-            datasourceUid: __expr__
-            model:
-              conditions:
-                - evaluator: {params: [0], type: gt}
-                  operator: {type: and}
-                  query: {params: [C]}
-                  reducer: {type: last}
-                  type: query
-              datasource: {type: __expr__, uid: __expr__}
-              expression: B
-              intervalMs: 1000
-              maxDataPoints: 43200
-              refId: C
-              type: threshold
-        noDataState: OK
-        execErrState: Alerting
-        for: 5m
-        annotations:
-          summary: A Longhorn node is offline
-        labels:
-          severity: critical
 
       - uid: task-runner-metrics-missing
         title: Task Runner scheduled-task metrics are missing
@@ -1160,3 +872,146 @@ groups:
         labels:
           severity: critical
 
+      - uid: cert-manager-expiry
+        title: Certificate expiring soon
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange: {from: 600, to: 0}
+            datasourceUid: prometheus
+            model:
+              editorMode: code
+              expr: certmanager_certificate_expiration_timestamp_seconds - time()
+              instant: true
+              intervalMs: 1000
+              maxDataPoints: 43200
+              range: false
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              datasource: {type: __expr__, uid: __expr__}
+              expression: A
+              intervalMs: 1000
+              maxDataPoints: 43200
+              reducer: last
+              refId: B
+              type: reduce
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator: {params: [1814400], type: lt}
+                  operator: {type: and}
+                  query: {params: [C]}
+                  reducer: {type: last}
+                  type: query
+              datasource: {type: __expr__, uid: __expr__}
+              expression: B
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: C
+              type: threshold
+        noDataState: Alerting
+        execErrState: Alerting
+        for: 1h
+        annotations:
+          summary: A cert-manager certificate expires in less than 21 days.
+        labels:
+          severity: warning
+
+      - uid: cert-manager-not-ready
+        title: Certificate not Ready
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange: {from: 600, to: 0}
+            datasourceUid: prometheus
+            model:
+              editorMode: code
+              expr: certmanager_certificate_ready_status{condition="False"}
+              instant: true
+              intervalMs: 1000
+              maxDataPoints: 43200
+              range: false
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              datasource: {type: __expr__, uid: __expr__}
+              expression: A
+              intervalMs: 1000
+              maxDataPoints: 43200
+              reducer: last
+              refId: B
+              type: reduce
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator: {params: [0], type: gt}
+                  operator: {type: and}
+                  query: {params: [C]}
+                  reducer: {type: last}
+                  type: query
+              datasource: {type: __expr__, uid: __expr__}
+              expression: B
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: C
+              type: threshold
+        noDataState: Alerting
+        execErrState: Alerting
+        for: 15m
+        annotations:
+          summary: A cert-manager certificate is not Ready.
+        labels:
+          severity: critical
+
+      - uid: nfs-server-unavailable
+        title: NFS server unavailable
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange: {from: 600, to: 0}
+            datasourceUid: prometheus
+            model:
+              editorMode: code
+              expr: kube_deployment_status_replicas_available{namespace="base",deployment="nfs-server"}
+              instant: true
+              intervalMs: 1000
+              maxDataPoints: 43200
+              range: false
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              datasource: {type: __expr__, uid: __expr__}
+              expression: A
+              intervalMs: 1000
+              maxDataPoints: 43200
+              reducer: last
+              refId: B
+              type: reduce
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator: {params: [1], type: lt}
+                  operator: {type: and}
+                  query: {params: [C]}
+                  reducer: {type: last}
+                  type: query
+              datasource: {type: __expr__, uid: __expr__}
+              expression: B
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: C
+              type: threshold
+        noDataState: Alerting
+        execErrState: Alerting
+        for: 2m
+        annotations:
+          summary: The NFS server has no available replicas; nfs-apps PVCs will fail.
+        labels:
+          severity: critical
