@@ -984,7 +984,7 @@ services:
 
     # Logtfy - Log Monitoring and ntfy Alerting
     logtfy:
-        image: ghcr.io/imranr98/logtfy:latest@sha256:ffe2a2e21b0ca82e2d05ff20f9a08d411f99a3960564dff33b716f683bf36ea4
+        image: ghcr.io/imranr98/logtfy:latest@sha256:7b718ebf4713862989911ce0b4355b71bfca3e542ed9ddf7dad0cbc80a0d93a4
         container_name: logtfy
         hostname: $TARGET
         restart: unless-stopped
