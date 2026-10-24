@@ -96,8 +96,9 @@ and external services. These determine the test and image-smoke shape.
 - Every reference: Dockerfiles, comments, READMEs, package scripts, Compose,
   Helm, K8s templates, deployment repo, docs.
 - Tag scheme used by each deployment.
-- Whether the repo is public (GHCR package public) or private (package private;
-  deployment auth or make it public).
+- Repo visibility and GHCR package visibility separately. A private repo can
+  publish a public package; record which visibility the deployment needs and
+  do not infer one from the other.
 - Multiple deployment references for the same image (e.g. Compose + K8s).
 - Whether the image is built in the deployment repo, has no repo, is archived,
   or is frozen/disabled.

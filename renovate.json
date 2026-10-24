@@ -238,11 +238,18 @@
       "enabled": false
     },
     {
-      "description": "the sale site (sale-site) uses a frozen one-off image (explicit tag, no digest pins)",
-      "matchPackageNames": [
-        "imranrdev/moving-sale-2027"
+      "description": "sale-site image is published by the moving-sale-2027 workflow; refresh the :latest digest as a safety net",
+      "matchDatasources": [
+        "docker"
       ],
-      "enabled": false
+      "matchPackageNames": [
+        "ghcr.io/imranr98/moving-sale-2027"
+      ],
+      "matchUpdateTypes": [
+        "digest",
+        "pinDigest"
+      ],
+      "groupName": "sale-site image digests"
     },
     {
       "description": "D$CPLN app images are built/pushed by the monorepo; Renovate refreshes the :latest digest as a safety net",

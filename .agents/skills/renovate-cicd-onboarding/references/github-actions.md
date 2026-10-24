@@ -166,10 +166,20 @@ jobs:
 
 ## Public vs private
 
-- Public repo → GHCR package is public by default. No pull secret/imagePullSecret
-  is needed; do not add registry-auth work.
-- Private repo → package is private. The deployment needs registry auth or the
-  package must be made public; ask and document. Never commit credentials.
+Package visibility is independent of repository visibility. A private repo can
+publish a public package; the source stays private while the image is pulled
+anonymously.
+
+- Public repo → package is public by default. No pull secret/imagePullSecret is
+  needed; do not add registry-auth work.
+- Private repo → package defaults to private. Prefer making it public when the
+  image is generic: the flip is one-time and irreversible, and removes all
+  deployment auth. Use a private package + deployment auth only when the image
+  itself must stay private. If the available token cannot change visibility,
+  ask the user to use the package settings UI. Never commit credentials.
+
+See [ghcr-migration.md](ghcr-migration.md#making-a-private-repo-package-public)
+for the UI/API steps and the anonymous-pull verification.
 
 ## Tag schemes
 

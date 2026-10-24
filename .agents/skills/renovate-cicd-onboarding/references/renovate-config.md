@@ -209,8 +209,9 @@ Check:
 - Multiple Dockerfiles — ask which one is production.
 - Archived/frozen app — ask before onboarding; do not create a noisy pipeline
   for a dead service.
-- Private repo → private GHCR package; public repo → public package. Do not
-  assume pull access.
+- Repo visibility does not dictate package visibility. A private repo can have
+  a public GHCR package (preferred for generic images); verify anonymous pull
+  rather than assuming either state.
 - Major auto-merge without a required check — never.
 
 ## When not to use

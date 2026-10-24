@@ -225,9 +225,13 @@ If the app publishes to Docker Hub, migrate to GHCR:
 - update Dockerfiles, READMEs, scripts, Compose/Helm/K8s, and CI,
 - add GHCR login/push, remove Docker Hub login/push,
 - public repo → public GHCR package (no pull auth needed),
-- private repo → private package (deployment auth or make the package public;
-  ask),
-- deprecate the old Docker Hub repository; do not delete it without consent.
+- private repo → package visibility is independent: a public package is
+  preferred for generic images (one-time UI flip, no pull auth) and is
+  irreversible; use a private package + deployment auth only when the image
+  itself must stay private. Never infer package visibility from repo
+  visibility.
+- deprecate the old Docker Hub repository; do not delete it without consent,
+- verify visibility with an anonymous pull, not just a successful push.
 
 Use [references/ghcr-migration.md](references/ghcr-migration.md).
 

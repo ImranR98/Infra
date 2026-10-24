@@ -7,14 +7,50 @@ pin a tag that CI does not currently publish.
 
 ## Visibility rule
 
+Package visibility is **independent of repository visibility**. A private app
+repo can publish a public GHCR package: the source stays private while the
+image layers are anonymously pullable. Do not infer one from the other.
+
 - **Public app repo** → GHCR package is public by default. No pull secret or
   registry auth is needed. Do not add unnecessary registry-auth work.
-- **Private app repo** → GHCR package is private. The deployment needs registry
-  auth or the package must be made public; ask and document. Never commit
-  credentials.
+- **Private app repo** → a new package defaults to private. Choose deliberately:
+  - **Public package (preferred when the image is generic):** no deployment
+    auth and no `read:packages` for Renovate. The flip is one-time and
+    **irreversible** (GitHub does not allow a public package to become private
+    again).
+  - **Private package (only when the image itself must stay private):** add
+    registry auth to the deployment. K3s needs an `imagePullSecret`; Compose
+    needs `docker login` on the host. Never commit credentials.
 
-This is the only significant registry-access difference. Public repos are the
-common case in this environment.
+### Making a private-repo package public
+
+1. Publish at least one version, preferably from the app workflow, so the
+   package is automatically linked to the repository.
+2. Open the package settings:
+   `https://github.com/users/<owner>/packages/container/package/<image>` for a
+   personal account, or
+   `https://github.com/orgs/<org>/packages/container/package/<image>` for an
+   organization.
+3. **Package settings → Danger Zone → Change visibility → Public**, then
+   confirm.
+
+Automation caveats:
+
+- The workflow's `GITHUB_TOKEN` can push the package, but `/user/packages` is
+  user-scoped; a best-effort `PATCH /user/packages/container/<image>/visibility`
+  with it typically returns 404. Do not loop on it.
+- The reliable scripted path is a classic PAT with `write:packages` (or a
+  fine-grained token with package admin) calling the same `PATCH` endpoint
+  (orgs: `PATCH /orgs/<org>/packages/container/<image>/visibility`) with
+  `{"visibility":"public"}`. If that 404s, use the UI.
+- If the available token lacks package scope, ask the user to flip it in the
+  UI when the package is ready. Do not ask them to paste a token.
+- Verify anonymously, not with the publish token:
+  `docker pull ghcr.io/<owner>/<image>:<tag>` from a host with no GHCR login, or
+  `docker manifest inspect ghcr.io/<owner>/<image>:<tag>`.
+
+Public packages need no `read:packages` for pulls or for Renovate's digest
+lookup, even when the source repo is private.
 
 ## Discover the actual images
 
@@ -37,7 +73,7 @@ repo:
 current registry/namespace:
 image name(s):
 tags used by each deployment:
-public/private repo:
+repo visibility / GHCR package visibility:
 production Dockerfile(s):
 ```
 
@@ -100,9 +136,9 @@ latest GitHub release. That is not reproducible and Renovate cannot track it.
 ## Update the deployment
 
 - Replace old image refs with the GHCR ref in every deployment file.
-- For public repos, no pull auth is needed.
-- For private repos, add the deployment's registry auth/imagePullSecret or make
-  the package public; ask.
+- For a public package, no pull auth is needed regardless of repo visibility.
+- For a private package, add the deployment's registry auth/imagePullSecret, or
+  make the package public when the image is generic; ask.
 - If the deployment also references the old tag, update it to the tag CI will
   publish.
 - Verify there are no remaining old refs in the deployment repo.
@@ -139,8 +175,9 @@ If the app already moved to GHCR but Docker Hub still has old tags:
 ## Verification
 
 - `docker pull ghcr.io/<owner>/<image>:<tag>` (or `podman`) succeeds.
-- For public repos, the pull works anonymously.
-- For private repos, the deployment's auth works and was not committed.
+- For a public package, the pull works anonymously from a host with no GHCR
+  login (this is the real test; repo visibility is irrelevant).
+- For a private package, the deployment's auth works and was not committed.
 - The digest/tag in the deployment matches the new publish.
 - `git grep` in the app and deployment repos finds no unintended old refs.
 - The app's docs/examples no longer instruct Docker Hub pushes unless they are
@@ -155,6 +192,7 @@ If the app already moved to GHCR but Docker Hub still has old tags:
 - Publishing only `latest` while the deployment pins a version tag.
 - Leaving a `dockerize` script that still pushes to Docker Hub.
 - Forgetting a Dockerfile comment or docs snippet.
-- Assuming a public GHCR package for a private repo.
+- Assuming repo visibility determines package visibility, or assuming a
+  private-repo package is public without an anonymous pull test.
 - Deleting the Docker Hub repo before all consumers moved.
 - Re-onboarding a stale Docker Hub image after a completed GHCR migration.

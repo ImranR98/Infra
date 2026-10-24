@@ -886,11 +886,12 @@ services:
         logging: *logging
 
     # Sale site - one app serving home/tech/main subdomains.
+    # Image is published to public GHCR from the private moving-sale-2027 repo.
     # Router names home-sale/tech-sale are kept so their existing ACME certs
     # remain valid; all three routers share the single sale-site service.
     sale-site:
         container_name: sale-site
-        image: imranrdev/moving-sale-2027:multisite-2026-10-22
+        image: ghcr.io/imranr98/moving-sale-2027:latest@sha256:805d9041eba0eb2c57b8fb99436104dd4a6262c745f20a0af2c6e9740768503b
         depends_on:
             - traefik
         labels:

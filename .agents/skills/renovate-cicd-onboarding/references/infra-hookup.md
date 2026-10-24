@@ -31,7 +31,8 @@ Required token scopes:
 - `workflow` — push `.github/workflows` changes (action pins/updates). Without
   this, Renovate logs `Workflows update rejection` and action updates abort.
 - `read:packages` — only needed if Renovate must read private package metadata;
-  public GHCR images do not need it.
+  a public GHCR package needs no `read:packages` even when its source repo is
+  private.
 
 If the runner's image or schedule changes, keep the repository list and notifier
 in sync in both files.
@@ -81,10 +82,13 @@ Search for the old registry/namespace/image and for `image:`. Update all
 production refs. Do not touch a deliberately frozen/disabled image unless the
 user asks.
 
-Public repo → public GHCR package: no pull work.
-Private repo → private package: add the deployment's registry auth or make the
-package public; ask. K3s uses an `imagePullSecret`; Compose uses registry login
-on the host. Never commit credentials.
+Public package → no pull work, regardless of repo visibility. A private repo
+can publish a public package; flip it once in the package settings UI and
+verify anonymous pull.
+
+Private package → add the deployment's registry auth. K3s uses an
+`imagePullSecret`; Compose uses registry login on the host. Never commit
+credentials. Only choose this when the image itself must stay private.
 
 ## Branch protection and auto-merge
 
@@ -150,8 +154,9 @@ repo that is the `renovate-pr-ops` skill and `AGENTS.md`/`validate.sh`.
 - **Not deployed here:** skip this phase; document the deployment-repo pattern.
 - **Stale Docker Hub image after a prior GHCR migration:** deprecate, don't
   re-onboard.
-- **Private image:** confirm pull auth/public package before adding the digest
-  rule.
+- **Private package:** confirm pull auth, or make the package public and verify
+  anonymous pull, before adding the digest rule. A private source repo alone
+  does not require a private package.
 - **Multiple deployment refs:** update all (Compose + K3s + docs); verify none
   remain.
 - **Non-`latest` deployment tag:** ensure the app publish workflow produces that
