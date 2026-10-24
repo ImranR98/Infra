@@ -116,6 +116,8 @@ Post-update: `git diff` → `bash scripts/validate.sh <target>` → deploy.
 
 `.github/workflows/validate.yml` runs on every push/PR: shellcheck, yamllint, helm lint/template with the committed `config_template` as a non-secret values overlay, `renovate-config-validator`, actionlint, and `git diff --check`. The full `validate.sh` remains the local review gate because it needs the filled `config/` tree. `.github/workflows/nfs-server-image.yml` builds/pushes the NFS image on `nfs-server-src` changes and opens the digest re-pin PR.
 
+Public app repos use GitHub CodeQL default setup (push + weekly); findings are informational and are not required branch checks. The app publish steps and the NFS image workflow emit SBOM and provenance attestations (`sbom: true`, `provenance: true`).
+
 ## Host security updates
 
 - **vps0 (Ubuntu 24.04):** `unattended-upgrades` is enabled and active.
