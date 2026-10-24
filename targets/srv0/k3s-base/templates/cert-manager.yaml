@@ -10,7 +10,7 @@ spec:
   failurePolicy: abort
   targetNamespace: base
   createNamespace: false
-  version: 1.21.2
+  version: 1.21.3
   valuesContent: |-
     installCRDs: true
     image:
