@@ -5,7 +5,7 @@
 #
 # Version ARGs are pinned. Renovate custom managers in renovate.json update
 # them; rebuild and re-pin the image digest with build.sh after a bump.
-ARG OPENCODE_VERSION=2.1.3
+ARG OPENCODE_VERSION=2.1.4
 ARG NODE_VERSION=24.22.1
 
 # --- opencode CLI -----------------------------------------------------------
