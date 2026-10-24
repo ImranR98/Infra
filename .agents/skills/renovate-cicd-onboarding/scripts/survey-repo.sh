@@ -5,8 +5,8 @@
 #
 # Prints repository shape, manifests, image references, build/test commands,
 # system installs, CI files, and test files. It never writes to the repo and
-# skips common secret/runtime files. It is a starting point, not a complete
-# dependency audit: read the flagged files yourself.
+# skips common secret/runtime files. Review the output before sharing it; it is
+# a starting point, not a complete dependency audit.
 set -euo pipefail
 
 if [ "$#" -ne 1 ]; then
@@ -54,7 +54,8 @@ echo "path: $repo"
 echo
 
 echo "== git =="
-git remote -v || true
+# Redact userinfo from remote URLs; a remote can technically embed a token.
+git remote -v | sed -E 's#([a-z][a-z0-9+.-]*://)[^/@[:space:]]+@#\1<redacted>@#gi' || true
 printf 'current branch: '
 git branch --show-current || true
 printf 'default branch: '
