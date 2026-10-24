@@ -39,6 +39,26 @@ node - <<'NODE'
 (async () => {
   const repos = (process.env.APP_REPOS || '').split(',').map((r) => r.trim()).filter(Boolean);
   const failures = [];
+  let apiErrors = 0;
+
+  const notify = async (title, message) => {
+    if (process.env.MODE === 'dry-run') {
+      console.log(`${title}\n\n${message}`);
+      return;
+    }
+    const res = await fetch(`${process.env.NTFY_URL.replace(/\/+$/, '')}/`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${process.env.NTFY_TOKEN}` },
+      body: JSON.stringify({
+        topic: process.env.NTFY_TOPIC,
+        title,
+        message,
+        tags: ['warning'],
+        markdown: true,
+      }),
+    });
+    if (!res.ok) throw new Error(`ntfy publish failed: ${res.status} ${await res.text()}`);
+  };
 
   for (const repo of repos) {
     const res = await fetch(
@@ -53,6 +73,7 @@ node - <<'NODE'
     );
     if (!res.ok) {
       console.error(`GitHub API failed for ${repo} pulls: ${res.status} ${await res.text()}`);
+      apiErrors += 1;
       continue;
     }
     const pulls = await res.json();
@@ -70,6 +91,7 @@ node - <<'NODE'
       );
       if (!checksRes.ok) {
         console.error(`GitHub API failed for ${repo}#${pr.number} checks: ${checksRes.status} ${await checksRes.text()}`);
+        apiErrors += 1;
         continue;
       }
       const checks = await checksRes.json();
@@ -95,6 +117,15 @@ node - <<'NODE'
     }
   }
 
+  if (failures.length === 0 && apiErrors > 0) {
+    await notify(
+      `App Renovate watch incomplete (${apiErrors} API error${apiErrors === 1 ? '' : 's'})`,
+      'The watcher could not query GitHub for every repo; results may be incomplete. Check the CronJob logs.',
+    );
+    console.error(`${apiErrors} GitHub API request(s) failed`);
+    process.exit(1);
+  }
+
   if (failures.length === 0) {
     console.log('no failing app Renovate PRs');
     return;
@@ -103,27 +134,14 @@ node - <<'NODE'
   const title = `App Renovate PRs failing tests (${failures.length})`;
   const message = `${title}\n\n${failures
     .map((f) => `- ${f.repo}#${f.number} (${f.ageHours}h): ${f.title}\n  ${f.url}`)
-    .join('\n')}`;
+    .join('\n')}${apiErrors > 0 ? `\n\nWarning: ${apiErrors} GitHub API request(s) failed; results may be incomplete.` : ''}`;
 
-  if (process.env.MODE === 'dry-run') {
-    console.log(message);
-    return;
-  }
-
-  const ntfyUrl = `${process.env.NTFY_URL.replace(/\/+$/, '')}/`;
-  const res = await fetch(ntfyUrl, {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${process.env.NTFY_TOKEN}` },
-    body: JSON.stringify({
-      topic: process.env.NTFY_TOPIC,
-      title,
-      message,
-      tags: ['warning'],
-      markdown: true,
-    }),
-  });
-  if (!res.ok) throw new Error(`ntfy publish failed: ${res.status} ${await res.text()}`);
+  await notify(title, message);
   console.log(`notified ${failures.length} failing app Renovate PR(s)`);
+  if (apiErrors > 0) {
+    console.error(`${apiErrors} GitHub API request(s) failed`);
+    process.exit(1);
+  }
 })().catch((err) => {
   console.error(err.message);
   process.exit(1);
