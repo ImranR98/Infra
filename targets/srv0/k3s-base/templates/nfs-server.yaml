@@ -49,7 +49,7 @@ spec:
               readOnly: true
       containers:
         - name: nfs-server
-          image: imranrdev/nfs-server:v3.22.2-2@sha256:a6ab9ae7e7a86b97cf633c4f03df6d4b65c3824819a9b73b0ca3a21582c8b9e2
+          image: ghcr.io/imranr98/nfs-server:v3.22.2-2@sha256:74bb7c6223cc42b0031783a2f1b2e071456ccf574eb0af443374728714283710
           ports:
             - name: nfsv4
               containerPort: 2049
