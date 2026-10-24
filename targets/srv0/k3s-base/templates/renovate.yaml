@@ -69,7 +69,7 @@ spec:
                   . /repo/config/VARS.env
                   set +a
                   export RENOVATE_TOKEN="$RENOVATE_GITHUB_TOKEN"
-                  export RENOVATE_REPOSITORIES="ImranR98/Infra,ImranR98/DSCPLN-Workflows,ImranR98/DSCPLN,ImranR98/PixelNtfy,ImranR98/ISBN-Lookup,ImranR98/apps.obtainium.imranr.dev,ImranR98/our-times,ImranR98/order-manager,ImranR98/Logtfy"
+                  export RENOVATE_REPOSITORIES="ImranR98/DSCPLN-Workflows,ImranR98/DSCPLN,ImranR98/PixelNtfy,ImranR98/ISBN-Lookup,ImranR98/apps.obtainium.imranr.dev,ImranR98/our-times,ImranR98/order-manager,ImranR98/Logtfy,ImranR98/Infra"
                   export LOG_LEVEL="info"
                   # Attribute commits to the repo's configured git identity
                   # (synced .git/config; matches local runs). Read the file
