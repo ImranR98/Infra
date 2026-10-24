@@ -759,7 +759,7 @@ services:
     # Obtainium Apps
     obtainium_apps:
         container_name: obtainium_apps
-        image: ghcr.io/imranr98/apps.obtainium.imranr.dev:latest@sha256:2d7489166d1795b990db88265d24ab1d2677438eab31e204cec472613837dff8
+        image: ghcr.io/imranr98/apps.obtainium.imranr.dev:latest@sha256:07065d1313f39e5c45b69198e90b7b894d5f8fa4d430df543f92716093b23c30
         depends_on:
             - traefik
         # Fetch Plausible stats over the local edge, not Cloudflare (Bot Fight Mode
