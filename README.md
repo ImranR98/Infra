@@ -26,7 +26,7 @@ The IaC system for my homelab and other devices.
   - **The Principle of Least Privilege** is applied to containers, with elevated privileges and root runtime user only allowed where necessary. Host devices are granted as Kubernetes device-plugin resources (via the generic-device-plugin) rather than `privileged: true`.
   - **Comprehensive Monitoring and Alerting** is done using [Alloy](https://grafana.com/docs/alloy/) + [Prometheus](https://prometheus.io/), [Loki](https://grafana.com/docs/loki/latest/), [Grafana](https://grafana.com/), [Ntfy.sh](https://ntfy.sh/) + [Logtfy](https://github.com/ImranR98/Logtfy), [Headlamp](https://headlamp.dev/), [Dozzle](https://dozzle.dev/), and [Uptime Kuma](https://uptimekuma.co/).
   - **A Honeypot ([Opencanary](https://github.com/thinkst/opencanary))** is used to discover intruders. 
-  - **Regular update checking** is done via [Renovate](https://www.mend.io/renovate/) (updates are applied manually to avoid unplanned changes).
+  - **Regular update checking** is done via [Renovate](https://www.mend.io/renovate/): app dependency PRs auto-merge when their test gate passes, while Infra digest/chart PRs are reviewed and merged manually.
 
 ## Usage examples
 
@@ -59,7 +59,7 @@ docker compose --env-file config/srv0/compose.env -f targets/srv0/compose/compos
 # pc/bigpc/rpi (machine facts only — the project-dir .env auto-loads):
 docker compose -f targets/<target>/compose/compose.yaml up -d
 
-# Check for updates (opens Renovate PRs on GitHub) — machine-local
+# Run Renovate manually (the in-cluster jobs do this on a schedule) — machine-local
 bash scripts/renovate.sh
 ```
 
