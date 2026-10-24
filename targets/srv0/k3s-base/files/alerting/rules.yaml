@@ -1,4 +1,24 @@
 apiVersion: 1
+# Rules removed from groups[] (the old Longhorn, pvc-backup and geoip alerts).
+# Grafana's file provisioning only prunes rules listed here; the source file
+# no longer defines them.
+deleteRules:
+  - orgId: 1
+    uid: cronjob-stale-pvc-backup
+  - orgId: 1
+    uid: longhorn-volume-space
+  - orgId: 1
+    uid: longhorn-volume-fault
+  - orgId: 1
+    uid: longhorn-volume-degraded
+  - orgId: 1
+    uid: longhorn-node-storage
+  - orgId: 1
+    uid: longhorn-disk-storage
+  - orgId: 1
+    uid: longhorn-node-down
+  - orgId: 1
+    uid: geoip-unavailable
 groups:
   - orgId: 1
     name: infra
