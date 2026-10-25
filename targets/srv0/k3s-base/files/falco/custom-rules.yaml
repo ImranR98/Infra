@@ -1,0 +1,36 @@
+# Initial tuning from the first deployment. These are known-noise suppressions,
+# not alert changes; event-rate alerts stay gated on the observation window.
+
+# logtfy watches pod logs through the Kubernetes API by design, so every poll
+# would otherwise be a NOTICE event. The output override also drops
+# `command=%proc.cmdline` for every other container: command lines can carry
+# bearer tokens or passwords (logtfy's curl invocation exposed a service
+# account token), and Loki retains them for 90 days.
+- rule: Contact K8S API Server From Container
+  output: >
+    Unexpected connection to K8s API Server from container |
+    connection=%fd.name lport=%fd.lport rport=%fd.rport fd_type=%fd.type
+    fd_proto=%fd.l4proto evt_type=%evt.type user=%user.name user_uid=%user.uid
+    user_loginuid=%user.loginuid process=%proc.name proc_exepath=%proc.exepath
+    parent=%proc.pname terminal=%proc.tty
+  exceptions:
+    - name: logtfy_kubernetes_api
+      fields: [k8s.ns.name, k8s.pod.name]
+      comps: ["=", startswith]
+      values:
+        - [apps, logtfy-]
+  override:
+    output: replace
+    exceptions: append
+
+# Immich's postgres readiness probe runs pg_isready, whose Perl wrapper opens
+# /etc/shadow on every check. The read is a known, non-actionable baseline.
+- rule: Read sensitive file untrusted
+  exceptions:
+    - name: immich_postgres_readiness
+      fields: [k8s.ns.name, k8s.pod.name, proc.name]
+      comps: ["=", startswith, "="]
+      values:
+        - [apps, immich-postgresql-, pg_isready]
+  override:
+    exceptions: append

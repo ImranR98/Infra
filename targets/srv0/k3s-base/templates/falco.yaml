@@ -94,6 +94,10 @@ spec:
       priority: notice
       json_output: true
 
+    customRules:
+      custom-rules.yaml: |-
+{{ .Files.Get "files/falco/custom-rules.yaml" | indent 8 }}
+
     metrics:
       enabled: true
       rulesCountersEnabled: true
