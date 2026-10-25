@@ -100,6 +100,13 @@ spec:
               value: "0.0.0.0:11434"
             - name: OLLAMA_MODELS
               value: /.ollama
+            # Context is tuned gemma4-first: its 262144 window fits the 16 GB
+            # card at ~13 GB total, and qwen3.5 also stays 100% GPU (~14 GB).
+            # qwen3.8 (17 GB of weights) only just loads, with heavy CPU
+            # offload. OLLAMA_NUM_PARALLEL (1) and OLLAMA_MAX_LOADED_MODELS
+            # (3, subject to available memory) keep their defaults.
+            - name: OLLAMA_CONTEXT_LENGTH
+              value: "262144"
           resources:
             limits:
               infra.local/amd: "1"
@@ -147,7 +154,7 @@ spec:
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: allow-openwebui-ollama-ingress
+  name: allow-ollama-ingress
   namespace: apps
 spec:
   podSelector:
@@ -158,6 +165,9 @@ spec:
         - podSelector:
             matchLabels:
               app.kubernetes.io/instance: open-webui
+        - podSelector:
+            matchLabels:
+              app: opencode
       ports:
         - port: 11434
   policyTypes:

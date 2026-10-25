@@ -47,6 +47,33 @@ spec:
           namespace: apps
           port: 4096
 ---
+# Machine-wide (system) configuration for the agent. /etc/opencode has the
+# highest precedence, so this pins the in-cluster Ollama endpoint without
+# touching the user-owned config on opencode-home-pvc. The Ollama plugin
+# discovers models from /api/tags + /api/show; limits are left at their
+# discovered defaults (context 262144, output 32000) to match
+# OLLAMA_CONTEXT_LENGTH in ollama.yaml.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: opencode-config
+  namespace: apps
+data:
+  opencode.jsonc: |
+    {
+      "$schema": "https://opencode.ai/config.json",
+      "providers": {
+        "ollama": {
+          "settings": {
+            "baseURL": "http://ollama.apps.svc.cluster.local:11434/v1"
+          },
+          "models": {
+            "medgemma1.5:latest": { "disabled": true }
+          }
+        }
+      }
+    }
+---
 # The agent's only host access is its home PVC, the unbacked tools PVC
 # (Homebrew + nvm/Node), and the sandbox NFS share; the server process runs
 # unsecured because only the Traefik edge can reach the pod (namespace baseline
@@ -186,6 +213,9 @@ spec:
               mountPath: /sandbox
             - name: tmp
               mountPath: /tmp
+            - name: etc-config
+              mountPath: /etc/opencode
+              readOnly: true
       volumes:
         - name: home
           persistentVolumeClaim:
@@ -198,6 +228,9 @@ spec:
             claimName: opencode-sandbox-pvc
         - name: tmp
           emptyDir: {}
+        - name: etc-config
+          configMap:
+            name: opencode-config
 ---
 apiVersion: v1
 kind: Service
