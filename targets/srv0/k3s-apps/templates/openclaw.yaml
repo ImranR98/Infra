@@ -128,7 +128,8 @@ data:
       // from the Control UI Skills page if needed.
       skills: {
         entries: {
-          "coding-agent": { enabled: true }
+          "coding-agent": { enabled: true },
+          "model-usage": { enabled: false }
         }
       }
     }
