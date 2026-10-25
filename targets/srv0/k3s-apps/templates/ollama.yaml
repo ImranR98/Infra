@@ -168,6 +168,9 @@ spec:
         - podSelector:
             matchLabels:
               app: opencode
+        - podSelector:
+            matchLabels:
+              app: openclaw
       ports:
         - port: 11434
   policyTypes:

@@ -285,6 +285,10 @@ OPENCANARY_NTFY_SECRET_TOPIC: "change_me" # openssl rand -base64 32
 # still the front gate).
 OPENCODE_SERVER_PASSWORD: "change_me" # openssl rand -hex 24
 
+# ====== OpenClaw ======
+# Shared gateway token pasted into the Control UI after Authelia login.
+OPENCLAW_GATEWAY_TOKEN: "change_me" # openssl rand -hex 32
+
 # ====== Radarr / Sonarr ======
 RADARR_API_KEY: "change_me" # openssl rand -hex 16
 SONARR_API_KEY: "change_me" # openssl rand -hex 16

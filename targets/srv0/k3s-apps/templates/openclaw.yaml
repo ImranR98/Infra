@@ -1,0 +1,470 @@
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: openclaw-ingress
+  namespace: base
+spec:
+  parentRefs:
+    - name: srv0
+      sectionName: websecure
+    - name: srv0
+      sectionName: websecure-proxy
+  hostnames:
+    - openclaw.{{ .Values.SERVICES_DOMAIN }}
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      filters:
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: geoblock
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: crowdsec-bouncer
+        # Authelia is the first gate; the OpenClaw Control UI then asks for
+        # the gateway token from openclaw-secrets.
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: forwardauth-authelia
+      backendRefs:
+        - name: openclaw
+          namespace: apps
+          port: 18789
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: openclaw-config
+  namespace: apps
+data:
+  # Seed-only: the init container copies these to the PVC only when missing.
+  # After first boot the persisted copies on openclaw-home-pvc are authoritative.
+  openclaw.json: |
+    {
+      gateway: {
+        mode: "local",
+        bind: "lan",
+        port: 18789,
+        # Traefik is the only admitted ingress (see allow-openclaw-ingress),
+        # so trust the pod CIDR for forwarded-client attribution. Exact
+        # Traefik pod IPs change on DaemonSet rollout.
+        trustedProxies: ["10.42.0.0/16"],
+        publicOrigin: "https://openclaw.{{ .Values.SERVICES_DOMAIN }}",
+        auth: {
+          mode: "token",
+          rateLimit: {
+            maxAttempts: 10,
+            windowMs: 60000,
+            lockoutMs: 300000,
+            exemptLoopback: true
+          }
+        },
+        controlUi: {
+          enabled: true,
+          allowedOrigins: ["https://openclaw.{{ .Values.SERVICES_DOMAIN }}"]
+        }
+      },
+      browser: {
+        noSandbox: true,
+        extensionRelay: {
+          allowLegacyAuth: false
+        }
+      },
+      // gemma4:12b does not reliably use Tool Search's indirect
+      // tool_search/tool_call surface; expose direct schemas instead.
+      tools: {
+        toolSearch: false
+      },
+      memory: {
+        search: {
+          provider: "ollama",
+          model: "nomic-embed-text"
+        }
+      },
+      models: {
+        providers: {
+          ollama: {
+            baseUrl: "http://ollama.apps.svc.cluster.local:11434",
+            apiKey: "ollama-local",
+            api: "ollama",
+            timeoutSeconds: 300,
+            models: [{
+              id: "gemma4:12b",
+              name: "gemma4:12b",
+              reasoning: true,
+              input: ["text", "image"],
+              contextTokens: 131072,
+              maxTokens: 8192,
+              params: { num_ctx: 131072, keep_alive: "15m" },
+              cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 }
+            }]
+          }
+        }
+      },
+      agents: {
+        defaults: {
+          workspace: "~/.openclaw/workspace",
+          # The workspace is pre-seeded; skip OpenClaw's no-clobber atomic
+          # bootstrap publishes, which are unreliable on NFS.
+          skipBootstrap: true,
+          model: { primary: "ollama/gemma4:12b" }
+        },
+        entries: {
+          default: { name: "OpenClaw Assistant", workspace: "~/.openclaw/workspace" }
+        }
+      },
+      cron: { enabled: true },
+      // The built-in coding-agent skill delegates to the standalone OpenCode
+      // server; the image's opencode shim adds --server for `run`. Toggle this
+      // from the Control UI Skills page if needed.
+      skills: {
+        entries: {
+          "coding-agent": { enabled: true }
+        }
+      }
+    }
+  AGENTS.md: |
+    # OpenClaw Assistant
+
+    You are a helpful AI assistant running in Kubernetes. Use the workspace for files and keep responses concise.
+  # Seed USER.md up front. OpenClaw otherwise creates it with a no-clobber
+  # atomic publish, which NFS's silly-rename makes fs-safe reject.
+  USER.md: |
+    # USER.md - User Model
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: openclaw-secrets
+  namespace: apps
+type: Opaque
+stringData:
+  OPENCLAW_GATEWAY_TOKEN: "{{ .Values.OPENCLAW_GATEWAY_TOKEN }}"
+  # The coding-agent shim talks to the standalone OpenCode server with the same
+  # password the OpenCode web UI/API uses.
+  OPENCODE_PASSWORD: "{{ .Values.OPENCODE_SERVER_PASSWORD }}"
+---
+# NFS-backed state keeps the app reschedulable and inside the existing restic
+# backup set. OpenClaw auto-detects NFS/SMB/CIFS and uses SQLite DELETE
+# journaling; upstream still recommends local storage, so accept the tradeoff.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: openclaw-home-pvc
+  namespace: apps
+  labels:
+    auto-backup: "true"
+  annotations:
+    backup.infra/exclude: ".cache"
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: nfs-apps
+  resources:
+    requests:
+      storage: 10Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: openclaw
+  namespace: apps
+  labels:
+    app: openclaw
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:
+      app: openclaw
+  template:
+    metadata:
+      labels:
+        app: openclaw
+      annotations:
+        checksum/secret: {{ printf "%s:%s" .Values.OPENCLAW_GATEWAY_TOKEN .Values.OPENCODE_SERVER_PASSWORD | sha256sum | quote }}
+    spec:
+      automountServiceAccountToken: false
+      # OpenClaw's shutdown budget is ~330s; let active runs drain cleanly.
+      terminationGracePeriodSeconds: 360
+      securityContext:
+        fsGroup: 1000
+        fsGroupChangePolicy: OnRootMismatch
+        seccompProfile:
+          type: RuntimeDefault
+      initContainers:
+        # nfs-apps mounts the PVC root root-owned at 2777. Normalize the
+        # top-level state directory to the runtime user before seeding.
+        - name: fix-perms
+          image: busybox:1.38
+          imagePullPolicy: IfNotPresent
+          command:
+            - sh
+            - -c
+            - |
+              set -eu
+              chown 1000:1000 /state
+              chmod 0700 /state
+              # Plugin installation requires a sticky shared temp directory.
+              chmod 1777 /tmp
+          securityContext:
+            runAsUser: 0
+            runAsGroup: 0
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+              add:
+                - CHOWN
+                - DAC_OVERRIDE
+                - FOWNER
+          resources:
+            requests:
+              memory: 16Mi
+              cpu: 25m
+            limits:
+              memory: 32Mi
+              cpu: 50m
+          volumeMounts:
+            - name: home
+              mountPath: /state
+            - name: tmp
+              mountPath: /tmp
+        - name: init-config
+          image: busybox:1.38
+          imagePullPolicy: IfNotPresent
+          command:
+            - sh
+            - -c
+            - |
+              set -eu
+              umask 0077
+              [ -f /state/openclaw.json ] || cp /config/openclaw.json /state/openclaw.json
+              mkdir -p /state/workspace /state/.cache /state/auth-profile-secrets \
+                /state/.local/share /state/.local/state /state/.config/gh /state/.config/git
+              chmod 0700 /state/.cache /state/auth-profile-secrets /state/.local \
+                /state/.local/share /state/.local/state /state/.config /state/.config/gh /state/.config/git
+              [ -f /state/workspace/AGENTS.md ] || cp /config/AGENTS.md /state/workspace/AGENTS.md
+              [ -f /state/workspace/USER.md ] || cp /config/USER.md /state/workspace/USER.md
+              for f in /state/openclaw.json /state/openclaw.json.bak /state/openclaw.json.bak.1 /state/openclaw.json.last-good; do
+                if [ -f "$f" ]; then chmod 0600 "$f"; fi
+              done
+              for d in /state/credentials /state/browser /state/plugin-skills /state/auth-profile-secrets; do
+                if [ -d "$d" ]; then chmod -R go-rwx "$d"; fi
+              done
+          securityContext:
+            runAsUser: 1000
+            runAsGroup: 1000
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+          resources:
+            requests:
+              memory: 32Mi
+              cpu: 50m
+            limits:
+              memory: 64Mi
+              cpu: 100m
+          volumeMounts:
+            - name: home
+              mountPath: /state
+            - name: config
+              mountPath: /config
+      containers:
+        - name: gateway
+          # Derived image: the stock browser variant plus gh and the OpenCode
+          # client shim. Chromium is bundled for the Control UI Browser panel
+          # and the agent's browser tool.
+          image: ghcr.io/imranr98/openclaw:latest
+          imagePullPolicy: IfNotPresent
+          command:
+            - sh
+            - -c
+            - |
+              umask 0077
+              exec node /app/dist/index.js gateway run
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            runAsGroup: 1000
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+          ports:
+            - name: gateway
+              containerPort: 18789
+              protocol: TCP
+          env:
+            - name: HOME
+              value: /home/node
+            - name: OPENCLAW_HOME
+              value: /home/node
+            - name: OPENCLAW_CONFIG_DIR
+              value: /home/node/.openclaw
+            - name: OPENCLAW_CONFIG_PATH
+              value: /home/node/.openclaw/openclaw.json
+            - name: OPENCLAW_STATE_DIR
+              value: /home/node/.openclaw
+            - name: OPENCLAW_WORKSPACE_DIR
+              value: /home/node/.openclaw/workspace
+            - name: OPENCLAW_AUTH_PROFILE_SECRET_DIR
+              value: /home/node/.config/openclaw
+            # SQLite snapshots and other cache data need a writable location
+            # because the root filesystem is read-only.
+            - name: XDG_CACHE_HOME
+              value: /home/node/.openclaw/.cache
+            - name: NODE_ENV
+              value: production
+            # Rootfs is read-only; npm-based plugin state needs a writable cache.
+            - name: NPM_CONFIG_CACHE
+              value: /home/node/.openclaw/.cache/npm
+            # The coding-agent skill drives the standalone OpenCode server; the
+            # image's opencode shim injects --server for `run`.
+            - name: OPENCODE_SERVER_URL
+              value: http://opencode.apps.svc.cluster.local:4096
+            - name: OPENCODE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: openclaw-secrets
+                  key: OPENCODE_PASSWORD
+            # Writable CLI state on the PVC; the root filesystem is read-only.
+            # OpenClaw's managed GitHub identity overlays GH_CONFIG_DIR per
+            # agent exec, so this path is the native/terminal fallback.
+            - name: GH_CONFIG_DIR
+              value: /home/node/.openclaw/.config/gh
+            - name: GIT_CONFIG_GLOBAL
+              value: /home/node/.openclaw/.gitconfig
+            - name: XDG_DATA_HOME
+              value: /home/node/.openclaw/.local/share
+            - name: XDG_STATE_HOME
+              value: /home/node/.openclaw/.local/state
+            - name: XDG_CONFIG_HOME
+              value: /home/node/.openclaw/.config
+            - name: TZ
+              value: "{{ .Values.TZ }}"
+            - name: OPENCLAW_GATEWAY_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: openclaw-secrets
+                  key: OPENCLAW_GATEWAY_TOKEN
+          startupProbe:
+            exec:
+              command:
+                - node
+                - -e
+                - "require('http').get('http://127.0.0.1:18789/readyz', r => { let b = ''; r.on('data', d => b += d); r.on('end', () => { try { process.exit(r.statusCode < 400 && JSON.parse(b).ready === true ? 0 : 1); } catch { process.exit(1); } }); }).on('error', () => process.exit(1))"
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 30
+          livenessProbe:
+            exec:
+              command:
+                - node
+                - -e
+                - "require('http').get('http://127.0.0.1:18789/healthz', r => { let b = ''; r.on('data', d => b += d); r.on('end', () => { try { process.exit(r.statusCode < 400 && JSON.parse(b).ok === true ? 0 : 1); } catch { process.exit(1); } }); }).on('error', () => process.exit(1))"
+            initialDelaySeconds: 60
+            periodSeconds: 30
+            timeoutSeconds: 10
+          readinessProbe:
+            exec:
+              command:
+                - node
+                - -e
+                - "require('http').get('http://127.0.0.1:18789/readyz', r => { let b = ''; r.on('data', d => b += d); r.on('end', () => { try { process.exit(r.statusCode < 400 && JSON.parse(b).ready === true ? 0 : 1); } catch { process.exit(1); } }); }).on('error', () => process.exit(1))"
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            timeoutSeconds: 5
+          resources:
+            # Chromium plus the Node gateway can exceed 6Gi under heavy browser
+            # use; 8Gi leaves headroom on srv0/bigpc.
+            requests:
+              memory: 1Gi
+              cpu: 500m
+            limits:
+              memory: 8Gi
+              cpu: "2"
+          volumeMounts:
+            - name: home
+              mountPath: /home/node/.openclaw
+            # Same NFS share/path the OpenCode server sees, so the client's
+            # x-opencode-directory header resolves to the same worktree.
+            - name: sandbox
+              mountPath: /sandbox
+            - name: auth-profile
+              mountPath: /home/node/.config/openclaw
+              subPath: auth-profile-secrets
+            - name: tmp
+              mountPath: /tmp
+            - name: dshm
+              mountPath: /dev/shm
+      volumes:
+        - name: home
+          persistentVolumeClaim:
+            claimName: openclaw-home-pvc
+        - name: sandbox
+          persistentVolumeClaim:
+            claimName: opencode-sandbox-pvc
+        - name: auth-profile
+          persistentVolumeClaim:
+            claimName: openclaw-home-pvc
+        - name: config
+          configMap:
+            name: openclaw-config
+        - name: tmp
+          emptyDir:
+            sizeLimit: 4Gi
+        - name: dshm
+          emptyDir:
+            medium: Memory
+            sizeLimit: 1Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: openclaw
+  namespace: apps
+spec:
+  type: ClusterIP
+  selector:
+    app: openclaw
+  ports:
+    - name: gateway
+      port: 18789
+      targetPort: 18789
+      protocol: TCP
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-openclaw-ingress
+  namespace: apps
+spec:
+  podSelector:
+    matchLabels:
+      app: openclaw
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: traefik
+      ports:
+        - port: 18789
+  policyTypes:
+    - Ingress
