@@ -136,6 +136,8 @@ data:
     # OpenClaw Assistant
 
     You are a helpful AI assistant running in Kubernetes. Use the workspace for files and keep responses concise.
+
+    For coding-agent work, use the shared /sandbox NFS mount for repositories and worktrees; the standalone OpenCode server sees the same absolute paths. Do not run coding workers against paths outside /sandbox.
   # Seed USER.md up front. OpenClaw otherwise creates it with a no-clobber
   # atomic publish, which NFS's silly-rename makes fs-safe reject.
   USER.md: |
