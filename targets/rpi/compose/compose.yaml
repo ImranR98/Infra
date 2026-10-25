@@ -41,7 +41,7 @@ services:
     # h264_v4l2m2m wedges at the driver level (see go2rtc.yaml comment), so
     # encoding is software x264.
     go2rtc:
-        image: alexxit/go2rtc:1.9.14
+        image: alexxit/go2rtc:1.9.15
         container_name: go2rtc
         restart: unless-stopped
         depends_on:
