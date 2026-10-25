@@ -301,6 +301,7 @@ check_chart_repos() {
         "https://charts.authelia.com"
         "https://charts.jetstack.io"
         "https://crowdsecurity.github.io/helm-charts"
+        "https://falcosecurity.github.io/charts"
         "https://raw.githubusercontent.com/kubernetes-csi/csi-driver-nfs/master/charts"
         "https://kubernetes-sigs.github.io/descheduler"
         "https://grafana.github.io/helm-charts"

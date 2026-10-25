@@ -1035,3 +1035,55 @@ groups:
           summary: The NFS server has no available replicas; nfs-apps PVCs will fail.
         labels:
           severity: critical
+
+      # The only Falco alert enabled during the rule-tuning window: readiness
+      # is independent of which rules match. bigpc being powered off makes this
+      # fire (desired stays 2, ready drops to 1); the node-not-ready alert
+      # explains why at the same time.
+      - uid: falco-daemonset-not-ready
+        title: Falco not ready
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange: {from: 600, to: 0}
+            datasourceUid: prometheus
+            model:
+              editorMode: code
+              expr: kube_daemonset_status_number_ready{namespace="base",daemonset="falco"} < kube_daemonset_status_desired_number_scheduled{namespace="base",daemonset="falco"}
+              instant: true
+              intervalMs: 1000
+              maxDataPoints: 43200
+              range: false
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              datasource: {type: __expr__, uid: __expr__}
+              expression: A
+              intervalMs: 1000
+              maxDataPoints: 43200
+              reducer: last
+              refId: B
+              type: reduce
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator: {params: [0], type: gt}
+                  operator: {type: and}
+                  query: {params: [C]}
+                  reducer: {type: last}
+                  type: query
+              datasource: {type: __expr__, uid: __expr__}
+              expression: B
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: C
+              type: threshold
+        noDataState: OK
+        execErrState: Alerting
+        for: 15m
+        annotations:
+          summary: Falco is not ready on every node it should cover.
+        labels:
+          severity: critical

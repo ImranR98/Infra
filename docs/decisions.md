@@ -56,6 +56,10 @@ The NFS server image no longer pins an exact `nfs-utils` version. It installs th
 
 `sale-site` is one container/database serving `home.sale`, `tech.sale`, and `sale` hosts. Item visibility is assigned in the app, not by deploying separate instances. The root host is the distinct `@`/main audience; the Traefik routers keep the old `home-sale`/`tech-sale` names so their ACME certificates survive the consolidation. All three hosts share the app's `hs_vid` analytics cookie on `.cloud.imranr.dev`, while the app's admin session cookie remains host-scoped.
 
+## Runtime security with Falco
+
+Falco (chart 9.2.1 / Falco 0.45.1, `targets/srv0/k3s-base/templates/falco.yaml`) runs as a modern-eBPF DaemonSet on srv0 and bigpc. It is the runtime counterpart to CrowdSec (L7) and opencanary (honeypot): syscall rules catch shells, credential access, crypto miners, and escape helpers that HTTP-layer tools cannot see. The sensor uses the least-privileged eBPF capability set plus pod-level `spc_t` (SELinux denies container_t `perf_event_open`/BPF), reads `/proc`, `/etc` and `/sys/kernel` read-only, and uses the K3s containerd socket; `collectors.kubernetes` is off, so there is no k8s-metacollector or cluster-wide RBAC. `falcoctl` `follow` is disabled: rules/plugin updates ride Renovate chart bumps instead of in-cluster auto-updates. There is no falcosidekick/Talon: JSON events go to Loki through Alloy, metrics drive Grafana alerts, and response is manual. Event-rate alerts are added only after a rule-count observation window because the default rules are noisy on this stack. The k8saudit plugin and vps0 coverage remain future work.
+
 ## Accepted duplication (do not consolidate)
 
 A simplification review triaged the repeated structures below and deliberately kept them as-is — don't propose helpers, `range` loops, anchors, or shared fragments for them again. The edge TLS certificates are the two shared multi-SAN Certificates above; the rest stay as-is.

@@ -212,7 +212,8 @@ spec:
 ---
 # PSA labels. enforce stays `privileged` — legitimate holdouts remain:
 # nfs-server (kernel NFS), syncthing hostNetwork, mosquitto hostPorts,
-# opencanary hostPorts. `audit: restricted` surfaces every remaining
+# opencanary hostPorts, falco (modern-eBPF sensor: spc_t + host reads).
+# `audit: restricted` surfaces every remaining
 # violation in metrics/logs so the distance to a real policy is measurable;
 # `warn: privileged` is a no-op kept for visibility that enforcement is
 # relaxed here.

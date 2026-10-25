@@ -1,0 +1,132 @@
+---
+# Falco — runtime security sensor (syscalls, not HTTP; CrowdSec covers L7).
+#
+# Modern eBPF (CO-RE) instead of the kernel module: the Fedora nodes update
+# their kernel independently of k3s, and there is no per-kernel driver build.
+# The probe is loaded by the privileged-capability container; SELinux denies
+# container_t perf_event_open/BPF on these nodes, so the pod runs as spc_t
+# (the same reason node-exporter/alloy-logs need it). If the least-privileged
+# capability set ever fails to start, the one-line fallback is
+# driver.modernEbpf.leastPrivileged: false (fully privileged).
+#
+# Only the K3s containerd socket is enabled: the chart's default engine list
+# would also mount /run/podman, /run/host-containerd, etc., which do not exist
+# here. No k8s-metacollector (collectors.kubernetes.enabled: false): container
+# annotations from the CRI socket already provide namespace/pod enrichment,
+# and this keeps the sensor free of cluster-wide RBAC.
+apiVersion: helm.cattle.io/v1
+kind: HelmChart
+metadata:
+  name: falco
+  namespace: base
+spec:
+  chart: falco
+  repo: https://falcosecurity.github.io/charts
+  failurePolicy: abort
+  targetNamespace: base
+  createNamespace: false
+  version: 9.2.1
+  valuesContent: |-
+    image:
+      repository: falcosecurity/falco
+      tag: 0.45.1
+
+    # Flush each event immediately; the Alloy log collector tails the pod log
+    # and ships it to Loki for browsing/forensics.
+    tty: true
+
+    tolerations:
+      - key: node-role.kubernetes.io/control-plane
+        effect: NoSchedule
+      - key: node-role.kubernetes.io/master
+        effect: NoSchedule
+      # bigpc is tainted PreferNoSchedule by k3s-join.sh; tolerate it so the
+      # sensor still lands there.
+      - key: scheduling-discouraged
+        operator: Exists
+        effect: PreferNoSchedule
+
+    podSecurityContext:
+      seLinuxOptions:
+        type: spc_t
+
+    driver:
+      kind: modern_ebpf
+      modernEbpf:
+        leastPrivileged: true
+
+    collectors:
+      containerEngine:
+        engines:
+          docker:
+            enabled: false
+          podman:
+            enabled: false
+          containerd:
+            enabled: false
+          cri:
+            enabled: true
+            sockets:
+              - /run/k3s/containerd/containerd.sock
+          lxc:
+            enabled: false
+          libvirt_lxc:
+            enabled: false
+          bpm:
+            enabled: false
+      kubernetes:
+        enabled: false
+
+    falcoctl:
+      artifact:
+        # Rules/plugin versions move with the chart (Renovate), not a weekly
+        # in-cluster auto-update. The init container still installs the pinned
+        # artifacts at pod start.
+        follow:
+          enabled: false
+        install:
+          refs:
+            - falco-rules:5
+
+    falco:
+      # Keep notice+ (the useful default rules); info/debug is noise. Event
+      # alerts are added only after the rule-count review.
+      priority: notice
+      json_output: true
+
+    metrics:
+      enabled: true
+      rulesCountersEnabled: true
+      kernelEventCountersEnabled: true
+
+    serviceMonitor:
+      create: true
+      interval: 60s
+
+    resources:
+      requests:
+        cpu: 100m
+        memory: 256Mi
+      limits:
+        cpu: "1"
+        memory: 768Mi
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-falco-metrics-ingress
+  namespace: base
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: falco
+  ingress:
+    # Deny-all-ingress is the base baseline; Alloy scrapes /metrics on 8765.
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: alloy-metrics
+      ports:
+        - port: 8765
+  policyTypes:
+    - Ingress

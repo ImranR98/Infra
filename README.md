@@ -26,6 +26,7 @@ The IaC system for my homelab and other devices.
   - **The Principle of Least Privilege** is applied to containers, with elevated privileges and root runtime user only allowed where necessary. Host devices are granted as Kubernetes device-plugin resources (via the generic-device-plugin) rather than `privileged: true`.
   - **Comprehensive Monitoring and Alerting** is done using [Alloy](https://grafana.com/docs/alloy/) + [Prometheus](https://prometheus.io/), [Loki](https://grafana.com/docs/loki/latest/), [Grafana](https://grafana.com/), [Ntfy.sh](https://ntfy.sh/) + [Logtfy](https://github.com/ImranR98/Logtfy), [Headlamp](https://headlamp.dev/), [Dozzle](https://dozzle.dev/), and [Uptime Kuma](https://uptimekuma.co/).
   - **A Honeypot ([Opencanary](https://github.com/thinkst/opencanary))** is used to discover intruders. 
+  - **Runtime security ([Falco](https://falco.org/))** uses modern eBPF to detect suspicious container and host behavior (unexpected shells, credential access, crypto miners, container-escape helpers), with events in Loki and alerts through Grafana.
   - **Regular update checking** is done via [Renovate](https://www.mend.io/renovate/): app dependency PRs auto-merge when their test gate passes, while Infra digest/chart PRs are reviewed and merged manually.
 
 ## Usage examples
