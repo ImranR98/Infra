@@ -42,7 +42,11 @@ All six app images (`PixelNtfy`, `ISBN-Lookup`, `apps.obtainium.imranr.dev`, `ou
 
 ## Infra-built images on GHCR
 
-The two images built in this repo publish to public GHCR packages: `ghcr.io/imranr98/opencode` (weekly and on `opencode-src` changes) and `ghcr.io/imranr98/nfs-server` (on `nfs-server-src` changes). Both workflows use the workflow `GITHUB_TOKEN` with `packages: write`; the packages are public, so srv0 pulls anonymously and Renovate needs no `read:packages`. The old Docker Hub repositories are deprecated but not deleted. Docker Hub credentials remain only in `config/VARS.env` for Renovate's upstream lookups; the GitHub Actions Docker Hub secrets were removed.
+The two images built in this repo publish to public GHCR packages: `ghcr.io/imranr98/opencode` (weekly and on `opencode-src` changes) and `ghcr.io/imranr98/nfs-server` (weekly and on `nfs-server-src` changes). Both workflows use the workflow `GITHUB_TOKEN` with `packages: write`; the packages are public, so srv0 pulls anonymously and Renovate needs no `read:packages`. The old Docker Hub repositories are deprecated but not deleted. Docker Hub credentials remain only in `config/VARS.env` for Renovate's upstream lookups; the GitHub Actions Docker Hub secrets were removed.
+
+## NFS image uses latest branch packages
+
+The NFS server image no longer pins an exact `nfs-utils` version. It installs the latest `nfs-utils` and runs `apk upgrade --no-cache` for its pinned Alpine branch, and the image workflow rebuilds weekly and on source changes. The image is tagged `latest`; the Deployment pins the digest. This trades reproducibility for automatic package freshness; the image build and verification are the gate. Alpine base updates remain Renovate PRs, with minor/major reviewed as Tier C.
 
 ## Sale site subdomain audiences
 

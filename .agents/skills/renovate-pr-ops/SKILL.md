@@ -111,7 +111,9 @@ re-pinned. The GitHub workflows do this automatically on `master`:
 - `nfs-server-src/**` → `.github/workflows/nfs-server-image.yml` → `automation/nfs-server-digest`
 
 Review and merge the digest PR in the normal Infra pass, then deploy. The workflow
-verifies the baked versions before opening the PR. Only fall back to the local
+verifies the baked versions before opening the PR. The NFS image installs the latest
+`nfs-utils`/Alpine packages for its pinned base and rebuilds weekly; an Alpine base bump
+is a normal Renovate PR (Tier C for minor/major). Only fall back to the local
 `build.sh` when the workflow is broken or an out-of-band rebuild is needed. On srv0 the
 opencode build is podman-based (log in to GHCR once, then pass the Docker config file to
 podman — a bare `podman push` fails auth):

@@ -412,20 +412,6 @@
       "enabled": false
     },
     {
-      "description": "nfs-server image source: stay on Alpine 3.22.x until a 3.23+ base is tested with the pinned nfs-utils",
-      "matchFileNames": [
-        "targets/srv0/k3s-base/nfs-server-src/Dockerfile"
-      ],
-      "matchPackageNames": [
-        "alpine"
-      ],
-      "matchUpdateTypes": [
-        "major",
-        "minor"
-      ],
-      "enabled": false
-    },
-    {
       "description": "nfs-server image source: a Dockerfile base bump is inert until the image is rebuilt and the digest re-pinned",
       "matchFileNames": [
         "targets/srv0/k3s-base/nfs-server-src/Dockerfile"
