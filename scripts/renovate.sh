@@ -12,11 +12,12 @@ source "$INFRA_ROOT/scripts/common.sh"
 
 usage() {
     cat <<'EOF'
-Usage: renovate.sh [apps|infra|all] [renovate options...]
+Usage: renovate.sh [apps|infra|all|clear-cache] [renovate options...]
 
-  apps   Run Renovate only for the six apps, DSCPLN, and dscpln-config.
-  infra  Run Renovate only for ImranR98/Infra, then the app CI digest.
-  all    Run both sets (default).
+  apps         Run Renovate only for the six apps, DSCPLN, and dscpln-config.
+  infra        Run Renovate only for ImranR98/Infra, then the app CI digest.
+  all          Run both sets (default).
+  clear-cache  Delete Renovate's persistent package/datasource cache.
 
 The failed app-Renovate-PR watcher remains separate:
   bash scripts/app-renovate-watch.sh
@@ -24,12 +25,14 @@ The failed app-Renovate-PR watcher remains separate:
 Examples:
   bash scripts/renovate.sh apps --dry-run
   bash scripts/renovate.sh infra
+  bash scripts/renovate.sh clear-cache
 EOF
 }
 
 selection="${1:-all}"
 case "$selection" in
     apps | infra | all) shift ;;
+    clear-cache | --clear-cache) selection=clear-cache; shift ;;
     -h | --help)
         usage
         exit 0
@@ -41,6 +44,27 @@ case "$selection" in
         exit 1
         ;;
 esac
+
+# Clearing the cache must work without credentials and before Renovate starts.
+if [ "$selection" = "clear-cache" ] && [ "${1:-}" != "" ]; then
+    echo "Error: clear-cache takes no extra arguments." >&2
+    exit 1
+fi
+if [ "$selection" = "clear-cache" ]; then
+    cache_dir="${RENOVATE_CACHE_DIR:-$HOME/.cache/infra-renovate}"
+    if [ -z "$cache_dir" ] || [ "$cache_dir" = "/" ]; then
+        echo "Error: refusing to clear unsafe RENOVATE_CACHE_DIR '$cache_dir'." >&2
+        exit 1
+    fi
+    cache_target="$cache_dir/renovate"
+    if [ -e "$cache_target" ]; then
+        rm -rf -- "$cache_target"
+        echo "Cleared Renovate package cache: $cache_target"
+    else
+        echo "Renovate package cache already empty: $cache_target"
+    fi
+    exit 0
+fi
 
 apps_repos="ImranR98/dscpln-config,ImranR98/DSCPLN,ImranR98/PixelNtfy,ImranR98/ISBN-Lookup,ImranR98/apps.obtainium.imranr.dev,ImranR98/our-times,ImranR98/order-manager,ImranR98/Logtfy"
 infra_repos="ImranR98/Infra"
@@ -85,6 +109,19 @@ if [ -n "${DOCKERHUB_USER:-}" ] && [ -n "${DOCKERHUB_TOKEN:-}" ]; then
     export RENOVATE_HOST_RULES
 fi
 export RENOVATE_REPOSITORIES="$repos"
+
+# Renovate's Docker datasource keeps the Docker Hub tag list for a hardcoded
+# 90 days in the package cache. A mutable `latest` tag can then resolve to an
+# old build and produce backwards digest PRs (e.g. the redis PR #305). Cap that
+# namespace at 7 days; cacheTtlOverride is the supported global override and
+# takes minutes.
+if [ -z "${RENOVATE_CACHE_TTL_OVERRIDE:-}" ]; then
+    # shellcheck disable=SC2089 # JSON literal, not shell quoting
+    printf -v RENOVATE_CACHE_TTL_OVERRIDE '%s' '{"datasource-docker-hub-cache":10080}'
+fi
+# shellcheck disable=SC2090 # JSON literal, not shell quoting
+export RENOVATE_CACHE_TTL_OVERRIDE
+
 export LOG_LEVEL="${LOG_LEVEL:-info}"
 
 # Attribute commits to the repo's configured git identity instead of Renovate's

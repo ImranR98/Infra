@@ -28,6 +28,17 @@ if [ -n "${DOCKERHUB_USER:-}" ] && [ -n "${DOCKERHUB_TOKEN:-}" ]; then
 fi
 export LOG_LEVEL="${LOG_LEVEL:-info}"
 
+# Match scripts/renovate.sh: cap Renovate's Docker Hub tag-list cache at 7 days
+# instead of its hardcoded 90, so a mutable `latest` cannot feed back an old
+# digest. The CronJobs run without a cacheDir, but keep the setting consistent
+# if one is ever added.
+if [ -z "${RENOVATE_CACHE_TTL_OVERRIDE:-}" ]; then
+    # shellcheck disable=SC2089 # JSON literal, not shell quoting
+    printf -v RENOVATE_CACHE_TTL_OVERRIDE '%s' '{"datasource-docker-hub-cache":10080}'
+fi
+# shellcheck disable=SC2090 # JSON literal, not shell quoting
+export RENOVATE_CACHE_TTL_OVERRIDE
+
 # Attribute commits to the repo's configured git identity (synced .git/config;
 # matches local runs). Read the file directly: `git -C /repo` trips git's
 # dubious-ownership check (root-owned mount parents, unprivileged pod).
