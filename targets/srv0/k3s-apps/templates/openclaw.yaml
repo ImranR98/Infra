@@ -287,7 +287,7 @@ spec:
           # Derived image: the stock browser variant plus gh and the OpenCode
           # client shim. Chromium is bundled for the Control UI Browser panel
           # and the agent's browser tool.
-          image: ghcr.io/imranr98/openclaw:latest
+          image: ghcr.io/imranr98/openclaw:latest@sha256:daf3cca850b69ef1e2ff83d30efa070552cd2e7a09bedbbcfcedebbc878eec69
           imagePullPolicy: IfNotPresent
           command:
             - sh
