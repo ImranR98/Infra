@@ -8,7 +8,7 @@
 | `restic-restore.sh` | — | this machine (srv0) | lists/restores the State Backups restic repo; `pvc <name>` and `compose srv0|vps0` accept `--live`; defaults to staging |
 | `prereqs.sh` | — | this machine | packages (NFS client), pinned helm, Docker bootstrap, machine-fact `.env`, host bind dirs, acme seed |
 | `kubeconfig-unlock.sh [--lock]` | — | this machine | read ACL on the k3s kubeconfig + `~/.kube/config` symlink; holds until Ctrl-C; `--lock` cleans up |
-| `renovate.sh` | — | this machine (opens GitHub PRs) | needs `RENOVATE_GITHUB_TOKEN` in `config/VARS.env`; Node/npm only |
+| `renovate.sh [apps\|infra\|all]` | — | this machine (opens GitHub PRs) | needs `RENOVATE_GITHUB_TOKEN` in `config/VARS.env`; Node/npm only; `infra`/`all` also run `ci-notify.sh` |
 | `renovate-notify.sh` | — | this machine / in-cluster | posts newly opened or refreshed `deps` PRs to ntfy; called by `renovate.sh` and the `renovate-apps`/`renovate-infra` CronJobs |
 | `app-renovate-watch.sh [--dry-run]` | — | this machine / in-cluster | posts a digest for open app Renovate PRs whose `test` check failed; exits non-zero and posts an incomplete-watch notice on GitHub API errors |
 | `ci-notify.sh` | — | this machine / in-cluster | posts failed app GitHub Actions runs from the last 24h; called by the `renovate-infra` CronJob |

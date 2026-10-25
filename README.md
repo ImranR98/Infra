@@ -60,7 +60,7 @@ docker compose --env-file config/srv0/compose.env -f targets/srv0/compose/compos
 docker compose -f targets/<target>/compose/compose.yaml up -d
 
 # Run Renovate manually (the in-cluster jobs do this on a schedule) — machine-local
-bash scripts/renovate.sh
+bash scripts/renovate.sh [apps|infra|all]
 ```
 
 ## More
