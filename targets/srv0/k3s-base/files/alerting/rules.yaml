@@ -22,7 +22,7 @@ deleteRules:
 groups:
   - orgId: 1
     name: infra
-    folder: Infra
+    folder: Falco
     interval: 1m
     rules:
       - uid: io-pressure-srv0
