@@ -9,6 +9,9 @@ templates:
       {{- with .Annotations.summary }}
       {{ . }}
       {{- end }}
+      {{- with .Labels.rule_name }}
+      Rule: `{{ . }}`
+      {{- end }}
       {{- with .Labels.severity }}
       Severity: `{{ . }}`
       {{- end }}

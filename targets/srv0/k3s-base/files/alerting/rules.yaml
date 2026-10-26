@@ -1049,7 +1049,7 @@ groups:
             datasourceUid: prometheus
             model:
               editorMode: code
-              expr: kube_daemonset_status_number_ready{namespace="base",daemonset="falco"} < kube_daemonset_status_desired_number_scheduled{namespace="base",daemonset="falco"}
+              expr: kube_daemonset_status_number_ready{namespace="base",daemonset="falco"} < bool on() group_left() count(kube_node_status_condition{condition="Ready",status="true"} == 1)
               instant: true
               intervalMs: 1000
               maxDataPoints: 43200
@@ -1084,6 +1084,216 @@ groups:
         execErrState: Alerting
         for: 15m
         annotations:
-          summary: Falco is not ready on every node it should cover.
+          summary: Falco is not ready on a Ready node.
         labels:
           severity: critical
+
+      # A rule's Prometheus counter series is created at its first match, so
+      # increase() is 0 for that event. present_over_time's first-5m window
+      # catches the new series; recurring matches use increase.
+      - uid: falco-critical-events
+        title: Falco critical event
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange: {from: 600, to: 0}
+            datasourceUid: prometheus
+            model:
+              editorMode: code
+              expr: >
+                sum by (rule_name) (increase(falcosecurity_falco_rules_matches_total{priority=~"0|1|2|3"}[5m]) > 0)
+                or sum by (rule_name) (
+                  present_over_time(falcosecurity_falco_rules_matches_total{priority=~"0|1|2|3"}[5m])
+                  unless present_over_time(falcosecurity_falco_rules_matches_total{priority=~"0|1|2|3"}[5m] offset 5m)
+                )
+              instant: true
+              intervalMs: 1000
+              maxDataPoints: 43200
+              range: false
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              datasource: {type: __expr__, uid: __expr__}
+              expression: A
+              intervalMs: 1000
+              maxDataPoints: 43200
+              reducer: last
+              refId: B
+              type: reduce
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator: {params: [0], type: gt}
+                  operator: {type: and}
+                  query: {params: [C]}
+                  reducer: {type: last}
+                  type: query
+              datasource: {type: __expr__, uid: __expr__}
+              expression: B
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: C
+              type: threshold
+        noDataState: OK
+        execErrState: Alerting
+        for: 0m
+        annotations:
+          summary: Falco detected a critical/error runtime event on srv0.
+        labels:
+          severity: critical
+
+      # A first warning series is only visible to present_over_time for 5m,
+      # so the 30m for requires recurring warnings (increase). One-off app
+      # warnings stay log-only and do not page.
+      - uid: falco-warning-events
+        title: Falco warning events recurring
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange: {from: 600, to: 0}
+            datasourceUid: prometheus
+            model:
+              editorMode: code
+              expr: >
+                sum by (rule_name) (increase(falcosecurity_falco_rules_matches_total{priority="4"}[5m]) > 0)
+                or sum by (rule_name) (
+                  present_over_time(falcosecurity_falco_rules_matches_total{priority="4"}[5m])
+                  unless present_over_time(falcosecurity_falco_rules_matches_total{priority="4"}[5m] offset 5m)
+                )
+              instant: true
+              intervalMs: 1000
+              maxDataPoints: 43200
+              range: false
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              datasource: {type: __expr__, uid: __expr__}
+              expression: A
+              intervalMs: 1000
+              maxDataPoints: 43200
+              reducer: last
+              refId: B
+              type: reduce
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator: {params: [0], type: gt}
+                  operator: {type: and}
+                  query: {params: [C]}
+                  reducer: {type: last}
+                  type: query
+              datasource: {type: __expr__, uid: __expr__}
+              expression: B
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: C
+              type: threshold
+        noDataState: OK
+        execErrState: Alerting
+        for: 30m
+        annotations:
+          summary: Falco warning events have recurred for 30 minutes.
+        labels:
+          severity: warning
+
+      - uid: falco-event-drops
+        title: Falco event drops
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange: {from: 600, to: 0}
+            datasourceUid: prometheus
+            model:
+              editorMode: code
+              expr: sum(rate(falcosecurity_scap_n_drops_total[10m]))
+              instant: true
+              intervalMs: 1000
+              maxDataPoints: 43200
+              range: false
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              datasource: {type: __expr__, uid: __expr__}
+              expression: A
+              intervalMs: 1000
+              maxDataPoints: 43200
+              reducer: last
+              refId: B
+              type: reduce
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator: {params: [0], type: gt}
+                  operator: {type: and}
+                  query: {params: [C]}
+                  reducer: {type: last}
+                  type: query
+              datasource: {type: __expr__, uid: __expr__}
+              expression: B
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: C
+              type: threshold
+        noDataState: OK
+        execErrState: Alerting
+        for: 15m
+        annotations:
+          summary: Falco is dropping syscall events; detections may be incomplete.
+        labels:
+          severity: warning
+
+      # 1-up is 1 when the target is down; absent() covers a missing
+      # ServiceMonitor target entirely. The same update/down gap as above.
+      - uid: falco-metrics-missing
+        title: Falco metrics missing
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange: {from: 600, to: 0}
+            datasourceUid: prometheus
+            model:
+              editorMode: code
+              expr: absent(up{job="falco-metrics"}) or (1 - up{job="falco-metrics"})
+              instant: true
+              intervalMs: 1000
+              maxDataPoints: 43200
+              range: false
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              datasource: {type: __expr__, uid: __expr__}
+              expression: A
+              intervalMs: 1000
+              maxDataPoints: 43200
+              reducer: last
+              refId: B
+              type: reduce
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator: {params: [0], type: gt}
+                  operator: {type: and}
+                  query: {params: [C]}
+                  reducer: {type: last}
+                  type: query
+              datasource: {type: __expr__, uid: __expr__}
+              expression: B
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: C
+              type: threshold
+        noDataState: OK
+        execErrState: Alerting
+        for: 10m
+        annotations:
+          summary: Prometheus cannot scrape the Falco metrics endpoint.
+        labels:
+          severity: warning
