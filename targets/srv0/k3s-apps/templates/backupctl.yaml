@@ -188,7 +188,7 @@ spec:
               mountPath: /config-src
       containers:
         - name: task-runner
-          image: ghcr.io/imranr98/dscpln-task-runner:latest@sha256:409e30023925b4c12cd07628add5a9378ed9a4e54468ecdec5abe2804c3c9a66
+          image: ghcr.io/imranr98/dscpln-task-runner:latest@sha256:7c82433339e65e9909e52308f92cb1c5d282476da046f48a2e1c095c697c85a8
           imagePullPolicy: IfNotPresent
           securityContext:
             runAsUser: 0
