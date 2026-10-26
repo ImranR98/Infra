@@ -42,10 +42,10 @@ if [ -z "$MAIN_PARENT_DIR" ]; then
     [ -f "$values" ] || { echo "Error: $values not found; pass --main-dir" >&2; exit 1; }
     MAIN_PARENT_DIR="$(yq -r '.MAIN_PARENT_DIR // ""' "$values")"
 fi
-[ -n "$MAIN_PARENT_DIR" ] && [ "$MAIN_PARENT_DIR" != "null" ] || {
+if [ -z "$MAIN_PARENT_DIR" ] || [ "$MAIN_PARENT_DIR" = "null" ]; then
     echo "Error: MAIN_PARENT_DIR is not configured; pass --main-dir" >&2
     exit 1
-}
+fi
 
 MAIN_DIR="$MAIN_PARENT_DIR/Main"
 CONFIG_DIR="${CONFIG_DIR:-$MAIN_DIR/Code/Automation/dscpln-config}"
