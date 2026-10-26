@@ -307,25 +307,3 @@ spec:
     requests:
       storage: 4096Gi
   volumeName: opencode-sandbox-pv
----
-# OpenClaw's coding-agent skill drives this server over the cluster network.
-# The pod CIDR egress policy already permits the connection; this admits only
-# OpenClaw to the API port.
-apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
-metadata:
-  name: allow-openclaw-opencode-ingress
-  namespace: apps
-spec:
-  podSelector:
-    matchLabels:
-      app: opencode
-  ingress:
-    - from:
-        - podSelector:
-            matchLabels:
-              app: openclaw
-      ports:
-        - port: 4096
-  policyTypes:
-    - Ingress

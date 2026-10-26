@@ -197,33 +197,6 @@
       "datasourceTemplate": "github-releases",
       "extractVersionTemplate": "^v?(?<version>\\d+\\.\\d+\\.\\d+)$",
       "versioningTemplate": "semver"
-    },
-    {
-      "customType": "regex",
-      "description": "GitHub CLI version baked into the derived OpenClaw image",
-      "managerFilePatterns": [
-        "/targets\\/srv0\\/k3s-apps\\/openclaw-src\\/Dockerfile$/"
-      ],
-      "matchStrings": [
-        "ARG GH_VERSION=(?<currentValue>\\S+)"
-      ],
-      "depNameTemplate": "cli/cli",
-      "datasourceTemplate": "github-releases",
-      "extractVersionTemplate": "^v?(?<version>\\d+\\.\\d+\\.\\d+)$",
-      "versioningTemplate": "semver"
-    },
-    {
-      "customType": "regex",
-      "description": "OpenCode client version baked into the derived OpenClaw image; keep it in lockstep with the standalone server",
-      "managerFilePatterns": [
-        "/targets\\/srv0\\/k3s-apps\\/openclaw-src\\/Dockerfile$/"
-      ],
-      "matchStrings": [
-        "ARG OPENCODE_VERSION=(?<currentValue>\\S+)"
-      ],
-      "depNameTemplate": "@opencode/cli",
-      "datasourceTemplate": "npm",
-      "versioningTemplate": "semver"
     }
   ],
   "packageRules": [
@@ -243,13 +216,6 @@
       ],
       "matchCurrentValue": "/^(latest|stable|release|alpine)$/",
       "pinDigests": true
-    },
-    {
-      "description": "opencode CLI is used by both the standalone server image and the OpenClaw client shim; keep them on one version",
-      "matchPackageNames": [
-        "@opencode/cli"
-      ],
-      "groupName": "opencode CLI"
     },
     {
       "description": "No major bumps for postgres, clickhouse/clickhouse-server, fedora, helm (their majors need manual migrations)",
@@ -461,15 +427,6 @@
       ],
       "prBodyNotes": [
         "After merging, the opencode image workflow rebuilds and opens a digest re-pin PR; deploy `srv0-apps` after that PR merges. The Dockerfile bump alone does not change the running image."
-      ]
-    },
-    {
-      "description": "openclaw image source: a Dockerfile bump is inert until the image is rebuilt and the digest re-pinned",
-      "matchFileNames": [
-        "targets/srv0/k3s-apps/openclaw-src/Dockerfile"
-      ],
-      "prBodyNotes": [
-        "After merging, the openclaw image workflow rebuilds and opens a digest re-pin PR; deploy `srv0-apps` after that PR merges. The Dockerfile bump alone does not change the running image."
       ]
     }
   ]

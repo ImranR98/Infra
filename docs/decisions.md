@@ -30,7 +30,7 @@ The metrics store is Prometheus (`prom/prometheus`, 180-day retention, remote-wr
 
 ## Shared multi-SAN edge certificates
 
-The per-app Let's Encrypt Certificates were replaced by `edge-public-tls` (the 25 exact public hostnames) and `edge-private-tls` (`files`, `traefik`). The public cert is attached to both secure listeners; the private cert only to `websecure`, so the private names never reach the public-exposure listener. The names are exact (not a wildcard), but all public names share one key, so a key compromise has wildcard-like blast radius; per-host key isolation was traded for fewer Orders and secrets. Adding a public app means adding its SAN and re-issuing.
+The per-app Let's Encrypt Certificates were replaced by `edge-public-tls` (the 24 exact public hostnames) and `edge-private-tls` (`files`, `traefik`). The public cert is attached to both secure listeners; the private cert only to `websecure`, so the private names never reach the public-exposure listener. The names are exact (not a wildcard), but all public names share one key, so a key compromise has wildcard-like blast radius; per-host key isolation was traded for fewer Orders and secrets. Adding a public app means adding its SAN and re-issuing.
 
 ## Docs split
 
@@ -42,11 +42,7 @@ All six app images (`PixelNtfy`, `ISBN-Lookup`, `apps.obtainium.imranr.dev`, `ou
 
 ## Infra-built images on GHCR
 
-The three images built in this repo publish to public GHCR packages: `ghcr.io/imranr98/opencode` (weekly and on `opencode-src` changes), `ghcr.io/imranr98/openclaw` (on `openclaw-src` changes), and `ghcr.io/imranr98/nfs-server` (weekly and on `nfs-server-src` changes). All workflows use the workflow `GITHUB_TOKEN` with `packages: write`; the packages are public, so srv0 pulls anonymously and Renovate needs no `read:packages`. The old Docker Hub repositories are deprecated but not deleted. Docker Hub credentials remain only in `config/VARS.env` for Renovate's upstream lookups; the GitHub Actions Docker Hub secrets were removed.
-
-## OpenClaw delegates coding to the standalone OpenCode
-
-OpenClaw's built-in coding-agent skill drives the existing standalone OpenCode server (`opencode run --server`) instead of running a second OpenCode runtime inside the gateway. The derived `openclaw-src` image adds only the `gh` CLI and the OpenCode client shim; the `code-sandbox` NFS share is mounted at `/sandbox` in both pods so the client's `x-opencode-directory` path resolves on the server. Model/provider choice stays in the OpenCode UI, GitHub credentials come from OpenClaw's UI-managed GitHub identity, and remote-run approvals are the server-side permission rules configured in the OpenCode UI; no `--auto`, token, or git identity is baked into the manifests.
+The two images built in this repo publish to public GHCR packages: `ghcr.io/imranr98/opencode` (weekly and on `opencode-src` changes) and `ghcr.io/imranr98/nfs-server` (weekly and on `nfs-server-src` changes). All workflows use the workflow `GITHUB_TOKEN` with `packages: write`; the packages are public, so srv0 pulls anonymously and Renovate needs no `read:packages`. The old Docker Hub repositories are deprecated but not deleted. Docker Hub credentials remain only in `config/VARS.env` for Renovate's upstream lookups; the GitHub Actions Docker Hub secrets were removed.
 
 ## NFS image uses latest branch packages
 

@@ -27,7 +27,6 @@ spec:
     - music.{{ .Values.SERVICES_DOMAIN }}
     - nextcloud.{{ .Values.SERVICES_DOMAIN }}
     - gpt.{{ .Values.SERVICES_DOMAIN }}
-    - openclaw.{{ .Values.SERVICES_DOMAIN }}
     - opencode.{{ .Values.SERVICES_DOMAIN }}
     - opodsync.{{ .Values.SERVICES_DOMAIN }}
     - send.{{ .Values.SERVICES_DOMAIN }}
