@@ -24,8 +24,9 @@ The IaC system for my homelab and other devices.
   - **Network policies** are used in the `srv0` Kubernetes stack to ensure that pod-to-pod communication is only allowed where necessary.
   - **WireGuard key pairs** (as opposed to symmetric token-based encryption) protect the public-exposure tunnel between `srv0` and `vps0`; each peer authenticates with its own key, preventing certain kinds of MITM attacks.
   - **The Principle of Least Privilege** is applied to containers, with elevated privileges and root runtime user only allowed where necessary. Host devices are granted as Kubernetes device-plugin resources (via the generic-device-plugin) rather than `privileged: true`.
-  - **Comprehensive Monitoring and Alerting** is done using [Alloy](https://grafana.com/docs/alloy/) + [Prometheus](https://prometheus.io/), [Loki](https://grafana.com/docs/loki/latest/), [Grafana](https://grafana.com/), [Ntfy.sh](https://ntfy.sh/) + [Logtfy](https://github.com/ImranR98/Logtfy), [Headlamp](https://headlamp.dev/), [Dozzle](https://dozzle.dev/), and [Uptime Kuma](https://uptimekuma.co/).
-  - **A Honeypot ([Opencanary](https://github.com/thinkst/opencanary))** is used to discover intruders. 
+  - **Comprehensive Monitoring and Alerting** is done using [Alloy](https://grafana.com/docs/alloy/) + [Prometheus](https://prometheus.io/), [Loki](https://grafana.com/docs/loki/latest/), [Grafana](https://grafana.com/), [Ntfy.sh](https://ntfy.sh/) + [Logtfy](https://github.com/ImranR98/Logtfy), [Headlamp](https://headlamp.dev/), [Dozzle](https://dozzle.dev/), and [Uptime Kuma](https://github.com/louislam/uptime-kuma).
+  - [Falco](https://falco.org/) flags suspicious activity on K3s nodes.
+  - **A Honeypot ([Opencanary](https://github.com/thinkst/opencanary))** is used to discover intruders.
   - **Runtime security ([Falco](https://falco.org/))** uses modern eBPF to detect suspicious container and host behavior (unexpected shells, credential access, crypto miners, container-escape helpers), with events in Loki and alerts through Grafana.
   - **Regular update checking** is done via [Renovate](https://www.mend.io/renovate/): app dependency PRs auto-merge when their test gate passes, while Infra digest/chart PRs are reviewed and merged manually.
 
@@ -40,10 +41,10 @@ bash scripts/prereqs.sh
 cp -r targets/<target>/config_template config/<target>   # then fill in real values
 cp config_template/VARS.env config/VARS.env              # then fill in
 
-# Validate your configuration
+# Validate the target
 bash scripts/validate.sh <target>
 
-# Deploy k3s
+# Deploy K3s
 bash scripts/preflight-task-runner.sh --fix # srv0: Main data dirs + config checkout
 bash scripts/kubeconfig-unlock.sh # unlock kubeconfig (so non-sudo can read it temporarily); run in another terminal
 helm upgrade --install srv0-base targets/srv0/k3s-base -n base --create-namespace \
@@ -51,7 +52,7 @@ helm upgrade --install srv0-base targets/srv0/k3s-base -n base --create-namespac
 helm upgrade --install srv0-apps targets/srv0/k3s-apps -n apps --create-namespace \
   -f targets/srv0/k3s-apps/values.yaml -f config/srv0/values.yaml
 
-# Deploy compose
+# Deploy Compose
 # vps0 (VARS-driven, with a config env):
 docker compose --env-file config/vps0/compose.env --env-file targets/vps0/compose/.env \
   -f targets/vps0/compose/compose.yaml \
@@ -62,7 +63,7 @@ docker compose --env-file config/srv0/compose.env -f targets/srv0/compose/compos
 docker compose -f targets/<target>/compose/compose.yaml up -d
 
 # Run Renovate manually (the in-cluster jobs do this on a schedule) — machine-local
-bash scripts/renovate.sh [apps|infra|all]
+bash scripts/renovate.sh [apps|infra|all|clear-cache] [--dry-run]
 ```
 
 ## More
