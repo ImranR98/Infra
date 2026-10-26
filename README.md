@@ -25,7 +25,7 @@ The IaC system for my homelab and other devices.
   - **WireGuard key pairs** (as opposed to symmetric token-based encryption) protect the public-exposure tunnel between `srv0` and `vps0`; each peer authenticates with its own key, preventing certain kinds of MITM attacks.
   - **The Principle of Least Privilege** is applied to containers, with elevated privileges and root runtime user only allowed where necessary. Host devices are granted as Kubernetes device-plugin resources (via the generic-device-plugin) rather than `privileged: true`.
   - **Comprehensive Monitoring and Alerting** is done using [Alloy](https://grafana.com/docs/alloy/) + [Prometheus](https://prometheus.io/), [Loki](https://grafana.com/docs/loki/latest/), [Grafana](https://grafana.com/), [Ntfy.sh](https://ntfy.sh/) + [Logtfy](https://github.com/ImranR98/Logtfy), [Headlamp](https://headlamp.dev/), [Dozzle](https://dozzle.dev/), and [Uptime Kuma](https://github.com/louislam/uptime-kuma).
-  - [Falco](https://falco.org/) flags suspicious activity on K3s nodes.
+  - **[Falco](https://falco.org/)** flags suspicious activity on K3s nodes.
   - **A Honeypot ([Opencanary](https://github.com/thinkst/opencanary))** is used to discover intruders.
   - **Regular update checking** is done via [Renovate](https://www.mend.io/renovate/): app dependency PRs auto-merge when their test gate passes, while Infra digest/chart PRs are reviewed and merged manually.
 
