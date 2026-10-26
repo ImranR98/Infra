@@ -44,6 +44,7 @@ cp config_template/VARS.env config/VARS.env              # then fill in
 bash scripts/validate.sh <target>
 
 # Deploy k3s
+bash scripts/preflight-task-runner.sh --fix # srv0: Main data dirs + config checkout
 bash scripts/kubeconfig-unlock.sh # unlock kubeconfig (so non-sudo can read it temporarily); run in another terminal
 helm upgrade --install srv0-base targets/srv0/k3s-base -n base --create-namespace \
   -f targets/srv0/k3s-base/values.yaml -f config/srv0/values.yaml

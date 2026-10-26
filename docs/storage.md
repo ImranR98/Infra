@@ -15,6 +15,23 @@
 - The NFS media shares (`music`, `jellyfin-tv`, `jellyfin-youtube`, `arrstack-media`, `frigate`, `code-sandbox`) are static PVs using the `nfs` class name; they are not dynamically provisioned.
 - Media deliberately stays on NFS (Frigate recordings, Jellyfin libraries, Immich external library) so pods can move nodes.
 
+## Task Runner runtime paths
+
+The Task Runner runs as root for PVC backups, but most tasks drop to `MY_UID`.
+On every pod start the `prepare-runtime` initContainer creates/chowns:
+
+- `/home/imranr/.cache`, `.venvs`, `.android`, `tmp` (`MY_UID`, `0700`)
+- the top level of `Main/Backups`, `Main/Media` and `Main/Documents`
+  (`MY_UID`, `2775`, not recursive)
+- `/config-src/.task-runner` (`MY_UID`, `0700`) and the writable repo files
+  `task-meta.json` / `tools/contacts/config.json` when present
+
+The app also creates its `.task-runner/{tasks,schedules,staging}` tree at boot
+and verifies the staging parent as the task user. Before the first deploy on a
+fresh host, run `scripts/preflight-task-runner.sh --fix` and clone the private
+`dscpln-config` checkout as `MY_UID`. The initContainer cannot create hostPath
+directories that must exist before the pod schedules.
+
 ## Backups
 
 - The **State Backups** task in D$CPLN Task Runner is the active backup system. It runs on a schedule (default Sundays 04:00) and has a manual **Run now**. One encrypted, deduplicated restic repository at `state_backups/restic` contains:

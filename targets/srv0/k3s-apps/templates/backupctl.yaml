@@ -115,6 +115,77 @@ spec:
         seLinuxOptions:
           type: spc_t
           level: s0
+      initContainers:
+        # Normalize only the directories the app manages plus the top-level
+        # data mounts. Do not recurse into the Main trees: they can be large.
+        - name: prepare-runtime
+          image: busybox:1.38.0-uclibc@sha256:b699b0c739b2d039afd8e2488a3ccfc0b9a86301d87633448d4a93c57bee8c76
+          imagePullPolicy: IfNotPresent
+          command:
+            - sh
+            - -ec
+            - |
+              uid={{ .Values.MY_UID }}
+              gid={{ .Values.MY_UID }}
+
+              # Home is writable by user-data tasks (ProtonMail, venvs, adb,
+              # temp files). Keep the root private but traversable.
+              mkdir -p /home/imranr/.cache /home/imranr/.venvs /home/imranr/.android /home/imranr/tmp
+              chown "$uid:$gid" /home/imranr
+              chmod 0755 /home/imranr
+              for d in /home/imranr/.cache /home/imranr/.venvs /home/imranr/.android /home/imranr/tmp; do
+                chown "$uid:$gid" "$d"
+                chmod 0700 "$d"
+              done
+
+              # User tasks write to these mounted trees; only normalize their
+              # top level so this stays fast and safe on large data sets.
+              for d in /home/imranr/Main/Backups /home/imranr/Main/Media /home/imranr/Main/Documents; do
+                [ -d "$d" ] || continue
+                chown "$uid:$gid" "$d"
+                chmod 2775 "$d"
+              done
+
+              # The config repo stores UI metadata, schedules and run state.
+              chown "$uid:$gid" /config-src
+              chmod 2755 /config-src
+              mkdir -p /config-src/.task-runner
+              chown -R "$uid:$gid" /config-src/.task-runner
+              find /config-src/.task-runner -type d -exec chmod 0700 {} \;
+              if [ -e /config-src/task-meta.json ]; then
+                chown "$uid:$gid" /config-src/task-meta.json
+                chmod 0664 /config-src/task-meta.json
+              fi
+              if [ -e /config-src/tools/contacts/config.json ]; then
+                chown "$uid:$gid" /config-src/tools/contacts/config.json
+                chmod 0644 /config-src/tools/contacts/config.json
+              fi
+          securityContext:
+            runAsUser: 0
+            runAsGroup: {{ .Values.MY_UID }}
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+              add:
+                - CHOWN
+                - FOWNER
+                - DAC_OVERRIDE
+            seccompProfile:
+              type: RuntimeDefault
+            seLinuxOptions:
+              level: s0
+          volumeMounts:
+            - name: home
+              mountPath: /home/imranr
+            - name: main-backups
+              mountPath: /home/imranr/Main/Backups
+            - name: main-media
+              mountPath: /home/imranr/Main/Media
+            - name: main-documents
+              mountPath: /home/imranr/Main/Documents
+            - name: config-src
+              mountPath: /config-src
       containers:
         - name: task-runner
           image: ghcr.io/imranr98/dscpln-task-runner:latest@sha256:409e30023925b4c12cd07628add5a9378ed9a4e54468ecdec5abe2804c3c9a66
