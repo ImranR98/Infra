@@ -34,3 +34,101 @@
         - [apps, immich-postgresql-, pg_isready]
   override:
     exceptions: append
+
+# --- False-alarm exceptions from the first observation window (2026-10-26) ---
+
+# RocketLeague under Proton/Wine uses ptrace for its anti-cheat on bigpc. This
+# is host-only and process-scoped; a container, or another host process, still
+# fires the rule.
+- rule: PTRACE attached to process
+  exceptions:
+    - name: rocket_league_eac_host
+      fields: [container.name, proc.name]
+      comps: ["=", "="]
+      values:
+        - [host, RocketLeague_EA]
+  override:
+    exceptions: append
+
+# Same game process also produces the anti-debug NOTICE.
+- rule: PTRACE anti-debug attempt
+  exceptions:
+    - name: rocket_league_eac_antidebug_host
+      fields: [container.name, proc.name]
+      comps: ["=", "="]
+      values:
+        - [host, RocketLeague_EA]
+  override:
+    exceptions: append
+
+# FlareSolverr launches its bundled chromedriver from the writable layer on
+# first solve. Scope to that pod and process only; any other binary still
+# triggers the Critical rule.
+- rule: Drop and execute new binary in container
+  exceptions:
+    - name: flaresolverr_chromedriver
+      fields: [k8s.ns.name, k8s.pod.name, proc.name]
+      comps: ["=", startswith, "="]
+      values:
+        - [apps, flaresolverr-, chromedriver]
+  override:
+    exceptions: append
+
+# Known controllers and jobs that legitimately use the API server. The rule
+# remains active for every other pod/process.
+- rule: Contact K8S API Server From Container
+  exceptions:
+    - name: headlamp_api
+      fields: [k8s.ns.name, k8s.pod.name, proc.name]
+      comps: ["=", startswith, "="]
+      values:
+        - [apps, headlamp-, headlamp-server]
+    - name: immich_seed_api
+      fields: [k8s.ns.name, k8s.pod.name, proc.name]
+      comps: ["=", startswith, "="]
+      values:
+        - [apps, immich-seed-, kubectl]
+    - name: crowdsec_cert_roll_api
+      fields: [k8s.ns.name, k8s.pod.name, proc.name]
+      comps: ["=", startswith, "="]
+      values:
+        - [base, crowdsec-cert-roll-, kubectl]
+    - name: helm_install_api
+      fields: [k8s.ns.name, k8s.pod.name, proc.name]
+      comps: ["=", startswith, "="]
+      values:
+        - [base, helm-install-, helm]
+    - name: helm_install_mapkubeapis_api
+      fields: [k8s.ns.name, k8s.pod.name, proc.name]
+      comps: ["=", startswith, "="]
+      values:
+        - [base, helm-install-, mapkubeapis]
+    - name: alloy_operator_api
+      fields: [k8s.ns.name, k8s.pod.name, proc.name]
+      comps: ["=", startswith, "="]
+      values:
+        - [base, k8s-monitoring-alloy-operator-, helm-operator]
+  override:
+    exceptions: append
+
+# FreshRSS's own cron wrapper.
+- rule: Run shell untrusted
+  exceptions:
+    - name: freshrss_cron_shell
+      fields: [k8s.ns.name, k8s.pod.name, proc.name]
+      comps: ["=", startswith, "="]
+      values:
+        - [apps, freshrss-, sh]
+  override:
+    exceptions: append
+
+# Home Assistant opens AF_PACKET sockets for local device discovery.
+- rule: Packet socket created in container
+  exceptions:
+    - name: homeassistant_packet_socket
+      fields: [k8s.ns.name, k8s.pod.name, proc.name]
+      comps: ["=", startswith, "="]
+      values:
+        - [apps, homeassistant-, python3]
+  override:
+    exceptions: append
