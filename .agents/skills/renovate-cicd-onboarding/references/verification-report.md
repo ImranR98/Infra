@@ -48,10 +48,10 @@ results), never secrets or private data.
 ## Deployment repo
 
 - [ ] App repo added to the runner and notifier lists.
-- [ ] Image digest rule matches the new GHCR image/namespace.
+- [ ] The first-party `ghcr.io/imranr98/*` digest group covers the new image (no per-app rule).
 - [ ] Every deployment ref updated (Compose, K3s/Helm, docs).
 - [ ] No unintended old registry refs remain.
-- [ ] Global vs per-app digest grouping decided and documented.
+- [ ] First-party vs third-party digest grouping documented (no per-app groups).
 - [ ] Public/private pull path verified.
 - [ ] Frozen/archived/Infra-built images untouched unless requested.
 - [ ] No deployment performed by this skill; the normal consent/deploy flow is

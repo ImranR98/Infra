@@ -44,25 +44,21 @@ in sync in both files.
 - a `kubernetes` manager scoped to `targets/srv0/k3s-(base|apps)/**`;
 - custom regex managers for chart/image/ARG pins;
 - a global `pinDigests` rule for floating tags;
-- a global `docker digests` group for digest/pin refreshes;
-- at least one existing per-app image digest rule.
-
-Add a rule for the new image after the global rules so it can override the
-group name:
+- a global `docker digests` group for third-party digest/pin refreshes;
+- one `app image digests` group for every first-party image:
 
 ```json
 {
-  "description": "<app> image digests",
+  "description": "One PR for every first-party image digest pin; one rollout covers the apps, nfs-server, and opencode-sandbox",
   "matchDatasources": ["docker"],
-  "matchPackageNames": ["/^ghcr\\.io\\/<owner>\\/<image-prefix>/"],
   "matchUpdateTypes": ["digest", "pinDigest"],
-  "groupName": "<app> image digests"
+  "matchPackageNames": ["/^ghcr\\.io\\/imranr98\\//"],
+  "groupName": "app image digests"
 }
 ```
 
-All first-party `ghcr.io/imranr98/*` images share the `app image digests` group;
-third-party images stay in the `docker digests` batch. Do not add a per-app
-digest group.
+A new `ghcr.io/imranr98/*` image is covered automatically; do not add a per-app
+digest group. Third-party images stay in the `docker digests` batch.
 
 The Infra repo's `automerge` is `false`; do not change that policy without
 consent. Image digest pins get the `infra-digest-pin` label and stay open for
@@ -162,13 +158,13 @@ repo that is the `renovate-pr-ops` skill and `AGENTS.md`/`validate.sh`.
   remain.
 - **Non-`latest` deployment tag:** ensure the app publish workflow produces that
   tag; the digest rule needs the tag that is actually deployed.
-- **Global vs per-app grouping:** ask; both are valid depending on deployment
-  batching.
+- **Digest grouping:** first-party `ghcr.io/imranr98/*` images always join the
+  shared `app image digests` group; third-party images stay in `docker digests`.
 
 ## Verification
 
 - Infra `git grep` finds no unintended old registry refs for the app.
-- The app repo is in `RENOVATE_REPOSITORIES` and the notifier list.
+- The app repo is in `APP_REPOS` in `scripts/repos.sh` (which feeds `RENOVATE_REPOSITORIES` and the notifier).
 - The dependency dashboard exists and lists the expected files.
 - A test dependency bump opens a PR, runs the app `test`, and auto-merges only
   when allowed.
