@@ -3,7 +3,7 @@
 # minimal build: Alpine + nfs-utils + an entrypoint that starts rpc.nfsd and
 # rpc.mountd in the host kernel. The deployment runs it privileged and mounts
 # /var/lib/nfs/etab from the nfs-etab ConfigMap.
-FROM alpine:3.22.2@sha256:4b7ce07002c69e8f3d704a9c5d6fd3053be500b7f1c69fc0d80990c2ad8dd412
+FROM alpine:3.24.3@sha256:be2656061b536c1883c4034790e21d0a09c5aaaf51968b89368a3c0371ea2c9a
 
 RUN apk upgrade --no-cache \
  && apk add --no-cache nfs-utils
