@@ -85,6 +85,29 @@ Scope by pod prefix + process, e.g. Home Assistant's installer, not the whole
 `apps` namespace. If the process name is generic (`sh`, `python3`, `node`), keep
 the namespace + pod prefix and add the parent/command if needed.
 
+## Renovate's containerbase Node tool
+
+Renovate's image runs `npm`/`node` from `/opt/containerbase/tools/node/…`, which
+lives in the writable layer and trips `Drop and execute new binary in
+container` (Critical) on every run. The actual Renovate process from the base
+image does not trip it.
+
+```yaml
+- rule: Drop and execute new binary in container
+  exceptions:
+    - name: renovate_containerbase_node
+      fields: [k8s.ns.name, k8s.pod.name, proc.name, proc.exe]
+      comps: ["=", startswith, "=", startswith]
+      values:
+        - [base, renovate-, node, /opt/containerbase/tools/node/]
+  override:
+    exceptions: append
+```
+
+Use `renovate-` (not just `renovate-apps-`) so the infra/pr-watch CronJobs are
+covered. The `proc.exe` prefix keeps the Critical rule active for any other
+binary dropped into a Renovate pod.
+
 ## Kubernetes controllers and jobs
 
 These legitimately call the API server:
@@ -134,6 +157,26 @@ HA uses `AF_PACKET` for local discovery:
   override:
     exceptions: append
 ```
+
+## Host DNF log rotation
+
+`dnf5 makecache` rotates/clears `/var/log/dnf5.log*` on the host and can trip
+`Clear Log Activities` (Warning):
+
+```yaml
+- rule: Clear Log Activities
+  exceptions:
+    - name: host_dnf5_log_rotation
+      fields: [container.name, proc.name, fd.name]
+      comps: ["=", "=", startswith]
+      values:
+        - [host, dnf5, /var/log/dnf5.log]
+  override:
+    exceptions: append
+```
+
+Keep the `fd.name` prefix: another host process clearing a different log, or
+dnf5 touching a non-log file, should still fire.
 
 ## Test and one-off pods
 

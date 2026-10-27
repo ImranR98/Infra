@@ -132,3 +132,27 @@
         - [apps, homeassistant-, python3]
   override:
     exceptions: append
+
+# Renovate's containerbase Node tool runs npm/node from its writable tool
+# cache. Scope to the Renovate job family and the containerbase Node path so a
+# different binary in the same pod still fires the Critical rule.
+- rule: Drop and execute new binary in container
+  exceptions:
+    - name: renovate_containerbase_node
+      fields: [k8s.ns.name, k8s.pod.name, proc.name, proc.exe]
+      comps: ["=", startswith, "=", startswith]
+      values:
+        - [base, renovate-, node, /opt/containerbase/tools/node/]
+  override:
+    exceptions: append
+
+# dnf5 makecache rotates/clears its own log on the host.
+- rule: Clear Log Activities
+  exceptions:
+    - name: host_dnf5_log_rotation
+      fields: [container.name, proc.name, fd.name]
+      comps: ["=", "=", startswith]
+      values:
+        - [host, dnf5, /var/log/dnf5.log]
+  override:
+    exceptions: append

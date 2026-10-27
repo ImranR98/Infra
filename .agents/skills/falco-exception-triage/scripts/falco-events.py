@@ -53,6 +53,7 @@ FILE_RULES = {
     "Write below binary dir",
     "Create symlink over sensitive files",
     "Create hardlink over sensitive files",
+    "Clear Log Activities",
 }
 
 
