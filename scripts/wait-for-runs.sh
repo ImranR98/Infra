@@ -50,6 +50,13 @@ export WAIT_SINCE="$since" WAIT_TIMEOUT="$timeout" WAIT_SETTLE="$settle" WAIT_PO
 timeout --signal=TERM "$((timeout + 60))s" node - <<'NODE'
 const { setTimeout: sleep } = require('node:timers/promises');
 
+function withTimeout(promise, ms, what) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => setTimeout(() => reject(new Error(`${what} timed out`)), ms)),
+  ]);
+}
+
 const api = 'https://api.github.com';
 const repos = (process.env.CI_REPOS || '').split(',').filter(Boolean);
 const infra = process.env.INFRA_REPO;
@@ -67,16 +74,20 @@ const failedConclusions = new Set([
 
 async function gh(path, attempt = 1) {
   try {
-    const res = await fetch(`${api}${path}`, {
-      headers: {
-        Authorization: `Bearer ${process.env.GH_TOKEN}`,
-        Accept: 'application/vnd.github+json',
-        'User-Agent': 'infra-wait-runs',
-      },
-      signal: AbortSignal.timeout(20000),
-    });
+    const res = await withTimeout(
+      fetch(`${api}${path}`, {
+        headers: {
+          Authorization: `Bearer ${process.env.GH_TOKEN}`,
+          Accept: 'application/vnd.github+json',
+          'User-Agent': 'infra-wait-runs',
+        },
+        signal: AbortSignal.timeout(20000),
+      }),
+      25000,
+      path,
+    );
     if (!res.ok) throw new Error(`GET ${path} failed: ${res.status} ${await res.text()}`);
-    return await res.json();
+    return await withTimeout(res.json(), 25000, `${path} body`);
   } catch (err) {
     if (attempt >= 3) throw err;
     await sleep(2000);
@@ -89,9 +100,11 @@ const defaultBranch = new Map();
 (async () => {
   const started = Date.now();
   let quietSince = null;
+  let lastLog = 0;
 
   for (;;) {
     let busy = false;
+    const reasons = [];
 
     for (const repo of repos) {
       if (!defaultBranch.has(repo)) {
@@ -111,6 +124,7 @@ const defaultBranch = new Map();
       });
       if (relevant.some((run) => run.status !== 'completed')) {
         busy = true;
+        reasons.push(`${repo}: pending run`);
       }
 
       const prs = (await gh(`/repos/${repo}/pulls?state=open&per_page=100`)).filter((pr) =>
@@ -121,11 +135,15 @@ const defaultBranch = new Map();
           .check_runs || [];
         if (checks.length === 0) {
           const age = Date.now() - new Date(pr.created_at || pr.updated_at).getTime();
-          if (age < 180000) busy = true;
+          if (age < 180000) {
+            busy = true;
+            reasons.push(`${repo}#${pr.number}: no checks yet`);
+          }
           continue;
         }
         if (checks.some((c) => c.status !== 'completed')) {
           busy = true;
+          reasons.push(`${repo}#${pr.number}: pending checks`);
           continue;
         }
         if (checks.some((c) => failedConclusions.has(c.conclusion))) continue;
@@ -149,10 +167,17 @@ const defaultBranch = new Map();
         run.event === 'push' &&
         run.head_branch === infraBranch,
     );
-    if (infraRelevant.some((run) => run.status !== 'completed')) busy = true;
+    if (infraRelevant.some((run) => run.status !== 'completed')) {
+      busy = true;
+      reasons.push('Infra: pending run');
+    }
 
     if (busy) {
       quietSince = null;
+      if (Date.now() - lastLog > 60000) {
+        console.error(`wait: busy (${reasons.join('; ')})`);
+        lastLog = Date.now();
+      }
       if (Date.now() - started > timeoutMs) {
         console.error('timed out waiting for runs to settle');
         process.exit(2);

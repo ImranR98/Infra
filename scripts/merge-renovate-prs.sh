@@ -57,6 +57,13 @@ export MERGE_METHOD="$merge_method" MERGE_TIMEOUT="$timeout"
 node - <<'NODE'
 const { setTimeout: sleep } = require('node:timers/promises');
 
+function withTimeout(promise, ms, what) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => setTimeout(() => reject(new Error(`${what} timed out`)), ms)),
+  ]);
+}
+
 const api = 'https://api.github.com';
 const repos = (process.env.REPOS || '').split(',').map((r) => r.trim()).filter(Boolean);
 const onlyLabels = (process.env.ONLY_LABELS || '').split(',').filter(Boolean);
@@ -73,21 +80,25 @@ const failedConclusions = new Set([
 
 async function gh(path, init = {}, attempt = 1) {
   try {
-    const res = await fetch(`${api}${path}`, {
-      ...init,
-      headers: {
-        Authorization: `Bearer ${process.env.GH_TOKEN}`,
-        Accept: 'application/vnd.github+json',
-        'User-Agent': 'infra-merge-renovate',
-        ...(init.headers || {}),
-      },
-      signal: AbortSignal.timeout(20000),
-    });
+    const res = await withTimeout(
+      fetch(`${api}${path}`, {
+        ...init,
+        headers: {
+          Authorization: `Bearer ${process.env.GH_TOKEN}`,
+          Accept: 'application/vnd.github+json',
+          'User-Agent': 'infra-merge-renovate',
+          ...(init.headers || {}),
+        },
+        signal: AbortSignal.timeout(20000),
+      }),
+      25000,
+      path,
+    );
     if (!res.ok) {
       throw new Error(`${init.method || 'GET'} ${path} failed: ${res.status} ${await res.text()}`);
     }
     if (res.status === 204) return null;
-    return await res.json();
+    return await withTimeout(res.json(), 25000, `${path} body`);
   } catch (err) {
     if (attempt >= 3) throw err;
     await sleep(2000);

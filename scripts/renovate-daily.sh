@@ -142,7 +142,7 @@ merge_prs "app PR merge" --repos "$CI_REPOS" --merge-method squash --timeout 360
 echo "==> [5/8] Wait for publishes to settle"
 wait_rc=0
 bash "$INFRA_ROOT/scripts/wait-for-runs.sh" --since "$RUN_START" || wait_rc=$?
-if [ "$wait_rc" -eq 2 ]; then
+if [ "$wait_rc" -eq 2 ] || [ "$wait_rc" -eq 124 ]; then
     notify "Renovate daily: publish wait timed out" "A GitHub Actions run was still pending after the wait timeout. The full Infra pass ran anyway."
     rc=1
 elif [ "$wait_rc" -ne 0 ]; then
