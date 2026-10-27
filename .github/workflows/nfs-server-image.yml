@@ -8,10 +8,6 @@ on:
   pull_request:
     paths:
       - targets/srv0/k3s-base/nfs-server-src/**
-  schedule:
-    # Rebuild weekly so unpinned Alpine packages (notably nfs-utils) pick up
-    # security updates even when no source file changes.
-    - cron: '0 4 * * 1'
   workflow_dispatch:
     inputs:
       image_tag:

@@ -1,14 +1,27 @@
 #!/bin/bash
-# DESC: Report failed GitHub Actions runs from the app repos to ntfy. Called by
-# the renovate-infra CronJob after the app Renovate run. Looks back 24 hours by
-# default; no notification when all runs are green.
+# DESC: Report failed GitHub Actions runs (app repos + Infra) and failed `test`
+# checks on open Renovate PRs to ntfy. One digest; no notification when clean.
 set -euo pipefail
+
+if [ -z "${INFRA_ROOT:-}" ]; then
+    INFRA_ROOT="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd)"
+    export INFRA_ROOT
+fi
+
+# shellcheck disable=SC1091
+. "$INFRA_ROOT/scripts/repos.sh"
+
+if [ -f "$INFRA_ROOT/config/VARS.env" ]; then
+    set -a
+    # shellcheck disable=SC1091
+    . "$INFRA_ROOT/config/VARS.env"
+    set +a
+fi
 
 : "${NTFY_URL:?NTFY_URL is required}"
 : "${NTFY_TOPIC:?NTFY_TOPIC is required}"
 : "${NTFY_TOKEN:?NTFY_TOKEN is required}"
 
-CI_REPOS="${CI_REPOS:-ImranR98/PixelNtfy,ImranR98/ISBN-Lookup,ImranR98/apps.obtainium.imranr.dev,ImranR98/our-times,ImranR98/order-manager,ImranR98/Logtfy}"
 CI_SINCE="${CI_SINCE:-$(date -u -d '24 hours ago' +%Y-%m-%dT%H:%M:%SZ)}"
 GH_TOKEN="${RENOVATE_TOKEN:-${RENOVATE_GITHUB_TOKEN:-}}"
 if [ -z "$GH_TOKEN" ]; then
@@ -21,45 +34,83 @@ if ! command -v node >/dev/null 2>&1; then
     exit 1
 fi
 
-export GH_TOKEN CI_REPOS CI_SINCE MODE="${MODE:-publish}"
+export GH_TOKEN CI_REPOS INFRA_REPO CI_SINCE MODE="${MODE:-publish}"
 
 node - <<'NODE'
+const api = 'https://api.github.com';
+const repos = [...(process.env.CI_REPOS || '').split(','), process.env.INFRA_REPO].filter(Boolean);
+const failedConclusions = new Set([
+  'failure',
+  'timed_out',
+  'cancelled',
+  'action_required',
+  'startup_failure',
+]);
+const since = new Date(process.env.CI_SINCE).getTime();
+
+async function gh(path) {
+  const res = await fetch(`${api}${path}`, {
+    headers: {
+      Authorization: `Bearer ${process.env.GH_TOKEN}`,
+      Accept: 'application/vnd.github+json',
+      'User-Agent': 'infra-ci-notify',
+    },
+  });
+  if (!res.ok) throw new Error(`GET ${path} failed: ${res.status} ${await res.text()}`);
+  return res.json();
+}
+
 (async () => {
-  const repos = (process.env.CI_REPOS || '').split(',').map((r) => r.trim()).filter(Boolean);
   const failures = [];
 
   for (const repo of repos) {
-    const res = await fetch(
-      `https://api.github.com/repos/${repo}/actions/runs?per_page=50`,
-      {
-        headers: {
-          Authorization: `Bearer ${process.env.GH_TOKEN}`,
-          Accept: 'application/vnd.github+json',
-          'User-Agent': 'infra-ci-notify',
-        },
-      },
-    );
-    if (!res.ok) throw new Error(`GitHub API failed for ${repo}: ${res.status} ${await res.text()}`);
-    const data = await res.json();
-    for (const run of data.workflow_runs || []) {
+    const runs = (await gh(`/repos/${repo}/actions/runs?per_page=100`)).workflow_runs || [];
+    for (const run of runs) {
+      if (new Date(run.created_at).getTime() < since) continue;
       if (run.conclusion !== 'failure') continue;
-      // Only default-branch/manual runs: failed Renovate PR checks are visible
-      // on the PR itself and are often transient rebases.
-      if (run.event !== 'push' && run.event !== 'workflow_dispatch') continue;
-      if (run.created_at < process.env.CI_SINCE) continue;
-      failures.push({ repo, run });
+      // Renovate PR failures are reported below from the PR's newest `test`
+      // check, which covers older failed runs too.
+      if (run.event === 'pull_request' && String(run.head_branch || '').startsWith('renovate/')) {
+        continue;
+      }
+      failures.push({
+        repo,
+        label: `${run.name} (${run.event}/${run.head_branch})`,
+        url: run.html_url,
+      });
+    }
+
+    const prs = (await gh(`/repos/${repo}/pulls?state=open&per_page=100`)).filter((pr) =>
+      String(pr.head?.ref || '').startsWith('renovate/'),
+    );
+    for (const pr of prs) {
+      const checks = (await gh(`/repos/${repo}/commits/${pr.head.sha}/check-runs?per_page=100`))
+        .check_runs || [];
+      const testRuns = checks
+        .filter((c) => c.name === 'test')
+        .sort((a, b) => {
+          const at = a.started_at ? Date.parse(a.started_at) : 0;
+          const bt = b.started_at ? Date.parse(b.started_at) : 0;
+          return bt - at || (b.id || 0) - (a.id || 0);
+        });
+      const test = testRuns[0];
+      if (test && failedConclusions.has(test.conclusion)) {
+        failures.push({
+          repo,
+          label: `PR #${pr.number}: ${pr.title} (test ${test.conclusion})`,
+          url: pr.html_url,
+        });
+      }
     }
   }
 
   if (failures.length === 0) {
-    console.log('no failed app CI runs in the last 24h');
+    console.log('no failed app/Infra CI runs or Renovate PR tests');
     return;
   }
 
-  const lines = failures.map(
-    ({ repo, run }) => `- ${repo}: ${run.name} (${run.head_branch}) ${run.html_url}`,
-  );
-  const title = `App CI failures (${failures.length})`;
+  const lines = failures.map((f) => `- ${f.repo}: ${f.label} ${f.url}`);
+  const title = `CI failures (${failures.length})`;
   const message = `${title}\n\n${lines.join('\n')}`;
 
   if (process.env.MODE === 'dry-run') {
@@ -67,8 +118,7 @@ node - <<'NODE'
     return;
   }
 
-  const ntfyUrl = `${process.env.NTFY_URL.replace(/\/+$/, '')}/`;
-  const res = await fetch(ntfyUrl, {
+  const res = await fetch(`${process.env.NTFY_URL.replace(/\/+$/, '')}/`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${process.env.NTFY_TOKEN}` },
     body: JSON.stringify({
@@ -80,7 +130,7 @@ node - <<'NODE'
     }),
   });
   if (!res.ok) throw new Error(`ntfy publish failed: ${res.status} ${await res.text()}`);
-  console.log(`notified ${failures.length} failed app CI run(s)`);
+  console.log(`notified ${failures.length} failure(s)`);
 })().catch((err) => {
   console.error(err.message);
   process.exit(1);

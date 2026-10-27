@@ -104,7 +104,7 @@ image does not trip it.
     exceptions: append
 ```
 
-Use `renovate-` (not just `renovate-apps-`) so the infra/pr-watch CronJobs are
+Use `renovate-` (not just `renovate-daily-`) so the daily job is
 covered. The `proc.exe` prefix keeps the Critical rule active for any other
 binary dropped into a Renovate pod.
 

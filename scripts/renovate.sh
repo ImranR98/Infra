@@ -1,7 +1,7 @@
 #!/bin/bash
 # DESC: Run Renovate manually for apps, Infra, or both — opens update PRs on
-# GitHub. The in-cluster renovate-apps/renovate-infra CronJobs use
-# scripts/renovate-in-cluster.sh; use this for on-demand runs.
+# GitHub. The in-cluster renovate-daily CronJob uses
+# scripts/renovate-daily.sh; use this for on-demand runs.
 set -euo pipefail
 
 if [ -z "${INFRA_ROOT:-}" ]; then
@@ -9,18 +9,20 @@ if [ -z "${INFRA_ROOT:-}" ]; then
     export INFRA_ROOT
 fi
 source "$INFRA_ROOT/scripts/common.sh"
+# shellcheck disable=SC1091
+. "$INFRA_ROOT/scripts/repos.sh"
 
 usage() {
     cat <<'EOF'
 Usage: renovate.sh [apps|infra|all|clear-cache] [renovate options...]
 
-  apps         Run Renovate only for the six apps, DSCPLN, and dscpln-config.
-  infra        Run Renovate only for ImranR98/Infra, then the app CI digest.
+  apps         Run Renovate for the app/ops repos (see scripts/repos.sh).
+  infra        Run Renovate only for ImranR98/Infra, then the CI digest.
   all          Run both sets (default).
   clear-cache  Delete Renovate's persistent package/datasource cache.
 
-The failed app-Renovate-PR watcher remains separate:
-  bash scripts/app-renovate-watch.sh
+The scheduled routine (apps -> nfs derived pass -> publish wait -> full Infra)
+is scripts/renovate-daily.sh; use this script for on-demand runs.
 
 Examples:
   bash scripts/renovate.sh apps --dry-run
@@ -66,12 +68,10 @@ if [ "$selection" = "clear-cache" ]; then
     exit 0
 fi
 
-apps_repos="ImranR98/dscpln-config,ImranR98/DSCPLN,ImranR98/PixelNtfy,ImranR98/ISBN-Lookup,ImranR98/apps.obtainium.imranr.dev,ImranR98/our-times,ImranR98/order-manager,ImranR98/Logtfy"
-infra_repos="ImranR98/Infra"
 case "$selection" in
-    apps) repos="$apps_repos" ;;
-    infra) repos="$infra_repos" ;;
-    all) repos="$apps_repos,$infra_repos" ;;
+    apps) repos="$APP_REPOS" ;;
+    infra) repos="$INFRA_REPO" ;;
+    all) repos="$APP_REPOS,$INFRA_REPO" ;;
 esac
 
 # Universal VARS (dotenv, config/VARS.env — gitignored; template:
@@ -100,7 +100,7 @@ fi
 # pending — install it with scripts/prereqs.sh.
 if ! command -v go >/dev/null 2>&1; then
     echo "Warning: 'go' not found — pending gomod updates will crash the run." >&2
-    echo "Install with: scripts/prereqs.sh (or let the in-cluster renovate-apps/renovate-infra CronJobs handle it)." >&2
+    echo "Install with: scripts/prereqs.sh (or let the in-cluster renovate-daily CronJob handle it)." >&2
 fi
 
 export RENOVATE_TOKEN="$RENOVATE_GITHUB_TOKEN"
@@ -196,6 +196,6 @@ bash "$INFRA_ROOT/scripts/renovate-notify.sh" --since "$RUN_START" "${notify_arg
 # The scheduled infra run reports failed app CI runs; do the same when this
 # manual run includes Infra.
 if [ "$selection" != "apps" ]; then
-    CI_REPOS="$apps_repos" bash "$INFRA_ROOT/scripts/ci-notify.sh" ||
+    bash "$INFRA_ROOT/scripts/ci-notify.sh" ||
         echo "Warning: CI notifier failed." >&2
 fi

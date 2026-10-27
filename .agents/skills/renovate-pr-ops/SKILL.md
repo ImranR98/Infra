@@ -102,32 +102,22 @@ then deploy in risk order using
 3. k3s Plan bumps (Tier C): apply `srv0-base`, then follow the upgrade-watch playbook.
 4. pc/bigpc/rpi: emit the `git pull` + compose commands; do not attempt them.
 
-### Derived images (opencode, NFS server)
+### Derived images (nfs-server)
 
-A merged source/FROM bump is inert until the derived image is rebuilt and its digest
-re-pinned. The GitHub workflows rebuild, verify and push on `master`:
+opencode is now an app repo (`ImranR98/opencode-sandbox`) and follows the normal app
+pipeline. The nfs-server image stays in Infra:
 
-- `opencode-src/**` → `.github/workflows/opencode-image.yml` (also weekly)
-- `nfs-server-src/**` → `.github/workflows/nfs-server-image.yml` (also weekly; PRs build without pushing)
+- `nfs-server-src/**` → `.github/workflows/nfs-server-image.yml` (PRs build without pushing; master builds, verifies, promotes)
 
-They do not open PRs. Renovate's daily `docker-digests` PR pins the new `latest`
-digest; review and merge it in the normal Infra pass, then deploy. The workflow pushes
-a `:candidate` tag, verifies that digest, then promotes `:latest`. The NFS image installs the latest
-`nfs-utils`/Alpine packages for its pinned base and rebuilds weekly; an Alpine base bump
-is a normal Renovate PR (Tier C for minor/major). Only fall back to the local
-`build.sh` when the workflow is broken or an out-of-band rebuild is needed. On srv0 the
-opencode build is podman-based (log in to GHCR once, then pass the Docker config file to
-podman — a bare `podman push` fails auth):
-
-```bash
-podman build --platform linux/amd64 -t ghcr.io/imranr98/opencode:latest targets/srv0/k3s-apps/opencode-src
-podman push --authfile ~/.docker/config.json ghcr.io/imranr98/opencode:latest
-skopeo inspect docker://ghcr.io/imranr98/opencode:latest | jq -r .Digest
-```
-
-Pin the index digest GHCR reports (not the local/platform digest) into
-`opencode.yaml`, commit and push the re-pin, then roll the pod with the `srv0-apps`
-upgrade.
+The daily `renovate-daily` job runs a derived-only Infra Renovate pass first, merges
+the resulting `derived-image` PR once its PR image test passes, waits for the build,
+then runs the full Infra pass so the digest pin PR is opened the same day. Review and
+merge that pin PR, then deploy. The image workflow pushes `:sha-<commit>`, verifies
+that digest, then promotes `:latest`; it has no schedule. An Alpine base bump is a
+normal Renovate PR (Tier C for minor/major) and is merged by the daily job only after
+the PR image test. Only fall back to the local `build.sh` when the workflow is broken
+or an out-of-band rebuild is needed. The opencode-sandbox repo's `build.sh` is the
+local path for that image.
 
 ## Phase 6 — Verify & report
 

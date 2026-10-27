@@ -1,7 +1,7 @@
 #!/bin/bash
 # DESC: Post-run Renovate notifier — publishes one ntfy notification per open
 # deps-labeled PR created or refreshed after the run started. Called by the
-# in-cluster renovate-apps/renovate-infra CronJobs and by scripts/renovate.sh.
+# in-cluster renovate-daily CronJob and by scripts/renovate.sh.
 set -euo pipefail
 
 if [ -z "${INFRA_ROOT:-}" ]; then

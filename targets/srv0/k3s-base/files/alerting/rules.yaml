@@ -469,7 +469,7 @@ groups:
             datasourceUid: prometheus
             model:
               editorMode: code
-              expr: time() - kube_cronjob_status_last_successful_time{cronjob=~"renovate-apps|renovate-infra|renovate-pr-watch"} > 93600
+              expr: time() - kube_cronjob_status_last_successful_time{cronjob="renovate-daily"} > 93600
               instant: true
               intervalMs: 1000
               maxDataPoints: 43200

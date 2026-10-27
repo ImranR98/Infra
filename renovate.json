@@ -45,7 +45,7 @@
     },
     {
       "customType": "regex",
-      "description": "helm.cattle.io HelmChart CR chart versions (oci:// — via docker datasource; the helm datasource has no OCI support)",
+      "description": "helm.cattle.io HelmChart CR chart versions (oci:// \u2014 via docker datasource; the helm datasource has no OCI support)",
       "managerFilePatterns": [
         "/targets\\/srv0\\/k3s-(base|apps)\\/.+\\.ya?ml$/"
       ],
@@ -157,46 +157,6 @@
       "depNameTemplate": "helm/helm",
       "datasourceTemplate": "github-releases",
       "versioningTemplate": "semver"
-    },
-    {
-      "customType": "regex",
-      "description": "opencode glibc CLI version baked into the derived image",
-      "managerFilePatterns": [
-        "/targets\\/srv0\\/k3s-apps\\/opencode-src\\/Dockerfile$/"
-      ],
-      "matchStrings": [
-        "ARG OPENCODE_VERSION=(?<currentValue>\\S+)"
-      ],
-      "depNameTemplate": "@opencode/cli",
-      "datasourceTemplate": "npm",
-      "versioningTemplate": "semver"
-    },
-    {
-      "customType": "regex",
-      "description": "Node LTS version installed by nvm in the derived opencode image",
-      "managerFilePatterns": [
-        "/targets\\/srv0\\/k3s-apps\\/opencode-src\\/Dockerfile$/"
-      ],
-      "matchStrings": [
-        "ARG NODE_VERSION=(?<currentValue>\\S+)"
-      ],
-      "depNameTemplate": "node",
-      "datasourceTemplate": "node-version",
-      "versioningTemplate": "semver"
-    },
-    {
-      "customType": "regex",
-      "description": "nvm version baked into the derived opencode image",
-      "managerFilePatterns": [
-        "/targets\\/srv0\\/k3s-apps\\/opencode-src\\/Dockerfile$/"
-      ],
-      "matchStrings": [
-        "ARG NVM_VERSION=(?<currentValue>\\S+)"
-      ],
-      "depNameTemplate": "nvm-sh/nvm",
-      "datasourceTemplate": "github-releases",
-      "extractVersionTemplate": "^v?(?<version>\\d+\\.\\d+\\.\\d+)$",
-      "versioningTemplate": "semver"
     }
   ],
   "packageRules": [
@@ -208,6 +168,17 @@
         "digest"
       ],
       "groupName": "docker digests"
+    },
+    {
+      "description": "nfs-server derived image deps: isolated PR, merged by the daily job after the PR image test",
+      "matchFileNames": [
+        "targets/srv0/k3s-base/nfs-server-src/**"
+      ],
+      "groupName": "derived image deps",
+      "addLabels": [
+        "derived-image"
+      ],
+      "automerge": false
     },
     {
       "description": "Pin floating tags to digests",
@@ -418,15 +389,6 @@
       ],
       "prBodyNotes": [
         "After merging, the NFS server image workflow rebuilds and pushes a new digest; the next Renovate run (daily) pins it in the docker-digests PR. Deploy `srv0-base` after that PR merges. The Dockerfile bump alone does not change the running image."
-      ]
-    },
-    {
-      "description": "opencode image source: a Dockerfile bump is inert until the image is rebuilt and the digest re-pinned",
-      "matchFileNames": [
-        "targets/srv0/k3s-apps/opencode-src/Dockerfile"
-      ],
-      "prBodyNotes": [
-        "After merging, the opencode image workflow rebuilds and pushes a new digest; the next Renovate run (daily) pins it in the docker-digests PR. Deploy `srv0-apps` after that PR merges. The Dockerfile bump alone does not change the running image."
       ]
     }
   ]

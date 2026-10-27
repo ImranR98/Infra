@@ -1,7 +1,7 @@
 # values.yaml — committed defaults: machine-independent built-ins. All secrets
 # and target-specific config live in the gitignored config/srv0/values.yaml
 # (passed as a later -f, so it wins on conflicts).
-# Must match the UID/GID baked into opencode-src/Dockerfile (default 1000);
+# Must match the UID/GID baked into the opencode-sandbox image (default 1000);
 # rebuild the image with --build-arg UID/GID if this changes.
 MY_UID: 1000
 
