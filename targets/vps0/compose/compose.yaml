@@ -784,7 +784,7 @@ services:
     # IKOM - Kitchen order manager
     ikom:
         container_name: ikom
-        image: ghcr.io/imranr98/order-manager:latest@sha256:1aea9c205890590cf3b5b328bbb70bb59c93a381c4d48e13b2ca5ec3ef51d0c2
+        image: ghcr.io/imranr98/order-manager:latest@sha256:d85266c4319d83d5253c5fe8c3e47f721d4283777909f91b054aff066fe3e965
         depends_on:
             - traefik
         labels:
