@@ -95,6 +95,15 @@ async function gh(path, attempt = 1) {
   }
 }
 
+// GitHub sometimes leaves a run "in_progress" after every job has completed.
+// Treat a run as finished once all of its jobs are complete.
+async function runIsActive(repo, run) {
+  if (run.status === 'completed') return false;
+  const data = await gh(`/repos/${repo}/actions/runs/${run.id}/jobs?per_page=100`);
+  const jobs = data.jobs || [];
+  return !(jobs.length > 0 && jobs.every((j) => j.status === 'completed'));
+}
+
 const defaultBranch = new Map();
 
 (async () => {
