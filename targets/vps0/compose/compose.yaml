@@ -501,7 +501,7 @@ services:
 
     # Traefik logrotate - caps the host-mounted access log (CrowdSec's acquisition source)
     traefik-logrotate:
-        image: vitess/logrotate:latest@sha256:a65c0993f0d2564bd6aa7f211f31aa2d17d52476e1b31c50531cdd4b7e0c0e42
+        image: vitess/logrotate:latest@sha256:614883506b9b9b18d5108b65b8bc8c079f6ad7970e45516f636277a526512192
         container_name: traefik-logrotate
         restart: unless-stopped
         mem_limit: 64M
@@ -735,7 +735,7 @@ services:
 
     # MeTube - YouTube Downloader
     metube:
-        image: ghcr.io/alexta69/metube:latest@sha256:78560456793445f4449d8b9d92374350c652725aa76dc75f8682d43fc5ff9a5b
+        image: ghcr.io/alexta69/metube:latest@sha256:845a67373a9f9e62b88e5f9067867202200d63db3615a051acbd77b09e86b9ce
         container_name: metube
         volumes:
             - ../../../current_target/compose_live_state/metube:/downloads
@@ -938,7 +938,7 @@ services:
 
     # Owncast Auth - Token-based access control for Owncast viewer
     owncast-auth:
-        image: python:3-alpine@sha256:d44b1254cb92329418d164b22b20d86bbd3869d48e80e09e476531a409a728bb
+        image: python:3-alpine@sha256:0aa144e9ec2ae8fd80dfd94070ef3e432a0df17b6e5e0091dc05323974ce9913
         container_name: owncast-auth
         restart: unless-stopped
         mem_limit: 64M
