@@ -122,9 +122,11 @@ const defaultBranch = new Map();
         }
         return false;
       });
-      if (relevant.some((run) => run.status !== 'completed')) {
-        busy = true;
-        reasons.push(`${repo}: pending run`);
+      for (const run of relevant) {
+        if (await runIsActive(repo, run)) {
+          busy = true;
+          reasons.push(`${repo}: pending run ${run.id}`);
+        }
       }
 
       const prs = (await gh(`/repos/${repo}/pulls?state=open&per_page=100`)).filter((pr) =>
@@ -167,9 +169,11 @@ const defaultBranch = new Map();
         run.event === 'push' &&
         run.head_branch === infraBranch,
     );
-    if (infraRelevant.some((run) => run.status !== 'completed')) {
-      busy = true;
-      reasons.push('Infra: pending run');
+    for (const run of infraRelevant) {
+      if (await runIsActive(infra, run)) {
+        busy = true;
+        reasons.push(`Infra: pending run ${run.id}`);
+      }
     }
 
     if (busy) {
