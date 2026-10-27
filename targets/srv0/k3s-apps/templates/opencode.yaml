@@ -144,7 +144,7 @@ spec:
               mountPath: /home/linuxbrew
       containers:
         - name: opencode
-          image: ghcr.io/imranr98/opencode-sandbox:latest@sha256:5302aa67e6125c773245aa6434d22066cf93b43d04b43a96a8f5798a7cac8b4e
+          image: ghcr.io/imranr98/opencode-sandbox:latest@sha256:9f3c7693bb974a34fb2d287670391b02c35c74783f3b3d0cbc611e5eacf6153c
           args:
             - serve
             - --hostname
