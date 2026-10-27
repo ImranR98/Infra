@@ -112,25 +112,34 @@ fi
 RUN_START="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 rc=0
 
-echo "==> [1/6] Renovate Infra (nfs-server derived deps)"
+merge_prs() {
+    local desc="$1"
+    shift
+    if ! bash "$INFRA_ROOT/scripts/merge-renovate-prs.sh" "$@"; then
+        echo "Error: $desc failed or timed out" >&2
+        rc=1
+    fi
+}
+
+echo "==> [1/8] Renovate Infra (nfs-server derived deps)"
 if ! renovate_infra_derived; then
     echo "Error: derived Renovate run failed" >&2
     rc=1
 fi
 
-echo "==> [2/6] Renovate apps"
+echo "==> [2/8] Renovate apps"
 if ! renovate_apps; then
     echo "Error: app Renovate run failed" >&2
     rc=1
 fi
 
-echo "==> [3/6] Merge derived-image PR after checks"
-if ! bash "$INFRA_ROOT/scripts/merge-derived-prs.sh"; then
-    echo "Error: derived-image merge failed or timed out" >&2
-    rc=1
-fi
+echo "==> [3/8] Merge derived-image PR after checks"
+merge_prs "derived-image merge" --repos "$INFRA_REPO" --include-label "$DERIVED_LABEL" --merge-method merge --timeout 600
 
-echo "==> [4/6] Wait for publishes to settle"
+echo "==> [4/8] Merge app Renovate PRs after checks"
+merge_prs "app PR merge" --repos "$CI_REPOS" --merge-method squash --timeout 3600
+
+echo "==> [5/8] Wait for publishes to settle"
 wait_rc=0
 bash "$INFRA_ROOT/scripts/wait-for-runs.sh" --since "$RUN_START" || wait_rc=$?
 if [ "$wait_rc" -eq 2 ]; then
@@ -141,13 +150,16 @@ elif [ "$wait_rc" -ne 0 ]; then
     rc=1
 fi
 
-echo "==> [5/6] Renovate Infra (full)"
+echo "==> [6/8] Renovate Infra (full)"
 if ! renovate_infra_full; then
     echo "Error: full Infra Renovate run failed" >&2
     rc=1
 fi
 
-echo "==> [6/6] Notifications"
+echo "==> [7/8] Merge Infra non-digest PRs after Validate"
+merge_prs "Infra non-digest merge" --repos "$INFRA_REPO" --skip-label "$DIGEST_LABEL" --include-label "$DERIVED_LABEL" --merge-method merge --timeout 900
+
+echo "==> [8/8] Notifications"
 if [ "$notify_configured" = 1 ]; then
     repos=()
     IFS=',' read -r -a app_list <<<"$APP_REPOS"
