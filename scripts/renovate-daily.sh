@@ -134,7 +134,7 @@ if ! renovate_apps; then
 fi
 
 echo "==> [3/8] Merge derived-image PR after checks"
-merge_prs "derived-image merge" --repos "$INFRA_REPO" --include-label "$DERIVED_LABEL" --merge-method merge --timeout 600
+merge_prs "derived-image merge" --repos "$INFRA_REPO" --only-label "$DERIVED_LABEL" --merge-method merge --timeout 600
 
 echo "==> [4/8] Merge app Renovate PRs after checks"
 merge_prs "app PR merge" --repos "$CI_REPOS" --merge-method squash --timeout 3600
@@ -157,7 +157,7 @@ if ! renovate_infra_full; then
 fi
 
 echo "==> [7/8] Merge Infra non-digest PRs after Validate"
-merge_prs "Infra non-digest merge" --repos "$INFRA_REPO" --skip-label "$DIGEST_LABEL" --include-label "$DERIVED_LABEL" --merge-method merge --timeout 900
+merge_prs "Infra non-digest merge" --repos "$INFRA_REPO" --skip-label "$DIGEST_LABEL,$DERIVED_LABEL" --merge-method merge --timeout 900
 
 echo "==> [8/8] Notifications"
 if [ "$notify_configured" = 1 ]; then

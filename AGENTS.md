@@ -54,7 +54,7 @@ sudo bash scripts/update-node-ip.sh [--ip X] [--force]
 bash scripts/prereqs.sh
 bash scripts/renovate.sh [apps|infra|all|clear-cache] [--dry-run]   # on-demand
 bash scripts/renovate-daily.sh [--dry-run|--derived-only]           # scheduled routine
-bash scripts/merge-renovate-prs.sh --repos ImranR98/Infra --include-label derived-image
+bash scripts/merge-renovate-prs.sh --repos ImranR98/Infra --only-label derived-image
 bash scripts/wait-for-runs.sh --since <ISO8601>
 bash scripts/preboot.sh public-exposure|crypt-ssh
 bash scripts/wireguard.sh <path/to/wg0.conf>

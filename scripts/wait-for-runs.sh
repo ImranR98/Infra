@@ -27,7 +27,7 @@ if [ -z "$GH_TOKEN" ]; then
 fi
 
 since=""
-timeout="${WAIT_TIMEOUT:-3600}"
+timeout="${WAIT_TIMEOUT:-1800}"
 settle="${WAIT_SETTLE:-60}"
 poll="${WAIT_POLL:-60}"
 while [ $# -gt 0 ]; do
@@ -47,7 +47,7 @@ fi
 export GH_TOKEN INFRA_REPO CI_REPOS
 export WAIT_SINCE="$since" WAIT_TIMEOUT="$timeout" WAIT_SETTLE="$settle" WAIT_POLL="$poll"
 
-node - <<'NODE'
+timeout --signal=TERM "$((timeout + 60))s" node - <<'NODE'
 const { setTimeout: sleep } = require('node:timers/promises');
 
 const api = 'https://api.github.com';

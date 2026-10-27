@@ -6,7 +6,7 @@
 # and Infra non-digest PRs.
 #
 # Usage:
-#   merge-renovate-prs.sh --repos a/b,c/d [--include-label L] [--skip-label L]
+#   merge-renovate-prs.sh --repos a/b,c/d [--only-label L] [--skip-label L]
 #                         [--merge-method merge|squash|rebase] [--timeout S]
 set -euo pipefail
 
@@ -29,19 +29,19 @@ if [ -z "$GH_TOKEN" ]; then
 fi
 
 repos=""
-include_labels=""
+only_labels=""
 skip_labels=""
 merge_method="merge"
 timeout="${MERGE_TIMEOUT:-3600}"
 while [ $# -gt 0 ]; do
     case "$1" in
         --repos) repos="${2:-}"; shift 2 ;;
-        --include-label) include_labels="${include_labels:+$include_labels,}${2:-}"; shift 2 ;;
+        --only-label) only_labels="${only_labels:+$only_labels,}${2:-}"; shift 2 ;;
         --skip-label) skip_labels="${skip_labels:+$skip_labels,}${2:-}"; shift 2 ;;
         --merge-method) merge_method="${2:-}"; shift 2 ;;
         --timeout) timeout="${2:-}"; shift 2 ;;
         *)
-            echo "Usage: $(basename "$0") --repos a/b,c/d [--include-label L] [--skip-label L] [--merge-method M] [--timeout S]" >&2
+            echo "Usage: $(basename "$0") --repos a/b,c/d [--only-label L] [--skip-label L] [--merge-method M] [--timeout S]" >&2
             exit 1
             ;;
     esac
@@ -51,7 +51,7 @@ if [ -z "$repos" ]; then
     exit 1
 fi
 
-export GH_TOKEN REPOS="$repos" INCLUDE_LABELS="$include_labels" SKIP_LABELS="$skip_labels"
+export GH_TOKEN REPOS="$repos" ONLY_LABELS="$only_labels" SKIP_LABELS="$skip_labels"
 export MERGE_METHOD="$merge_method" MERGE_TIMEOUT="$timeout"
 
 node - <<'NODE'
@@ -59,7 +59,7 @@ const { setTimeout: sleep } = require('node:timers/promises');
 
 const api = 'https://api.github.com';
 const repos = (process.env.REPOS || '').split(',').map((r) => r.trim()).filter(Boolean);
-const includeLabels = (process.env.INCLUDE_LABELS || '').split(',').filter(Boolean);
+const onlyLabels = (process.env.ONLY_LABELS || '').split(',').filter(Boolean);
 const skipLabels = (process.env.SKIP_LABELS || '').split(',').filter(Boolean);
 const mergeMethod = process.env.MERGE_METHOD || 'merge';
 const deadline = Date.now() + Number(process.env.MERGE_TIMEOUT || 3600) * 1000;
@@ -204,9 +204,8 @@ async function mergeOne(repo, number) {
 
     for (const pr of prs) {
       const labels = (pr.labels || []).map((l) => l.name);
-      const included = includeLabels.length > 0 && includeLabels.some((l) => labels.includes(l));
-      const skipped = skipLabels.some((l) => labels.includes(l));
-      if (!included && skipped) continue;
+      if (onlyLabels.length > 0 && !onlyLabels.some((l) => labels.includes(l))) continue;
+      if (skipLabels.some((l) => labels.includes(l))) continue;
       console.log(`${repo} #${pr.number}: ${pr.title}`);
       await mergeOne(repo, pr.number);
     }
