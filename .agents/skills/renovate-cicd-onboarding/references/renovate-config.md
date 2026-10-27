@@ -46,9 +46,9 @@ Adapt, don't cargo-cult. Start from the app's actual ecosystems.
 }
 ```
 
-Add `security:minimumReleaseAgeNpm` for npm projects. For other ecosystems, use
-`minimumReleaseAge` only if it fits the release cadence. Do not add presets that
-require an ecosystem the app does not use.
+Every app repo carries `security:minimumReleaseAgeNpm` plus a top-level
+`"minimumReleaseAge": "3 days"`; keep both. Do not add presets that require an
+ecosystem the app does not use.
 
 ## Merge policy
 
