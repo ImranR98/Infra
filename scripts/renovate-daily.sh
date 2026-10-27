@@ -85,6 +85,7 @@ renovate_infra_derived() {
     RENOVATE_REPOSITORIES="$INFRA_REPO" \
         RENOVATE_INCLUDE_PATHS="$DERIVED_PATHS" \
         RENOVATE_DEPENDENCY_DASHBOARD=false \
+        RENOVATE_PRUNE_STALE_BRANCHES=false \
         renovate "${renovate_args[@]}"
 }
 

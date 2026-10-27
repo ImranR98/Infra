@@ -122,14 +122,10 @@ const defaultBranch = new Map();
           continue;
         }
         if (checks.some((c) => failedConclusions.has(c.conclusion))) continue;
-        // Green but still open: either auto-merge is queued or the merge is
-        // about to happen. Wait for the resulting push run.
-        if (pr.auto_merge) {
-          busy = true;
-        } else {
-          const age = Date.now() - new Date(pr.updated_at).getTime();
-          if (age < 300000) busy = true;
-        }
+        // Green but still open: do not block on a queued auto-merge. Many PRs
+        // are "behind" the base branch and will be rebased on the next run; the
+        // settle window below catches a merge that happens right after the last
+        // check completes.
       }
     }
 
