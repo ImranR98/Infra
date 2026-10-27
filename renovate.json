@@ -417,7 +417,7 @@
         "targets/srv0/k3s-base/nfs-server-src/Dockerfile"
       ],
       "prBodyNotes": [
-        "After merging, the NFS server image workflow rebuilds and opens a digest re-pin PR; deploy `srv0-base` after that PR merges. The Dockerfile bump alone does not change the running image."
+        "After merging, the NFS server image workflow rebuilds and pushes a new digest; the next Renovate run (daily) pins it in the docker-digests PR. Deploy `srv0-base` after that PR merges. The Dockerfile bump alone does not change the running image."
       ]
     },
     {
@@ -426,7 +426,7 @@
         "targets/srv0/k3s-apps/opencode-src/Dockerfile"
       ],
       "prBodyNotes": [
-        "After merging, the opencode image workflow rebuilds and opens a digest re-pin PR; deploy `srv0-apps` after that PR merges. The Dockerfile bump alone does not change the running image."
+        "After merging, the opencode image workflow rebuilds and pushes a new digest; the next Renovate run (daily) pins it in the docker-digests PR. Deploy `srv0-apps` after that PR merges. The Dockerfile bump alone does not change the running image."
       ]
     }
   ]

@@ -105,13 +105,14 @@ then deploy in risk order using
 ### Derived images (opencode, NFS server)
 
 A merged source/FROM bump is inert until the derived image is rebuilt and its digest
-re-pinned. The GitHub workflows do this automatically on `master`:
+re-pinned. The GitHub workflows rebuild, verify and push on `master`:
 
-- `opencode-src/**` → `.github/workflows/opencode-image.yml` → `automation/opencode-digest` (also weekly)
-- `nfs-server-src/**` → `.github/workflows/nfs-server-image.yml` → `automation/nfs-server-digest`
+- `opencode-src/**` → `.github/workflows/opencode-image.yml` (also weekly)
+- `nfs-server-src/**` → `.github/workflows/nfs-server-image.yml` (also weekly; PRs build without pushing)
 
-Review and merge the digest PR in the normal Infra pass, then deploy. The workflow
-verifies the baked versions before opening the PR. The NFS image installs the latest
+They do not open PRs. Renovate's daily `docker-digests` PR pins the new `latest`
+digest; review and merge it in the normal Infra pass, then deploy. The workflow
+verifies the baked versions after pushing. The NFS image installs the latest
 `nfs-utils`/Alpine packages for its pinned base and rebuilds weekly; an Alpine base bump
 is a normal Renovate PR (Tier C for minor/major). Only fall back to the local
 `build.sh` when the workflow is broken or an out-of-band rebuild is needed. On srv0 the

@@ -70,9 +70,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
-      contents: write
+      contents: read
       packages: write
-      pull-requests: write
     env:
       IMAGE: ghcr.io/imranr98/nfs-server
       IMAGE_TAG: ${{ inputs.image_tag || 'latest' }}
@@ -120,38 +119,3 @@ jobs:
             apk list --installed nfs-utils
             echo image-ok
           '
-
-      - name: Update digest and open PR
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          DIGEST: ${{ steps.build.outputs.digest }}
-        run: |
-          set -euo pipefail
-          [ -n "$DIGEST" ] || { echo "no image digest" >&2; exit 1; }
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          sed -i -E \
-            "s#image: (imranrdev/nfs-server|ghcr\\.io/imranr98/nfs-server):[^@[:space:]]+(@sha256:[a-f0-9]+)?#image: ghcr.io/imranr98/nfs-server:${IMAGE_TAG}@${DIGEST}#" \
-            targets/srv0/k3s-base/templates/nfs-server.yaml
-          if git diff --quiet; then
-            echo "digest unchanged; no PR needed"
-            exit 0
-          fi
-          git checkout -B automation/nfs-server-digest
-          git add targets/srv0/k3s-base/templates/nfs-server.yaml
-          git commit -m "nfs: re-pin image digest to ${DIGEST}"
-          git push --force origin automation/nfs-server-digest
-          pr="$(gh pr list --head automation/nfs-server-digest --state open --json number --jq '.[0].number // empty')"
-          if [ -n "$pr" ]; then
-            gh pr comment "$pr" --body "Rebuilt the NFS server image at ${DIGEST}."
-          else
-            gh pr create \
-              --base master \
-              --head automation/nfs-server-digest \
-              --title "nfs: re-pin image digest" \
-              --body "Rebuilt the NFS server image from \`nfs-server-src\` and re-pinned the digest.
-
-          Digest: \`${DIGEST}\`
-
-          Run the Infra review workflow before merging."
-          fi
