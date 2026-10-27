@@ -891,7 +891,7 @@ services:
     # remain valid; all three routers share the single sale-site service.
     sale-site:
         container_name: sale-site
-        image: ghcr.io/imranr98/moving-sale-2027:latest@sha256:805d9041eba0eb2c57b8fb99436104dd4a6262c745f20a0af2c6e9740768503b
+        image: ghcr.io/imranr98/moving-sale-2027:latest@sha256:c26b84dbd840d2781e38e095b4367df3c5776a4e53b2086d787755ac31d12979
         depends_on:
             - traefik
         labels:
