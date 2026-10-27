@@ -66,7 +66,8 @@ jobs:
           '
 
   publish:
-    if: github.event_name != 'pull_request'
+    # Never publish from a PR or a branch dispatch: the real tag must only move for master.
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
@@ -99,7 +100,7 @@ jobs:
           push: true
           provenance: true
           sbom: true
-          tags: ${{ env.IMAGE }}:${{ env.IMAGE_TAG }}
+          tags: ${{ env.IMAGE }}:candidate
           labels: |
             org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
             org.opencontainers.image.revision=${{ github.sha }}
@@ -109,7 +110,7 @@ jobs:
       - name: Verify image
         run: |
           set -euo pipefail
-          docker run --rm --entrypoint sh "$IMAGE:${IMAGE_TAG}" -c '
+          docker run --rm --entrypoint sh "$IMAGE@${{ steps.build.outputs.digest }}" -c '
             set -eu
             grep -E "^(ID|VERSION_ID)=" /etc/os-release
             test -x /usr/sbin/rpc.nfsd
@@ -119,3 +120,12 @@ jobs:
             apk list --installed nfs-utils
             echo image-ok
           '
+
+      - name: Promote verified image
+        env:
+          DIGEST: ${{ steps.build.outputs.digest }}
+        run: |
+          set -euo pipefail
+          docker buildx imagetools create -t "$IMAGE:$IMAGE_TAG" "$IMAGE@$DIGEST"
+          docker buildx imagetools inspect "$IMAGE:$IMAGE_TAG" | grep -q "Digest:.*${DIGEST#sha256:}"
+          echo "promoted $DIGEST to $IMAGE:$IMAGE_TAG"

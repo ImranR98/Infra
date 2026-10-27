@@ -20,13 +20,16 @@ concurrency:
 
 jobs:
   publish:
+    # Never publish from a branch dispatch: :latest must only move for master.
+    if: github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
     timeout-minutes: 90
     permissions:
       contents: read
       packages: write
     env:
-      IMAGE: ghcr.io/imranr98/opencode:latest
+      IMAGE: ghcr.io/imranr98/opencode
+      TAG: latest
     steps:
       - name: Check out
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -51,7 +54,7 @@ jobs:
           push: true
           provenance: true
           sbom: true
-          tags: ${{ env.IMAGE }}
+          tags: ${{ env.IMAGE }}:candidate
           labels: |
             org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
             org.opencontainers.image.revision=${{ github.sha }}
@@ -63,7 +66,7 @@ jobs:
           set -euo pipefail
           expected_opencode="$(sed -n 's/^ARG OPENCODE_VERSION=//p' targets/srv0/k3s-apps/opencode-src/Dockerfile | head -1)"
           expected_node="$(sed -n 's/^ARG NODE_VERSION=//p' targets/srv0/k3s-apps/opencode-src/Dockerfile | head -1)"
-          docker run --rm --entrypoint /usr/local/bin/docker-entrypoint.sh "$IMAGE" /bin/bash -c '
+          docker run --rm --entrypoint /usr/local/bin/docker-entrypoint.sh "$IMAGE@${{ steps.build.outputs.digest }}" /bin/bash -c '
             set -eu
             opencode --version | tee /tmp/opencode-version
             node --version | tee /tmp/node-version
@@ -73,3 +76,12 @@ jobs:
           grep -q "$expected_opencode" /tmp/opencode-verify.log
           grep -q "v${expected_node}" /tmp/opencode-verify.log
           echo "opencode ${expected_opencode} / node ${expected_node} verified"
+
+      - name: Promote verified image
+        env:
+          DIGEST: ${{ steps.build.outputs.digest }}
+        run: |
+          set -euo pipefail
+          docker buildx imagetools create -t "$IMAGE:$TAG" "$IMAGE@$DIGEST"
+          docker buildx imagetools inspect "$IMAGE:$TAG" | grep -q "Digest:.*${DIGEST#sha256:}"
+          echo "promoted $DIGEST to $IMAGE:$TAG"
