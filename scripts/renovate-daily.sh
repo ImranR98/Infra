@@ -2,10 +2,13 @@
 # DESC: Daily Renovate routine, run by the renovate-daily CronJob on srv0.
 #   1. Renovate Infra, nfs-server source only (derived image deps)
 #   2. Renovate the app repos
-#   3. Merge the derived-image PR once its checks pass
-#   4. Wait for app/derived GitHub Actions publishes to settle
-#   5. Renovate Infra (full) so the new digests are pinned the same day
-#   6. Notify: per-PR messages + one CI failure digest
+#   3. Check app Renovate config conformance
+#   4. Merge the derived-image PR once its checks pass
+#   5. Merge every green app PR (squash)
+#   6. Wait for app/derived GitHub Actions publishes to settle
+#   7. Renovate Infra (full) so the new digests are pinned the same day
+#   8. Merge Infra non-digest PRs after Validate
+#   9. Notify: left-open PRs, per-PR messages, and one CI failure digest
 # Flags: --dry-run (Renovate only, no merges/waits/notifications),
 #        --derived-only (only step 1).
 set -euo pipefail
@@ -110,36 +113,47 @@ if [ "$dry_run" = 1 ]; then
 fi
 
 RUN_START="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+merge_report="$(mktemp)"
+trap 'rm -f "$merge_report"' EXIT
 rc=0
 
 merge_prs() {
     local desc="$1"
     shift
-    if ! bash "$INFRA_ROOT/scripts/merge-renovate-prs.sh" "$@"; then
+    if ! bash "$INFRA_ROOT/scripts/merge-renovate-prs.sh" --report "$merge_report" "$@"; then
         echo "Error: $desc failed or timed out" >&2
         rc=1
     fi
 }
 
-echo "==> [1/8] Renovate Infra (nfs-server derived deps)"
+echo "==> [1/9] Renovate Infra (nfs-server derived deps)"
 if ! renovate_infra_derived; then
     echo "Error: derived Renovate run failed" >&2
     rc=1
 fi
 
-echo "==> [2/8] Renovate apps"
+echo "==> [2/9] Renovate apps"
 if ! renovate_apps; then
     echo "Error: app Renovate run failed" >&2
     rc=1
 fi
 
-echo "==> [3/8] Merge derived-image PR after checks"
-merge_prs "derived-image merge" --repos "$INFRA_REPO" --only-label "$DERIVED_LABEL" --merge-method merge --timeout 600
+echo "==> [3/9] Check app Renovate config conformance"
+if ! config_out="$(bash "$INFRA_ROOT/scripts/check-app-configs.sh" 2>&1)"; then
+    echo "$config_out"
+    notify "Renovate daily: app Renovate config drift" "$config_out"
+    rc=1
+else
+    echo "$config_out"
+fi
 
-echo "==> [4/8] Merge app Renovate PRs after checks"
-merge_prs "app PR merge" --repos "$CI_REPOS" --merge-method squash --timeout 3600
+echo "==> [4/9] Merge derived-image PR after checks"
+merge_prs "derived-image merge" --repos "$INFRA_REPO" --only-label "$DERIVED_LABEL" --require-check test --merge-method merge --timeout 600
 
-echo "==> [5/8] Wait for publishes to settle"
+echo "==> [5/9] Merge app Renovate PRs after checks"
+merge_prs "app PR merge" --repos "$APP_REPOS" --require-check test --merge-method squash --timeout 3600
+
+echo "==> [6/9] Wait for publishes to settle"
 wait_rc=0
 bash "$INFRA_ROOT/scripts/wait-for-runs.sh" --since "$RUN_START" || wait_rc=$?
 if [ "$wait_rc" -eq 2 ] || [ "$wait_rc" -eq 124 ]; then
@@ -150,17 +164,23 @@ elif [ "$wait_rc" -ne 0 ]; then
     rc=1
 fi
 
-echo "==> [6/8] Renovate Infra (full)"
+echo "==> [7/9] Renovate Infra (full)"
 if ! renovate_infra_full; then
     echo "Error: full Infra Renovate run failed" >&2
     rc=1
 fi
 
-echo "==> [7/8] Merge Infra non-digest PRs after Validate"
-merge_prs "Infra non-digest merge" --repos "$INFRA_REPO" --skip-label "$DIGEST_LABEL,$DERIVED_LABEL" --merge-method merge --timeout 900
+echo "==> [8/9] Merge Infra non-digest PRs after Validate"
+merge_prs "Infra non-digest merge" --repos "$INFRA_REPO" --skip-label "$DIGEST_LABEL,$DERIVED_LABEL" --require-check validate --merge-method merge --timeout 900
 
-echo "==> [8/8] Notifications"
+echo "==> [9/9] Notifications"
 if [ "$notify_configured" = 1 ]; then
+    if [ -s "$merge_report" ]; then
+        left_open="$(grep -E '^left-open' "$merge_report" | cut -f2- || true)"
+        if [ -n "$left_open" ]; then
+            notify "Renovate daily: PRs left open" "$left_open"
+        fi
+    fi
     repos=()
     IFS=',' read -r -a app_list <<<"$APP_REPOS"
     for repo in "${app_list[@]}"; do

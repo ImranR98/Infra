@@ -12,19 +12,25 @@ conversationally.
 ## Daily automation
 
 `scripts/renovate-daily.sh` is the single merge path for everything except the final
-image digest pins:
+Docker image digest pins:
 
 - every green app-repo Renovate PR (including lockfile maintenance, majors, and
-  behind branches) is merged by the job after its `test` check;
-- every green Infra PR that is **not** labeled `infra-digest-pin` is merged after
-  `Validate` (charts, app versions, k3s plans, the Renovate runner, the nfs derived
-  image);
-- PRs labeled `infra-digest-pin` are the final image digest pins. They stay open for
-  this skill, which merges them and performs the rollout.
+  behind branches) is merged by the job after its `test` check is `success`;
+- every green Infra PR that is **not** labeled `infra-digest-pin` is merged after its
+  `validate` check is `success` (charts, app versions, k3s plans, the Renovate
+  runner, the nfs derived image);
+- all first-party `ghcr.io/imranr98/*` image digest pins are grouped into one
+  `app image digests` PR; PRs labeled `infra-digest-pin` stay open for this skill,
+  which merges them and performs the rollout;
+- the job also runs `scripts/check-app-configs.sh` before the merges and reports
+  drift from the shared app Renovate baseline;
+- PRs left open for a non-failure reason (blocked, conflicted, or no checks) are
+  posted as a separate ntfy message instead of going silent.
 
 So the manual scope of this skill is the `infra-digest-pin` PRs and the deploy. App
-PRs are not merged here. A non-digest Infra PR left open means its checks failed or
-the daily job has not run.
+PRs are not merged here. A non-digest Infra PR left open means its checks failed, the
+required `validate` check is missing/failed, the branch is blocked/conflicted, or the
+daily job has not run.
 
 `AGENTS.md` is the source of truth for repo layout, deploy commands, and safety rules;
 this skill encodes the recurring Renovate workflow on top of it. Skim its Targets and
@@ -75,7 +81,7 @@ Tier assignment (change magnitude × component criticality) is documented in
 
 ## Phase 2 — Triage
 
-1. List PRs: `bash .agents/skills/renovate-pr-ops/scripts/list-prs.sh` (`--json` for raw). The script also reports open Dependabot alerts and failed/pending PR checks; include them in the triage and final report. After the daily job, only `infra-digest-pin` PRs (and any PR whose checks failed) should remain; filter to the digest pins for the merge phase.
+1. List PRs: `bash .agents/skills/renovate-pr-ops/scripts/list-prs.sh` (`--json` for raw). The script also reports open Dependabot alerts and failed/pending PR checks; include them in the triage and final report. After the daily job, only `infra-digest-pin` PRs (and any PR the helper left open: failed checks, conflicts, or a missing required check) should remain; filter to the digest pins for the merge phase.
 2. Diff locally: `git fetch origin pull/<n>/head:renovate/pr-<n>`, then
    `git diff master...renovate/pr-<n>`. `gh` is not installed; fetching the PR ref
    avoids the diff endpoint and the anonymous API limit (60 requests/hour, enough for
@@ -114,7 +120,7 @@ Push `master` first so remote checkouts can `git pull`. Present one consolidated
 then deploy in risk order using
 [references/deploy-and-verify.md](references/deploy-and-verify.md):
 
-1. srv0: `srv0-base`, then `srv0-apps`, inside an unlock session.
+1. srv0: `bash scripts/deploy.sh srv0` inside an unlock session (validate → `srv0-base` → `srv0-apps` → helm-controller, rollout, pod, restart, and `/readyz` checks). The raw `helm upgrade` commands remain the fallback.
 2. vps0: compose `up -d <changed services>` over SSH.
 3. k3s Plan bumps (Tier C): apply `srv0-base`, then follow the upgrade-watch playbook.
 4. pc/bigpc/rpi: emit the `git pull` + compose commands; do not attempt them.

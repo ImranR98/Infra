@@ -60,13 +60,14 @@ group name:
 }
 ```
 
-Decide with the user whether to:
-
-- use a dedicated per-app group (clear deployment PR per app), or
-- leave the image in the existing global digest group (fewer, larger PRs).
+All first-party `ghcr.io/imranr98/*` images share the `app image digests` group;
+third-party images stay in the `docker digests` batch. Do not add a per-app
+digest group.
 
 The Infra repo's `automerge` is `false`; do not change that policy without
-consent. Digest PRs are reviewed/merged like any other Infra PR.
+consent. Image digest pins get the `infra-digest-pin` label and stay open for
+the `renovate-pr-ops` skill; every other Infra PR is merged by the daily job
+after `Validate`.
 
 ## Deployment references
 

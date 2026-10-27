@@ -34,11 +34,11 @@ if ! command -v node >/dev/null 2>&1; then
     exit 1
 fi
 
-export GH_TOKEN CI_REPOS INFRA_REPO CI_SINCE MODE="${MODE:-publish}"
+export GH_TOKEN APP_REPOS INFRA_REPO CI_SINCE MODE="${MODE:-publish}"
 
 node - <<'NODE'
 const api = 'https://api.github.com';
-const repos = [...(process.env.CI_REPOS || '').split(','), process.env.INFRA_REPO].filter(Boolean);
+const repos = [...(process.env.APP_REPOS || '').split(','), process.env.INFRA_REPO].filter(Boolean);
 const failedConclusions = new Set([
   'failure',
   'timed_out',

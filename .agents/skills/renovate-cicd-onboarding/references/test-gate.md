@@ -8,7 +8,7 @@ critical behavior and the production image works may be.
 
 A major update may auto-merge only when all of these are true:
 
-1. The `test` job is a required status check for the default branch.
+1. The `test` job runs on every PR and the daily merge helper requires it to be `success` (public repos may also enforce it via branch protection; private repos cannot, so the helper is the gate).
 2. Install/build/lint/typecheck pass from the lockfile.
 3. Tests exercise the app's primary behavior, not just construction.
 4. The production image builds and passes a smoke test.

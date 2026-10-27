@@ -4,13 +4,9 @@
 # app set is defined exactly once.
 
 # App/ops repos: Renovate updates them, their CI tests, and (where they carry
-# images) publishes. dscpln-config has no workflows.
+# images) publishes. All carry GitHub Actions; dscpln-config is validation-only.
 # shellcheck disable=SC2034
 APP_REPOS="ImranR98/dscpln-config,ImranR98/DSCPLN,ImranR98/PixelNtfy,ImranR98/ISBN-Lookup,ImranR98/apps.obtainium.imranr.dev,ImranR98/our-times,ImranR98/order-manager,ImranR98/Logtfy,ImranR98/moving-sale-2027,ImranR98/opencode-sandbox"
-
-# Subset with GitHub Actions.
-# shellcheck disable=SC2034
-CI_REPOS="ImranR98/dscpln-config,ImranR98/DSCPLN,ImranR98/PixelNtfy,ImranR98/ISBN-Lookup,ImranR98/apps.obtainium.imranr.dev,ImranR98/our-times,ImranR98/order-manager,ImranR98/Logtfy,ImranR98/moving-sale-2027,ImranR98/opencode-sandbox"
 
 # Infra owns the nfs-server image; its deps are updated in a dedicated
 # pre-infra Renovate pass so the rebuilt digest is captured the same day.

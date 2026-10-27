@@ -50,20 +50,24 @@ Add `security:minimumReleaseAgeNpm` for npm projects. For other ecosystems, use
 `minimumReleaseAge` only if it fits the release cadence. Do not add presets that
 require an ecosystem the app does not use.
 
-## Auto-merge policy
+## Merge policy
 
-Auto-merge is a gate decision, not a default:
+This homelab does **not** use Renovate or GitHub platform automerge in app repos.
+The Infra `renovate-daily` job merges every green app PR with
+`scripts/merge-renovate-prs.sh` after the required `test` check is `success`
+(including majors and lockfile maintenance). The helper updates behind branches
+and is the only merge path, so public and private repos behave identically and
+private repos do not need branch protection.
 
-- Required: `test` is a required status check; auto-merge is enabled on the
-  repo; the merge strategy is allowed.
-- All update types (including majors) only when
-  [the test gate](test-gate.md) is sufficient.
-- Otherwise auto-merge non-major only, or leave everything manual.
-- `platformAutomerge: true` + `automergeType: "pr"` uses GitHub's native
-  auto-merge. Choose `automergeStrategy` that the repo actually permits
-  (`merge-commit`, `squash`, `rebase`).
-- Do not rely on Renovate's own automerge without a required status check; a
-  branch with no required checks can merge failing code.
+- Required: a `test` job that runs on every PR and fails on real errors.
+- Do **not** add `automerge`, `platformAutomerge`, `automergeType`, or
+  `automergeStrategy`; the daily helper is the gate.
+- Add the repo to `APP_REPOS` in `scripts/repos.sh`; the daily job runs Renovate,
+  requires `test`, and merges.
+- `scripts/check-app-configs.sh` must pass: standard presets, OSV alerts,
+  dependency dashboard, `rangeStrategy: replace`, `minimumReleaseAge`, and
+  lockfile maintenance where a lockfile exists.
+- Only proceed with majors when [the test gate](test-gate.md) is sufficient.
 
 ## Grouping
 

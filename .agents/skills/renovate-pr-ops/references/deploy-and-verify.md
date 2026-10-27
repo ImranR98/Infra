@@ -12,6 +12,16 @@
 
 ## srv0 (K3s) — apply base, then apps
 
+Preferred path (validates, upgrades both charts, waits for the helm-controller jobs
+and workload rollouts, then checks pods, HelmChart failures, restart counts, and
+`/readyz`; workloads only on NotReady nodes are warned and skipped):
+
+```bash
+bash scripts/deploy.sh srv0
+```
+
+Raw fallback:
+
 ```bash
 helm upgrade --install srv0-base targets/srv0/k3s-base -n base --create-namespace \
   -f targets/srv0/k3s-base/values.yaml -f config/srv0/values.yaml

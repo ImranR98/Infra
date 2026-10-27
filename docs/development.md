@@ -9,10 +9,12 @@
 | `prereqs.sh` | — | this machine | packages (NFS client), pinned helm, Docker bootstrap, machine-fact `.env`, host bind dirs, acme seed |
 | `kubeconfig-unlock.sh [--lock]` | — | this machine | read ACL on the k3s kubeconfig + `~/.kube/config` symlink; holds until Ctrl-C; `--lock` cleans up |
 | `renovate.sh [apps\|infra\|all]` | — | this machine (opens GitHub PRs) | needs `RENOVATE_GITHUB_TOKEN` in `config/VARS.env`; Node/npm only; `infra`/`all` also run `ci-notify.sh` |
-| `renovate-daily.sh [--dry-run\|--derived-only]` | — | in-cluster (`renovate-daily` CronJob) | the scheduled routine: derived nfs pass → apps → merge derived + app PRs → wait for publishes → full Infra pass → merge Infra non-digest PRs → notifications |
-| `merge-renovate-prs.sh --repos ...` | — | in-cluster | single merge path: waits for checks, updates behind branches, merges green Renovate PRs, leaves red/timeouts open; used for the derived PR, app PRs, and Infra non-digest PRs (skips `infra-digest-pin`) |
+| `renovate-daily.sh [--dry-run\|--derived-only]` | — | in-cluster (`renovate-daily` CronJob) | the scheduled routine: derived nfs pass → apps → app-config conformance → merge derived + app PRs (required `test`) → wait for publishes → full Infra pass → merge Infra non-digest PRs (required `validate`) → notifications, including PRs left open for a non-failure reason |
+| `merge-renovate-prs.sh --repos ...` | — | in-cluster | single merge path: waits for checks, requires named checks to be `success`, updates behind branches, merges green Renovate PRs, and writes red/blocked/no-check PRs to `--report`; used for the derived PR, app PRs, and Infra non-digest PRs (skips `infra-digest-pin`) |
 | `wait-for-runs.sh --since <ISO>` | — | in-cluster | waits for default-branch push runs and `renovate/*` PR runs to settle; exit 2 on timeout |
-| `repos.sh` | — | sourced | single source of truth for the app/CI repo lists and the nfs derived path |
+| `check-app-configs.sh` | — | this machine / in-cluster | asserts the shared Renovate baseline in every app repo (extends, OSV, dashboard, release age, lockfile maintenance, no automerge); run by `renovate-daily.sh` |
+| `deploy.sh srv0 [--dry-run]` | target | this machine (srv0, unlocked kubeconfig) | validate → `srv0-base` → `srv0-apps` → helm-controller/rollout/pod/restart/readiness checks; skips workloads only on NotReady nodes |
+| `repos.sh` | — | sourced | single source of truth for the app repo list and the nfs derived path |
 | `renovate-notify.sh` | — | this machine / in-cluster | posts newly opened or refreshed `deps` PRs to ntfy; called by `renovate.sh` and `renovate-daily.sh` |
 | `ci-notify.sh` | — | in-cluster | one digest for failed app/Infra Actions runs and failed `test` checks on open Renovate PRs; called by `renovate-daily.sh` |
 | `preboot.sh public-exposure\|crypt-ssh` | — | this machine | initramfs LUKS unlock; preboot key from `config/<hostname>/public-exposure/` |

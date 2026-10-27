@@ -44,7 +44,7 @@ if [ -z "$since" ]; then
     exit 1
 fi
 
-export GH_TOKEN INFRA_REPO CI_REPOS
+export GH_TOKEN INFRA_REPO APP_REPOS
 export WAIT_SINCE="$since" WAIT_TIMEOUT="$timeout" WAIT_SETTLE="$settle" WAIT_POLL="$poll"
 
 timeout --signal=TERM "$((timeout + 60))s" node - <<'NODE'
@@ -58,7 +58,7 @@ function withTimeout(promise, ms, what) {
 }
 
 const api = 'https://api.github.com';
-const repos = (process.env.CI_REPOS || '').split(',').filter(Boolean);
+const repos = (process.env.APP_REPOS || '').split(',').filter(Boolean);
 const infra = process.env.INFRA_REPO;
 const since = new Date(process.env.WAIT_SINCE).getTime();
 const timeoutMs = Number(process.env.WAIT_TIMEOUT) * 1000;

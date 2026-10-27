@@ -461,7 +461,7 @@ groups:
           severity: critical
 
       - uid: cronjob-stale-renovate
-        title: Renovate automation has not succeeded in 26h
+        title: Renovate daily job has not succeeded in 26h
         condition: C
         data:
           - refId: A
@@ -504,7 +504,58 @@ groups:
         execErrState: Alerting
         for: 10m
         annotations:
-          summary: A Renovate job (apps, infra, or PR watch) has not completed successfully in 26 hours
+          summary: The Renovate daily job (apps, Infra, and digest pins) has not completed successfully in 26 hours
+        labels:
+          severity: warning
+
+      - uid: renovate-daily-job-failed
+        title: Renovate daily job failed
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange: {from: 600, to: 0}
+            datasourceUid: prometheus
+            model:
+              editorMode: code
+              expr: >
+                kube_job_status_failed{namespace="base",job_name=~"renovate-daily-.*"} > 0
+                and on(namespace, job_name) kube_job_status_active{namespace="base",job_name=~"renovate-daily-.*"} == 0
+                unless on(namespace, job_name) kube_job_status_completion_time{namespace="base",job_name=~"renovate-daily-.*"} > 0
+              instant: true
+              intervalMs: 1000
+              maxDataPoints: 43200
+              range: false
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              datasource: {type: __expr__, uid: __expr__}
+              expression: A
+              intervalMs: 1000
+              maxDataPoints: 43200
+              reducer: last
+              refId: B
+              type: reduce
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator: {params: [0], type: gt}
+                  operator: {type: and}
+                  query: {params: [C]}
+                  reducer: {type: last}
+                  type: query
+              datasource: {type: __expr__, uid: __expr__}
+              expression: B
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: C
+              type: threshold
+        noDataState: OK
+        execErrState: Alerting
+        for: 5m
+        annotations:
+          summary: The scheduled Renovate daily job failed; check the job logs and the ntfy failure digest.
         labels:
           severity: warning
 

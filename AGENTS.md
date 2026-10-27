@@ -23,6 +23,7 @@ bash scripts/validate.sh vps0
 
 # K3s (srv0) — the kubeconfig is root-only. Unlock it in another terminal:
 bash scripts/kubeconfig-unlock.sh
+bash scripts/deploy.sh srv0          # validate + base/apps + rollout checks
 helm upgrade --install srv0-base targets/srv0/k3s-base -n base --create-namespace \
   -f targets/srv0/k3s-base/values.yaml -f config/srv0/values.yaml
 helm upgrade --install srv0-apps targets/srv0/k3s-apps -n apps --create-namespace \
@@ -54,7 +55,9 @@ sudo bash scripts/update-node-ip.sh [--ip X] [--force]
 bash scripts/prereqs.sh
 bash scripts/renovate.sh [apps|infra|all|clear-cache] [--dry-run]   # on-demand
 bash scripts/renovate-daily.sh [--dry-run|--derived-only]           # scheduled routine
-bash scripts/merge-renovate-prs.sh --repos ImranR98/Infra --only-label derived-image
+bash scripts/check-app-configs.sh                                  # app Renovate baseline
+bash scripts/merge-renovate-prs.sh --repos ImranR98/Infra --only-label derived-image \
+  --require-check test
 bash scripts/wait-for-runs.sh --since <ISO8601>
 bash scripts/preboot.sh public-exposure|crypt-ssh
 bash scripts/wireguard.sh <path/to/wg0.conf>
@@ -93,5 +96,6 @@ Scripts warn or hard-fail (`require_target_host`) on hostname/target mismatches.
 - The six user-facing apps (Home Assistant, Immich, Jellyfin, Linkwarden, Navidrome, Opodsync) have no Authelia forward-auth filter; use `BOOTSTRAP_PRIVATE_APPS` for first-boot LAN/VPN containment.
 - Node labels are static: `k3s-server.sh` sets both; `k3s-join.sh --hostpath-main` for a joined node. Do not reintroduce NFD/node-facts.
 - Geoblock uses `get.geojs.io`; do not reintroduce the self-hosted GeoIP service/`geoip-src`.
+- **App repos share one Renovate baseline** — `scripts/check-app-configs.sh` (run by `renovate-daily`) enforces the standard presets, OSV alerts, dependency dashboard, `minimumReleaseAge`, lockfile maintenance, and no automerge; `scripts/merge-renovate-prs.sh` is the only merger.
 - **Helm charts** — only project-maintained charts; `validate.sh` enforces the allowlist. Home Assistant is the single approved third-party exception. Pin `image.repository`/`image.tag` on app-version-sensitive charts so Renovate tracks the app, not just the chart.
 - TLS is `edge-public-tls` (24 exact public SANs) plus `edge-private-tls` (`files`/`traefik`, `websecure` only). Adding a public app means adding its SAN and re-issuing; no per-app certs or wildcards.

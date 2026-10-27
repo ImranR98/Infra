@@ -170,6 +170,20 @@
       "groupName": "docker digests"
     },
     {
+      "description": "One PR for every first-party image digest pin; one rollout covers the apps, nfs-server, and opencode-sandbox",
+      "matchDatasources": [
+        "docker"
+      ],
+      "matchUpdateTypes": [
+        "digest",
+        "pinDigest"
+      ],
+      "matchPackageNames": [
+        "/^ghcr\\.io\\/imranr98\\//"
+      ],
+      "groupName": "app image digests"
+    },
+    {
       "description": "nfs-server derived image deps: isolated PR, merged by the daily job after the PR image test",
       "matchFileNames": [
         "targets/srv0/k3s-base/nfs-server-src/**"
@@ -210,118 +224,6 @@
         "syncthing/syncthing"
       ],
       "enabled": false
-    },
-    {
-      "description": "sale-site image is published by the moving-sale-2027 workflow; refresh the :latest digest as a safety net",
-      "matchDatasources": [
-        "docker"
-      ],
-      "matchPackageNames": [
-        "ghcr.io/imranr98/moving-sale-2027"
-      ],
-      "matchUpdateTypes": [
-        "digest",
-        "pinDigest"
-      ],
-      "groupName": "sale-site image digests"
-    },
-    {
-      "description": "PixelNtfy image digests",
-      "matchDatasources": [
-        "docker"
-      ],
-      "matchPackageNames": [
-        "ghcr.io/imranr98/pixel-ntfy"
-      ],
-      "matchUpdateTypes": [
-        "digest",
-        "pinDigest"
-      ],
-      "groupName": "PixelNtfy image digests"
-    },
-    {
-      "description": "ISBN-Lookup image digests",
-      "matchDatasources": [
-        "docker"
-      ],
-      "matchPackageNames": [
-        "ghcr.io/imranr98/isbn-lookup"
-      ],
-      "matchUpdateTypes": [
-        "digest",
-        "pinDigest"
-      ],
-      "groupName": "ISBN-Lookup image digests"
-    },
-    {
-      "description": "Obtainium apps image digests",
-      "matchDatasources": [
-        "docker"
-      ],
-      "matchPackageNames": [
-        "ghcr.io/imranr98/apps.obtainium.imranr.dev"
-      ],
-      "matchUpdateTypes": [
-        "digest",
-        "pinDigest"
-      ],
-      "groupName": "Obtainium apps image digests"
-    },
-    {
-      "description": "Logtfy image digests",
-      "matchDatasources": [
-        "docker"
-      ],
-      "matchPackageNames": [
-        "ghcr.io/imranr98/logtfy"
-      ],
-      "matchUpdateTypes": [
-        "digest",
-        "pinDigest"
-      ],
-      "groupName": "Logtfy image digests"
-    },
-    {
-      "description": "Our Times image digests",
-      "matchDatasources": [
-        "docker"
-      ],
-      "matchPackageNames": [
-        "ghcr.io/imranr98/our-times"
-      ],
-      "matchUpdateTypes": [
-        "digest",
-        "pinDigest"
-      ],
-      "groupName": "Our Times image digests"
-    },
-    {
-      "description": "Order Manager image digests",
-      "matchDatasources": [
-        "docker"
-      ],
-      "matchPackageNames": [
-        "ghcr.io/imranr98/order-manager"
-      ],
-      "matchUpdateTypes": [
-        "digest",
-        "pinDigest"
-      ],
-      "groupName": "Order Manager image digests"
-    },
-    {
-      "description": "D$CPLN app images are built/pushed by the monorepo; Renovate refreshes the :latest digest as a safety net",
-      "matchDatasources": [
-        "docker"
-      ],
-      "matchPackageNames": [
-        "/^ghcr\\.io\\/imranr98\\/dscpln-/"
-      ],
-      "matchUpdateTypes": [
-        "digest",
-        "pinDigest"
-      ],
-      "groupName": "D$CPLN image digests"
     },
     {
       "description": "Authelia charts use the ghcr.io registry; track the actual image, not the registry-less Docker Hub name",
@@ -400,6 +302,9 @@
       ],
       "addLabels": [
         "infra-digest-pin"
+      ],
+      "matchDatasources": [
+        "docker"
       ]
     }
   ]
