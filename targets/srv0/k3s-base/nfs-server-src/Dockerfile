@@ -1,4 +1,3 @@
-# Derived-image flow verification (temporary)
 # Replaces the archived ghcr.io/trexx/docker-nfs-server image (its GHCR
 # package no longer has any tags or manifests). This reproduces the same
 # minimal build: Alpine + nfs-utils + an entrypoint that starts rpc.nfsd and
