@@ -152,7 +152,7 @@ done
 check_pods() {
     local ns="$1" out="" warnings errors
     local i
-    for ((i = 0; i < 12; i++)); do
+    for ((i = 0; i < 24; i++)); do
         out="$(kubectl -n "$ns" get pods -o wide --no-headers | awk -v nr="$not_ready_nodes" '
             BEGIN { n = split(nr, a, "\n"); for (i = 1; i <= n; i++) off[a[i]] = 1 }
             {

@@ -8,6 +8,7 @@ if [ -z "${INFRA_ROOT:-}" ]; then
     INFRA_ROOT="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd)"
     export INFRA_ROOT
 fi
+# shellcheck disable=SC1091
 source "$INFRA_ROOT/scripts/common.sh"
 # shellcheck disable=SC1091
 . "$INFRA_ROOT/scripts/repos.sh"
@@ -21,8 +22,9 @@ Usage: renovate.sh [apps|infra|all|clear-cache] [renovate options...]
   all          Run both sets (default).
   clear-cache  Delete Renovate's persistent package/datasource cache.
 
-The scheduled routine (apps -> nfs derived pass -> publish wait -> full Infra)
-is scripts/renovate-daily.sh; use this script for on-demand runs.
+The scheduled routine (derived nfs pass -> apps -> config check -> merges ->
+publish wait -> full Infra) is scripts/renovate-daily.sh; use this script for
+on-demand runs.
 
 Examples:
   bash scripts/renovate.sh apps --dry-run
