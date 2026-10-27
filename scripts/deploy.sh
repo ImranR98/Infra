@@ -15,6 +15,10 @@ fi
 # shellcheck disable=SC1091
 source "$INFRA_ROOT/scripts/common.sh"
 
+usage() {
+    echo "Usage: $(basename "$0") [srv0] [--dry-run] [--timeout S]" >&2
+}
+
 target="srv0"
 dry_run=0
 timeout=600
@@ -31,11 +35,11 @@ while [ $# -gt 0 ]; do
             shift
             ;;
         -h|--help)
-            echo "Usage: $(basename "$0") [srv0] [--dry-run] [--timeout S]" >&2
+            usage
             exit 0
             ;;
         *)
-            echo "Usage: $(basename "$0") [srv0] [--dry-run] [--timeout S]" >&2
+            usage
             exit 1
             ;;
     esac

@@ -23,11 +23,9 @@ if [ -f "$INFRA_ROOT/config/VARS.env" ]; then
     set +a
 fi
 
-GH_TOKEN="${RENOVATE_TOKEN:-${RENOVATE_GITHUB_TOKEN:-}}"
-if [ -z "$GH_TOKEN" ]; then
-    echo "Error: RENOVATE_TOKEN or RENOVATE_GITHUB_TOKEN is required." >&2
-    exit 1
-fi
+usage() {
+    echo "Usage: $(basename "$0") --repos a/b,c/d [--only-label L] [--skip-label L] [--require-check NAME] [--merge-method M] [--timeout S] [--report FILE]" >&2
+}
 
 repos=""
 only_labels=""
@@ -38,6 +36,7 @@ timeout="${MERGE_TIMEOUT:-3600}"
 report=""
 while [ $# -gt 0 ]; do
     case "$1" in
+        -h|--help) usage; exit 0 ;;
         --repos) repos="${2:-}"; shift 2 ;;
         --only-label) only_labels="${only_labels:+$only_labels,}${2:-}"; shift 2 ;;
         --skip-label) skip_labels="${skip_labels:+$skip_labels,}${2:-}"; shift 2 ;;
@@ -46,13 +45,19 @@ while [ $# -gt 0 ]; do
         --timeout) timeout="${2:-}"; shift 2 ;;
         --report) report="${2:-}"; shift 2 ;;
         *)
-            echo "Usage: $(basename "$0") --repos a/b,c/d [--only-label L] [--skip-label L] [--require-check NAME] [--merge-method M] [--timeout S] [--report FILE]" >&2
+            usage
             exit 1
             ;;
     esac
 done
 if [ -z "$repos" ]; then
     echo "Error: --repos is required." >&2
+    exit 1
+fi
+
+GH_TOKEN="${RENOVATE_TOKEN:-${RENOVATE_GITHUB_TOKEN:-}}"
+if [ -z "$GH_TOKEN" ]; then
+    echo "Error: RENOVATE_TOKEN or RENOVATE_GITHUB_TOKEN is required." >&2
     exit 1
 fi
 

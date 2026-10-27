@@ -74,8 +74,15 @@ async function gh(path, attempt = 1) {
 
   for (const repo of repos) {
     const runs = (await gh(`/repos/${repo}/actions/runs?per_page=100`)).workflow_runs || [];
+    // A newer success clears an older failure on the same workflow/branch/event.
+    const latest = new Map();
     for (const run of runs) {
       if (new Date(run.created_at).getTime() < since) continue;
+      const key = `${run.workflow_id}:${run.event}:${run.head_branch}`;
+      const prev = latest.get(key);
+      if (!prev || new Date(run.created_at) > new Date(prev.created_at)) latest.set(key, run);
+    }
+    for (const run of latest.values()) {
       if (run.conclusion !== 'failure') continue;
       // Renovate PR failures are reported below from the PR's newest `test`
       // check, which covers older failed runs too.
