@@ -43,7 +43,7 @@ spec:
               level: s0
           containers:
             - name: renovate
-              image: renovate/renovate:44.186.6@sha256:461ab1d41744ecd9e16607a7f939183c783a19ce1968f32c87c122759676df04
+              image: renovate/renovate:44.188.2@sha256:a9fb71ff93d399214cfc9a564383601303cafbe4e38b94484d824705e865868e
               imagePullPolicy: IfNotPresent
               securityContext:
                 allowPrivilegeEscalation: false
