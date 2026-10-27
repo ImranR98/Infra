@@ -65,16 +65,23 @@ const failedConclusions = new Set([
   'startup_failure',
 ]);
 
-async function gh(path) {
-  const res = await fetch(`${api}${path}`, {
-    headers: {
-      Authorization: `Bearer ${process.env.GH_TOKEN}`,
-      Accept: 'application/vnd.github+json',
-      'User-Agent': 'infra-wait-runs',
-    },
-  });
-  if (!res.ok) throw new Error(`GET ${path} failed: ${res.status} ${await res.text()}`);
-  return res.json();
+async function gh(path, attempt = 1) {
+  try {
+    const res = await fetch(`${api}${path}`, {
+      headers: {
+        Authorization: `Bearer ${process.env.GH_TOKEN}`,
+        Accept: 'application/vnd.github+json',
+        'User-Agent': 'infra-wait-runs',
+      },
+      signal: AbortSignal.timeout(20000),
+    });
+    if (!res.ok) throw new Error(`GET ${path} failed: ${res.status} ${await res.text()}`);
+    return await res.json();
+  } catch (err) {
+    if (attempt >= 3) throw err;
+    await sleep(2000);
+    return gh(path, attempt + 1);
+  }
 }
 
 const defaultBranch = new Map();

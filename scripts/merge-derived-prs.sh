@@ -46,21 +46,28 @@ const failedConclusions = new Set([
   'startup_failure',
 ]);
 
-async function gh(path, init = {}) {
-  const res = await fetch(`${api}${path}`, {
-    ...init,
-    headers: {
-      Authorization: `Bearer ${process.env.GH_TOKEN}`,
-      Accept: 'application/vnd.github+json',
-      'User-Agent': 'infra-merge-derived',
-      ...(init.headers || {}),
-    },
-  });
-  if (!res.ok) {
-    throw new Error(`${init.method || 'GET'} ${path} failed: ${res.status} ${await res.text()}`);
+async function gh(path, init = {}, attempt = 1) {
+  try {
+    const res = await fetch(`${api}${path}`, {
+      ...init,
+      headers: {
+        Authorization: `Bearer ${process.env.GH_TOKEN}`,
+        Accept: 'application/vnd.github+json',
+        'User-Agent': 'infra-merge-derived',
+        ...(init.headers || {}),
+      },
+      signal: AbortSignal.timeout(20000),
+    });
+    if (!res.ok) {
+      throw new Error(`${init.method || 'GET'} ${path} failed: ${res.status} ${await res.text()}`);
+    }
+    if (res.status === 204) return null;
+    return await res.json();
+  } catch (err) {
+    if (attempt >= 3) throw err;
+    await sleep(2000);
+    return gh(path, init, attempt + 1);
   }
-  if (res.status === 204) return null;
-  return res.json();
 }
 
 async function checksFor(sha) {

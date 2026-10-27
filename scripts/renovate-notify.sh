@@ -98,6 +98,7 @@ node - <<'NODE'
       method: 'POST',
       headers: ntfyHeader,
       body: JSON.stringify({ topic, title, message, click, tags: ['robot', 'package'], markdown: true }),
+      signal: AbortSignal.timeout(15000),
     });
     if (!res.ok) throw new Error(`ntfy publish failed: ${res.status} ${await res.text()}`);
   }
@@ -119,6 +120,7 @@ node - <<'NODE'
           Accept: 'application/vnd.github+json',
           'User-Agent': 'infra-renovate-notify',
         },
+        signal: AbortSignal.timeout(20000),
       },
     );
     if (!res.ok) throw new Error(`GitHub API failed for ${repo}: ${res.status} ${await res.text()}`);

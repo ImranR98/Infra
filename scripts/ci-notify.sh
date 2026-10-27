@@ -48,16 +48,25 @@ const failedConclusions = new Set([
 ]);
 const since = new Date(process.env.CI_SINCE).getTime();
 
-async function gh(path) {
-  const res = await fetch(`${api}${path}`, {
-    headers: {
-      Authorization: `Bearer ${process.env.GH_TOKEN}`,
-      Accept: 'application/vnd.github+json',
-      'User-Agent': 'infra-ci-notify',
-    },
-  });
-  if (!res.ok) throw new Error(`GET ${path} failed: ${res.status} ${await res.text()}`);
-  return res.json();
+const { setTimeout: sleep } = require('node:timers/promises');
+
+async function gh(path, attempt = 1) {
+  try {
+    const res = await fetch(`${api}${path}`, {
+      headers: {
+        Authorization: `Bearer ${process.env.GH_TOKEN}`,
+        Accept: 'application/vnd.github+json',
+        'User-Agent': 'infra-ci-notify',
+      },
+      signal: AbortSignal.timeout(20000),
+    });
+    if (!res.ok) throw new Error(`GET ${path} failed: ${res.status} ${await res.text()}`);
+    return await res.json();
+  } catch (err) {
+    if (attempt >= 3) throw err;
+    await sleep(2000);
+    return gh(path, attempt + 1);
+  }
 }
 
 (async () => {
@@ -120,6 +129,7 @@ async function gh(path) {
 
   const res = await fetch(`${process.env.NTFY_URL.replace(/\/+$/, '')}/`, {
     method: 'POST',
+    signal: AbortSignal.timeout(15000),
     headers: { Authorization: `Bearer ${process.env.NTFY_TOKEN}` },
     body: JSON.stringify({
       topic: process.env.NTFY_TOPIC,

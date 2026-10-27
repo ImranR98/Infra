@@ -71,7 +71,7 @@ fi
 
 notify() {
     [ "$notify_configured" = 1 ] || return 0
-    curl -fsS -o /dev/null \
+    curl -fsS --max-time 15 --connect-timeout 5 -o /dev/null \
         -H "Authorization: Bearer $NTFY_TOKEN" \
         -H "Title: $1" \
         -d "$2" \
