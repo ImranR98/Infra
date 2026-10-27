@@ -9,8 +9,8 @@
 | `prereqs.sh` | — | this machine | packages (NFS client), pinned helm, Docker bootstrap, machine-fact `.env`, host bind dirs, acme seed |
 | `kubeconfig-unlock.sh [--lock]` | — | this machine | read ACL on the k3s kubeconfig + `~/.kube/config` symlink; holds until Ctrl-C; `--lock` cleans up |
 | `renovate.sh [apps\|infra\|all]` | — | this machine (opens GitHub PRs) | needs `RENOVATE_GITHUB_TOKEN` in `config/VARS.env`; Node/npm only; `infra`/`all` also run `ci-notify.sh` |
-| `renovate-daily.sh [--dry-run\|--derived-only]` | — | in-cluster (`renovate-daily` CronJob) | the scheduled routine: derived nfs pass → apps → merge derived PR → wait for publishes → full Infra pass → notifications |
-| `merge-derived-prs.sh` | — | in-cluster | waits for the `derived-image` PR checks, merges on green, leaves red/timeouts open |
+| `renovate-daily.sh [--dry-run\|--derived-only]` | — | in-cluster (`renovate-daily` CronJob) | the scheduled routine: derived nfs pass → apps → merge derived + app PRs → wait for publishes → full Infra pass → merge Infra non-digest PRs → notifications |
+| `merge-renovate-prs.sh --repos ...` | — | in-cluster | single merge path: waits for checks, updates behind branches, merges green Renovate PRs, leaves red/timeouts open; used for the derived PR, app PRs, and Infra non-digest PRs (skips `infra-digest-pin`) |
 | `wait-for-runs.sh --since <ISO>` | — | in-cluster | waits for default-branch push runs and `renovate/*` PR runs to settle; exit 2 on timeout |
 | `repos.sh` | — | sourced | single source of truth for the app/CI repo lists and the nfs derived path |
 | `renovate-notify.sh` | — | this machine / in-cluster | posts newly opened or refreshed `deps` PRs to ntfy; called by `renovate.sh` and `renovate-daily.sh` |
