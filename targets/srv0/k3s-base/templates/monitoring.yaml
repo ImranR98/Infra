@@ -238,7 +238,7 @@ spec:
   failurePolicy: abort
   targetNamespace: base
   createNamespace: false
-  version: 14.1.0
+  version: 14.2.0
   valuesContent: |-
     image:
       registry: docker.io
