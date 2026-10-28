@@ -9,7 +9,7 @@ if [ -z "${INFRA_ROOT:-}" ]; then
 fi
 if [ -f "$INFRA_ROOT/config/VARS.env" ]; then
     set -a
-    # shellcheck disable=SC1090
+    # shellcheck disable=SC1090,SC1091
     . "$INFRA_ROOT/config/VARS.env"
     set +a
 fi
