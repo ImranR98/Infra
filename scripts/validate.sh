@@ -480,7 +480,9 @@ ok=1
 
 if [ -d "$template_dir" ]; then
     check_config_files "$template_dir" "$INFRA_ROOT/config/$TARGET" || ok=0
-    check_template_values "$template_dir/values.yaml" "$target_dir" || ok=0
+    if [ -f "$template_dir/values.yaml" ]; then
+        check_template_values "$template_dir/values.yaml" "$target_dir" || ok=0
+    fi
 else
     echo "validate: target '$TARGET' has no config_template (no secret variables) — nothing to check"
 fi
