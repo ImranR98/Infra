@@ -1,0 +1,12 @@
+# Deployment-specific Authelia access-control rules for vps0.
+# May be comments-only; the base bypass/sale/catch-all rules still apply.
+# Injected at the __AUTHELIA_ACCESS_RULES__ marker in
+# targets/vps0/compose/files/authelia/configuration.base.yml.
+# First match wins; the base bypass rules above the marker take precedence.
+# Supports ${CLOUD_SERVICES_DOMAIN} substitution by the render script.
+#
+# Example:
+# - domain: internal.${CLOUD_SERVICES_DOMAIN}
+#   policy: one_factor
+#   subject:
+#   - 'group:family'

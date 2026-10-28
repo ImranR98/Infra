@@ -1,3 +1,4 @@
+{{- $awgEndpoint := required "REMOTE_ACCESS_AMNEZIAWG_ENDPOINT must be set in config/srv0/values.yaml" .Values.REMOTE_ACCESS_AMNEZIAWG_ENDPOINT -}}
 {{- define "remote-access-dns.corefile" -}}
 .:53 {
     bind 10.100.0.1

@@ -28,94 +28,6 @@ x-socket-proxy: &socket-proxy
 # the public-exposure tunnel conf as a real 0600 file under
 # ../../../config/vps0/public-exposure/.
 configs:
-    authelia_configuration:
-        content: |
-            jwt_secret: '${AUTHELIA_JWT_SECRET}'
-
-            log:
-              # Deliberate: logtfy parses the Authelia log for login notifications.
-              level: debug
-
-            totp:
-              issuer: ${CLOUD_SERVICES_DOMAIN}
-
-            authentication_backend:
-              file:
-                path: /config/users_database.yml
-
-            access_control:
-              default_policy: 'deny'
-              # Admin catch-all below is two_factor (TOTP is Authelia's default second
-              # factor); explicit one_factor rules (ytdl/ikom) intentionally stay 1FA.
-              # Sale sites: public sale pages bypass Authelia; only /admin + /api/admin
-              # require a login (any Authelia user).
-              rules:
-                - domain: auth.${CLOUD_SERVICES_DOMAIN}
-                  policy: bypass
-                - domain: ytdl.${CLOUD_SERVICES_DOMAIN}
-                  policy: one_factor
-                  subject:
-                  - 'group:family'
-                  - 'group:guests'
-                - domain: ikom.${CLOUD_SERVICES_DOMAIN}
-                  policy: one_factor
-                  subject:
-                  - 'group:family'
-                - domain: times.${CLOUD_SERVICES_DOMAIN}
-                  policy: one_factor
-                  subject:
-                  - 'group:jaan'
-                - domain: tech.sale.${CLOUD_SERVICES_DOMAIN}
-                  resources:
-                  - '^/admin([/?].*)?$'
-                  - '^/api/admin([/?].*)?$'
-                  policy: one_factor
-                - domain: tech.sale.${CLOUD_SERVICES_DOMAIN}
-                  policy: bypass
-                - domain: home.sale.${CLOUD_SERVICES_DOMAIN}
-                  resources:
-                  - '^/admin([/?].*)?$'
-                  - '^/api/admin([/?].*)?$'
-                  policy: one_factor
-                - domain: home.sale.${CLOUD_SERVICES_DOMAIN}
-                  policy: bypass
-                - domain: sale.${CLOUD_SERVICES_DOMAIN}
-                  resources:
-                  - '^/admin([/?].*)?$'
-                  - '^/api/admin([/?].*)?$'
-                  policy: one_factor
-                - domain: sale.${CLOUD_SERVICES_DOMAIN}
-                  policy: bypass
-                - domain: '*.${CLOUD_SERVICES_DOMAIN}'
-                  policy: two_factor
-                  subject:
-                  - 'group:admins'
-
-            session:
-              secret: '${AUTHELIA_SESSION_SECRET}'
-              cookies:
-                - domain: ${CLOUD_SERVICES_DOMAIN}
-                  authelia_url: https://auth.${CLOUD_SERVICES_DOMAIN}
-
-              redis:
-                host: authelia-db
-                port: 6379
-                password: '${AUTHELIA_REDIS_PASSWORD}'
-
-            regulation:
-              max_retries: 3
-              find_time: 120
-              ban_time: 3600
-
-            storage:
-              encryption_key: '${AUTHELIA_DB_ENCRYPTION_KEY}'
-              local:
-                path: /config/db.sqlite3
-
-            notifier:
-              filesystem:
-                filename: /config/notification.txt
-
     traefik_dynamic:
         content: |
             http:
@@ -234,7 +146,7 @@ configs:
 
     crowdsec_plausible_whitelist:
         content: |
-            name: imranr/plausible
+            name: plausible
             description: "Whitelist for Plausible"
             whitelist:
               reason: "Plausible is a SPA: the dashboard fetches the stats API in bursts, tripping crawl scenarios"
@@ -246,7 +158,7 @@ configs:
 
     crowdsec_webui_whitelist:
         content: |
-            name: imranr/crowdsec-webui
+            name: crowdsec-webui
             description: "Whitelist for CrowdSec Web UI"
             whitelist:
               reason: "The web UI is a SPA: the dashboard fetches the API in bursts, tripping crawl scenarios"
@@ -375,12 +287,6 @@ services:
         volumes:
             - ../../../current_target/compose_live_state/authelia/config:/config
             - ../../../config/vps0/authelia/users_database.yml:/config/users_database.yml:ro
-        configs:
-          - source: authelia_configuration
-            target: /config/configuration.yml
-            uid: "$MY_UID"
-            gid: "$MY_UID"
-            mode: 0400
         networks:
             - traefik
         labels:

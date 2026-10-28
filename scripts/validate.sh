@@ -364,6 +364,12 @@ fi
 
 [ -d "$target_dir/compose" ] && { check_compose_mounts "$target_dir" || ok=0; }
 
+# vps0's Authelia config is rendered from the committed base + config rules.
+# The generated file only exists on vps0, so check it there.
+if [ "$TARGET" = vps0 ] && [ -d "$target_dir/compose" ] && [ "$(hostname)" = vps0 ]; then
+    bash "$INFRA_ROOT/scripts/render-vps0-authelia.sh" --check || ok=0
+fi
+
 # First-boot safety: the six user-facing apps are LAN/VPN-only while this is on.
 config_values="$INFRA_ROOT/config/$TARGET/values.yaml"
 if [ -f "$config_values" ]; then

@@ -137,9 +137,9 @@ spec:
       - name: ENABLE_OAUTH_ROLE_MANAGEMENT
         value: "true"
       - name: OAUTH_ALLOWED_ROLES
-        value: "admins,dev,family"
+        value: '{{ .Values.OPENWEBUI_ALLOWED_ROLES | default "admins" }}'
       - name: OAUTH_ADMIN_ROLES
-        value: "admins"
+        value: '{{ .Values.OPENWEBUI_ADMIN_ROLES | default "admins" }}'
       - name: OAUTH_ROLES_CLAIM
         value: "groups"
       - name: WEBUI_URL

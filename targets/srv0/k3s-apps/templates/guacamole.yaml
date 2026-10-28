@@ -14,6 +14,7 @@ The Guacamole password is generated once and reused across upgrades via
 lookup. GUACAMOLE_DB_PASSWORD can pin it before the first deploy; changing it
 after the DB exists requires rotating the Postgres password as well.
 */ -}}
+{{- $winHost := required "GUACAMOLE_WINDOWS_HOST must be set in config/srv0/values.yaml" .Values.GUACAMOLE_WINDOWS_HOST -}}
 {{- $dbPassword := .Values.GUACAMOLE_DB_PASSWORD | default "" -}}
 {{- if not $dbPassword -}}
 {{- $existingSecret := lookup "v1" "Secret" "apps" "guacamole-db-secret" -}}
@@ -496,7 +497,7 @@ spec:
   egress:
     - to:
         - ipBlock:
-            cidr: {{ .Values.GUACAMOLE_WINDOWS_HOST }}/32
+            cidr: {{ $winHost }}/32
       ports:
         - protocol: TCP
           port: 3389

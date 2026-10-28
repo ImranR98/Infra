@@ -12,8 +12,9 @@ Mac browser ──TLS──> vps0 Traefik ──TLS passthrough──> WireGuard
 ```
 
 - **Access:** `group:admins` and `group:family`, Authelia `one_factor`.
-  The `family` group must exist in `config/srv0/values.yaml` and contain the
-  intended users; otherwise only admins pass the rule.
+  The rule lives in `AUTHELIA_ACCESS_CONTROL_RULES` in
+  `config/srv0/values.yaml`, not in the chart. The `family` group must contain
+  the intended users in that same config file; otherwise only admins pass.
 - **No geoblock** on this host (like `auth`); Authelia + CrowdSec are the gate.
 - **No Windows credential is stored** in Guacamole: the seeded connection omits
   `username`/`password`, so guacd prompts for any Windows account.
@@ -31,11 +32,11 @@ Mac browser ──TLS──> vps0 Traefik ──TLS passthrough──> WireGuard
    a dedicated one if you prefer. Guacamole prompts for the username/password
    on every connect; nothing is stored. Add the account to **Remote Desktop
    Users** if it is not already allowed to sign in remotely.
-4. Give the machine a static IP or DHCP reservation. The default value is
-   `192.168.8.164` (same `/24` as srv0); change `GUACAMOLE_WINDOWS_HOST` if
-   needed.
+4. Give the machine a static IP or DHCP reservation. Set
+   `GUACAMOLE_WINDOWS_HOST` to that address; it must be on the same `/24` as
+   srv0.
 5. Windows Firewall: allow TCP **3389** only from srv0's LAN IP
-   (`192.168.8.247`; confirm the source in the firewall log). Do not expose
+   (`<srv0-lan-ip>`; confirm the source in the firewall log). Do not expose
    3389 to the internet.
 6. Disable sleep/hibernate when plugged in; control Windows Update reboots.
    The machine must be awake for a connection to succeed.
@@ -45,7 +46,7 @@ Mac browser ──TLS──> vps0 Traefik ──TLS passthrough──> WireGuard
 Committed defaults live in `targets/srv0/k3s-apps/values.yaml`:
 
 ```yaml
-GUACAMOLE_WINDOWS_HOST: "192.168.8.164"
+GUACAMOLE_WINDOWS_HOST: "<windows-ip>"
 GUACAMOLE_WINDOWS_PORT: "3389"
 GUACAMOLE_DB_STORAGE: "2Gi"
 GUACAMOLE_DB_PASSWORD: ""   # generated once and reused if empty

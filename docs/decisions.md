@@ -28,6 +28,10 @@ The restic repository was re-initialized on 2026-10-19 after the old key was los
 
 The metrics store is Prometheus (`prom/prometheus`, 180-day retention, remote-write receiver) instead of Mimir. Alloy still scrapes and remote-writes; Loki, Grafana, the dashboards, and the 18 alert rules are unchanged. Prometheus runs on the `nfs-apps` PVC, which it warns is an unsupported filesystem — the same NFS tradeoff the Mimir PVC had. Mimir's historical metrics were not migrated; the TSDB starts fresh. The Mimir Deployment/Service/PVC/NetworkPolicy were removed after Prometheus was verified.
 
+## Authelia access-control ownership
+
+Structural rules stay in code: ACME/app bypasses and the final admin catch-all. Deployment-specific rules — hosts, groups, users, one-factor/two-factor policy — live in `config/srv0/values.yaml` as `AUTHELIA_ACCESS_CONTROL_RULES` (rendered by `tpl` between the bypasses and catch-all) and in `config/vps0/authelia/access_control.yml` for vps0. The vps0 base config is committed; `scripts/render-vps0-authelia.sh` injects the config rules and writes the live `configuration.yml` before `docker compose up`. The split keeps the reusable chart free of personal group names while preserving first-match ordering.
+
 ## Shared multi-SAN edge certificates
 
 The per-app Let's Encrypt Certificates were replaced by `edge-public-tls` (the 25 exact public hostnames) and `edge-private-tls` (`files`, `traefik`). The public cert is attached to both secure listeners; the private cert only to `websecure`, so the private names never reach the public-exposure listener. The names are exact (not a wildcard), but all public names share one key, so a key compromise has wildcard-like blast radius; per-host key isolation was traded for fewer Orders and secrets. Adding a public app means adding its SAN and re-issuing.

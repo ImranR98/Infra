@@ -170,20 +170,6 @@
       "groupName": "docker digests"
     },
     {
-      "description": "One PR for every first-party image digest pin; one rollout covers the apps, nfs-server, and opencode-sandbox",
-      "matchDatasources": [
-        "docker"
-      ],
-      "matchUpdateTypes": [
-        "digest",
-        "pinDigest"
-      ],
-      "matchPackageNames": [
-        "/^ghcr\\.io\\/imranr98\\//"
-      ],
-      "groupName": "app image digests"
-    },
-    {
       "description": "nfs-server derived image deps: isolated PR, merged by the daily job after the PR image test",
       "matchFileNames": [
         "targets/srv0/k3s-base/nfs-server-src/**"

@@ -22,7 +22,7 @@ spec:
       # passwords, encryption key) are read at startup; a Secret-only change
       # doesn't touch the HelmChart CR, so hash the inputs into the pod.
       annotations:
-        checksum/authelia-secrets: {{ printf "%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s" .Values.AUTHELIA_USERS_DATABASE .Values.AUTHELIA_DB_PASSWORD .Values.AUTHELIA_REDIS_PASSWORD .Values.AUTHELIA_JWKS_KEY .Values.AUTHELIA_IMMICH_CLIENT_SECRET_HASHED .Values.AUTHELIA_OPENWEBUI_CLIENT_SECRET_HASHED .Values.AUTHELIA_HEADLAMP_CLIENT_SECRET_HASHED .Values.AUTHELIA_LINKWARDEN_CLIENT_SECRET_HASHED .Values.AUTHELIA_GRAFANA_CLIENT_SECRET_HASHED .Values.AUTHELIA_FILEBROWSER_CLIENT_SECRET_HASHED .Values.AUTHELIA_OIDC_HMAC_SECRET .Values.AUTHELIA_DB_ENCRYPTION_KEY | sha256sum }}
+        checksum/authelia-secrets: {{ printf "%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s" .Values.AUTHELIA_USERS_DATABASE .Values.AUTHELIA_DB_PASSWORD .Values.AUTHELIA_REDIS_PASSWORD .Values.AUTHELIA_JWKS_KEY .Values.AUTHELIA_IMMICH_CLIENT_SECRET_HASHED .Values.AUTHELIA_OPENWEBUI_CLIENT_SECRET_HASHED .Values.AUTHELIA_HEADLAMP_CLIENT_SECRET_HASHED .Values.AUTHELIA_LINKWARDEN_CLIENT_SECRET_HASHED .Values.AUTHELIA_GRAFANA_CLIENT_SECRET_HASHED .Values.AUTHELIA_FILEBROWSER_CLIENT_SECRET_HASHED .Values.AUTHELIA_OIDC_HMAC_SECRET .Values.AUTHELIA_DB_ENCRYPTION_KEY .Values.AUTHELIA_ACCESS_CONTROL_RULES | sha256sum }}
       securityContext:
         container:
           runAsUser: {{ .Values.MY_UID }}
@@ -285,11 +285,11 @@ spec:
             policy: bypass
           - domain: opodsync.{{ .Values.SERVICES_DOMAIN }}
             policy: bypass
-          - domain: win.{{ .Values.SERVICES_DOMAIN }}
-            policy: one_factor
-            subject:
-            - 'group:admins'
-            - 'group:family'
+          # Deployment-specific rules from config/srv0/values.yaml.
+          # First match wins; the built-in bypass rules above take precedence.
+{{- with .Values.AUTHELIA_ACCESS_CONTROL_RULES }}
+{{ tpl . $ | indent 10 }}
+{{- end }}
           - domain: '*.{{ .Values.SERVICES_DOMAIN }}'
             policy: two_factor
             subject:

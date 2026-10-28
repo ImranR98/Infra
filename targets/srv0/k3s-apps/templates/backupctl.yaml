@@ -1,3 +1,4 @@
+{{- $homeDir := required "HOME_DIR must be set in config/srv0/values.yaml" .Values.HOME_DIR -}}
 # backupctl (D$CPLN Task Runner) — the config-driven workflow runner. It runs
 # the scheduled state-backup task as root (the PVC data is owned by fixed
 # Postgres/Redis UIDs) and serves the same UI behind Authelia. The private
@@ -130,17 +131,17 @@ spec:
 
               # Home is writable by user-data tasks (ProtonMail, venvs, adb,
               # temp files). Keep the root private but traversable.
-              mkdir -p /home/imranr/.cache /home/imranr/.venvs /home/imranr/.android /home/imranr/tmp
-              chown "$uid:$gid" /home/imranr
-              chmod 0755 /home/imranr
-              for d in /home/imranr/.cache /home/imranr/.venvs /home/imranr/.android /home/imranr/tmp; do
+              mkdir -p {{ $homeDir }}/.cache {{ $homeDir }}/.venvs {{ $homeDir }}/.android {{ $homeDir }}/tmp
+              chown "$uid:$gid" {{ $homeDir }}
+              chmod 0755 {{ $homeDir }}
+              for d in {{ $homeDir }}/.cache {{ $homeDir }}/.venvs {{ $homeDir }}/.android {{ $homeDir }}/tmp; do
                 chown "$uid:$gid" "$d"
                 chmod 0700 "$d"
               done
 
               # User tasks write to these mounted trees; only normalize their
               # top level so this stays fast and safe on large data sets.
-              for d in /home/imranr/Main/Backups /home/imranr/Main/Media /home/imranr/Main/Documents; do
+              for d in {{ $homeDir }}/Main/Backups {{ $homeDir }}/Main/Media {{ $homeDir }}/Main/Documents; do
                 [ -d "$d" ] || continue
                 chown "$uid:$gid" "$d"
                 chmod 2775 "$d"
@@ -177,13 +178,13 @@ spec:
               level: s0
           volumeMounts:
             - name: home
-              mountPath: /home/imranr
+              mountPath: {{ $homeDir }}
             - name: main-backups
-              mountPath: /home/imranr/Main/Backups
+              mountPath: {{ $homeDir }}/Main/Backups
             - name: main-media
-              mountPath: /home/imranr/Main/Media
+              mountPath: {{ $homeDir }}/Main/Media
             - name: main-documents
-              mountPath: /home/imranr/Main/Documents
+              mountPath: {{ $homeDir }}/Main/Documents
             - name: config-src
               mountPath: /config-src
       containers:
@@ -217,7 +218,7 @@ spec:
             - name: APP
               value: task-runner
             - name: HOME
-              value: /home/imranr
+              value: {{ $homeDir }}
             - name: TZ
               value: America/Toronto
             # Tasks pinned to another machine show as unavailable on this one.
@@ -237,7 +238,7 @@ spec:
             - name: BACKUPCTL_STATE_GID
               value: "{{ .Values.MY_UID }}"
             - name: BACKUPCTL_TMP_DIR
-              value: /home/imranr/tmp
+              value: {{ $homeDir }}/tmp
             # Scheduled workflows (State Backups) run on this instance.
             - name: BACKUPCTL_SCHEDULES
               value: "1"
@@ -291,21 +292,21 @@ spec:
             - name: staging
               mountPath: /staging
             - name: home
-              mountPath: /home/imranr
+              mountPath: {{ $homeDir }}
             # Narrow per-tree mounts (the tasks only ever touch these three
             # top-level dirs); no whole-Main mount.
             - name: main-backups
-              mountPath: /home/imranr/Main/Backups
+              mountPath: {{ $homeDir }}/Main/Backups
             - name: main-media
-              mountPath: /home/imranr/Main/Media
+              mountPath: {{ $homeDir }}/Main/Media
             - name: main-documents
-              mountPath: /home/imranr/Main/Documents
+              mountPath: {{ $homeDir }}/Main/Documents
             # The backup task reads the live K3s app data and Compose state.
             - name: infra-current
-              mountPath: /home/imranr/Main/Infra/current_target
+              mountPath: {{ $homeDir }}/Main/Infra/current_target
               readOnly: true
             - name: state-backups
-              mountPath: /home/imranr/Main/Infra/state_backups
+              mountPath: {{ $homeDir }}/Main/Infra/state_backups
             - name: backup-data
               mountPath: /backup-data
             # The Syncthing-synced private config checkout; a directory mount

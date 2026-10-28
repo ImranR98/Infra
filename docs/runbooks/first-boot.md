@@ -2,7 +2,7 @@
 
 1. **DNS/edge first.** `$SERVICES_DOMAIN` → vps0; `home.$SERVICES_DOMAIN` + `*.home.$SERVICES_DOMAIN` are routed through the public-exposure tunnel. Generate the tunnel material on srv0 (`scripts/public-exposure-keygen.sh`) and copy `config/vps0/public-exposure/` to vps0. Bring vps0 up before srv0 — cert-manager's HTTP-01 challenges need the edge serving.
 2. **Prereqs.** `bash scripts/prereqs.sh` on every machine.
-3. **Config.** Copy each `targets/<t>/config_template` to `config/<t>/` and fill it; copy `config_template/VARS.env` to `config/VARS.env`.
+3. **Config.** Copy each `targets/<t>/config_template` to `config/<t>/` and fill it; copy `config_template/VARS.env` to `config/VARS.env`. The srv0 values template now requires `HOME_DIR`, `LAN_CIDR`, `GUACAMOLE_WINDOWS_HOST`, and `REMOTE_ACCESS_AMNEZIAWG_ENDPOINT`; `config/VARS.env` requires `INFRA_REPO`/`APP_REPOS`. The vps0 config includes `authelia/access_control.yml`; the deployment-specific rules go there. Then on vps0 run `bash scripts/render-vps0-authelia.sh` before `docker compose up` (the render is manual; `validate.sh vps0` checks it when run on vps0).
 4. **First-boot private apps.** In `config/srv0/values.yaml` set:
    ```yaml
    BOOTSTRAP_PRIVATE_APPS: "true"

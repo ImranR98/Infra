@@ -1,3 +1,4 @@
+{{- $lanCidr := required "LAN_CIDR must be set in config/srv0/values.yaml" .Values.LAN_CIDR -}}
 ---
 apiVersion: v1
 kind: ServiceAccount
@@ -235,7 +236,7 @@ spec:
               app: sonarr
         # kubelet readiness probes originate from the node's LAN address.
         - ipBlock:
-            cidr: 192.168.8.0/24
+            cidr: {{ $lanCidr }}
       ports:
         - port: 8096
   policyTypes:

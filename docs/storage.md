@@ -3,7 +3,7 @@
 ## App data — NFS (`nfs-apps`)
 
 - The `nfs-server` pod (base) exports host paths; `csi-driver-nfs` mounts them. The **app-data export** is `/exports/apps` → `{{ .Values.INFRA_ROOT }}/current_target/k3s_live_state/nfs-apps`, with `no_root_squash` (needed by CSI subdir creation and Postgres chowns).
-- The `nfs-server` image is built from `targets/srv0/k3s-base/nfs-server-src` and pushed to `ghcr.io/imranr98/nfs-server`; the Deployment pins the registry digest. Upstream `ghcr.io/trexx/docker-nfs-server` was archived in October 2026 and its GHCR package was deleted, so `build.sh` is the reproducible replacement. `.github/workflows/nfs-server-image.yml` rebuilds on `nfs-server-src` changes and weekly, pushes a `:candidate` tag, verifies that digest, promotes `:latest`, and leaves digest pinning to Renovate's daily `docker-digests` PR; `build.sh` remains the local/emergency path. The image installs the latest `nfs-utils` and runs `apk upgrade --no-cache` for the pinned Alpine branch, so package updates are picked up by the weekly rebuild. It is tagged `latest`; the Deployment pins the digest. Alpine base updates are Renovate PRs (all update types; minor/major are reviewed as Tier C).
+- The `nfs-server` image is built from `targets/srv0/k3s-base/nfs-server-src` and pushed to `ghcr.io/<owner>/nfs-server`; the Deployment pins the registry digest. Upstream `ghcr.io/trexx/docker-nfs-server` was archived in October 2026 and its GHCR package was deleted, so `build.sh` is the reproducible replacement. `.github/workflows/nfs-server-image.yml` rebuilds on `nfs-server-src` changes and weekly, pushes a `:candidate` tag, verifies that digest, promotes `:latest`, and leaves digest pinning to Renovate's daily `docker-digests` PR; `build.sh` remains the local/emergency path. The image installs the latest `nfs-utils` and runs `apk upgrade --no-cache` for the pinned Alpine branch, so package updates are picked up by the weekly rebuild. It is tagged `latest`; the Deployment pins the digest. Alpine base updates are Renovate PRs (all update types; minor/major are reviewed as Tier C).
 - The dynamic StorageClass **`nfs-apps`** is the **default** (`storageclass.kubernetes.io/is-default-class: "true"`). It provisions `subDir: ${pvc.metadata.namespace}/${pvc.metadata.name}`, `mountPermissions: "0777"`, `reclaimPolicy: Retain`, `onDelete: retain`, `volumeBindingMode: Immediate`, `allowVolumeExpansion: false` (sizes are advisory; NFS has no quota).
 - Migrated PVCs use **`ReadWriteMany`** so backup/restore pods can run on any node. The CSI driver is the only NFS client (hostNetwork node plugin); `nfs-server` ingress is allowlisted to the LAN CIDR (`allow-nfs-ingress`), all mounts use `nfsvers=4.2`.
 - `opencode` splits its state: `opencode-home-pvc` is auto-backed-up (config, sessions, auth, SSH keys), while `opencode-tools-pvc` is intentionally unbacked and holds the Homebrew prefix/cache and nvm/Node versions under `/home/linuxbrew`; both toolchains are re-seeded from the image on first start after a loss.
@@ -20,7 +20,7 @@
 The Task Runner runs as root for PVC backups, but most tasks drop to `MY_UID`.
 On every pod start the `prepare-runtime` initContainer creates/chowns:
 
-- `/home/imranr/.cache`, `.venvs`, `.android`, `tmp` (`MY_UID`, `0700`)
+- `<home>/.cache`, `.venvs`, `.android`, `tmp` (`MY_UID`, `0700`)
 - the top level of `Main/Backups`, `Main/Media` and `Main/Documents`
   (`MY_UID`, `2775`, not recursive)
 - `/config-src/.task-runner` (`MY_UID`, `0700`) and the writable repo files

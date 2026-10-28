@@ -27,7 +27,7 @@ DSCPLN_CONFIG_DIR="${DSCPLN_CONFIG_DIR:-$(cd "$INFRA_ROOT/.." && pwd)/Code/Autom
 RESTIC_CACHE_DIR="${RESTIC_CACHE_DIR:-$HOME/.cache/restic}"
 SSH_KEY_FILE="${SSH_KEY_FILE:-$INFRA_ROOT/config/state-backup-vps0/id_ed25519}"
 KNOWN_HOSTS="${KNOWN_HOSTS:-$HOME/.ssh/known_hosts}"
-VPS0_HOST="${VPS0_HOST:-vps0.imranr.dev}"
+VPS0_HOST="${VPS0_HOST:-vps0.example.org}"
 VPS0_USER="${VPS0_USER:-root}"
 
 # The repository password lives outside git in the private dscpln-config

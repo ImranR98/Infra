@@ -45,6 +45,10 @@ MAIN_PARENT_DIR: "/path/to/data"
 MEDIA_DIR_PATH: "/path/to/data/Main/Media"
 WA_TXT_PATH: "/path/to/data/Main/Backups/WhatsApp TXT"
 SECONDARY_STORAGE_PATH: "/mnt/k3s_extra_storage"
+# Container home used by the Task Runner/backup app mounts.
+HOME_DIR: "<home-dir>"
+# LAN CIDR used by egress/NFS/readiness NetworkPolicies.
+LAN_CIDR: "<lan-cidr>"
 
 # ====== Authelia ======
 # Use `docker run -it authelia/authelia:latest authelia crypto hash generate argon2` to generate the password hash
@@ -59,6 +63,17 @@ AUTHELIA_USERS_DATABASE: |
           email: contact@example.org
           groups:
             - admins
+# Deployment-specific access-control rules. Inserted after the chart's built-in
+# bypass rules and before the admin catch-all; first match wins. Leave empty to
+# use only the built-in bypasses + admin catch-all. Supports Helm templating,
+# e.g. {{ .Values.SERVICES_DOMAIN }}. Example:
+# AUTHELIA_ACCESS_CONTROL_RULES: |
+#   - domain: win.{{ .Values.SERVICES_DOMAIN }}
+#     policy: one_factor
+#     subject:
+#       - 'group:admins'
+#       - 'group:family'
+AUTHELIA_ACCESS_CONTROL_RULES: ""
 AUTHELIA_DB_ENCRYPTION_KEY: "change_me" # openssl rand -hex 128
 AUTHELIA_OIDC_HMAC_SECRET: "change_me" # openssl rand -hex 128
 AUTHELIA_REDIS_PASSWORD: "change_me" # openssl rand -base64 32
@@ -81,6 +96,16 @@ AUTHELIA_OPENWEBUI_CLIENT_SECRET_HASHED: "change_me"
 AUTHELIA_HEADLAMP_CLIENT_SECRET_HASHED: "change_me"
 AUTHELIA_LINKWARDEN_CLIENT_SECRET_HASHED: "change_me"
 AUTHELIA_FILEBROWSER_CLIENT_SECRET_HASHED: "change_me" # hash of the filebrowser plaintext above
+
+# ====== App group mapping / browser RDP ======
+# Open WebUI maps these Authelia groups to its allowed/admin roles.
+OPENWEBUI_ALLOWED_ROLES: "admins"
+OPENWEBUI_ADMIN_ROLES: "admins"
+# FileBrowser's OIDC admin group.
+FILEBROWSER_ADMIN_GROUP: "admins"
+# Windows machine reachable by the Guacamole RDP gateway. Keep it an IP: the
+# guacd egress NetworkPolicy is a /32 ipBlock.
+GUACAMOLE_WINDOWS_HOST: "<windows-ip>"
 
 # ====== Bootstrap-private apps (optional) ======
 # Set BOOTSTRAP_PRIVATE_APPS: "true" in config/srv0/values.yaml during a
@@ -125,7 +150,7 @@ HA_MQTT_PASSWORD: "change_me" # openssl rand -hex 16 (also add `homeassistant` u
 FRIGATE_ADDITIONAL_CONFIG: |
   go2rtc:
       streams:
-        rpi: rtsp://admin:{FRIGATE_RTSP_PASSWORD}@192.168.8.XX:8554/rpi#timeout=5
+        rpi: rtsp://admin:{FRIGATE_RTSP_PASSWORD}@<camera-ip>:8554/rpi#timeout=5
   cameras:
       # Default camera: rpi go2rtc webcam stream (targets/rpi)
       rpi:
@@ -312,11 +337,12 @@ QBITTORRENT_WG_ENDPOINT_IP: "change_me"
 # No secrets live here: the server and client keys plus the AWG obfuscation
 # parameters are generated in-cluster by the remote-access-amneziawg pod's
 # keygen init container and persisted on remote-access-amneziawg-pvc
-# (auto-backup: "true"). REMOTE_ACCESS_AMNEZIAWG_ENDPOINT/_CLIENTS are
-# committed defaults in targets/srv0/k3s-base/values.yaml. Fetch a client
-# profile on an unlocked host with:
+# (auto-backup: "true"). REMOTE_ACCESS_AMNEZIAWG_CLIENTS is a committed default
+# in targets/srv0/k3s-base/values.yaml; the public endpoint is deployment
+# specific and required here. Fetch a client profile on an unlocked host with:
 #   bash scripts/remote-access-client.sh <client>
 # (clients must support AmneziaWG; vanilla WireGuard apps cannot connect).
+REMOTE_ACCESS_AMNEZIAWG_ENDPOINT: "<vps0-host>:51820"
 
 # ====== Observability ======
 GRAFANA_ADMIN_PASSWORD: "change_me" # openssl rand -base64 32
@@ -328,5 +354,5 @@ AUTHELIA_GRAFANA_CLIENT_SECRET_HASHED: "change_me"
 
 # ====== Infra paths (k3s-chart-only, machine/env layout) ======
 # Repo path used by the renovate CronJob (hostPath mount of the synced repo).
-INFRA_ROOT: "/home/imranr/Main/Infra"
+INFRA_ROOT: "<path-to-Infra>"
 TARGET: "srv0"

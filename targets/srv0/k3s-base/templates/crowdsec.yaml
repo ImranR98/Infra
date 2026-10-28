@@ -254,7 +254,7 @@ stringData:
       Title: CrowdSec on {{ .Values.TARGET }}
       Priority: min
   navidrome.whitelist.yaml: |
-    name: imranr/navidrome
+    name: navidrome
     description: "Whitelist for Navidrome"
     whitelist:
       reason: "Downloading from Navidrome using client apps can cause false positives"
@@ -262,7 +262,7 @@ stringData:
         - evt.Meta.target_fqdn == 'music.{{ .Values.SERVICES_DOMAIN }}'
         - evt.Overflow.Alert.GetScenario() in ['crowdsecurity/http-probing', 'crowdsecurity/http-crawl-non_statics']
   immich.whitelist.yaml: |
-    name: imranr/immich
+    name: immich
     description: "Whitelist for Immich"
     whitelist:
       reason: "Browsing Immich can cause false positives (missing thumbnails 404, token-expiry 401 bursts)"
@@ -272,7 +272,7 @@ stringData:
         - evt.Meta.http_path matches '/api/.*'
         - evt.Meta.http_status in ['404', '401', '403']
   homeassistant.whitelist.yaml: |
-    name: imranr/homeassistant
+    name: homeassistant
     description: "Whitelist for HomeAssistant"
     whitelist:
       reason: "HomeAssistant webhooks can cause false positives"
@@ -282,7 +282,7 @@ stringData:
         - evt.Meta.http_verb == 'POST'
         - evt.Meta.http_path matches '^/api/webhook/.+'
   seerr.whitelist.yaml: |
-    name: imranr/seerr
+    name: seerr
     description: "Whitelist for Seerr"
     whitelist:
       reason: "Browsing Seerr without login causes 403 on API endpoints"
@@ -292,14 +292,14 @@ stringData:
         - evt.Meta.http_status == '403'
         - evt.Meta.http_path matches '^/api/.*'
   plik.whitelist.yaml: |
-    name: imranr/plik
+    name: plik
     description: "Whitelist for Plik"
     whitelist:
       reason: "Uploading/downloading files from Plik can cause false positives"
       expression:
         - evt.Meta.target_fqdn == 'send.{{ .Values.SERVICES_DOMAIN }}' && evt.Overflow.Alert.GetScenario() in ['LePresidente/http-generic-403-bf', 'crowdsecurity/http-probing', 'crowdsecurity/http-crawl-non_statics']
   linkwarden.whitelist.yaml: |
-    name: imranr/linkwarden
+    name: linkwarden
     description: "Whitelist for Linkwarden"
     whitelist:
       reason: "Linkwarden is a SPA: the UI fetches /api/v1 archive previews in bursts, tripping crawl scenarios"
@@ -309,7 +309,7 @@ stringData:
         - evt.Meta.http_verb == 'GET'
         - evt.Meta.http_path matches '^/api/v1/.+'
   fmd.whitelist.yaml: |
-    name: imranr/fmd
+    name: fmd
     description: "Whitelist for FindMyDevice"
     whitelist:
       reason: "Phone clients with a stale device key get 401 from fmd, tripping brute-force scenarios and self-banning the IP"
@@ -319,7 +319,7 @@ stringData:
         - evt.Meta.http_verb == 'POST'
         - evt.Meta.http_path matches '^/api/v1/location'
   crowdsec-webui.whitelist.yaml: |
-    name: imranr/crowdsec-webui
+    name: crowdsec-webui
     description: "Whitelist for CrowdSec Web UI"
     whitelist:
       reason: "The web UI is a SPA: the dashboard fetches the API in bursts, tripping crawl scenarios"

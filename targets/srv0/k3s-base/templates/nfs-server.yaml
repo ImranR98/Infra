@@ -1,3 +1,4 @@
+{{- $lanCidr := required "LAN_CIDR must be set in config/srv0/values.yaml" .Values.LAN_CIDR -}}
 {{- define "nfs.etab" -}}
 /exports *(rw,fsid=0,crossmnt,no_subtree_check,insecure,root_squash)
 /exports/music *(ro,fsid=1,no_subtree_check,insecure,root_squash)
@@ -170,10 +171,8 @@ spec:
   ingress:
     - from:
         # hostNetwork CSI node plugin — traffic arrives from node IPs.
-        # HARDCODED LAN SUBNET: change 192.168.8.0/24 to this cluster's LAN
-        # when bootstrapping elsewhere, or CSI NFS mounts are blocked.
         - ipBlock:
-            cidr: 192.168.8.0/24
+            cidr: {{ $lanCidr }}
       ports:
         - protocol: TCP
           port: 2049

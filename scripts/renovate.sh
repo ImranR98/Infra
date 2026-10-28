@@ -17,8 +17,8 @@ usage() {
     cat <<'EOF'
 Usage: renovate.sh [apps|infra|all|clear-cache] [renovate options...]
 
-  apps         Run Renovate for the app/ops repos (see scripts/repos.sh).
-  infra        Run Renovate only for ImranR98/Infra, then the CI digest.
+  apps         Run Renovate for the app/ops repos (see config/VARS.env).
+  infra        Run Renovate only for the Infra repo, then the CI digest.
   all          Run both sets (default).
   clear-cache  Delete Renovate's persistent package/datasource cache.
 

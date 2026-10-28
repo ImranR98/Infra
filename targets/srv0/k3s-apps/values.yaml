@@ -13,8 +13,9 @@ BOOTSTRAP_PRIVATE_APPS: "false"
 # ====== Guacamole (browser RDP gateway) ======
 # The Windows machine is reached over the LAN; guacd is pinned to the
 # external-exposed node so its egress source is predictable for the Windows
-# firewall. Keep this an IP: the egress NetworkPolicy is a /32 ipBlock.
-GUACAMOLE_WINDOWS_HOST: "192.168.8.164"
+# firewall. Required in config/srv0/values.yaml; keep it an IP because the
+# egress NetworkPolicy is a /32 ipBlock.
+GUACAMOLE_WINDOWS_HOST: ""
 GUACAMOLE_WINDOWS_PORT: "3389"
 GUACAMOLE_DB_STORAGE: "2Gi"
 # Optional. Leave empty to generate once on first deploy and reuse it from the
@@ -22,3 +23,13 @@ GUACAMOLE_DB_STORAGE: "2Gi"
 # to pin it; changing it after the DB exists requires rotating the Postgres
 # password too.
 GUACAMOLE_DB_PASSWORD: ""
+
+# ====== Deployment paths / LAN ======
+# Required in config/srv0/values.yaml.
+HOME_DIR: ""
+LAN_CIDR: ""
+
+# ====== Group names used by app-level auth ======
+OPENWEBUI_ALLOWED_ROLES: "admins"
+OPENWEBUI_ADMIN_ROLES: "admins"
+FILEBROWSER_ADMIN_GROUP: "admins"

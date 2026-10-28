@@ -31,6 +31,8 @@ helm upgrade --install srv0-apps targets/srv0/k3s-apps -n apps --create-namespac
 helm uninstall srv0-apps -n apps     # delete apps first, then srv0-base
 
 # Compose — from the repo root, ON the target machine:
+# vps0: render Authelia's config from the base + config rules before compose.
+bash scripts/render-vps0-authelia.sh
 docker compose --env-file config/vps0/compose.env --env-file targets/vps0/compose/.env \
   -f targets/vps0/compose/compose.yaml -f targets/vps0/compose/compose.private.yaml \
   up -d --remove-orphans
@@ -56,7 +58,7 @@ bash scripts/prereqs.sh
 bash scripts/renovate.sh [apps|infra|all|clear-cache] [--dry-run]   # on-demand
 bash scripts/renovate-daily.sh [--dry-run|--derived-only]           # scheduled routine
 bash scripts/check-app-configs.sh                                  # app Renovate baseline
-bash scripts/merge-renovate-prs.sh --repos ImranR98/Infra --only-label derived-image \
+bash scripts/merge-renovate-prs.sh --repos "<owner>/Infra" --only-label derived-image \
   --require-check test
 bash scripts/wait-for-runs.sh --since <ISO8601>
 bash scripts/preboot.sh public-exposure|crypt-ssh
@@ -99,3 +101,4 @@ Scripts warn or hard-fail (`require_target_host`) on hostname/target mismatches.
 - **App repos share one Renovate baseline** — `scripts/check-app-configs.sh` (run by `renovate-daily`) enforces the standard presets, OSV alerts, dependency dashboard, `minimumReleaseAge`, lockfile maintenance, and no automerge; `scripts/merge-renovate-prs.sh` is the only merger.
 - **Helm charts** — only project-maintained charts; `validate.sh` enforces the allowlist. Home Assistant is the single approved third-party exception. Pin `image.repository`/`image.tag` on app-version-sensitive charts so Renovate tracks the app, not just the chart.
 - TLS is `edge-public-tls` (25 exact public SANs) plus `edge-private-tls` (`files`/`traefik`, `websecure` only). Adding a public app means adding its SAN and re-issuing; no per-app certs or wildcards.
+- **Authelia access control is dual-source** — structural bypasses and the final admin catch-all stay in the charts; group/user/deployment-specific rules live in `config/` (`AUTHELIA_ACCESS_CONTROL_RULES` on srv0; `config/vps0/authelia/access_control.yml` rendered by `scripts/render-vps0-authelia.sh` on vps0). Don't add personal group names to the chart.

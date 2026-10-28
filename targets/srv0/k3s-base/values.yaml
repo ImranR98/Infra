@@ -3,5 +3,12 @@
 # (passed as a later -f, so it wins on conflicts).
 MY_UID: 1000
 
-REMOTE_ACCESS_AMNEZIAWG_ENDPOINT: "vps0.imranr.dev:51820"
+# Deployment-specific Authelia access-control rules (block scalar; supports
+# Helm templating such as {{ .Values.SERVICES_DOMAIN }}). Inserted after the
+# chart's bypass rules and before the admin catch-all. Set in config.
+AUTHELIA_ACCESS_CONTROL_RULES: ""
+
+# LAN CIDR used by the egress/NFS/readiness NetworkPolicies. Set in config.
+LAN_CIDR: ""
+
 REMOTE_ACCESS_AMNEZIAWG_CLIENTS: "client1 client2"

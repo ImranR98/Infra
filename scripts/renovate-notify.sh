@@ -9,6 +9,8 @@ if [ -z "${INFRA_ROOT:-}" ]; then
     export INFRA_ROOT
 fi
 source "$INFRA_ROOT/scripts/common.sh"
+# shellcheck disable=SC1091
+. "$INFRA_ROOT/scripts/repos.sh"
 
 usage() {
     echo "Usage: $(basename "$0") --since <ISO8601> [--repo <owner/repo>] [--dry-run]"
@@ -17,7 +19,7 @@ usage() {
     echo "  --since <ISO8601>  Only notify for PRs created or refreshed after"
     echo "                     this timestamp (a Renovate run's start time)"
     echo "  --repo <owner/repo>  Repository to query; repeat for several"
-    echo "                     (default: ImranR98/Infra)"
+    echo "                     (default: \$INFRA_REPO from config/VARS.env)"
     echo "  --dry-run          Print matching PRs instead of publishing"
     echo "  --test             Send a single test notification and exit"
     echo
@@ -60,7 +62,7 @@ while [ $# -gt 0 ]; do
 done
 
 if [ "${#repos[@]}" -eq 0 ]; then
-    repos=("ImranR98/Infra")
+    repos=("$INFRA_REPO")
 fi
 
 if [ "$mode" != "test" ] && [ -z "$since" ]; then

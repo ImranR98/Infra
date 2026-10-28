@@ -28,7 +28,7 @@ auth:
       issuerUrl: "https://auth.{{ .Values.SERVICES_DOMAIN }}"
       scopes: "openid profile email groups"
       userIdentifier: "preferred_username"
-      adminGroup: "admins"
+      adminGroup: '{{ .Values.FILEBROWSER_ADMIN_GROUP | default "admins" }}'
 {{- end -}}
 ---
 apiVersion: gateway.networking.k8s.io/v1
