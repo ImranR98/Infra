@@ -45,7 +45,7 @@ spec:
     requests:
       storage: 1Gi
   volumeName: dscpln-agent-{{ $name }}-config-pv
-{{- range $mount := $agent.dataMounts }}
+{{ range $mount := $agent.dataMounts }}
 {{- $mountName := required (printf "DSCPLN_AGENTS.%s.dataMounts[].name" $name) $mount.name -}}
 {{- $mountSubdir := required (printf "DSCPLN_AGENTS.%s.dataMounts[%s].subdir" $name $mountName) $mount.subdir -}}
 {{- $dataPath := printf "%s/%s" $root.Values.MAIN_PARENT_DIR $mountSubdir -}}
@@ -86,13 +86,16 @@ spec:
     requests:
       storage: {{ $mount.capacity | default "4096Gi" }}
   volumeName: dscpln-agent-{{ $name }}-{{ $mountName }}-pv
-{{- end }}
+{{ end }}
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: dscpln-agent-{{ $name }}
   namespace: apps
+  labels:
+    app.kubernetes.io/name: dscpln-agent
+    dscpln-agent: {{ $name }}
 spec:
   replicas: 1
   revisionHistoryLimit: 2
@@ -100,10 +103,11 @@ spec:
     type: Recreate
   selector:
     matchLabels:
-      dscpln-agent: {{ $name }}
+      app: dscpln-agent-{{ $name }}
   template:
     metadata:
       labels:
+        app: dscpln-agent-{{ $name }}
         app.kubernetes.io/name: dscpln-agent
         dscpln-agent: {{ $name }}
     spec:
@@ -161,22 +165,22 @@ spec:
             - name: config
               mountPath: /state
               subPath: state
-            {{- range $mount := $agent.dataMounts }}
+            {{ range $mount := $agent.dataMounts }}
             - name: data-{{ $mount.name }}
               mountPath: {{ required (printf "DSCPLN_AGENTS.%s.dataMounts[%s].mountPath" $name $mount.name) $mount.mountPath }}
               readOnly: true
-            {{- end }}
+            {{ end }}
             - name: tmp
               mountPath: /tmp
       volumes:
         - name: config
           persistentVolumeClaim:
             claimName: dscpln-agent-{{ $name }}-config-pvc
-        {{- range $mount := $agent.dataMounts }}
+        {{ range $mount := $agent.dataMounts }}
         - name: data-{{ $mount.name }}
           persistentVolumeClaim:
             claimName: dscpln-agent-{{ $name }}-{{ $mount.name }}-pvc
-        {{- end }}
+        {{ end }}
         - name: tmp
           emptyDir: {}
 ---
@@ -187,12 +191,12 @@ metadata:
   namespace: apps
 spec:
   selector:
-    dscpln-agent: {{ $name }}
+    app: dscpln-agent-{{ $name }}
   ports:
     - name: http
       port: 8788
       targetPort: http
-{{- end }}
+{{ end }}
 ---
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
