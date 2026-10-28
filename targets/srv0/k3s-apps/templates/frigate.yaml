@@ -131,6 +131,19 @@ spec:
       annotations:
         checksum/config: {{ printf "%s-%s-%s" (.Values.FRIGATE_ADDITIONAL_CONFIG | sha256sum) $frigateDetector $frigateResource | sha256sum }}
     spec:
+      # Keep the NVR on the main media node when possible. The accelerator
+      # resource is the hard requirement; FRIGATE_GPU_RESOURCE=amd-dgpu can
+      # still move it to bigpc when that fallback is selected.
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              preference:
+                matchExpressions:
+                  - key: infra.local/hostpath-main
+                    operator: In
+                    values:
+                      - "true"
       initContainers:
         - name: copyconfig
 {{- if eq $frigateDetector "rocm" }}

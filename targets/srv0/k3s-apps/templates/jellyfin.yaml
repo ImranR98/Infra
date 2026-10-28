@@ -58,6 +58,20 @@ spec:
         app.kubernetes.io/version: "12.2"
     spec:
       serviceAccountName: jellyfin
+      # Jellyfin's libraries are NFS, but the main media node is still the
+      # preferred home. The accelerator resource remains the hard capability
+      # requirement; this is only a placement preference (bigpc stays a
+      # fallback if srv0 has no vaapi capacity).
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              preference:
+                matchExpressions:
+                  - key: infra.local/hostpath-main
+                    operator: In
+                    values:
+                      - "true"
       securityContext:
         runAsUser: {{ .Values.MY_UID }}
         runAsGroup: {{ .Values.MY_UID }}
