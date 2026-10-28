@@ -64,6 +64,10 @@ spec:
               drop: [ALL]
             seccompProfile:
               type: RuntimeDefault
+          # /dev is the host device tree (read-only); the default
+          # /dev/termination-log cannot be created. Use the writable config
+          # emptyDir instead.
+          terminationMessagePath: /etc/generic-device-plugin/termination-log
           resources:
             limits:
               memory: 16Mi
