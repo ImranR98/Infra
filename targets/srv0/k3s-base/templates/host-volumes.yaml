@@ -90,7 +90,7 @@ spec:
   persistentVolumeReclaimPolicy: Retain
   storageClassName: hostpath
   local:
-    path: /var/log/journal
+    path: {{ .Values.JOURNAL_DIR }}
   nodeAffinity:
     required:
       nodeSelectorTerms:
@@ -238,7 +238,7 @@ spec:
   persistentVolumeReclaimPolicy: Retain
   storageClassName: hostpath
   local:
-    path: {{ .Values.MAIN_PARENT_DIR }}/Main/Media
+    path: {{ .Values.MEDIA_DIR_PATH }}
   nodeAffinity:
     required:
       nodeSelectorTerms:
@@ -349,7 +349,7 @@ spec:
   persistentVolumeReclaimPolicy: Retain
   storageClassName: hostpath
   local:
-    path: {{ .Values.MAIN_PARENT_DIR }}/Main/Infra
+    path: {{ .Values.INFRA_ROOT }}
   nodeAffinity:
     required:
       nodeSelectorTerms:

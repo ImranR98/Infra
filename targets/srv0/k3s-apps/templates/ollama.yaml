@@ -1,3 +1,4 @@
+{{- $ollamaGpu := include "gpu.ollamaGpu" . | trim -}}
 ---
 apiVersion: v1
 kind: ServiceAccount
@@ -89,7 +90,11 @@ spec:
         - name: ollama
           securityContext:
             allowPrivilegeEscalation: false
+{{- if eq $ollamaGpu "none" }}
+          image: ollama/ollama:0.40.12
+{{- else }}
           image: ollama/ollama:0.40.12-rocm@sha256:5768ab9d622d7aa2046605f105c372f3a34eb516720216cb95869807e0ed05d3
+{{- end }}
           imagePullPolicy: IfNotPresent
           ports:
             - name: http
@@ -109,9 +114,13 @@ spec:
               value: "262144"
           resources:
             limits:
-              infra.local/amd: "1"
+{{- if ne $ollamaGpu "none" }}
+              infra.local/{{ $ollamaGpu }}: "1"
+{{- end }}
             requests:
-              infra.local/amd: "1"
+{{- if ne $ollamaGpu "none" }}
+              infra.local/{{ $ollamaGpu }}: "1"
+{{- end }}
               memory: 2Gi
           volumeMounts:
             # The chart rendered its own emptyDir at this path; keep it

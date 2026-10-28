@@ -254,6 +254,128 @@ check_gateway_certrefs() {
 
 # check_helm <target_dir> — lint + template render of each k3s chart
 # (targets/<t>/k3s-base → namespace/release base, k3s-apps → apps).
+# check_template_values <template> <target_dir> — every top-level config key
+# must be referenced by .Values.KEY in the target charts/compose/scripts, or be
+# explicitly allowlisted for manual/script-only values.
+check_template_values() {
+    local template="$1" target_dir="$2" ok=1 key
+    local allowlist=(HA_MQTT_PASSWORD TARGET)
+    while IFS= read -r key; do
+        [ -n "$key" ] || continue
+        case " ${allowlist[*]} " in
+            *" $key "*) continue ;;
+        esac
+        if ! grep -Rqs -- "\.Values\.$key\b" \
+            "$target_dir/k3s-base" "$target_dir/k3s-apps" \
+            "$target_dir/compose" "$INFRA_ROOT/scripts" 2>/dev/null; then
+            _err "ERROR: config template key '$key' is not referenced by .Values.$key (dead or script-only?)"
+            ok=0
+        fi
+    done < <(yq '. | keys | .[]' "$template")
+    [ "$ok" = 1 ]
+}
+
+# check_rendered_paths <rendered> <config> — path values must actually drive
+# the PVs they claim to control.
+check_rendered_paths() {
+    local rendered="$1" config_file="$2" ok=1
+    local pv key want got
+    while IFS='|' read -r pv key; do
+        want=$(yq -r ".$key // \"\"" "$config_file")
+        got=$(yq -N "select(.kind == \"PersistentVolume\" and .metadata.name == \"$pv\") | .spec.local.path" <<<"$rendered" | head -1)
+        if [ "$got" != "$want" ]; then
+            _err "ERROR: rendered PV $pv path does not match $key"
+            ok=0
+        fi
+    done <<'EOF'
+hostpath-main-node-infra-pv|INFRA_ROOT
+hostpath-main-node-media-pv|MEDIA_DIR_PATH
+dscpln-config-pv|DSCPLN_CONFIG_PATH
+external-exposed-node-syslog-pv|JOURNAL_DIR
+EOF
+    [ "$ok" = 1 ]
+}
+
+# check_san_routes <rendered> — every srv0 public route must have a SAN, and
+# report public SANs with no srv0 route (vps0-owned names are acceptable but
+# should be reviewed; stale names are how the old `send` false positive arose).
+check_san_routes() {
+    local rendered="$1" ok=1
+    local cert private routes public_routes missing stale
+    cert=$(yq -N 'select(.kind == "Certificate" and .metadata.name == "edge-public-tls") | .spec.dnsNames[]' <<<"$rendered" | sort -u)
+    private=$(yq -N 'select(.kind == "Certificate" and .metadata.name == "edge-private-tls") | .spec.dnsNames[]' <<<"$rendered" | sort -u)
+    routes=$(yq -N 'select(.kind == "HTTPRoute") | .spec.hostnames[]?' <<<"$rendered" | sort -u)
+    public_routes=$(comm -23 <(printf '%s\n' "$routes") <(printf '%s\n' "$private"))
+    missing=$(comm -23 <(printf '%s\n' "$public_routes") <(printf '%s\n' "$cert"))
+    stale=$(comm -13 <(printf '%s\n' "$public_routes") <(printf '%s\n' "$cert"))
+    if [ -n "$missing" ]; then
+        _err "ERROR: public routes missing from edge-public-tls:"
+        awk 'NF {print "  " $0}' <<<"$missing" >&2
+        ok=0
+    fi
+    if [ -n "$stale" ]; then
+        _err "WARNING: edge-public-tls names without an srv0 HTTPRoute (vps0-owned or stale):"
+        awk 'NF {print "  " $0}' <<<"$stale" >&2
+    fi
+    [ "$ok" = 1 ]
+}
+
+# check_agent_schema <config> — validate DSCPLN_AGENTS without rendering.
+check_agent_schema() {
+    local config_file="$1" ok=1 name key bad
+    while IFS= read -r name; do
+        [ -n "$name" ] || continue
+        for key in node stateSubdir config; do
+            if ! yq -e ".DSCPLN_AGENTS[\"$name\"].$key" "$config_file" >/dev/null 2>&1; then
+                _err "ERROR: DSCPLN_AGENTS.$name.$key is required"
+                ok=0
+            fi
+        done
+        if yq -e ".DSCPLN_AGENTS[\"$name\"] | has(\"configSubdir\")" "$config_file" >/dev/null 2>&1; then
+            _err "ERROR: DSCPLN_AGENTS.$name.configSubdir is obsolete; use stateSubdir"
+            ok=0
+        fi
+        bad=$(yq ".DSCPLN_AGENTS[\"$name\"].dataMounts // [] | .[] | select((has(\"name\") | not) or (has(\"subdir\") | not) or (has(\"mountPath\") | not) or has(\"readOnly\")) | .name // \"<unnamed>\"" "$config_file" 2>/dev/null || true)
+        if [ -n "$bad" ]; then
+            _err "ERROR: DSCPLN_AGENTS.$name.dataMounts has invalid entries (need name/subdir/mountPath; readOnly is obsolete): $bad"
+            ok=0
+        fi
+    done < <(yq '.DSCPLN_AGENTS // {} | keys | .[]' "$config_file")
+    [ "$ok" = 1 ]
+}
+
+# check_cluster_hardware <config> — warn when the active profile expects a
+# device resource no Ready node advertises. Runs only where kubectl can reach
+# the cluster (srv0's kubeconfig is root-only).
+check_cluster_hardware() {
+    local config_file="$1" profile conbee node res val check
+    command -v kubectl >/dev/null 2>&1 || return 0
+    kubectl get node srv0 >/dev/null 2>&1 || return 0
+    profile=$(yq -r '.GPU_PROFILE // "intel"' "$config_file" 2>/dev/null || echo intel)
+    conbee=$(yq -r '.HA_CONBEE // true' "$config_file" 2>/dev/null || echo true)
+
+    local checks=()
+    case "$profile" in
+        intel) checks=("srv0 intel-gpu" "srv0 vaapi" "bigpc amd-dgpu") ;;
+        amd) checks=("srv0 amd-igpu" "srv0 vaapi" "bigpc amd-dgpu") ;;
+        none) checks=() ;;
+        *)
+            _err "WARNING: unknown GPU_PROFILE '$profile'"
+            return 0
+            ;;
+    esac
+    [ "$conbee" = "false" ] || checks+=("srv0 conbee")
+
+    for check in "${checks[@]}"; do
+        node=${check%% *}
+        res=${check#* }
+        val=$(kubectl get node "$node" -o json 2>/dev/null | yq -r ".items[0].status.allocatable[\"infra.local/$res\"] // \"0\"" 2>/dev/null || echo 0)
+        if [ -z "$val" ] || [ "$val" = "0" ] || [ "$val" = "null" ]; then
+            _err "WARNING: GPU_PROFILE=$profile expects infra.local/$res on $node, but it is not advertised"
+        fi
+    done
+}
+
 check_helm() {
     local target_dir="$1"
     local config_file="$INFRA_ROOT/config/$TARGET/values.yaml"
@@ -287,6 +409,8 @@ check_helm() {
         all_out+="$out"$'\n'
     done
 
+    check_rendered_paths "$all_out" "$config_file" || ok=0
+    check_san_routes "$all_out" || ok=0
     check_gateway_certrefs "$all_out" || ok=0
     [ "$ok" = 1 ]
 }
@@ -356,8 +480,14 @@ ok=1
 
 if [ -d "$template_dir" ]; then
     check_config_files "$template_dir" "$INFRA_ROOT/config/$TARGET" || ok=0
+    check_template_values "$template_dir/values.yaml" "$target_dir" || ok=0
 else
     echo "validate: target '$TARGET' has no config_template (no secret variables) — nothing to check"
+fi
+
+config_values="$INFRA_ROOT/config/$TARGET/values.yaml"
+if [ -f "$config_values" ]; then
+    check_agent_schema "$config_values" || ok=0
 fi
 
 [ -d "$target_dir/k3s-base" ] && { check_helm "$target_dir" || ok=0; check_chart_repos "$target_dir" || ok=0; }
@@ -371,7 +501,6 @@ if [ "$TARGET" = vps0 ] && [ -d "$target_dir/compose" ] && [ "$(hostname)" = vps
 fi
 
 # First-boot safety: the six user-facing apps are LAN/VPN-only while this is on.
-config_values="$INFRA_ROOT/config/$TARGET/values.yaml"
 if [ -f "$config_values" ]; then
     bootstrap=$(yq '.BOOTSTRAP_PRIVATE_APPS // "false"' "$config_values" 2>/dev/null || echo "false")
     if [ "$bootstrap" = "true" ]; then
@@ -385,6 +514,13 @@ if command -v kubectl >/dev/null 2>&1 && kubectl get node "$TARGET" >/dev/null 2
         value=$(kubectl get node "$TARGET" -o jsonpath="{.metadata.labels.infra\.local/$label}" 2>/dev/null || true)
         [ "$value" = "true" ] || echo "WARNING: node $TARGET is missing infra.local/$label=true" >&2
     done
+
+    main_count=$(kubectl get nodes -l infra.local/hostpath-main=true --no-headers 2>/dev/null | wc -l)
+    if [ "$main_count" -gt 1 ]; then
+        echo "WARNING: $main_count nodes carry infra.local/hostpath-main=true; the static Main PVs and nfs-server expect exactly one data node." >&2
+    fi
+
+    [ -f "$config_values" ] && check_cluster_hardware "$config_values"
 fi
 
 if [ "$ok" = 1 ]; then

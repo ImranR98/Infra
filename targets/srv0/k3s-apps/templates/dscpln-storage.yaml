@@ -17,7 +17,7 @@ spec:
   persistentVolumeReclaimPolicy: Retain
   storageClassName: hostpath
   local:
-    path: {{ .Values.MAIN_PARENT_DIR }}/Main/Code/Automation/dscpln-config
+    path: {{ .Values.DSCPLN_CONFIG_PATH }}
   nodeAffinity:
     required:
       nodeSelectorTerms:

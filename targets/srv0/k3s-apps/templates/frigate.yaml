@@ -1,3 +1,5 @@
+{{- $frigateDetector := include "gpu.frigateDetector" . | trim -}}
+{{- $frigateResource := include "gpu.frigateResource" . | trim -}}
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -16,19 +18,21 @@ data:
       user: frigate
       password: '{FRIGATE_MQTT_PASSWORD}'
     ffmpeg:
-      # VAAPI decode on srv0's Iris Xe (renderD128). Explicit device because
-      # the auto-selector probes devices in arbitrary order. -hwaccel_output_format
-      # nv12: decode on the GPU but deliver CPU frames, so the detect/record
-      # filter chains (fps, scale) work. The standard image auto-detects
-      # OpenVINO on the Intel GPU for the detector and enrichments.
+      # VAAPI decode uses the selected GPU resource (intel-gpu/amd-igpu/
+      # amd-dgpu), whose device plugin mapping exposes renderD128. Explicit
+      # device because the auto-selector probes devices in arbitrary order.
+      # -hwaccel_output_format nv12: decode on the GPU but deliver CPU frames,
+      # so the detect/record filter chains (fps, scale) work.
+{{- if ne $frigateDetector "cpu" }}
       hwaccel_args: -hwaccel_flags allow_profile_mismatch -hwaccel vaapi -hwaccel_device /dev/dri/renderD128 -hwaccel_output_format nv12
+{{- end }}
       retry_interval: 5
+{{- if eq $frigateDetector "openvino" }}
     detectors:
       openvino:
         type: openvino
         device: GPU
     # Bundled OpenVINO default model (SSDLite MobileNet v2, FP16 IR).
-    # device: GPU = the Iris Xe iGPU via OpenVINO.
     model:
       width: 300
       height: 300
@@ -36,6 +40,25 @@ data:
       input_pixel_format: bgr
       path: /openvino-model/ssdlite_mobilenet_v2.xml
       labelmap_path: /openvino-model/coco_91cl_bkgr.txt
+{{- else if eq $frigateDetector "rocm" }}
+    detectors:
+      onnx:
+        type: onnx
+    # ROCm/ONNX detector model. Stage yolov9-t-320.onnx in the Frigate config
+    # PVC (see docs/runbooks/hardware-swap.md) before enabling this backend.
+    model:
+      width: 320
+      height: 320
+      input_tensor: nhwc
+      input_pixel_format: rgb
+      path: /config/model_cache/yolov9-t-320.onnx
+      labelmap_path: /labelmap/coco-80.txt
+      model_type: yologeneric
+{{- else }}
+    detectors:
+      cpu:
+        type: cpu
+{{- end }}
     # Deployment-specific config (go2rtc streams, cameras) comes from
     # FRIGATE_ADDITIONAL_CONFIG in targets/srv0/config_template/values.yaml
 {{ .Values.FRIGATE_ADDITIONAL_CONFIG | indent 4 }}
@@ -106,11 +129,15 @@ spec:
         app.kubernetes.io/instance: frigate
         app.kubernetes.io/version: "0.18.2"
       annotations:
-        checksum/config: {{ printf "%s-%s" (.Values.FRIGATE_ADDITIONAL_CONFIG | sha256sum) "openvino-gpu-1" | sha256sum }}
+        checksum/config: {{ printf "%s-%s-%s" (.Values.FRIGATE_ADDITIONAL_CONFIG | sha256sum) $frigateDetector $frigateResource | sha256sum }}
     spec:
       initContainers:
         - name: copyconfig
+{{- if eq $frigateDetector "rocm" }}
+          image: ghcr.io/blakeblackshear/frigate:0.18.2-rocm
+{{- else }}
           image: ghcr.io/blakeblackshear/frigate:0.18.2
+{{- end }}
           imagePullPolicy: IfNotPresent
           volumeMounts:
             - mountPath: /config.yml
@@ -132,7 +159,11 @@ spec:
               mountPath: /media/frigate
       containers:
         - name: frigate
+{{- if eq $frigateDetector "rocm" }}
+          image: ghcr.io/blakeblackshear/frigate:0.18.2-rocm
+{{- else }}
           image: ghcr.io/blakeblackshear/frigate:0.18.2
+{{- end }}
           imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: false
@@ -205,11 +236,15 @@ spec:
               name: frigate-media
           resources:
             limits:
-              infra.local/intel-gpu: "1"
+{{- with $frigateResource }}
+              infra.local/{{ . }}: "1"
+{{- end }}
               memory: 3Gi
             requests:
               cpu: 50m
-              infra.local/intel-gpu: "1"
+{{- with $frigateResource }}
+              infra.local/{{ . }}: "1"
+{{- end }}
               memory: 1.5Gi
       volumes:
         - name: configmap

@@ -10,5 +10,3 @@ AUTHELIA_ACCESS_CONTROL_RULES: ""
 
 # LAN CIDR used by the egress/NFS/readiness NetworkPolicies. Set in config.
 LAN_CIDR: ""
-
-REMOTE_ACCESS_AMNEZIAWG_CLIENTS: "client1 client2"

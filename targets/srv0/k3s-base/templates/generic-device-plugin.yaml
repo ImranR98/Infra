@@ -1,33 +1,26 @@
 ---
 # Generic device plugin (squat/generic-device-plugin): registers host devices
-# with kubelet so pods can request them as extended resources. It discovers
-# /dev directly and advertises stable path-derived IDs with a fixed count per
-# group, so the advertised device set never churns.
+# with kubelet so pods can request them as extended resources. The init
+# container generates the config from sysfs and /dev on every node:
 #
-# Resources (domain infra.local; device config in
-# files/generic-device-plugin-config.yaml):
-#   infra.local/intel-gpu -> /dev/dri/renderD128      (VAAPI/OpenVINO, i915/xe
-#                          only; generated per node, never advertised on bigpc)
-#   infra.local/conbee  -> /dev/ttyACM0 (optional)    (ConBee II, srv0 only)
-#   infra.local/amd     -> /dev/kfd + /dev/dri/*      (ROCm, bigpc only; the
-#                          required /dev/kfd means srv0 registers nothing)
+#   infra.local/vaapi     -> one render node, preferring a discrete GPU
+#   infra.local/intel-gpu -> i915/xe render node (OpenVINO)
+#   infra.local/amd-igpu  -> AMD integrated GPU (kfd + DRM nodes, ROCm)
+#   infra.local/amd-dgpu  -> AMD discrete GPU (kfd + DRM nodes, ROCm)
+#   infra.local/conbee    -> ConBee II, discovered by /dev/serial/by-id
 #
-# The base config is shared by every node. An init container appends the
-# intel-gpu group only when renderD128 is backed by the i915/xe driver, so the
-# resource is a hardware pin rather than a node label.
-#
-# The plugin runs unprivileged: spc_t covers SELinux for the host /dev (read-
-# only) and the kubelet device-plugin socket dir, and no capabilities are
-# needed. Discovery happens at startup, so a config change rolls the DaemonSet
-# via the checksum annotation below (hardware changes: rolling restart).
+# The generator normalizes host device names to card0/renderD128/ttyACM0, so
+# app manifests never depend on enumeration order. Hardware is therefore a
+# capability, not a node-label proxy. The plugin runs unprivileged: spc_t
+# covers SELinux for the host /dev (read-only) and the kubelet device-plugin
+# socket dir, and no capabilities are needed. A config change rolls the
+# DaemonSet via the checksum annotation below.
 apiVersion: v1
 kind: ConfigMap
 metadata:
   name: generic-device-plugin
   namespace: base
 data:
-  config.yaml: |
-    {{- .Files.Get "files/generic-device-plugin-config.yaml" | nindent 4 }}
   init.sh: |
     {{- .Files.Get "files/generic-device-plugin-init.sh" | nindent 4 }}
 ---
@@ -45,9 +38,9 @@ spec:
       labels:
         app: generic-device-plugin
       annotations:
-        # Roll the DaemonSet when the device config or generator changes (the
-        # plugin reads the generated config only at startup).
-        checksum/config: {{ printf "%s%s" (.Files.Get "files/generic-device-plugin-config.yaml") (.Files.Get "files/generic-device-plugin-init.sh") | sha256sum }}
+        # Roll the DaemonSet when the generator changes (the plugin reads the
+        # generated config only at startup).
+        checksum/config: {{ .Files.Get "files/generic-device-plugin-init.sh" | sha256sum }}
     spec:
       # Run on every node, including tainted ones (bigpc's
       # scheduling-discouraged taint) so the AMD resource is registered there.
@@ -57,8 +50,7 @@ spec:
         seLinuxOptions:
           type: spc_t
       initContainers:
-        # Generate the per-node config: the Intel group is added only where
-        # renderD128 is i915/xe (srv0). bigpc's AMD nodes get the base config.
+        # Generate the per-node config from /sys and /dev.
         - name: config
           image: busybox:1.38.0-uclibc
           command:
@@ -85,6 +77,9 @@ spec:
               mountPath: /etc/generic-device-plugin
             - name: sys
               mountPath: /sys
+              readOnly: true
+            - name: dev
+              mountPath: /dev
               readOnly: true
       containers:
         - name: plugin

@@ -1,3 +1,5 @@
+{{- $haConbee := .Values.HA_CONBEE -}}
+{{- $haBluetooth := .Values.HA_BLUETOOTH -}}
 {{- define "homeassistant.dashboard" -}}
 views:
   - title: Live
@@ -88,22 +90,27 @@ spec:
     podSecurityContext:
       # spc_t (not privileged): SELinux blocks container_t from the host dbus
       # socket (Bluetooth integration -> host bluez) and the ConBee II device.
-      # The device itself is granted via the generic-device-plugin.
+      # The device itself is granted via the generic-device-plugin. If neither
+      # hardware path is enabled, container_t is sufficient.
       # level s0: keeps PVC files category-free so the backup temp pods
       # (also s0) can read the config volume (see syncthing for precedent).
       seLinuxOptions:
+{{- if or $haConbee $haBluetooth }}
         type: spc_t
+{{- end }}
         level: s0
     # No hostNetwork: LAN auto-discovery (mDNS/HomeKit/Cast) is not used.
     # NET_ADMIN/NET_RAW then apply to the pod netns only, not the host stack.
     securityContext:
       allowPrivilegeEscalation: false
+{{- if $haBluetooth }}
       # habluetooth manages the host BT adapter via direct HCI sockets
       # (needs NET_ADMIN/NET_RAW) in addition to the bluez dbus socket.
       capabilities:
         add:
           - NET_ADMIN
           - NET_RAW
+{{- end }}
     persistence:
       enabled: true
       existingClaim: homeassistant-config-pvc
@@ -238,34 +245,46 @@ spec:
           - name: homeassistant-home-assistant-pvc
             mountPath: /config
     additionalVolumes:
+{{- if $haConbee }}
       - name: usb-serial
         hostPath:
           path: /dev/serial/by-id
           type: DirectoryOrCreate
+{{- end }}
+{{- if $haBluetooth }}
       - name: dbus
         hostPath:
           path: /run/dbus/system_bus_socket
           type: Socket
+{{- end }}
       - name: ha-dashboards
         configMap:
           name: ha-dashboards
     additionalMounts:
+{{- if $haConbee }}
       - name: usb-serial
         mountPath: /dev/serial/by-id
         readOnly: true
+{{- end }}
+{{- if $haBluetooth }}
       - name: dbus
         mountPath: /run/dbus/system_bus_socket
+{{- end }}
       - name: ha-dashboards
         mountPath: /config/dashboards
         readOnly: true
     resources:
       limits:
         memory: 1.5Gi
+{{- if $haConbee }}
         infra.local/conbee: "1"
+{{- end }}
       requests:
         memory: 512Mi
         cpu: 20m
+{{- if $haConbee }}
         infra.local/conbee: "1"
+{{- end }}
 ---
 ---
 apiVersion: gateway.networking.k8s.io/v1

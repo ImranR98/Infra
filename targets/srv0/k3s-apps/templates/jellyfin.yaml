@@ -1,4 +1,5 @@
 {{- $lanCidr := required "LAN_CIDR must be set in config/srv0/values.yaml" .Values.LAN_CIDR -}}
+{{- $jellyfinVaapi := eq (include "gpu.jellyfinHwaccel" .) "vaapi" -}}
 ---
 apiVersion: v1
 kind: ServiceAccount
@@ -130,11 +131,15 @@ spec:
           resources:
             limits:
               memory: 1.5Gi
-              infra.local/intel-gpu: "1"
+{{- if $jellyfinVaapi }}
+              infra.local/vaapi: "1"
+{{- end }}
             requests:
               memory: 512Mi
               cpu: 20m
-              infra.local/intel-gpu: "1"
+{{- if $jellyfinVaapi }}
+              infra.local/vaapi: "1"
+{{- end }}
           volumeMounts:
             - mountPath: /config
               name: config

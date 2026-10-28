@@ -8,11 +8,11 @@ The 45 application PVCs were migrated from Longhorn to the NFS-backed `nfs-apps`
 
 ## Static node labels (no NFD)
 
-NFD/node-facts were removed. `infra.local/hostpath-main` and `infra.local/external-exposed` are set statically by `k3s-server.sh`; `k3s-join.sh --hostpath-main` labels a joined node that owns the Main host paths. There is no 60-second detector. `validate.sh` warns when srv0 is missing either label.
+NFD/node-facts were removed. `infra.local/hostpath-main` and `infra.local/external-exposed` are set statically by `k3s-server.sh`; `k3s-join.sh --hostpath-main` labels a replacement Main-data node. `hostpath-main` is intentionally a singleton (the static Main PVs and nfs-server assume one owner); there is no 60-second detector. `validate.sh` warns when srv0 is missing either label or when more than one node carries `hostpath-main`.
 
 ## Scheduling pinning (claims and hardware, not labels)
 
-Workloads are pinned by what they consume: app data on a host path uses a statically bound `hostpath` PV/PVC whose `nodeAffinity` names the node that owns the path, and hardware is requested as a generic-device-plugin extended resource (`infra.local/intel-gpu`, `infra.local/amd`, `infra.local/conbee`). The remaining pod selectors are for non-storage node requirements (the hostNetwork VPN/DNS and the lockdown port-blocker on `external-exposed`) and the DaemonSets. The bigpc archive agent is pinned by its local data PV, not a selector. Guacamole is unpinned because the Windows firewall accepts RDP from the LAN.
+Workloads are pinned by what they consume: app data on a host path uses a statically bound `hostpath` PV/PVC whose `nodeAffinity` names the node that owns the path, and hardware is requested as a generic-device-plugin extended resource (`infra.local/intel-gpu`, `infra.local/amd-igpu`, `infra.local/amd-dgpu`, `infra.local/vaapi`, `infra.local/conbee`). The plugin generates those resources from sysfs/`/dev` and normalizes device names; `GPU_PROFILE` chooses the media/ML backend. The remaining pod selectors are for non-storage node requirements (the hostNetwork VPN/DNS and the lockdown port-blocker on `external-exposed`) and the DaemonSets. The bigpc archive agent is pinned by its local data PV, not a selector. Guacamole is unpinned because the Windows firewall accepts RDP from the LAN. The shared `external-exposed` role for the public edge and the LAN bridge/port-blocker is accepted.
 
 ## Public geoblock API (no self-hosted GeoIP)
 
@@ -38,7 +38,7 @@ Structural rules stay in code: ACME/app bypasses and the final admin catch-all. 
 
 ## Shared multi-SAN edge certificates
 
-The per-app Let's Encrypt Certificates were replaced by `edge-public-tls` (the 25 exact public hostnames) and `edge-private-tls` (`files`, `traefik`). The public cert is attached to both secure listeners; the private cert only to `websecure`, so the private names never reach the public-exposure listener. The names are exact (not a wildcard), but all public names share one key, so a key compromise has wildcard-like blast radius; per-host key isolation was traded for fewer Orders and secrets. Adding a public app means adding its SAN and re-issuing.
+The per-app Let's Encrypt Certificates were replaced by `edge-public-tls` (the 25 exact public hostnames) and `edge-private-tls` (`files`, `traefik`). Every public name currently has an srv0 HTTPRoute; `send` is Plik, not stale. `validate.sh` compares the public SANs with the srv0 route hostnames and warns on drift. The public cert is attached to both secure listeners; the private cert only to `websecure`, so the private names never reach the public-exposure listener. The names are exact (not a wildcard), but all public names share one key, so a key compromise has wildcard-like blast radius; per-host key isolation was traded for fewer Orders and secrets. Adding a public app means adding its SAN and re-issuing.
 
 ## Docs split
 

@@ -374,11 +374,11 @@ spec:
             claimName: hostpath-main-node-documents-pvc
         - name: infra-current
           hostPath:
-            path: {{ .Values.MAIN_PARENT_DIR }}/Main/Infra/current_target
+            path: {{ .Values.INFRA_ROOT }}/current_target
             type: Directory
         - name: state-backups
           hostPath:
-            path: {{ .Values.MAIN_PARENT_DIR }}/Main/Infra/state_backups
+            path: {{ .Values.INFRA_ROOT }}/state_backups
             type: DirectoryOrCreate
         - name: backup-data
           persistentVolumeClaim:

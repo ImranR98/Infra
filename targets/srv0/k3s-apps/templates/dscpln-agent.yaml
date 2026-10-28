@@ -1,13 +1,26 @@
 # Generic D$CPLN archive agents. One Deployment/Service per DSCPLN_AGENTS
-# entry; each entry also gets local PV/PVCs for its config/state tree and each
-# data mount. The PV nodeAffinity pins the pod to the node that owns the paths,
-# so no pod nodeSelector is needed. The agent program/image is generic; the
-# job definitions live in the host's agent.json.
+# entry; each entry gets a ConfigMap for agent.json, a local PV/PVC for the
+# state tree, and a local PV/PVC per data mount. The PV nodeAffinity pins the
+# pod to the node that owns the paths, so no pod nodeSelector is needed. The
+# job definitions are deployment config, not host files.
 {{- $root := . -}}
 {{- range $name, $agent := .Values.DSCPLN_AGENTS }}
 {{- $node := required (printf "DSCPLN_AGENTS.%s.node" $name) $agent.node -}}
-{{- $configSubdir := required (printf "DSCPLN_AGENTS.%s.configSubdir" $name) $agent.configSubdir -}}
-{{- $configPath := printf "%s/%s" $root.Values.MAIN_PARENT_DIR $configSubdir -}}
+{{- $stateSubdir := required (printf "DSCPLN_AGENTS.%s.stateSubdir" $name) $agent.stateSubdir -}}
+{{- $statePath := printf "%s/%s" $root.Values.MAIN_PARENT_DIR $stateSubdir -}}
+{{- $configJSON := required (printf "DSCPLN_AGENTS.%s.config" $name) $agent.config -}}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: dscpln-agent-{{ $name }}-config
+  namespace: apps
+  labels:
+    app.kubernetes.io/name: dscpln-agent
+    dscpln-agent: {{ $name }}
+data:
+  agent.json: |
+{{ $configJSON | indent 4 }}
 ---
 apiVersion: v1
 kind: PersistentVolume
@@ -22,7 +35,7 @@ spec:
   persistentVolumeReclaimPolicy: Retain
   storageClassName: hostpath
   local:
-    path: {{ $configPath }}
+    path: {{ $statePath }}
   nodeAffinity:
     required:
       nodeSelectorTerms:
@@ -110,6 +123,8 @@ spec:
         app: dscpln-agent-{{ $name }}
         app.kubernetes.io/name: dscpln-agent
         dscpln-agent: {{ $name }}
+      annotations:
+        checksum/config: {{ $configJSON | sha256sum }}
     spec:
       automountServiceAccountToken: false
       tolerations:
@@ -162,7 +177,7 @@ spec:
             - name: config
               mountPath: /config
               readOnly: true
-            - name: config
+            - name: state
               mountPath: /state
               subPath: state
             {{ range $mount := $agent.dataMounts }}
@@ -174,6 +189,9 @@ spec:
               mountPath: /tmp
       volumes:
         - name: config
+          configMap:
+            name: dscpln-agent-{{ $name }}-config
+        - name: state
           persistentVolumeClaim:
             claimName: dscpln-agent-{{ $name }}-config-pvc
         {{ range $mount := $agent.dataMounts }}

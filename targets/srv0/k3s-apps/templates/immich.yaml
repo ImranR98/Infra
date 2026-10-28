@@ -1,3 +1,6 @@
+{{- $immichServerVaapi := eq (include "gpu.immichServerHwaccel" .) "vaapi" -}}
+{{- $immichMlBackend := include "gpu.immichMlBackend" . | trim -}}
+{{- $immichMlResource := include "gpu.immichMlResource" . | trim -}}
 ---
 apiVersion: helm.cattle.io/v1
 kind: HelmChart
@@ -32,8 +35,8 @@ spec:
       annotations:
         checksum/immich-db-credentials: {{ .Values.IMMICH_DB_PASSWORD | sha256sum }}
       # The server's /external mount is the hostpath media PV, whose
-      # nodeAffinity pins the pod to srv0; the ML pod is pinned by the
-      # intel-gpu resource. Neither needs a pod nodeSelector.
+      # nodeAffinity pins the pod to srv0. The accelerator resource chooses
+      # the ML/hardware node; neither pod needs a nodeSelector.
       securityContext:
         runAsUser: {{ .Values.MY_UID }}
         runAsGroup: {{ .Values.MY_UID }}
@@ -61,18 +64,23 @@ spec:
                 allowPrivilegeEscalation: false
               # Resources are per-component (the top-level controllers.main is
               # shared across all Immich components, so anything set there
-              # leaks into valkey/ML). The intel-gpu grant is for VAAPI
-              # transcoding.
+              # leaks into valkey/ML). The vaapi grant is for transcoding.
               resources:
                 limits:
                   memory: 4Gi
-                  infra.local/intel-gpu: "1"
+{{- if $immichServerVaapi }}
+                  infra.local/vaapi: "1"
+{{- end }}
                 requests:
                   memory: 1.5Gi
                   cpu: 20m
-                  infra.local/intel-gpu: "1"
+{{- if $immichServerVaapi }}
+                  infra.local/vaapi: "1"
+{{- end }}
+{{- if $immichServerVaapi }}
               env:
                 HWACCEL_VAAPI_ENABLED: "true"
+{{- end }}
       persistence:
         external:
           # Reuse the existing Main/Media local PV; the claim pins the server
@@ -89,24 +97,38 @@ spec:
         main:
           containers:
             main:
+{{- if eq $immichMlBackend "openvino" }}
               image:
                 repository: ghcr.io/immich-app/immich-machine-learning
                 tag: v3.3.5-openvino
+{{- else if eq $immichMlBackend "rocm" }}
+              image:
+                repository: ghcr.io/immich-app/immich-machine-learning
+                tag: v3.3.5-rocm
+{{- else }}
+              image:
+                repository: ghcr.io/immich-app/immich-machine-learning
+                tag: v3.3.5
+{{- end }}
               securityContext:
                 allowPrivilegeEscalation: false
               resources:
                 limits:
                   memory: 6Gi
-                  infra.local/intel-gpu: "1"
+{{- with $immichMlResource }}
+                  infra.local/{{ . }}: "1"
+{{- end }}
                 requests:
                   memory: 384Mi
                   cpu: 20m
-                  infra.local/intel-gpu: "1"
+{{- with $immichMlResource }}
+                  infra.local/{{ . }}: "1"
+{{- end }}
       defaultPodOptions:
         securityContext:
           seLinuxOptions:
             level: s0
-        # No nodeSelector: the intel-gpu resource pins ML to the Iris Xe node.
+        # No nodeSelector: the accelerator resource chooses the GPU node.
         # bigpc's scheduling-discouraged taint still discourages drift.
 
     immich:

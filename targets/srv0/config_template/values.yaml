@@ -42,8 +42,11 @@ GEOBLOCK_CONFIG_SUBSET: |
 # ====== Host Paths ======
 # Ensure these exist before starting services
 MAIN_PARENT_DIR: "/path/to/data"
-# Immich's external library (read-only /external) mounts the media local PV.
+# Media tree used by the media local PV (Immich /external, file-pipelines,
+# Task Runner) and the NFS Music/TV/YouTube exports.
 MEDIA_DIR_PATH: "/path/to/data/Main/Media"
+# Journal directory backing the external-exposed syslog PV consumed by logtfy.
+JOURNAL_DIR: "/var/log/journal"
 # D$CPLN WhatsApp TXT exports on the wa-txt local PV.
 WA_TXT_PATH: "/path/to/data/Main/Backups/WhatsApp TXT"
 SECONDARY_STORAGE_PATH: "/mnt/k3s_extra_storage"
@@ -51,6 +54,26 @@ SECONDARY_STORAGE_PATH: "/mnt/k3s_extra_storage"
 HOME_DIR: "<home-dir>"
 # LAN CIDR used by egress/NFS/readiness NetworkPolicies.
 LAN_CIDR: "<lan-cidr>"
+
+# ====== Accelerators ======
+# Deployment-wide media/ML backend: intel | amd | none.
+#   intel: Frigate/Immich ML OpenVINO on an Intel iGPU; VAAPI for Jellyfin/Immich.
+#   amd:   Frigate ROCm on srv0's iGPU; Immich ML ROCm on bigpc's dGPU;
+#          VAAPI for Jellyfin/Immich; Ollama on bigpc's dGPU.
+#   none:  CPU/no-GPU fallbacks.
+# Per-app overrides below are optional; empty derives from GPU_PROFILE.
+GPU_PROFILE: "intel"
+FRIGATE_DETECTOR: ""         # openvino | rocm | cpu
+FRIGATE_GPU_RESOURCE: ""     # intel-gpu | amd-igpu | amd-dgpu
+IMMICH_ML_BACKEND: ""        # openvino | rocm | cpu
+IMMICH_ML_GPU_RESOURCE: ""   # intel-gpu | amd-dgpu
+JELLYFIN_HWACCEL: ""         # vaapi | none
+IMMICH_SERVER_HWACCEL: ""    # vaapi | none
+OLLAMA_GPU: ""               # amd-dgpu | none
+# Hardware-specific Home Assistant integrations. Disable either when the
+# device/adapter is not present; the pod then drops the matching mount/grant.
+HA_CONBEE: true
+HA_BLUETOOTH: true
 
 # ====== Authelia ======
 # Use `docker run -it authelia/authelia:latest authelia crypto hash generate argon2` to generate the password hash
@@ -291,19 +314,29 @@ FILEBROWSER_JWT_TOKEN_SECRET: "change_me" # openssl rand -base64 32
 # PV/PVC mounts it at the same path in the pod so the app can read the workbook
 # and commit its changes.
 DSCPLN_LEDGER_PATH: "/path/to/data/Main/Documents/Balance"
+# Checkout of the private D$CPLN config repo (config.mjs, apps/, tools/).
+# Mounted read-write by the Task Runner and per-app by the other D$CPLN pods.
+DSCPLN_CONFIG_PATH: "/path/to/data/Main/Code/Automation/dscpln-config"
 # Per-node D$CPLN archive agents. Each entry renders a dscpln-agent-<name>
-# Deployment/Service plus local PV/PVCs; the PV nodeAffinity pins the pod to the
-# named node. The agent's job definitions live in <configSubdir>/agent.json on
-# that node. Example:
+# Deployment/Service, a ConfigMap for agent.json, a local PV/PVC for
+# <stateSubdir>/state (token + state), and a local PV/PVC per data mount. The
+# PV nodeAffinity pins the pod to the named node. Data mounts are always
+# read-only. Example (the real config belongs in config/srv0/values.yaml):
 # DSCPLN_AGENTS:
 #   bigpc:
 #     node: bigpc
-#     configSubdir: dscpln-agent
+#     stateSubdir: dscpln-agent
+#     config: |
+#       {
+#         "listen": "0.0.0.0",
+#         "port": 8788,
+#         "stateDir": "/state",
+#         "jobs": {}
+#       }
 #     dataMounts:
 #       - name: installs
 #         subdir: Games/Installs
 #         mountPath: /data/installs
-#         readOnly: true
 DSCPLN_AGENTS: {}
 # Balance app config (workbook path, sheets, API state) lives in the private
 # dscpln-config repo under apps/balance-xlsx/.
@@ -354,12 +387,12 @@ QBITTORRENT_WG_ENDPOINT_IP: "change_me"
 # No secrets live here: the server and client keys plus the AWG obfuscation
 # parameters are generated in-cluster by the remote-access-amneziawg pod's
 # keygen init container and persisted on remote-access-amneziawg-pvc
-# (auto-backup: "true"). REMOTE_ACCESS_AMNEZIAWG_CLIENTS is a committed default
-# in targets/srv0/k3s-base/values.yaml; the public endpoint is deployment
+# (auto-backup: "true"). The public endpoint and client names are deployment
 # specific and required here. Fetch a client profile on an unlocked host with:
 #   bash scripts/remote-access-client.sh <client>
 # (clients must support AmneziaWG; vanilla WireGuard apps cannot connect).
 REMOTE_ACCESS_AMNEZIAWG_ENDPOINT: "<vps0-host>:51820"
+REMOTE_ACCESS_AMNEZIAWG_CLIENTS: "client1 client2"
 
 # ====== Observability ======
 GRAFANA_ADMIN_PASSWORD: "change_me" # openssl rand -base64 32
@@ -370,7 +403,7 @@ AUTHELIA_GRAFANA_CLIENT_SECRET_HASHABLE: "change_me" # docker run authelia/authe
 AUTHELIA_GRAFANA_CLIENT_SECRET_HASHED: "change_me"
 
 # ====== Infra paths (k3s-chart-only, machine/env layout) ======
-# Repo path exposed through the hostpath PV/PVC mounted by the renovate
-# CronJob (the claim pins the job; no pod nodeSelector).
+# Repo path. Drives the infra hostpath PV (Renovate + Task Runner) and the
+# nfs-apps current_target; the PV claim, not a nodeSelector, pins the pods.
 INFRA_ROOT: "<path-to-Infra>"
 TARGET: "srv0"

@@ -11,11 +11,11 @@
 
 ## Shared media / static host paths
 
-- `host-volumes` (base) defines the static `hostpath` PV/PVC pairs for the Main tree (main, deviceSync, journal, WhatsApp TXT, file-pipelines, backups, media, documents, WhatsApp, infra) pinned by `infra.local/hostpath-main=true`.
+- `host-volumes` (base) defines the static `hostpath` PV/PVC pairs for the Main tree (main, deviceSync, journal, WhatsApp TXT, file-pipelines, backups, media, documents, WhatsApp, infra) pinned by `infra.local/hostpath-main=true`. The media and infra PVs use `MEDIA_DIR_PATH` and `INFRA_ROOT` directly; the syslog PV uses `JOURNAL_DIR`, and `dscpln-config-pv` uses `DSCPLN_CONFIG_PATH`. `hostpath-main` is a singleton: exactly one node owns the tree.
 - The D$CPLN apps share `dscpln-config-pv/pvc` (apps) for the private config checkout; `dscpln-ledger-pv/pvc` holds the Excel ledger. Both are local PVs with the same node affinity, so the claims pin the whole D$CPLN stack to srv0 without pod selectors.
 - **A hostPath must not be the only reason a pod is pinned** — back it with a statically bound `hostpath` PV/PVC and let the claim do the scheduling. Device/system paths (`/dev`, `/run/dbus`, `/var/lib/kubelet`) are exempt.
 - The NFS media shares (`music`, `jellyfin-tv`, `jellyfin-youtube`, `arrstack-media`, `frigate`, `code-sandbox`) are static PVs using the `nfs` class name; they are not dynamically provisioned.
-- Frigate recordings and the Jellyfin libraries stay on NFS (not tied to a node), but the pods are pinned by `infra.local/intel-gpu`. Immich's external library is the read-only media local PV; its primary library is `nfs-apps`.
+- Frigate recordings and the Jellyfin libraries stay on NFS (not tied to a node). Jellyfin/Immich server use the vendor-neutral `infra.local/vaapi` resource; Frigate uses `intel-gpu` (OpenVINO) or `amd-igpu` (ROCm); Immich ML uses `intel-gpu` or bigpc's `amd-dgpu`. `GPU_PROFILE` selects the backend. Immich's external library is the read-only media local PV; its primary library is `nfs-apps`.
 
 ## Task Runner runtime paths
 
