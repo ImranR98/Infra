@@ -135,18 +135,6 @@
     },
     {
       "customType": "regex",
-      "description": "Images embedded in pvc.sh's generated backup/restore pod YAML",
-      "managerFilePatterns": [
-        "/scripts\\/pvc\\.sh$/"
-      ],
-      "matchStrings": [
-        "image:\\s*(?<depName>[^\\s@:\"']+):(?<currentValue>[^\\s@:\"'#]+)"
-      ],
-      "datasourceTemplate": "docker",
-      "versioningTemplate": "docker"
-    },
-    {
-      "customType": "regex",
       "description": "Pinned helm version in prereqs.sh",
       "managerFilePatterns": [
         "/scripts\\/prereqs\\.sh$/"

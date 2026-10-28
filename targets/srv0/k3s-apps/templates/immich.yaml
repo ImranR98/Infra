@@ -45,7 +45,7 @@ spec:
         # container_t + s0 (verified): SELinux allows container_t the
         # /dev/dri device grant, the media-PV library read, and the
         # library PVC; s0 keeps files category-free so server/ML and the
-        # pvc-backup pods can share them.
+        # backup pods can share them.
         seLinuxOptions:
           level: s0
 

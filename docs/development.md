@@ -38,7 +38,7 @@ fi
 source "$INFRA_ROOT/scripts/common.sh"
 ```
 
-The bootstrap self-computes the repo root but honors a pre-set `INFRA_ROOT` (the in-cluster pods ship it, and their host paths must not be recomputed). Target-selecting scripts call `require_target "$1"` (warns on hostname mismatch — check flows) or `require_target_host "$1"` (hard-asserts — ops that mutate the machine). Useful `common.sh` helpers: `_confirm`, `get_node_ip`, `wait_for_k3s_cluster`, `set_my_uid`.
+The bootstrap self-computes the repo root but honors a pre-set `INFRA_ROOT` (the in-cluster pods ship it, and their host paths must not be recomputed). Target-selecting scripts call `require_target "$1"` (warns on hostname mismatch — check flows) or `require_target_host "$1"` (hard-asserts — ops that mutate the machine). Useful `common.sh` helpers: `get_node_ip`, `wait_for_k3s_cluster`, `set_my_uid`.
 
 ### Comment & doc rules
 

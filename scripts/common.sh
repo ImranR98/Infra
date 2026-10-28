@@ -1,26 +1,19 @@
 #!/bin/bash
-# scripts/common.sh — env bootstrap + shared helpers (_confirm/
-# get_node_ip/wait_for_k3s_cluster) for the retained bash scripts.
+# scripts/common.sh — env bootstrap + shared helpers
+# (get_node_ip/wait_for_k3s_cluster) for the retained bash scripts.
 [[ "${INFRA_LIB_LOADED:-}" = true ]] && return 0
 INFRA_LIB_LOADED=true
 
 _lib_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 
 # ---- always-on environment (exported so child processes in a chain see it) ----
-# Pre-set values win (in-cluster pods ship INFRA_ROOT/PVC_BACKUP_DIR/MY_UID in
+# Pre-set values win (in-cluster pods ship INFRA_ROOT/MY_UID in
 # their env and must not get host paths recomputed over them).
 if [ -z "${INFRA_ROOT:-}" ]; then
     INFRA_ROOT="$(cd "$_lib_dir/.." >/dev/null 2>&1 && pwd)"
 fi
 export INFRA_ROOT
 [ -n "${COMPOSE_STATE_DIR:-}" ] || export COMPOSE_STATE_DIR="$INFRA_ROOT/current_target/compose_live_state"
-[ -n "${PVC_BACKUP_DIR:-}" ] || export PVC_BACKUP_DIR="$INFRA_ROOT/k3s_state_backups"
-
-_confirm() {
-    local prompt="${1:-Proceed?}" yn
-    read -r -p "$prompt [y/N] " yn
-    [[ "$yn" =~ ^[Yy] ]]
-}
 
 get_node_ip() {
     local iface

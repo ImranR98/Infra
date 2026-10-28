@@ -1,18 +1,12 @@
 /current_target/
-/current_target/k3s_live_state/
-/compose_state_backups/
-/k3s_state_backups/
 /config/
 targets/*/compose/compose.private.yaml
 targets/*/compose/.env
-targets/*/k3s-base/plugins/*/plugin.wasm
 ~*
 **/__pycache__
 .venv/
-/cache/
 /.stfolder/
 /.stignore
-/.backup-state-Infra_Compose_State.json
 # Syncthing temp files
 **/.syncthing*
 *.sync-conflict*

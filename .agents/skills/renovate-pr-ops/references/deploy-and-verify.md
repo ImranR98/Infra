@@ -109,7 +109,7 @@ The machine-fact `.env` auto-loads from the compose project dir; no `--env-file`
   (`systemctl status k3s`, journal) rather than forcing a re-run.
 - NFD workers restart during the API blip and stabilize; only investigate if restart
   counts keep climbing.
-- Pre-existing failures (for example a failed nightly `pvc-backup` run) are not caused
+- Pre-existing failures (for example a failed nightly state-backup run) are not caused
   by the deploy — triage them separately and say so explicitly.
 - Orphaned `Unknown`/`Error` pods are safe to delete once their owning job is
   Complete/Failed; leave Completed job pods as history.

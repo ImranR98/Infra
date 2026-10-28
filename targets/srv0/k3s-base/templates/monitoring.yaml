@@ -213,7 +213,7 @@ spec:
         # denies container_t that ptrace across mount namespaces (root +
         # SYS_PTRACE alone do not pass the LSM hook), so the chart's 65534
         # default drops all node_filesystem_* metrics. spc_t + root + SYS_PTRACE
-        # matches the repo's other host-access pods (pvc-backup/restore, HA);
+        # matches the repo's other host-access pods (backup/restore, HA);
         # the container keeps read-onlyRootFilesystem + read-only host mounts.
         securityContext:
           runAsNonRoot: false

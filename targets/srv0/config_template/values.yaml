@@ -291,8 +291,6 @@ FILEBROWSER_JWT_TOKEN_SECRET: "change_me" # openssl rand -base64 32
 # PV/PVC mounts it at the same path in the pod so the app can read the workbook
 # and commit its changes.
 DSCPLN_LEDGER_PATH: "/path/to/data/Main/Documents/Balance"
-# bigpc's LAN address for the Task Runner Wine game-save sync.
-BIGPC_IP: "192.168.8.226"
 # Balance app config (workbook path, sheets, API state) lives in the private
 # dscpln-config repo under apps/balance-xlsx/.
 
