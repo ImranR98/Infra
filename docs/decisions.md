@@ -12,7 +12,7 @@ NFD/node-facts were removed. `infra.local/hostpath-main` and `infra.local/extern
 
 ## Scheduling pinning (claims and hardware, not labels)
 
-Workloads are pinned by what they consume: app data on a host path uses a statically bound `hostpath` PV/PVC with `infra.local/hostpath-main`, and hardware is requested as a generic-device-plugin extended resource (`infra.local/intel-gpu`, `infra.local/amd`, `infra.local/conbee`). The remaining pod selectors are for non-storage node requirements (the hostNetwork VPN/DNS and the lockdown port-blocker on `external-exposed`, the bigpc archive agent on its hostname) and the DaemonSets. Guacamole is unpinned because the Windows firewall accepts RDP from the LAN.
+Workloads are pinned by what they consume: app data on a host path uses a statically bound `hostpath` PV/PVC whose `nodeAffinity` names the node that owns the path, and hardware is requested as a generic-device-plugin extended resource (`infra.local/intel-gpu`, `infra.local/amd`, `infra.local/conbee`). The remaining pod selectors are for non-storage node requirements (the hostNetwork VPN/DNS and the lockdown port-blocker on `external-exposed`) and the DaemonSets. The bigpc archive agent is pinned by its local data PV, not a selector. Guacamole is unpinned because the Windows firewall accepts RDP from the LAN.
 
 ## Public geoblock API (no self-hosted GeoIP)
 

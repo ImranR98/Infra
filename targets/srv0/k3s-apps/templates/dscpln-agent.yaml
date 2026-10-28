@@ -1,0 +1,234 @@
+# Generic D$CPLN archive agents. One Deployment/Service per DSCPLN_AGENTS
+# entry; each entry also gets local PV/PVCs for its config/state tree and each
+# data mount. The PV nodeAffinity pins the pod to the node that owns the paths,
+# so no pod nodeSelector is needed. The agent program/image is generic; the
+# job definitions live in the host's agent.json.
+{{- $root := . -}}
+{{- range $name, $agent := .Values.DSCPLN_AGENTS }}
+{{- $node := required (printf "DSCPLN_AGENTS.%s.node" $name) $agent.node -}}
+{{- $configSubdir := required (printf "DSCPLN_AGENTS.%s.configSubdir" $name) $agent.configSubdir -}}
+{{- $configPath := printf "%s/%s" $root.Values.MAIN_PARENT_DIR $configSubdir -}}
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: dscpln-agent-{{ $name }}-config-pv
+spec:
+  capacity:
+    storage: 1Gi
+  volumeMode: Filesystem
+  accessModes:
+    - ReadWriteMany
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: hostpath
+  local:
+    path: {{ $configPath }}
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - key: kubernetes.io/hostname
+              operator: In
+              values:
+                - {{ $node | quote }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: dscpln-agent-{{ $name }}-config-pvc
+  namespace: apps
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: hostpath
+  resources:
+    requests:
+      storage: 1Gi
+  volumeName: dscpln-agent-{{ $name }}-config-pv
+{{- range $mount := $agent.dataMounts }}
+{{- $mountName := required (printf "DSCPLN_AGENTS.%s.dataMounts[].name" $name) $mount.name -}}
+{{- $mountSubdir := required (printf "DSCPLN_AGENTS.%s.dataMounts[%s].subdir" $name $mountName) $mount.subdir -}}
+{{- $dataPath := printf "%s/%s" $root.Values.MAIN_PARENT_DIR $mountSubdir -}}
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: dscpln-agent-{{ $name }}-{{ $mountName }}-pv
+spec:
+  capacity:
+    storage: {{ $mount.capacity | default "4096Gi" }}
+  volumeMode: Filesystem
+  accessModes:
+    - ReadWriteMany
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: hostpath
+  local:
+    path: {{ $dataPath }}
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - key: kubernetes.io/hostname
+              operator: In
+              values:
+                - {{ $node | quote }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: dscpln-agent-{{ $name }}-{{ $mountName }}-pvc
+  namespace: apps
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: hostpath
+  resources:
+    requests:
+      storage: {{ $mount.capacity | default "4096Gi" }}
+  volumeName: dscpln-agent-{{ $name }}-{{ $mountName }}-pv
+{{- end }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dscpln-agent-{{ $name }}
+  namespace: apps
+spec:
+  replicas: 1
+  revisionHistoryLimit: 2
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      dscpln-agent: {{ $name }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: dscpln-agent
+        dscpln-agent: {{ $name }}
+    spec:
+      automountServiceAccountToken: false
+      tolerations:
+        - key: scheduling-discouraged
+          operator: Equal
+          value: "true"
+          effect: PreferNoSchedule
+      securityContext:
+        runAsUser: {{ $root.Values.MY_UID }}
+        runAsGroup: {{ $root.Values.MY_UID }}
+        fsGroup: {{ $root.Values.MY_UID }}
+        fsGroupChangePolicy: OnRootMismatch
+        seLinuxOptions:
+          type: spc_t
+          level: s0
+      containers:
+        - name: agent
+          image: ghcr.io/imranr98/dscpln-agent@sha256:9331d0011787fe502a71faa6dcb8fb88baa74ceb02bb0591a4ffc92f13220f1d
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+            seccompProfile:
+              type: RuntimeDefault
+          ports:
+            - name: http
+              containerPort: 8788
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 2
+            periodSeconds: 30
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 60
+          resources:
+            limits:
+              memory: 512Mi
+            requests:
+              memory: 64Mi
+              cpu: 10m
+          volumeMounts:
+            - name: config
+              mountPath: /config
+              readOnly: true
+            - name: config
+              mountPath: /state
+              subPath: state
+            {{- range $mount := $agent.dataMounts }}
+            - name: data-{{ $mount.name }}
+              mountPath: {{ required (printf "DSCPLN_AGENTS.%s.dataMounts[%s].mountPath" $name $mount.name) $mount.mountPath }}
+              readOnly: true
+            {{- end }}
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: config
+          persistentVolumeClaim:
+            claimName: dscpln-agent-{{ $name }}-config-pvc
+        {{- range $mount := $agent.dataMounts }}
+        - name: data-{{ $mount.name }}
+          persistentVolumeClaim:
+            claimName: dscpln-agent-{{ $name }}-{{ $mount.name }}-pvc
+        {{- end }}
+        - name: tmp
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: dscpln-agent-{{ $name }}
+  namespace: apps
+spec:
+  selector:
+    dscpln-agent: {{ $name }}
+  ports:
+    - name: http
+      port: 8788
+      targetPort: http
+{{- end }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-task-runner-agent-ingress
+  namespace: apps
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: dscpln-agent
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: dscpln-task-runner
+      ports:
+        - protocol: TCP
+          port: 8788
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-dscpln-task-runner-vps0-agent-egress
+  namespace: apps
+spec:
+  podSelector:
+    matchLabels:
+      app: dscpln-task-runner
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - ipBlock:
+            cidr: 10.99.0.1/32
+      ports:
+        - protocol: TCP
+          port: 8788

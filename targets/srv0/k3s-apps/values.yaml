@@ -33,3 +33,8 @@ LAN_CIDR: ""
 OPENWEBUI_ALLOWED_ROLES: "admins"
 OPENWEBUI_ADMIN_ROLES: "admins"
 FILEBROWSER_ADMIN_GROUP: "admins"
+
+# ====== D$CPLN archive agents ======
+# Deployment-specific map lives in config/srv0/values.yaml. Each entry renders
+# dscpln-agent-<name> plus local PV/PVCs pinned by kubernetes.io/hostname.
+DSCPLN_AGENTS: {}

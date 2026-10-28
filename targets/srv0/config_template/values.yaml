@@ -291,6 +291,20 @@ FILEBROWSER_JWT_TOKEN_SECRET: "change_me" # openssl rand -base64 32
 # PV/PVC mounts it at the same path in the pod so the app can read the workbook
 # and commit its changes.
 DSCPLN_LEDGER_PATH: "/path/to/data/Main/Documents/Balance"
+# Per-node D$CPLN archive agents. Each entry renders a dscpln-agent-<name>
+# Deployment/Service plus local PV/PVCs; the PV nodeAffinity pins the pod to the
+# named node. The agent's job definitions live in <configSubdir>/agent.json on
+# that node. Example:
+# DSCPLN_AGENTS:
+#   bigpc:
+#     node: bigpc
+#     configSubdir: dscpln-agent
+#     dataMounts:
+#       - name: installs
+#         subdir: Games/Installs
+#         mountPath: /data/installs
+#         readOnly: true
+DSCPLN_AGENTS: {}
 # Balance app config (workbook path, sheets, API state) lives in the private
 # dscpln-config repo under apps/balance-xlsx/.
 

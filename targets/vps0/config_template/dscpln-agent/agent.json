@@ -1,0 +1,20 @@
+{
+  "listen": "<vps0-tunnel-ip>",
+  "port": 8788,
+  "stateDir": "/state",
+  "enrollment": {
+    "enabled": true,
+    "windowSeconds": 0,
+    "allowFrom": ["<srv0-tunnel-ip>/32"]
+  },
+  "jobs": {
+    "vps0-state": {
+      "type": "archive",
+      "root": "/data/state",
+      "ignoreReadErrors": true,
+      "format": "tar.gz",
+      "maxBytes": 6442450944,
+      "timeoutSeconds": 3600
+    }
+  }
+}

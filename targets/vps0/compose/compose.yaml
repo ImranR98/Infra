@@ -1060,6 +1060,37 @@ services:
         logging: *logging
         # If services are unreachable: ufw allow from 172.19.0.0/24 to any port 443 proto tcp
 
+    # D$CPLN archive agent: streams the vps0 Compose state to the Task Runner
+    # over the public-exposure tunnel. The same generic image as the K3s
+    # dscpln-agent on bigpc; the job/config live in config/vps0/dscpln-agent/.
+    dscpln-agent:
+        image: ghcr.io/imranr98/dscpln-agent@sha256:9331d0011787fe502a71faa6dcb8fb88baa74ceb02bb0591a4ffc92f13220f1d
+        container_name: dscpln-agent
+        restart: unless-stopped
+        network_mode: host
+        depends_on:
+            - public-exposure-server-wg
+        user: "0:0"
+        read_only: true
+        cap_drop:
+            - ALL
+        cap_add:
+            - DAC_READ_SEARCH
+        security_opt:
+            - no-new-privileges:true
+        volumes:
+            - ../../../config/vps0/dscpln-agent/agent.json:/config/agent.json:ro
+            - ../../../current_target/compose_live_state:/data/state:ro
+            - ../../../current_target/dscpln-agent/state:/state
+        tmpfs:
+            - /tmp
+        healthcheck:
+            test: ["CMD", "wget", "-qO-", "http://10.99.0.1:8788/healthz"]
+            interval: 30s
+            timeout: 5s
+            retries: 3
+        logging: *logging
+
 networks:
     traefik:
         name: traefik
