@@ -285,6 +285,11 @@ spec:
             policy: bypass
           - domain: opodsync.{{ .Values.SERVICES_DOMAIN }}
             policy: bypass
+          - domain: win.{{ .Values.SERVICES_DOMAIN }}
+            policy: one_factor
+            subject:
+            - 'group:admins'
+            - 'group:family'
           - domain: '*.{{ .Values.SERVICES_DOMAIN }}'
             policy: two_factor
             subject:

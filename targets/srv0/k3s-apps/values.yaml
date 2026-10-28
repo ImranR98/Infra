@@ -9,3 +9,16 @@ MY_UID: 1000
 # Immich, Jellyfin, Linkwarden, Navidrome, Opodsync) on the LAN/VPN listener
 # only until Authelia is Ready. Normally false.
 BOOTSTRAP_PRIVATE_APPS: "false"
+
+# ====== Guacamole (browser RDP gateway) ======
+# The Windows machine is reached over the LAN; guacd is pinned to the
+# external-exposed node so its egress source is predictable for the Windows
+# firewall. Keep this an IP: the egress NetworkPolicy is a /32 ipBlock.
+GUACAMOLE_WINDOWS_HOST: "192.168.8.164"
+GUACAMOLE_WINDOWS_PORT: "3389"
+GUACAMOLE_DB_STORAGE: "2Gi"
+# Optional. Leave empty to generate once on first deploy and reuse it from the
+# existing Secret on every upgrade. Set it before the first deploy if you want
+# to pin it; changing it after the DB exists requires rotating the Postgres
+# password too.
+GUACAMOLE_DB_PASSWORD: ""

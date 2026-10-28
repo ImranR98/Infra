@@ -98,4 +98,4 @@ Scripts warn or hard-fail (`require_target_host`) on hostname/target mismatches.
 - Geoblock uses `get.geojs.io`; do not reintroduce the self-hosted GeoIP service/`geoip-src`.
 - **App repos share one Renovate baseline** — `scripts/check-app-configs.sh` (run by `renovate-daily`) enforces the standard presets, OSV alerts, dependency dashboard, `minimumReleaseAge`, lockfile maintenance, and no automerge; `scripts/merge-renovate-prs.sh` is the only merger.
 - **Helm charts** — only project-maintained charts; `validate.sh` enforces the allowlist. Home Assistant is the single approved third-party exception. Pin `image.repository`/`image.tag` on app-version-sensitive charts so Renovate tracks the app, not just the chart.
-- TLS is `edge-public-tls` (24 exact public SANs) plus `edge-private-tls` (`files`/`traefik`, `websecure` only). Adding a public app means adding its SAN and re-issuing; no per-app certs or wildcards.
+- TLS is `edge-public-tls` (25 exact public SANs) plus `edge-private-tls` (`files`/`traefik`, `websecure` only). Adding a public app means adding its SAN and re-issuing; no per-app certs or wildcards.

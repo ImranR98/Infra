@@ -1,0 +1,565 @@
+{{- /*
+Browser RDP gateway for the Windows machine on the LAN.
+
+Authelia is the only human login. Traefik rewrites X-Guac-User to the fixed
+`shared` identity after forward-auth (see win-header-auth in k3s-base), so
+Guacamole never sees the Authelia username. The seeded RDP connection has no
+username/password parameters, so guacd prompts for the Windows credentials on
+every connect — Authelia and Windows auth stay decoupled.
+
+The schema and seed run in init containers; there is no Guacamole admin UI
+step. guacadmin is disabled. The DB is on the default nfs-apps StorageClass.
+
+The Guacamole password is generated once and reused across upgrades via
+lookup. GUACAMOLE_DB_PASSWORD can pin it before the first deploy; changing it
+after the DB exists requires rotating the Postgres password as well.
+*/ -}}
+{{- $dbPassword := .Values.GUACAMOLE_DB_PASSWORD | default "" -}}
+{{- if not $dbPassword -}}
+{{- $existingSecret := lookup "v1" "Secret" "apps" "guacamole-db-secret" -}}
+{{- if and $existingSecret (hasKey $existingSecret.data "password") -}}
+{{- $dbPassword = index $existingSecret.data "password" | b64dec -}}
+{{- else -}}
+{{- $dbPassword = randAlphaNum 32 -}}
+{{- end -}}
+{{- end -}}
+{{- define "guacamole.seed" -}}
+-- Fixed Guacamole identity used only through the header-auth extension.
+INSERT INTO guacamole_entity (name, type)
+VALUES ('shared', 'USER')
+ON CONFLICT (type, name) DO NOTHING;
+
+INSERT INTO guacamole_user (entity_id, password_hash, password_date, disabled)
+SELECT entity_id,
+       decode('0000000000000000000000000000000000000000000000000000000000000000', 'hex'),
+       CURRENT_TIMESTAMP,
+       FALSE
+FROM guacamole_entity
+WHERE name = 'shared' AND type = 'USER'
+  AND NOT EXISTS (
+    SELECT 1 FROM guacamole_user u WHERE u.entity_id = guacamole_entity.entity_id
+  );
+
+UPDATE guacamole_user
+SET disabled = FALSE
+FROM guacamole_entity
+WHERE guacamole_user.entity_id = guacamole_entity.entity_id
+  AND guacamole_entity.name = 'shared'
+  AND guacamole_entity.type = 'USER';
+
+-- Self read/update keeps the JDBC extension's account model consistent.
+INSERT INTO guacamole_user_permission (entity_id, affected_user_id, permission)
+SELECT e.entity_id, u.user_id, p.permission::guacamole_object_permission_type
+FROM guacamole_entity e
+JOIN guacamole_user u ON u.entity_id = e.entity_id
+CROSS JOIN (VALUES ('READ'), ('UPDATE')) p(permission)
+WHERE e.name = 'shared' AND e.type = 'USER'
+ON CONFLICT DO NOTHING;
+
+INSERT INTO guacamole_connection (connection_name, protocol, max_connections)
+SELECT 'Windows', 'rdp', 1
+WHERE NOT EXISTS (
+  SELECT 1 FROM guacamole_connection
+  WHERE connection_name = 'Windows' AND parent_id IS NULL
+);
+
+INSERT INTO guacamole_connection_parameter (connection_id, parameter_name, parameter_value)
+SELECT c.connection_id, p.name, p.value
+FROM guacamole_connection c
+CROSS JOIN (VALUES
+  ('hostname', '{{ .Values.GUACAMOLE_WINDOWS_HOST }}'),
+  ('port', '{{ .Values.GUACAMOLE_WINDOWS_PORT | default "3389" }}'),
+  ('security', 'nla'),
+  ('ignore-cert', 'true'),
+  ('resize-method', 'display-update'),
+  ('color-depth', '32'),
+  ('enable-clipboard', 'true'),
+  ('enable-drive', 'false')
+) p(name, value)
+WHERE c.connection_name = 'Windows' AND c.parent_id IS NULL
+ON CONFLICT (connection_id, parameter_name)
+DO UPDATE SET parameter_value = EXCLUDED.parameter_value;
+
+INSERT INTO guacamole_connection_permission (entity_id, connection_id, permission)
+SELECT e.entity_id, c.connection_id, 'READ'::guacamole_object_permission_type
+FROM guacamole_entity e, guacamole_connection c
+WHERE e.name = 'shared' AND e.type = 'USER'
+  AND c.connection_name = 'Windows' AND c.parent_id IS NULL
+ON CONFLICT DO NOTHING;
+
+-- No admin UI: the deploy owns the connection definition.
+UPDATE guacamole_user
+SET disabled = TRUE
+FROM guacamole_entity
+WHERE guacamole_user.entity_id = guacamole_entity.entity_id
+  AND guacamole_entity.name = 'guacadmin'
+  AND guacamole_entity.type = 'USER';
+{{- end }}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: guacamole-db-secret
+  namespace: apps
+type: Opaque
+stringData:
+  password: {{ $dbPassword | quote }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: guacamole-db-pvc
+  namespace: apps
+  labels:
+    auto-backup: "true"
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: nfs-apps
+  resources:
+    requests:
+      storage: {{ .Values.GUACAMOLE_DB_STORAGE | default "2Gi" }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: guacamole-seed
+  namespace: apps
+data:
+  seed.sql: |
+{{ include "guacamole.seed" . | indent 4 }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: guacamole-db
+  namespace: apps
+  labels:
+    app: guacamole-db
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: guacamole-db
+  template:
+    metadata:
+      labels:
+        app: guacamole-db
+      annotations:
+        checksum/guacamole-db-password: {{ $dbPassword | sha256sum }}
+    spec:
+      nodeSelector:
+        infra.local/external-exposed: "true"
+      automountServiceAccountToken: false
+      securityContext:
+        fsGroup: 999
+      initContainers:
+        - name: volume-permissions
+          image: postgres:17.11-alpine
+          command:
+            - sh
+            - -c
+            - |
+              rm -rf /var/lib/postgresql/data/lost+found
+              chown -R 999:999 /var/lib/postgresql/data
+          securityContext:
+            runAsUser: 0  # root required: chown on the NFS-backed PVC for postgresql (uid 999)
+          resources:
+            limits:
+              memory: 256Mi
+            requests:
+              memory: 32Mi
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+      containers:
+        - name: postgresql
+          image: postgres:17.11-alpine
+          securityContext:
+            runAsUser: 999
+            runAsGroup: 999
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            seccompProfile:
+              type: RuntimeDefault
+          ports:
+            - name: postgres
+              containerPort: 5432
+          readinessProbe:
+            exec:
+              command:
+                - pg_isready
+                - -U
+                - guacamole
+                - -d
+                - guacamole
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+            initialDelaySeconds: 15
+          env:
+            - name: POSTGRES_USER
+              value: guacamole
+            - name: POSTGRES_DB
+              value: guacamole
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: guacamole-db-secret
+                  key: password
+          resources:
+            limits:
+              memory: 512Mi
+            requests:
+              memory: 128Mi
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: guacamole-db-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: guacamole-db
+  namespace: apps
+spec:
+  selector:
+    app: guacamole-db
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: postgres
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: guacd
+  namespace: apps
+  labels:
+    app: guacd
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: guacd
+  template:
+    metadata:
+      labels:
+        app: guacd
+    spec:
+      nodeSelector:
+        infra.local/external-exposed: "true"
+      automountServiceAccountToken: false
+      containers:
+        - name: guacd
+          image: guacamole/guacd:1.6.0
+          securityContext:
+            runAsUser: 1000
+            runAsGroup: 1000
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            seccompProfile:
+              type: RuntimeDefault
+          ports:
+            - name: guacd
+              containerPort: 4822
+          readinessProbe:
+            tcpSocket:
+              port: guacd
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+          resources:
+            limits:
+              memory: 512Mi
+            requests:
+              memory: 64Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: guacd
+  namespace: apps
+spec:
+  selector:
+    app: guacd
+  ports:
+    - name: guacd
+      port: 4822
+      targetPort: guacd
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: guacamole
+  namespace: apps
+  labels:
+    app: guacamole
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: guacamole
+  template:
+    metadata:
+      labels:
+        app: guacamole
+      annotations:
+        checksum/guacamole-seed: {{ include "guacamole.seed" . | sha256sum }}
+    spec:
+      nodeSelector:
+        infra.local/external-exposed: "true"
+      automountServiceAccountToken: false
+      initContainers:
+        - name: schema
+          image: guacamole/guacamole:1.6.0
+          command:
+            - sh
+            - -c
+            - /opt/guacamole/bin/initdb.sh --postgresql > /sql/schema.sql
+          securityContext:
+            runAsUser: 0  # writes the generated schema to the shared emptyDir
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            seccompProfile:
+              type: RuntimeDefault
+          resources:
+            limits:
+              memory: 256Mi
+            requests:
+              memory: 32Mi
+          volumeMounts:
+            - name: schema
+              mountPath: /sql
+        - name: db-init
+          image: postgres:17.11-alpine
+          command:
+            - sh
+            - -c
+            - |
+              until pg_isready -h guacamole-db -U guacamole -d guacamole; do sleep 2; done
+              if [ "$(psql -h guacamole-db -U guacamole -d guacamole -tAc "SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='guacamole_entity'")" != "1" ]; then
+                psql -h guacamole-db -U guacamole -d guacamole -v ON_ERROR_STOP=1 -f /sql/schema.sql
+              fi
+              psql -h guacamole-db -U guacamole -d guacamole -v ON_ERROR_STOP=1 -f /seed/seed.sql
+          securityContext:
+            runAsUser: 999
+            runAsGroup: 999
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            seccompProfile:
+              type: RuntimeDefault
+          env:
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: guacamole-db-secret
+                  key: password
+          resources:
+            limits:
+              memory: 256Mi
+            requests:
+              memory: 32Mi
+          volumeMounts:
+            - name: schema
+              mountPath: /sql
+              readOnly: true
+            - name: seed
+              mountPath: /seed
+              readOnly: true
+      containers:
+        - name: guacamole
+          image: guacamole/guacamole:1.6.0
+          securityContext:
+            runAsUser: 1001
+            runAsGroup: 1001
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            seccompProfile:
+              type: RuntimeDefault
+          ports:
+            - name: http
+              containerPort: 8080
+          readinessProbe:
+            tcpSocket:
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 6
+            initialDelaySeconds: 20
+          env:
+            - name: GUACD_HOSTNAME
+              value: guacd
+            - name: GUACD_PORT
+              value: "4822"
+            - name: POSTGRESQL_HOSTNAME
+              value: guacamole-db
+            - name: POSTGRESQL_PORT
+              value: "5432"
+            - name: POSTGRESQL_DATABASE
+              value: guacamole
+            - name: POSTGRESQL_USERNAME
+              value: guacamole
+            - name: POSTGRESQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: guacamole-db-secret
+                  key: password
+            - name: POSTGRESQL_ENABLED
+              value: "true"
+            - name: WEBAPP_CONTEXT
+              value: ROOT
+            - name: HTTP_AUTH_ENABLED
+              value: "true"
+            - name: HTTP_AUTH_HEADER
+              value: X-Guac-User
+            - name: REMOTE_IP_VALVE_ENABLED
+              value: "true"
+          resources:
+            limits:
+              memory: 1Gi
+            requests:
+              memory: 512Mi
+      volumes:
+        - name: schema
+          emptyDir:
+            sizeLimit: 2Mi
+        - name: seed
+          configMap:
+            name: guacamole-seed
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: guacamole
+  namespace: apps
+spec:
+  selector:
+    app: guacamole
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http
+---
+# guacd is a passive proxy with no authentication; only the webapp may reach it.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-guacamole-to-guacd
+  namespace: apps
+spec:
+  podSelector:
+    matchLabels:
+      app: guacd
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: guacamole
+      ports:
+        - protocol: TCP
+          port: 4822
+---
+# The only LAN destination this app may reach is the Windows RDP port.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-guacd-to-windows
+  namespace: apps
+spec:
+  podSelector:
+    matchLabels:
+      app: guacd
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - ipBlock:
+            cidr: {{ .Values.GUACAMOLE_WINDOWS_HOST }}/32
+      ports:
+        - protocol: TCP
+          port: 3389
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-guacamole-to-db
+  namespace: apps
+spec:
+  podSelector:
+    matchLabels:
+      app: guacamole-db
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: guacamole
+      ports:
+        - protocol: TCP
+          port: 5432
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: guacamole-ingress
+  namespace: base
+spec:
+  parentRefs:
+    - name: srv0
+      sectionName: websecure
+    - name: srv0
+      sectionName: websecure-proxy
+  hostnames:
+    - win.{{ .Values.SERVICES_DOMAIN }}
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      filters:
+        # Deliberate: no geoblock on this host (like auth.*). Authelia is the
+        # gate; the public-exposure tunnel is the only route in.
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: crowdsec-bouncer
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: forwardauth-authelia
+        # Runs after forward-auth and overwrites the header on every request,
+        # so Guacamole always sees the single fixed `shared` identity.
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: win-header-auth
+      backendRefs:
+        - name: guacamole
+          namespace: apps
+          port: 8080

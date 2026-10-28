@@ -94,6 +94,21 @@ spec:
     customRequestHeaders:
       Authorization: "Basic {{ printf "opencode:%s" .Values.OPENCODE_SERVER_PASSWORD | b64enc }}"
 ---
+# Guacamole header authentication. Authelia remains the human gate; this
+# middleware runs after forward-auth and pins Guacamole's identity to the
+# fixed `shared` account so the Authelia username is never coupled to the
+# Windows username. The route is the only way to the webapp (its Service is
+# ClusterIP and NetworkPolicies deny everything except Traefik).
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: win-header-auth
+  namespace: base
+spec:
+  headers:
+    customRequestHeaders:
+      X-Guac-User: "shared"
+---
 apiVersion: helm.cattle.io/v1
 kind: HelmChartConfig
 metadata:

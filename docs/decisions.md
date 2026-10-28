@@ -30,7 +30,7 @@ The metrics store is Prometheus (`prom/prometheus`, 180-day retention, remote-wr
 
 ## Shared multi-SAN edge certificates
 
-The per-app Let's Encrypt Certificates were replaced by `edge-public-tls` (the 24 exact public hostnames) and `edge-private-tls` (`files`, `traefik`). The public cert is attached to both secure listeners; the private cert only to `websecure`, so the private names never reach the public-exposure listener. The names are exact (not a wildcard), but all public names share one key, so a key compromise has wildcard-like blast radius; per-host key isolation was traded for fewer Orders and secrets. Adding a public app means adding its SAN and re-issuing.
+The per-app Let's Encrypt Certificates were replaced by `edge-public-tls` (the 25 exact public hostnames) and `edge-private-tls` (`files`, `traefik`). The public cert is attached to both secure listeners; the private cert only to `websecure`, so the private names never reach the public-exposure listener. The names are exact (not a wildcard), but all public names share one key, so a key compromise has wildcard-like blast radius; per-host key isolation was traded for fewer Orders and secrets. Adding a public app means adding its SAN and re-issuing.
 
 ## Docs split
 

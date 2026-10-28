@@ -203,6 +203,17 @@
       "pinDigests": true
     },
     {
+      "description": "Guacamole webapp and guacd speak the same protocol; bump them together",
+      "matchDatasources": [
+        "docker"
+      ],
+      "matchPackageNames": [
+        "guacamole/guacamole",
+        "guacamole/guacd"
+      ],
+      "groupName": "guacamole"
+    },
+    {
       "description": "No major bumps for postgres, clickhouse/clickhouse-server, fedora, helm (their majors need manual migrations)",
       "matchPackageNames": [
         "postgres",

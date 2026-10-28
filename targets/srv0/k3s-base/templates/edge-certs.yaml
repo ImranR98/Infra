@@ -29,6 +29,7 @@ spec:
     - gpt.{{ .Values.SERVICES_DOMAIN }}
     - opencode.{{ .Values.SERVICES_DOMAIN }}
     - opodsync.{{ .Values.SERVICES_DOMAIN }}
+    - win.{{ .Values.SERVICES_DOMAIN }}
     - send.{{ .Values.SERVICES_DOMAIN }}
     - prowlarr.{{ .Values.SERVICES_DOMAIN }}
     - qbittorrent.{{ .Values.SERVICES_DOMAIN }}
