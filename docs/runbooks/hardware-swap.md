@@ -99,8 +99,8 @@ Then roll the plugin and inspect allocatable:
 ```bash
 kubectl -n base rollout restart ds/generic-device-plugin
 kubectl -n base rollout status ds/generic-device-plugin
-kubectl get node srv0 -o json | yq '.items[0].status.allocatable | with_entries(select(.key | startswith("infra.local/")))'
-kubectl get node bigpc -o json | yq '.items[0].status.allocatable | with_entries(select(.key | startswith("infra.local/")))'
+kubectl get node srv0 -o json | yq '.status.allocatable | with_entries(select(.key | test("^infra\\.")))'
+kubectl get node bigpc -o json | yq '.status.allocatable | with_entries(select(.key | test("^infra\\.")))'
 ```
 
 ## 5. Accelerator cutover
