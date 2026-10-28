@@ -112,6 +112,15 @@ spec:
 {{- end }}
               securityContext:
                 allowPrivilegeEscalation: false
+{{- if or .Values.IMMICH_ML_ROCR_VISIBLE_DEVICES .Values.IMMICH_ML_HSA_OVERRIDE_GFX_VERSION }}
+              env:
+{{- with .Values.IMMICH_ML_ROCR_VISIBLE_DEVICES }}
+                ROCR_VISIBLE_DEVICES: {{ . | quote }}
+{{- end }}
+{{- with .Values.IMMICH_ML_HSA_OVERRIDE_GFX_VERSION }}
+                HSA_OVERRIDE_GFX_VERSION: {{ . | quote }}
+{{- end }}
+{{- end }}
               resources:
                 limits:
                   memory: 6Gi

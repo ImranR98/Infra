@@ -67,6 +67,9 @@ FRIGATE_DETECTOR: ""         # openvino | rocm | cpu
 FRIGATE_GPU_RESOURCE: ""     # intel-gpu | amd-igpu | amd-dgpu
 IMMICH_ML_BACKEND: ""        # openvino | rocm | cpu
 IMMICH_ML_GPU_RESOURCE: ""   # intel-gpu | amd-dgpu
+# Optional ROCm selection when bigpc has more than one KFD-visible GPU.
+IMMICH_ML_ROCR_VISIBLE_DEVICES: ""
+IMMICH_ML_HSA_OVERRIDE_GFX_VERSION: ""
 JELLYFIN_HWACCEL: ""         # vaapi | none
 IMMICH_SERVER_HWACCEL: ""    # vaapi | none
 OLLAMA_GPU: ""               # amd-dgpu | none
