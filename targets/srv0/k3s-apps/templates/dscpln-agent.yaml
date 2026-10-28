@@ -22,6 +22,8 @@ data:
   agent.json: |
 {{ $configJSON | indent 4 }}
 ---
+# Legacy name: this PV/PVC now holds the agent's /state tree (token + state),
+# not agent.json. Keeping the bound claim names avoids a state migration.
 apiVersion: v1
 kind: PersistentVolume
 metadata:
