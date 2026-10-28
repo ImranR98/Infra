@@ -369,7 +369,7 @@ check_cluster_hardware() {
     for check in "${checks[@]}"; do
         node=${check%% *}
         res=${check#* }
-        val=$(kubectl get node "$node" -o json 2>/dev/null | yq -r ".items[0].status.allocatable[\"infra.local/$res\"] // \"0\"" 2>/dev/null || echo 0)
+        val=$(kubectl get node "$node" -o json 2>/dev/null | yq -r ".status.allocatable[\"infra.local/$res\"] // \"0\"" 2>/dev/null || echo 0)
         if [ -z "$val" ] || [ "$val" = "0" ] || [ "$val" = "null" ]; then
             _err "WARNING: GPU_PROFILE=$profile expects infra.local/$res on $node, but it is not advertised"
         fi
