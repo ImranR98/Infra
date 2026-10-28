@@ -31,11 +31,9 @@ spec:
       # The DB credentials Secret feeds env secretKeyRefs in both Immich pods.
       annotations:
         checksum/immich-db-credentials: {{ .Values.IMMICH_DB_PASSWORD | sha256sum }}
-      # Pin everything to srv0: the library PVC is RWO and VAAPI/OpenVINO
-      # need the Iris Xe there. Without this, a RollingUpdate pod can land on
-      # bigpc (PreferNoSchedule only discourages) and deadlock on the PVC.
-      nodeSelector:
-        infra.local/hostpath-main: "true"
+      # The server's /external mount is the hostpath media PV, whose
+      # nodeAffinity pins the pod to srv0; the ML pod is pinned by the
+      # intel-gpu resource. Neither needs a pod nodeSelector.
       securityContext:
         runAsUser: {{ .Values.MY_UID }}
         runAsGroup: {{ .Values.MY_UID }}
@@ -45,7 +43,7 @@ spec:
         # warnings. Root ownership already matches, so only check the root.
         fsGroupChangePolicy: OnRootMismatch
         # container_t + s0 (verified): SELinux allows container_t the
-        # /dev/dri device grant, the external hostPath library read, and the
+        # /dev/dri device grant, the media-PV library read, and the
         # library PVC; s0 keeps files category-free so server/ML and the
         # pvc-backup pods can share them.
         seLinuxOptions:
@@ -63,21 +61,25 @@ spec:
                 allowPrivilegeEscalation: false
               # Resources are per-component (the top-level controllers.main is
               # shared across all Immich components, so anything set there
-              # leaks into valkey/ML). The DRI grant is for VAAPI transcoding.
+              # leaks into valkey/ML). The intel-gpu grant is for VAAPI
+              # transcoding.
               resources:
                 limits:
                   memory: 4Gi
-                  infra.local/dri: "1"
+                  infra.local/intel-gpu: "1"
                 requests:
                   memory: 1.5Gi
                   cpu: 20m
-                  infra.local/dri: "1"
+                  infra.local/intel-gpu: "1"
               env:
                 HWACCEL_VAAPI_ENABLED: "true"
       persistence:
         external:
-          type: hostPath
-          hostPath: {{ .Values.MEDIA_DIR_PATH }}
+          # Reuse the existing Main/Media local PV; the claim pins the server
+          # to the node that owns the tree without an NFS import or a
+          # nodeSelector.
+          type: persistentVolumeClaim
+          existingClaim: hostpath-main-node-media-pvc
           globalMounts:
             - path: /external
               readOnly: true
@@ -95,20 +97,17 @@ spec:
               resources:
                 limits:
                   memory: 6Gi
-                  infra.local/dri: "1"
+                  infra.local/intel-gpu: "1"
                 requests:
                   memory: 384Mi
                   cpu: 20m
-                  infra.local/dri: "1"
+                  infra.local/intel-gpu: "1"
       defaultPodOptions:
-        nodeSelector:
-          infra.local/hostpath-main: "true"
         securityContext:
           seLinuxOptions:
             level: s0
-        # No node affinity/tolerations: bigpc's scheduling-discouraged taint
-        # keeps the pod on srv0; the descheduler evicts any drift. ML runs on
-        # srv0's Iris Xe iGPU via OpenVINO (see tag above).
+        # No nodeSelector: the intel-gpu resource pins ML to the Iris Xe node.
+        # bigpc's scheduling-discouraged taint still discourages drift.
 
     immich:
       persistence:

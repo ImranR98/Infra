@@ -5,7 +5,7 @@
 # bridge address and requires a token held in the Secret below. The UI server
 # is the only client; the browser never receives the token.
 ---
-{{- $secret := lookup "v1" "Secret" .Release.Namespace "lockdown-port-blocker-token" -}}
+{{- $secret := lookup "v1" "Secret" .Release.Namespace "dscpln-lockdown-port-blocker-token" -}}
 {{- $token := "" -}}
 {{- if and $secret $secret.data (index $secret.data "token") -}}
 {{- $token = index $secret.data "token" | b64dec -}}
@@ -15,7 +15,7 @@
 apiVersion: v1
 kind: Secret
 metadata:
-  name: lockdown-port-blocker-token
+  name: dscpln-lockdown-port-blocker-token
   namespace: apps
 type: Opaque
 data:
@@ -24,7 +24,7 @@ data:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: lockdown
+  name: dscpln-lockdown
   namespace: apps
 spec:
   replicas: 1
@@ -32,23 +32,23 @@ spec:
     type: Recreate
   selector:
     matchLabels:
-      app: lockdown
+      app: dscpln-lockdown
   template:
     metadata:
       labels:
-        app: lockdown
+        app: dscpln-lockdown
       annotations:
         checksum/token: {{ $token | sha256sum }}
     spec:
       # The blocker is reachable at srv0's flannel bridge address, so the UI
-      # must run on srv0.
+      # must run on srv0; the config PV pins the config host tree as well.
       nodeSelector:
         infra.local/external-exposed: "true"
       securityContext:
         {{- include "dscpln.podSecurityContext" (dict "uid" .Values.MY_UID) | nindent 8 }}
       automountServiceAccountToken: false
       containers:
-        - name: lockdown
+        - name: dscpln-lockdown
           image: ghcr.io/imranr98/dscpln-lockdown:latest@sha256:b94c7cdb2a0778f4e18b4b6ff1dad9c39f75415ead7760389357b7898f0689cb
           securityContext:
             {{- include "dscpln.containerSecurityContext" (dict "uid" .Values.MY_UID "readOnlyRootFilesystem" true) | nindent 12 }}
@@ -69,7 +69,7 @@ spec:
             - name: PORT_BLOCKER_TOKEN
               valueFrom:
                 secretKeyRef:
-                  name: lockdown-port-blocker-token
+                  name: dscpln-lockdown-port-blocker-token
                   key: token
             - name: LOCKDOWN_CONFIG
               value: /config/config.json
@@ -88,6 +88,7 @@ spec:
               mountPath: /tmp
             - name: config
               mountPath: /config
+              subPath: apps/lockdown
               readOnly: true
       volumes:
         - name: tmp
@@ -95,16 +96,15 @@ spec:
             medium: Memory
             sizeLimit: 64Mi
         - name: config
-          hostPath:
-            path: {{ .Values.MAIN_PARENT_DIR }}/Main/Code/Automation/dscpln-config/apps/lockdown
-            type: Directory
+          persistentVolumeClaim:
+            claimName: dscpln-config-pvc
 ---
-{{ include "dscpln.service" (dict "name" "lockdown" "targetPort" "http" "port" 8086) }}
+{{ include "dscpln.service" (dict "name" "dscpln-lockdown" "targetPort" "http" "port" 8086) }}
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: port-blocker
+  name: dscpln-port-blocker
   namespace: apps
 spec:
   replicas: 1
@@ -112,11 +112,11 @@ spec:
     type: Recreate
   selector:
     matchLabels:
-      app: port-blocker
+      app: dscpln-port-blocker
   template:
     metadata:
       labels:
-        app: port-blocker
+        app: dscpln-port-blocker
       annotations:
         checksum/token: {{ $token | sha256sum }}
     spec:
@@ -130,7 +130,7 @@ spec:
           type: spc_t
           level: s0
       containers:
-        - name: port-blocker
+        - name: dscpln-port-blocker
           image: ghcr.io/imranr98/dscpln-lockdown:latest@sha256:b94c7cdb2a0778f4e18b4b6ff1dad9c39f75415ead7760389357b7898f0689cb
           securityContext:
             runAsUser: 0
@@ -157,7 +157,7 @@ spec:
             - name: PORT_BLOCKER_TOKEN
               valueFrom:
                 secretKeyRef:
-                  name: lockdown-port-blocker-token
+                  name: dscpln-lockdown-port-blocker-token
                   key: token
             - name: LOCKDOWN_CONFIG
               value: /config/config.json
@@ -180,6 +180,7 @@ spec:
               mountPath: /tmp
             - name: config
               mountPath: /config
+              subPath: apps/lockdown
               readOnly: true
       volumes:
         - name: tmp
@@ -187,6 +188,5 @@ spec:
             medium: Memory
             sizeLimit: 16Mi
         - name: config
-          hostPath:
-            path: {{ .Values.MAIN_PARENT_DIR }}/Main/Code/Automation/dscpln-config/apps/lockdown
-            type: Directory
+          persistentVolumeClaim:
+            claimName: dscpln-config-pvc

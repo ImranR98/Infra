@@ -130,11 +130,11 @@ spec:
           resources:
             limits:
               memory: 1.5Gi
-              infra.local/dri: "1"
+              infra.local/intel-gpu: "1"
             requests:
               memory: 512Mi
               cpu: 20m
-              infra.local/dri: "1"
+              infra.local/intel-gpu: "1"
           volumeMounts:
             - mountPath: /config
               name: config

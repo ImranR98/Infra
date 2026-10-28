@@ -36,9 +36,9 @@ spec:
             runAsUser: {{ $.Values.MY_UID }}
             # Containerbase's /opt/containerbase tree is root:root 775, so the
             # dynamic tool installs (install-tool node/npm: lockfile updates)
-            # need group 0; the uid stays unprivileged for the hostPath mounts.
+            # need group 0; the uid stays unprivileged for the repo mounts.
             runAsGroup: 0
-            # Pods sharing a hostPath tree need pod-level s0 (container-level is ignored).
+            # Pods sharing the Main tree need pod-level s0 (container-level is ignored).
             seLinuxOptions:
               level: s0
           containers:
@@ -71,28 +71,25 @@ spec:
                 - bash
                 - /repo/scripts/renovate-daily.sh
               volumeMounts:
-                - name: vars-file
+                # The Infra PVC is a local PV pinned by
+                # infra.local/hostpath-main, so the CronJob is scheduled on the
+                # node that owns the repo without a pod nodeSelector.
+                - name: infra
                   mountPath: /repo/config/VARS.env
+                  subPath: config/VARS.env
                   readOnly: true
-                - name: git-config
+                - name: infra
                   mountPath: /repo/.git/config
+                  subPath: .git/config
                   readOnly: true
-                - name: scripts-dir
+                - name: infra
                   mountPath: /repo/scripts
+                  subPath: scripts
                   readOnly: true
           volumes:
-            - name: vars-file
-              hostPath:
-                path: "{{ $.Values.INFRA_ROOT }}/config/VARS.env"
-                type: File
-            - name: git-config
-              hostPath:
-                path: "{{ $.Values.INFRA_ROOT }}/.git/config"
-                type: File
-            - name: scripts-dir
-              hostPath:
-                path: "{{ $.Values.INFRA_ROOT }}/scripts"
-                type: Directory
+            - name: infra
+              persistentVolumeClaim:
+                claimName: hostpath-main-node-infra-pvc
 ---
 # Write-only ntfy token for the PR/CI notifier (same value the Grafana contact
 # point uses).

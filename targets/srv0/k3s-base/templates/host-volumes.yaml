@@ -363,7 +363,7 @@ apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: hostpath-main-node-infra-pvc
-  namespace: apps
+  namespace: base
 spec:
   accessModes:
     - ReadWriteMany

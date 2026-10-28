@@ -101,7 +101,7 @@ spec:
     - from:
         - podSelector:
             matchLabels:
-              app: task-runner
+              app: dscpln-task-runner
       ports:
         - protocol: TCP
           port: 80

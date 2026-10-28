@@ -10,6 +10,10 @@ The 45 application PVCs were migrated from Longhorn to the NFS-backed `nfs-apps`
 
 NFD/node-facts were removed. `infra.local/hostpath-main` and `infra.local/external-exposed` are set statically by `k3s-server.sh`; `k3s-join.sh --hostpath-main` labels a joined node that owns the Main host paths. There is no 60-second detector. `validate.sh` warns when srv0 is missing either label.
 
+## Scheduling pinning (claims and hardware, not labels)
+
+Workloads are pinned by what they consume: app data on a host path uses a statically bound `hostpath` PV/PVC with `infra.local/hostpath-main`, and hardware is requested as a generic-device-plugin extended resource (`infra.local/intel-gpu`, `infra.local/amd`, `infra.local/conbee`). The remaining pod selectors are for non-storage node requirements (the hostNetwork VPN/DNS and the lockdown port-blocker on `external-exposed`, the bigpc archive agent on its hostname) and the DaemonSets. Guacamole is unpinned because the Windows firewall accepts RDP from the LAN.
+
 ## Public geoblock API (no self-hosted GeoIP)
 
 The GeoIP service, image source, `geoipupdate` secret, and Traefik wait-for-geoip init container were removed. The geoblock plugin calls `https://get.geojs.io/v1/ip/country/{ip}` (`apiTimeoutMs=2000`, cache 1000). The tradeoff: a geojs.io outage blocks public traffic (the plugin fails closed). If that becomes unacceptable, restoring a self-hosted MaxMind service is the fallback.

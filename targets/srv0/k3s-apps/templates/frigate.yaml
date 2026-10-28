@@ -205,11 +205,11 @@ spec:
               name: frigate-media
           resources:
             limits:
-              infra.local/dri: "1"
+              infra.local/intel-gpu: "1"
               memory: 3Gi
             requests:
               cpu: 50m
-              infra.local/dri: "1"
+              infra.local/intel-gpu: "1"
               memory: 1.5Gi
       volumes:
         - name: configmap
@@ -233,8 +233,6 @@ spec:
         - name: frigate-media
           persistentVolumeClaim:
             claimName: frigate-media-pvc
-      nodeSelector:
-        infra.local/hostpath-main: "true"
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute

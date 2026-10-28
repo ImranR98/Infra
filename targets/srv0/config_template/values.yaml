@@ -42,7 +42,9 @@ GEOBLOCK_CONFIG_SUBSET: |
 # ====== Host Paths ======
 # Ensure these exist before starting services
 MAIN_PARENT_DIR: "/path/to/data"
+# Immich's external library (read-only /external) mounts the media local PV.
 MEDIA_DIR_PATH: "/path/to/data/Main/Media"
+# D$CPLN WhatsApp TXT exports on the wa-txt local PV.
 WA_TXT_PATH: "/path/to/data/Main/Backups/WhatsApp TXT"
 SECONDARY_STORAGE_PATH: "/mnt/k3s_extra_storage"
 # Container home used by the Task Runner/backup app mounts.
@@ -104,7 +106,9 @@ OPENWEBUI_ADMIN_ROLES: "admins"
 # FileBrowser's OIDC admin group.
 FILEBROWSER_ADMIN_GROUP: "admins"
 # Windows machine reachable by the Guacamole RDP gateway. Keep it an IP: the
-# guacd egress NetworkPolicy is a /32 ipBlock.
+# guacd egress NetworkPolicy is a /32 ipBlock. The Windows firewall allows
+# 3389 from the LAN, so the host only needs to be reachable from the cluster
+# nodes.
 GUACAMOLE_WINDOWS_HOST: "<windows-ip>"
 
 # ====== Bootstrap-private apps (optional) ======
@@ -283,8 +287,9 @@ PLIK_ADMIN_PASSWORD: "change_me" # openssl rand -hex 16
 FILEBROWSER_JWT_TOKEN_SECRET: "change_me" # openssl rand -base64 32
 
 # ====== D$CPLN ======
-# Directory of the git-tracked Excel ledger (mounted at the same path in the
-# pod so the app can read the workbook and commit its changes).
+# Directory of the git-tracked Excel ledger. The static `dscpln-ledger` local
+# PV/PVC mounts it at the same path in the pod so the app can read the workbook
+# and commit its changes.
 DSCPLN_LEDGER_PATH: "/path/to/data/Main/Documents/Balance"
 # bigpc's LAN address for the Task Runner Wine game-save sync.
 BIGPC_IP: "192.168.8.226"
@@ -353,6 +358,7 @@ AUTHELIA_GRAFANA_CLIENT_SECRET_HASHABLE: "change_me" # docker run authelia/authe
 AUTHELIA_GRAFANA_CLIENT_SECRET_HASHED: "change_me"
 
 # ====== Infra paths (k3s-chart-only, machine/env layout) ======
-# Repo path used by the renovate CronJob (hostPath mount of the synced repo).
+# Repo path exposed through the hostpath PV/PVC mounted by the renovate
+# CronJob (the claim pins the job; no pod nodeSelector).
 INFRA_ROOT: "<path-to-Infra>"
 TARGET: "srv0"

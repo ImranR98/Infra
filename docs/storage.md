@@ -11,9 +11,11 @@
 
 ## Shared media / static host paths
 
-- `host-volumes` (base) defines the static `hostpath` PV/PVC pairs for the Main tree (media, music, documents, WhatsApp, backups, infra) pinned by `infra.local/hostpath-main=true`.
+- `host-volumes` (base) defines the static `hostpath` PV/PVC pairs for the Main tree (main, deviceSync, journal, WhatsApp TXT, file-pipelines, backups, media, documents, WhatsApp, infra) pinned by `infra.local/hostpath-main=true`.
+- The D$CPLN apps share `dscpln-config-pv/pvc` (apps) for the private config checkout; `dscpln-ledger-pv/pvc` holds the Excel ledger. Both are local PVs with the same node affinity, so the claims pin the whole D$CPLN stack to srv0 without pod selectors.
+- **A hostPath must not be the only reason a pod is pinned** — back it with a statically bound `hostpath` PV/PVC and let the claim do the scheduling. Device/system paths (`/dev`, `/run/dbus`, `/var/lib/kubelet`) are exempt.
 - The NFS media shares (`music`, `jellyfin-tv`, `jellyfin-youtube`, `arrstack-media`, `frigate`, `code-sandbox`) are static PVs using the `nfs` class name; they are not dynamically provisioned.
-- Media deliberately stays on NFS (Frigate recordings, Jellyfin libraries, Immich external library) so pods can move nodes.
+- Frigate recordings and the Jellyfin libraries stay on NFS (not tied to a node), but the pods are pinned by `infra.local/intel-gpu`. Immich's external library is the read-only media local PV; its primary library is `nfs-apps`.
 
 ## Task Runner runtime paths
 
@@ -27,10 +29,12 @@ On every pod start the `prepare-runtime` initContainer creates/chowns:
   `task-meta.json` / `tools/contacts/config.json` when present
 
 The app also creates its `.task-runner/{tasks,schedules,staging}` tree at boot
-and verifies the staging parent as the task user. Before the first deploy on a
-fresh host, run `scripts/preflight-task-runner.sh --fix` and clone the private
-`dscpln-config` checkout as `MY_UID`. The initContainer cannot create hostPath
-directories that must exist before the pod schedules.
+and verifies the staging parent as the task user. `/config-src` is the shared
+`dscpln-config-pvc` local PV (read-write; the UI persists task-meta.json and
+Contacts Discover edits). Before the first deploy on a fresh host, run
+`scripts/preflight-task-runner.sh --fix` and clone the private `dscpln-config`
+checkout as `MY_UID`. The initContainer cannot create hostPath directories that
+must exist before the pod schedules.
 
 ## Backups
 

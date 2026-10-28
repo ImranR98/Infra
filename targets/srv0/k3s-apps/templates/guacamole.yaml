@@ -151,8 +151,6 @@ spec:
       annotations:
         checksum/guacamole-db-password: {{ $dbPassword | sha256sum }}
     spec:
-      nodeSelector:
-        infra.local/external-exposed: "true"
       automountServiceAccountToken: false
       securityContext:
         fsGroup: 999
@@ -257,8 +255,6 @@ spec:
       labels:
         app: guacd
     spec:
-      nodeSelector:
-        infra.local/external-exposed: "true"
       automountServiceAccountToken: false
       containers:
         - name: guacd
@@ -321,8 +317,6 @@ spec:
       annotations:
         checksum/guacamole-seed: {{ include "guacamole.seed" . | sha256sum }}
     spec:
-      nodeSelector:
-        infra.local/external-exposed: "true"
       automountServiceAccountToken: false
       initContainers:
         - name: schema

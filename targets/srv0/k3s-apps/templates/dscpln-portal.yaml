@@ -7,12 +7,12 @@
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: allow-portal-notify-ingress
+  name: allow-dscpln-portal-notify-ingress
   namespace: apps
 spec:
   podSelector:
     matchLabels:
-      app: portal
+      app: dscpln-portal
   ingress:
     - from:
         - podSelector:
@@ -20,9 +20,9 @@ spec:
               - key: app
                 operator: In
                 values:
-                  - balance-xlsx
-                  - file-pipelines
-                  - task-runner
+                  - dscpln-balance-xlsx
+                  - dscpln-file-pipelines
+                  - dscpln-task-runner
       ports:
         - port: 8080
   policyTypes:
@@ -31,7 +31,7 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: portal
+  name: dscpln-portal
   namespace: apps
 spec:
   replicas: 1
@@ -39,19 +39,17 @@ spec:
     type: Recreate
   selector:
     matchLabels:
-      app: portal
+      app: dscpln-portal
   template:
     metadata:
       labels:
-        app: portal
+        app: dscpln-portal
     spec:
-      nodeSelector:
-        infra.local/hostpath-main: "true"
       securityContext:
         {{- include "dscpln.podSecurityContext" (dict "uid" .Values.MY_UID "seType" "spc_t" "seLevel" "s0") | nindent 8 }}
       automountServiceAccountToken: false
       containers:
-        - name: portal
+        - name: dscpln-portal
           image: ghcr.io/imranr98/dscpln-portal:latest@sha256:b94c7cdb2a0778f4e18b4b6ff1dad9c39f75415ead7760389357b7898f0689cb
           securityContext:
             {{- include "dscpln.containerSecurityContext" (dict "uid" .Values.MY_UID "readOnlyRootFilesystem" true) | nindent 12 }}
@@ -70,7 +68,8 @@ spec:
               value: proxy-header
             - name: AUTH_EXEMPT_PATHS
               value: /api/notify
-            # Notification settings (ntfy URL + token) live on the portal PVC.
+            # Notification settings (ntfy URL + token) live in the portal's
+            # apps/portal directory on the shared D$CPLN config PV.
             - name: DSCPLN_CONFIG_FILE
               value: /config/config.json
           resources:
@@ -86,14 +85,14 @@ spec:
               mountPath: /tmp
             - name: config-src
               mountPath: /config
+              subPath: apps/portal
       volumes:
         - name: tmp
           emptyDir:
             medium: Memory
             sizeLimit: 128Mi
         - name: config-src
-          hostPath:
-            path: {{ .Values.MAIN_PARENT_DIR }}/Main/Code/Automation/dscpln-config/apps/portal
-            type: Directory
+          persistentVolumeClaim:
+            claimName: dscpln-config-pvc
 ---
-{{ include "dscpln.service" (dict "name" "portal" "targetPort" "http" "port" 8080) }}
+{{ include "dscpln.service" (dict "name" "dscpln-portal" "targetPort" "http" "port" 8080) }}

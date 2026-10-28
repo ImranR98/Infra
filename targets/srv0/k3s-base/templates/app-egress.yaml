@@ -9,7 +9,7 @@
 #
 # Exceptions:
 #   - qbittorrent: BitTorrent peers connect to arbitrary public ports.
-#   - task-runner: SSHes to the Compose state target (vps0).
+#   - dscpln-task-runner: SSHes to the Compose state target (vps0).
 #   - homeassistant/frigate: LAN integrations and camera RTSP.
 #   - opencanary: a honeypot with its own strict policy; it must NOT inherit
 #     the cluster/internet allows, so the broad policies exclude it.

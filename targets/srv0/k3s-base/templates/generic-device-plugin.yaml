@@ -6,10 +6,15 @@
 #
 # Resources (domain infra.local; device config in
 # files/generic-device-plugin-config.yaml):
-#   infra.local/dri     -> /dev/dri/renderD128        (VAAPI, srv0 + bigpc)
+#   infra.local/intel-gpu -> /dev/dri/renderD128      (VAAPI/OpenVINO, i915/xe
+#                          only; generated per node, never advertised on bigpc)
 #   infra.local/conbee  -> /dev/ttyACM0 (optional)    (ConBee II, srv0 only)
 #   infra.local/amd     -> /dev/kfd + /dev/dri/*      (ROCm, bigpc only; the
 #                          required /dev/kfd means srv0 registers nothing)
+#
+# The base config is shared by every node. An init container appends the
+# intel-gpu group only when renderD128 is backed by the i915/xe driver, so the
+# resource is a hardware pin rather than a node label.
 #
 # The plugin runs unprivileged: spc_t covers SELinux for the host /dev (read-
 # only) and the kubelet device-plugin socket dir, and no capabilities are
@@ -23,6 +28,8 @@ metadata:
 data:
   config.yaml: |
     {{- .Files.Get "files/generic-device-plugin-config.yaml" | nindent 4 }}
+  init.sh: |
+    {{- .Files.Get "files/generic-device-plugin-init.sh" | nindent 4 }}
 ---
 apiVersion: apps/v1
 kind: DaemonSet
@@ -38,9 +45,9 @@ spec:
       labels:
         app: generic-device-plugin
       annotations:
-        # Roll the DaemonSet when the device config changes (the plugin reads
-        # it only at startup).
-        checksum/config: {{ .Files.Get "files/generic-device-plugin-config.yaml" | sha256sum }}
+        # Roll the DaemonSet when the device config or generator changes (the
+        # plugin reads the generated config only at startup).
+        checksum/config: {{ printf "%s%s" (.Files.Get "files/generic-device-plugin-config.yaml") (.Files.Get "files/generic-device-plugin-init.sh") | sha256sum }}
     spec:
       # Run on every node, including tainted ones (bigpc's
       # scheduling-discouraged taint) so the AMD resource is registered there.
@@ -49,6 +56,36 @@ spec:
       securityContext:
         seLinuxOptions:
           type: spc_t
+      initContainers:
+        # Generate the per-node config: the Intel group is added only where
+        # renderD128 is i915/xe (srv0). bigpc's AMD nodes get the base config.
+        - name: config
+          image: busybox:1.38.0-uclibc
+          command:
+            - /bin/sh
+            - /etc/generic-device-plugin-src/init.sh
+          securityContext:
+            runAsUser: 0
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+            seccompProfile:
+              type: RuntimeDefault
+          resources:
+            limits:
+              memory: 16Mi
+            requests:
+              memory: 8Mi
+          volumeMounts:
+            - name: config-src
+              mountPath: /etc/generic-device-plugin-src
+              readOnly: true
+            - name: config
+              mountPath: /etc/generic-device-plugin
+            - name: sys
+              mountPath: /sys
+              readOnly: true
       containers:
         - name: plugin
           image: squat/generic-device-plugin:0.2.0
@@ -100,7 +137,13 @@ spec:
             path: /dev
             type: Directory
         - name: config
+          emptyDir: {}
+        - name: config-src
           configMap:
             name: generic-device-plugin
+        - name: sys
+          hostPath:
+            path: /sys
+            type: Directory
         - name: tmp
           emptyDir: {}

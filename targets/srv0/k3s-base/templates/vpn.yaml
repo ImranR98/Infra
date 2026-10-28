@@ -21,7 +21,7 @@ ns  IN  A   10.100.0.1
 ---
 # Remote-access AmneziaWG VPN server: hostNetwork so it can create
 # ra-amneziawg0 in the host netns for the public-exposure tunnel to reach,
-# pinned to the exposed node via the NFD external-exposed label (same for
+# pinned to the exposed node via the static external-exposed label (same for
 # remote-access-dns). Keys and obfuscation parameters are generated once by the
 # keygen init container into remote-access-amneziawg-pvc (auto-backup); profiles
 # are fetched with scripts/remote-access-client.sh. conn-notify alerts ntfy when

@@ -21,8 +21,8 @@ Mac browser ──TLS──> vps0 Traefik ──TLS passthrough──> WireGuard
 - **No Guacamole admin UI step:** the schema and seed run in the
   `guacamole` Deployment's init containers; `guacadmin` is disabled.
 - **One session at a time:** the seeded connection has `max_connections=1`.
-- guacd is pinned to `infra.local/external-exposed` (srv0) so its egress source
-  is srv0's LAN IP for the Windows firewall allowlist.
+- The Windows firewall allows RDP from the LAN, so the Guacamole stack
+  (`guacamole`, `guacd`, `guacamole-db`) is not pinned to a node.
 
 ## Windows machine (manual, one-time)
 
@@ -33,11 +33,10 @@ Mac browser ──TLS──> vps0 Traefik ──TLS passthrough──> WireGuard
    on every connect; nothing is stored. Add the account to **Remote Desktop
    Users** if it is not already allowed to sign in remotely.
 4. Give the machine a static IP or DHCP reservation. Set
-   `GUACAMOLE_WINDOWS_HOST` to that address; it must be on the same `/24` as
-   srv0.
-5. Windows Firewall: allow TCP **3389** only from srv0's LAN IP
-   (`<srv0-lan-ip>`; confirm the source in the firewall log). Do not expose
-   3389 to the internet.
+   `GUACAMOLE_WINDOWS_HOST` to that address; it must be reachable from the
+   cluster nodes (same LAN).
+5. Windows Firewall: allow TCP **3389** from the **LAN** (any local subnet
+   address), not only srv0. Do not expose 3389 to the internet.
 6. Disable sleep/hibernate when plugged in; control Windows Update reboots.
    The machine must be awake for a connection to succeed.
 

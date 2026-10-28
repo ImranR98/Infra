@@ -11,10 +11,10 @@ MY_UID: 1000
 BOOTSTRAP_PRIVATE_APPS: "false"
 
 # ====== Guacamole (browser RDP gateway) ======
-# The Windows machine is reached over the LAN; guacd is pinned to the
-# external-exposed node so its egress source is predictable for the Windows
-# firewall. Required in config/srv0/values.yaml; keep it an IP because the
-# egress NetworkPolicy is a /32 ipBlock.
+# The Windows machine is reached over the LAN and the Windows firewall allows
+# 3389 from the LAN, so the Guacamole stack needs no node pin. Required in
+# config/srv0/values.yaml; keep it an IP because the egress NetworkPolicy is a
+# /32 ipBlock.
 GUACAMOLE_WINDOWS_HOST: ""
 GUACAMOLE_WINDOWS_PORT: "3389"
 GUACAMOLE_DB_STORAGE: "2Gi"

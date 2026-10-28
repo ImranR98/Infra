@@ -664,7 +664,7 @@ groups:
             datasourceUid: prometheus
             model:
               editorMode: code
-              expr: kube_deployment_status_replicas_available{namespace="apps",deployment="task-runner"}
+              expr: kube_deployment_status_replicas_available{namespace="apps",deployment="dscpln-task-runner"}
               instant: true
               intervalMs: 1000
               maxDataPoints: 43200

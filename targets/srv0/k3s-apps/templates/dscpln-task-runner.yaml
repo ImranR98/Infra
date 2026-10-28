@@ -60,13 +60,13 @@ spec:
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: task-runner-backup
+  name: dscpln-task-runner-backup
   namespace: apps
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: task-runner-backup
+  name: dscpln-task-runner-backup
 rules:
   - apiGroups: [""]
     resources: ["persistentvolumeclaims"]
@@ -75,20 +75,20 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: task-runner-backup
+  name: dscpln-task-runner-backup
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: task-runner-backup
+  name: dscpln-task-runner-backup
 subjects:
   - kind: ServiceAccount
-    name: task-runner-backup
+    name: dscpln-task-runner-backup
     namespace: apps
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: task-runner
+  name: dscpln-task-runner
   namespace: apps
 spec:
   replicas: 1
@@ -97,15 +97,13 @@ spec:
     type: Recreate
   selector:
     matchLabels:
-      app: task-runner
+      app: dscpln-task-runner
   template:
     metadata:
       labels:
-        app: task-runner
+        app: dscpln-task-runner
     spec:
-      nodeSelector:
-        infra.local/hostpath-main: "true"
-      serviceAccountName: task-runner-backup
+      serviceAccountName: dscpln-task-runner-backup
       automountServiceAccountToken: true
       securityContext:
         # Root is required to read the Postgres/Redis-owned PVC data; spc_t
@@ -188,7 +186,7 @@ spec:
             - name: config-src
               mountPath: /config-src
       containers:
-        - name: task-runner
+        - name: dscpln-task-runner
           image: ghcr.io/imranr98/dscpln-task-runner:latest@sha256:b94c7cdb2a0778f4e18b4b6ff1dad9c39f75415ead7760389357b7898f0689cb
           imagePullPolicy: IfNotPresent
           securityContext:
@@ -267,7 +265,7 @@ spec:
               value: http://localhost:4444
             # Notification relay and deep links.
             - name: DSCPLN_PORTAL_URL
-              value: http://portal:8080
+              value: http://dscpln-portal:8080
             - name: DSCPLN_ORIGIN
               value: "https://dscpln.{{ .Values.SERVICES_DOMAIN }}"
             # State backups: restic cache and the target GID for the setgid
@@ -385,11 +383,12 @@ spec:
         - name: backup-data
           persistentVolumeClaim:
             claimName: task-runner-backup-pvc
-        # The private config checkout (config.mjs + apps/ + tools/).
+        # The private config checkout (config.mjs + apps/ + tools/) lives on
+        # the shared config PV; writable because the UI commits task-meta.json
+        # and Contacts Discover edits its collection list here.
         - name: config-src
-          hostPath:
-            path: {{ .Values.MAIN_PARENT_DIR }}/Main/Code/Automation/dscpln-config
-            type: Directory
+          persistentVolumeClaim:
+            claimName: dscpln-config-pvc
         - name: browser-profile
           persistentVolumeClaim:
             claimName: backupctl-browser-pvc
@@ -398,18 +397,18 @@ spec:
             medium: Memory
             sizeLimit: 1Gi
 ---
-{{ include "dscpln.service" (dict "name" "task-runner" "targetPort" "http" "port" 8085) }}
+{{ include "dscpln.service" (dict "name" "dscpln-task-runner" "targetPort" "http" "port" 8085) }}
 ---
 # Scrape the Task Runner's per-task run gauges (the dead-man switch).
 apiVersion: monitoring.coreos.com/v1
 kind: PodMonitor
 metadata:
-  name: task-runner
+  name: dscpln-task-runner
   namespace: apps
 spec:
   selector:
     matchLabels:
-      app: task-runner
+      app: dscpln-task-runner
   podMetricsEndpoints:
     - port: http
       path: /tasks/api/metrics
@@ -418,12 +417,12 @@ spec:
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: allow-task-runner-metrics-ingress
+  name: allow-dscpln-task-runner-metrics-ingress
   namespace: apps
 spec:
   podSelector:
     matchLabels:
-      app: task-runner
+      app: dscpln-task-runner
   ingress:
     - from:
         - namespaceSelector:

@@ -9,7 +9,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: file-pipelines
+  name: dscpln-file-pipelines
   namespace: apps
 spec:
   replicas: 1
@@ -17,18 +17,18 @@ spec:
     type: Recreate
   selector:
     matchLabels:
-      app: file-pipelines
+      app: dscpln-file-pipelines
   template:
     metadata:
       labels:
-        app: file-pipelines
+        app: dscpln-file-pipelines
     spec:
       securityContext:
         # s0: the pod reads Syncthing-written trees and writes files that host
         # processes and other containers must be able to read back.
         {{- include "dscpln.podSecurityContext" (dict "uid" .Values.MY_UID "seType" "spc_t" "seLevel" "s0") | nindent 8 }}
       containers:
-        - name: file-pipelines
+        - name: dscpln-file-pipelines
           # Pin by digest after the first push so Renovate can bump deliberately.
           image: ghcr.io/imranr98/dscpln-file-pipelines:latest@sha256:b94c7cdb2a0778f4e18b4b6ff1dad9c39f75415ead7760389357b7898f0689cb
           securityContext:
@@ -47,7 +47,7 @@ spec:
               value: "https://dscpln.{{ .Values.SERVICES_DOMAIN }}"
             # Notifications relay through the portal (ntfy URL/token live there).
             - name: DSCPLN_PORTAL_URL
-              value: http://portal:8080
+              value: http://dscpln-portal:8080
           resources:
             limits:
               memory: 2Gi
@@ -71,6 +71,7 @@ spec:
               mountPath: /destination/WhatsApp
             - name: config
               mountPath: /config
+              subPath: apps/file-pipelines
             - name: appdata
               mountPath: /appdata
       volumes:
@@ -91,11 +92,10 @@ spec:
           persistentVolumeClaim:
             claimName: hostpath-main-node-whatsapp-pvc
         - name: config
-          hostPath:
-            path: {{ .Values.MAIN_PARENT_DIR }}/Main/Code/Automation/dscpln-config/apps/file-pipelines
-            type: Directory
+          persistentVolumeClaim:
+            claimName: dscpln-config-pvc
         - name: appdata
           persistentVolumeClaim:
             claimName: hostpath-main-node-file-pipelines-pvc
 ---
-{{ include "dscpln.service" (dict "name" "file-pipelines" "targetPort" "http" "port" 8791) }}
+{{ include "dscpln.service" (dict "name" "dscpln-file-pipelines" "targetPort" "http" "port" 8791) }}

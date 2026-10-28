@@ -1,7 +1,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: balance-xlsx
+  name: dscpln-balance-xlsx
   namespace: apps
 spec:
   replicas: 1
@@ -9,17 +9,17 @@ spec:
     type: Recreate
   selector:
     matchLabels:
-      app: balance-xlsx
+      app: dscpln-balance-xlsx
   template:
     metadata:
       labels:
-        app: balance-xlsx
+        app: dscpln-balance-xlsx
     spec:
       securityContext:
         {{- include "dscpln.podSecurityContext" (dict "uid" .Values.MY_UID "seType" "spc_t" "seLevel" "s0") | nindent 8 }}
       automountServiceAccountToken: false
       containers:
-        - name: balance-xlsx
+        - name: dscpln-balance-xlsx
           image: ghcr.io/imranr98/dscpln-balance:latest@sha256:b94c7cdb2a0778f4e18b4b6ff1dad9c39f75415ead7760389357b7898f0689cb
           securityContext:
             {{- include "dscpln.containerSecurityContext" (dict "uid" .Values.MY_UID "readOnlyRootFilesystem" true) | nindent 12 }}
@@ -57,15 +57,16 @@ spec:
               value: "https://dscpln.{{ .Values.SERVICES_DOMAIN }}"
             # Notifications relay through the portal (ntfy URL/token live there).
             - name: DSCPLN_PORTAL_URL
-              value: http://portal:8080
+              value: http://dscpln-portal:8080
           volumeMounts:
             - name: tmp
               mountPath: /tmp
             - name: config
               mountPath: /config
+              subPath: apps/balance-xlsx
               readOnly: true
-            # The git-tracked ledger repo is mounted at its host path so the
-            # app can read Balance.xlsx and commit changes to it.
+            # The git-tracked ledger repo lives on its own local PV, so the
+            # claim (not a nodeSelector) pins the app to srv0.
             - name: dscpln-ledger
               mountPath: {{ .Values.DSCPLN_LEDGER_PATH }}
       volumes:
@@ -74,14 +75,13 @@ spec:
             medium: Memory
             sizeLimit: 256Mi
         - name: config
-          hostPath:
-            path: {{ .Values.MAIN_PARENT_DIR }}/Main/Code/Automation/dscpln-config/apps/balance-xlsx
-            type: Directory
+          persistentVolumeClaim:
+            claimName: dscpln-config-pvc
         - name: dscpln-ledger
           persistentVolumeClaim:
             claimName: dscpln-ledger-pvc
 ---
-{{ include "dscpln.service" (dict "name" "balance-xlsx" "port" 3300) }}
+{{ include "dscpln.service" (dict "name" "dscpln-balance-xlsx" "port" 3300) }}
 ---
 apiVersion: v1
 kind: PersistentVolume
@@ -125,17 +125,17 @@ spec:
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: allow-task-runner-ingress
+  name: allow-dscpln-task-runner-ingress
   namespace: apps
 spec:
   podSelector:
     matchLabels:
-      app: balance-xlsx
+      app: dscpln-balance-xlsx
   ingress:
     - from:
         - podSelector:
             matchLabels:
-              app: task-runner
+              app: dscpln-task-runner
       ports:
         - port: 3300
   policyTypes:

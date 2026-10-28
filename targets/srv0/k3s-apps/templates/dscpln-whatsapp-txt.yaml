@@ -1,7 +1,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: whatsapp-txt
+  name: dscpln-whatsapp-txt
   namespace: apps
 spec:
   replicas: 1
@@ -9,11 +9,11 @@ spec:
     type: Recreate
   selector:
     matchLabels:
-      app: whatsapp-txt
+      app: dscpln-whatsapp-txt
   template:
     metadata:
       labels:
-        app: whatsapp-txt
+        app: dscpln-whatsapp-txt
     spec:
       securityContext:
         runAsUser: {{ .Values.MY_UID }}
@@ -25,7 +25,7 @@ spec:
           level: s0
       automountServiceAccountToken: false
       containers:
-        - name: whatsapp-txt
+        - name: dscpln-whatsapp-txt
           image: ghcr.io/imranr98/dscpln-watxt:latest@sha256:b94c7cdb2a0778f4e18b4b6ff1dad9c39f75415ead7760389357b7898f0689cb
           securityContext:
             allowPrivilegeEscalation: false
@@ -68,4 +68,4 @@ spec:
           persistentVolumeClaim:
             claimName: hostpath-main-node-wa-txt-pvc
 ---
-{{ include "dscpln.service" (dict "name" "whatsapp-txt" "port" 8787) }}
+{{ include "dscpln.service" (dict "name" "dscpln-whatsapp-txt" "port" 8787) }}

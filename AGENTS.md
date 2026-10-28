@@ -97,6 +97,8 @@ Scripts warn or hard-fail (`require_target_host`) on hostname/target mismatches.
 - `nfs-apps` is the default StorageClass; do not add new Longhorn PVs. The old Longhorn system is removed.
 - The six user-facing apps (Home Assistant, Immich, Jellyfin, Linkwarden, Navidrome, Opodsync) have no Authelia forward-auth filter; use `BOOTSTRAP_PRIVATE_APPS` for first-boot LAN/VPN containment.
 - Node labels are static: `k3s-server.sh` sets both; `k3s-join.sh --hostpath-main` for a joined node. Do not reintroduce NFD/node-facts.
+- **HostPath data is exposed through a local PV/PVC** — app data that lives on a host path must be mounted via a statically bound `hostpath` PV/PVC (`nodeAffinity: infra.local/hostpath-main`) so the claim pins the pod. Never add a pod `nodeSelector` to compensate for a raw `hostPath`; device/system paths (`/dev`, `/run/dbus`, `/var/lib/kubelet`) are exempt.
+- **Hardware is requested through the generic device plugin** — use `infra.local/intel-gpu`, `infra.local/amd`, or `infra.local/conbee` rather than a node label as a hardware proxy.
 - Geoblock uses `get.geojs.io`; do not reintroduce the self-hosted GeoIP service/`geoip-src`.
 - **App repos share one Renovate baseline** — `scripts/check-app-configs.sh` (run by `renovate-daily`) enforces the standard presets, OSV alerts, dependency dashboard, `minimumReleaseAge`, lockfile maintenance, and no automerge; `scripts/merge-renovate-prs.sh` is the only merger.
 - **Helm charts** — only project-maintained charts; `validate.sh` enforces the allowlist. Home Assistant is the single approved third-party exception. Pin `image.repository`/`image.tag` on app-version-sensitive charts so Renovate tracks the app, not just the chart.

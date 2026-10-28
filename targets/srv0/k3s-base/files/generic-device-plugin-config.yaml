@@ -1,9 +1,4 @@
 device:
-  - name: dri
-    groups:
-      - count: 32
-        paths:
-          - path: /dev/dri/renderD128
   - name: conbee
     groups:
       - count: 32

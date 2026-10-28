@@ -75,7 +75,7 @@ spec:
               kubernetes.io/metadata.name: apps
           podSelector:
             matchLabels:
-              app: portal
+              app: dscpln-portal
         - namespaceSelector:
             matchLabels:
               kubernetes.io/metadata.name: apps

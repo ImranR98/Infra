@@ -44,7 +44,7 @@ spec:
             kind: Middleware
             name: crowdsec-bouncer
       backendRefs:
-        - name: balance-xlsx
+        - name: dscpln-balance-xlsx
           namespace: apps
           port: 3300
     - matches:
@@ -68,7 +68,7 @@ spec:
             kind: Middleware
             name: forwardauth-authelia
       backendRefs:
-        - name: balance-xlsx
+        - name: dscpln-balance-xlsx
           namespace: apps
           port: 3300
     - matches:
@@ -94,7 +94,7 @@ spec:
             kind: Middleware
             name: forwardauth-authelia
       backendRefs:
-        - name: file-pipelines
+        - name: dscpln-file-pipelines
           namespace: apps
           port: 8791
     - matches:
@@ -118,7 +118,7 @@ spec:
             kind: Middleware
             name: forwardauth-authelia
       backendRefs:
-        - name: whatsapp-txt
+        - name: dscpln-whatsapp-txt
           namespace: apps
           port: 8787
     - matches:
@@ -143,7 +143,7 @@ spec:
             kind: Middleware
             name: forwardauth-authelia
       backendRefs:
-        - name: task-runner
+        - name: dscpln-task-runner
           namespace: apps
           port: 8085
     - matches:
@@ -164,7 +164,7 @@ spec:
             kind: Middleware
             name: forwardauth-authelia
       backendRefs:
-        - name: lockdown
+        - name: dscpln-lockdown
           namespace: apps
           port: 8086
     - matches:
@@ -188,6 +188,6 @@ spec:
             kind: Middleware
             name: forwardauth-authelia
       backendRefs:
-        - name: portal
+        - name: dscpln-portal
           namespace: apps
           port: 8080
