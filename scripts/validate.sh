@@ -332,8 +332,7 @@ check_global_config() {
     if [ -f "$vars_file" ]; then
         while IFS= read -r key; do
             [ -n "$key" ] || continue
-            _err "ERROR: config/VARS.env has a placeholder value: $key"
-            ok=0
+            _err "WARNING: config/VARS.env has a placeholder value: $key (needed only for Renovate/CI)"
         done < <(grep -E '^[A-Z][A-Z0-9_]*=.*(change_me|REPLACE_ME|<[A-Za-z])' "$vars_file" | cut -d= -f1 | grep -v '^DOCKERHUB_')
     fi
 

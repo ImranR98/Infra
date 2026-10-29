@@ -46,7 +46,8 @@ Then fill:
   `dscpln-agent`
 
 Run `bash scripts/validate.sh <target>`; it prints key names, not values, and
-rejects placeholders.
+rejects placeholders in target config. `config/VARS.env` placeholders are
+warnings because that file is only needed for Renovate/CI.
 
 ## Path defaults
 
