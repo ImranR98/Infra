@@ -34,7 +34,7 @@ The metrics store is Prometheus (`prom/prometheus`, 180-day retention, remote-wr
 
 ## Authelia access-control ownership
 
-Structural rules stay in code: ACME/app bypasses and the final admin catch-all. Deployment-specific rules — hosts, groups, users, one-factor/two-factor policy — live in `config/srv0/values.yaml` as `AUTHELIA_ACCESS_CONTROL_RULES` (rendered by `tpl` between the bypasses and catch-all) and in `config/vps0/authelia/access_control.yml` for vps0. The vps0 base config is committed; `scripts/render-vps0-authelia.sh` injects the config rules and writes the live `configuration.yml` before `docker compose up`. The split keeps the reusable chart free of personal group names while preserving first-match ordering.
+Structural rules stay in code: ACME/app bypasses and the final admin catch-all. Deployment-specific rules — hosts, groups, users, one-factor/two-factor policy — live in `config/srv0/values.yaml` as `AUTHELIA_ACCESS_CONTROL_RULES` (rendered by `tpl` between the bypasses and catch-all) and in `config/vps0/authelia/access_control.yml` for vps0. The vps0 base config is committed; `scripts/render-vps0-authelia.sh` injects the config rules and writes the live `configuration.yml`; `compose.sh vps0 up` runs it automatically. The split keeps the reusable chart free of personal group names while preserving first-match ordering.
 
 ## Shared multi-SAN edge certificates
 

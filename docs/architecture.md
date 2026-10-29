@@ -59,15 +59,34 @@ architecture.svg|.excalidraw  # architecture diagram
 
 ## Bootstrap order
 
-For a from-scratch setup:
+For the full walkthrough, use `docs/runbooks/first-boot.md`. In short:
 
-1. **DNS first** — `$SERVICES_DOMAIN` must point at vps0, with `home.$SERVICES_DOMAIN` and `*.home.$SERVICES_DOMAIN` for the tunnel; run `scripts/public-exposure-keygen.sh` on srv0 and copy `config/vps0/public-exposure/` to vps0 (the template documents it). cert-manager uses HTTP-01, so it cannot issue certs until the public path through the vps0 hub exists.
-2. **`scripts/prereqs.sh` on every machine** — packages (NFS client), pinned helm, Docker, the machine-fact `.env`, host bind dirs, and the seeded `acme.json`.
-3. **Config** — `bash scripts/init-config.sh <target> [--detect]` and fill every value; only `MAIN_PARENT_DIR`/`SECONDARY_STORAGE_PATH` are required roots, the other paths derive by default. See `docs/configuration.md`.
-4. **Bring vps0 up before srv0** — `validate.sh vps0`, then compose up: srv0's ACME challenges need the edge already serving.
-5. **srv0** — `validate.sh srv0` → `k3s-server.sh` → `kubeconfig-unlock.sh` → the public-exposure client compose sidecar → `srv0-base` → `srv0-apps`. On a first bootstrap, set `BOOTSTRAP_PRIVATE_APPS: "true"` in `config/srv0/values.yaml`; the six user-facing apps stay on the LAN/VPN listener until Authelia is Ready, then set it back to `"false"`.
-6. **Add the other nodes** — run `k3s-join.sh` on the control plane once the nfs-server/csi-driver are up. `--hostpath-main` labels a node that owns the Main host paths; `--scheduling-discouraged` adds the desktop taint.
-7. **Machine-local extras** — `wireguard.sh`, `preboot.sh`.
-8. **Post-deploy** — the manual first-time setup below (app seeding, crowdsec-web-ui machine registration).
+1. **DNS first** — point `SERVICES_DOMAIN`/`*.$SERVICES_DOMAIN`,
+   `CLOUD_SERVICES_DOMAIN`/`*.$CLOUD_SERVICES_DOMAIN`, and any base-domain
+   apps at vps0. When `SERVICES_DOMAIN=home.$BASE_SERVICES_DOMAIN`, the vps0
+   file-provider routes `home.$BASE_SERVICES_DOMAIN` and
+   `*.home.$BASE_SERVICES_DOMAIN`. cert-manager uses HTTP-01, so it cannot
+   issue until vps0 is serving.
+2. **`scripts/prereqs.sh` on every machine** — packages (NFS client), pinned
+   Helm, Docker, the machine-fact `.env`, host bind dirs, and `acme.json`.
+3. **Config** — `bash scripts/init-config.sh <target> [--detect]` and fill
+   every value; only `MAIN_PARENT_DIR`/`SECONDARY_STORAGE_PATH` are required
+   roots, the rest derive. See `docs/configuration.md`.
+4. **Tunnel material** — fill `config/srv0/compose.env`, run
+   `scripts/public-exposure-keygen.sh` on srv0, copy
+   `config/vps0/public-exposure/` to vps0, and install `preboot.sh`.
+5. **Bring vps0 up before srv0** — `scripts/deploy.sh vps0` renders Authelia
+   and runs Compose; srv0's ACME challenges need the edge serving.
+6. **srv0** — `preflight-task-runner.sh --fix` if using D$CPLN, then
+   `k3s-server.sh` → `kubeconfig-unlock.sh` → `compose.sh srv0 up -d` →
+   `deploy.sh srv0`. Set `BOOTSTRAP_PRIVATE_APPS: "true"` for the first boot;
+   the six user-facing apps stay LAN/VPN-only until Authelia is Ready, then
+   set it back to `"false"` and redeploy.
+7. **Add the other nodes** — `k3s-join.sh` for bigpc; deploy `pc`, `bigpc`,
+   and `rpi` with `deploy.sh`. `--hostpath-main` is a singleton for srv0;
+   `--scheduling-discouraged` adds the desktop taint.
+8. **Machine-local extras** — `wireguard.sh`, `preboot.sh`.
+9. **Post-deploy** — the manual first-time setup below (app seeding,
+   crowdsec-web-ui machine registration, VPN profiles).
 
 The `renovate-daily` job mounts this repo from `INFRA_ROOT`, so the checkout can live anywhere (it need not be under `MAIN_PARENT_DIR/Main`). Task Runner instead mounts the private `dscpln-config` checkout at `$MAIN_PARENT_DIR/Main/Code/Automation/dscpln-config`.

@@ -4,6 +4,13 @@ The repo uses native Helm values and Compose env files, plus a small number of
 real files for multi-line configuration. Generated machine facts and runtime
 keys stay out of the config tree.
 
+For the end-to-end first install, start with
+[`docs/runbooks/first-boot.md`](runbooks/first-boot.md). This page is the
+reference for each configuration layer and default.
+
+Before `init-config.sh`, set the target hostnames and run
+`scripts/prereqs.sh` on each machine; `init-config` needs `yq` from prereqs.
+
 ## Layers
 
 | Layer | Location | Who writes it |
@@ -24,6 +31,10 @@ keys stay out of the config tree.
 ## Initialise
 
 ```bash
+# On each machine first:
+bash scripts/prereqs.sh
+
+# Then, on the machine that owns the config:
 bash scripts/init-config.sh srv0 --detect   # run on srv0
 bash scripts/init-config.sh vps0            # run on vps0
 ```
@@ -45,9 +56,20 @@ Then fill:
 - `config/vps0/dscpln-agent/agent.json` only if `COMPOSE_PROFILES` includes
   `dscpln-agent`
 
+Authelia has two separate user sources: srv0 uses
+`AUTHELIA_USERS_DATABASE` in `config/srv0/values.yaml`, while vps0 uses
+`config/vps0/authelia/users_database.yml`. Keep the users and group names
+consistent across both, and with the group names used by access rules and
+Open WebUI/FileBrowser.
+
 Run `bash scripts/validate.sh <target>`; it prints key names, not values, and
 rejects placeholders in target config. `config/VARS.env` placeholders are
 warnings because that file is only needed for Renovate/CI.
+
+The reference stack is a personal catalog. If you do not use every app, remove
+the unused templates/services and their `PUBLIC_HOSTS` labels; see
+[Minimal stack](runbooks/first-boot.md#minimal-stack). `DSCPLN_AGENTS: {}` only
+disables the archive agents, not the other D$CPLN apps or Task Runner.
 
 ## Path defaults
 
@@ -78,7 +100,9 @@ current machine.
 
 `PUBLIC_HOSTS` and `PRIVATE_HOSTS` in `config/srv0/values.yaml` are the exact
 SAN labels appended to `SERVICES_DOMAIN`. Keep them aligned with the
-HTTPRoutes; `validate.sh` reports route/SAN drift.
+HTTPRoutes; `validate.sh` reports route/SAN drift. Remove any public hostname
+you do not serve before the first deploy, or Let's Encrypt HTTP-01 can fail for
+a SAN with no DNS/route.
 
 ## Optional services
 
@@ -89,6 +113,7 @@ leave the profile unset to skip it entirely.
 ## Standard commands
 
 ```bash
+bash scripts/prereqs.sh                     # once per machine
 bash scripts/init-config.sh srv0 --detect
 bash scripts/validate.sh srv0
 bash scripts/deploy.sh srv0                 # Helm + rollout checks

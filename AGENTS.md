@@ -17,7 +17,8 @@ Infra is the infrastructure-as-code repo for a multi-machine homelab. Everything
 Run `validate.sh` before every `helm upgrade --install`.
 
 ```bash
-# First time only — copy templates (never overwrites) and detect srv0 hardware:
+# First time only — run scripts/prereqs.sh on each machine first (it installs
+# yq), then copy templates (never overwrites) and detect srv0 hardware:
 bash scripts/init-config.sh srv0 --detect
 bash scripts/init-config.sh vps0
 
@@ -77,6 +78,7 @@ Scripts warn or hard-fail (`require_target_host`) on hostname/target mismatches.
 ## Documentation
 
 - [Configuration](docs/configuration.md) — every config layer, generated file, path default, and command
+- [First boot](docs/runbooks/first-boot.md) — end-to-end install order, minimal stack, common failures
 - [Architecture](docs/architecture.md) — targets, layout, bootstrap order
 - [Networking](docs/networking.md) — Traefik/Gateway, public exposure, VPN, DNS, static labels
 - [Storage](docs/storage.md) — NFS, `nfs-apps`, backups/restore, performance note

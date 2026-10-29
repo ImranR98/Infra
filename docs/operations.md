@@ -2,6 +2,10 @@
 
 ## Prerequisites
 
+For the end-to-end install path, use `docs/runbooks/first-boot.md`. This page
+is the operations reference.
+
+
 Bash 4+, Python 3, Docker Compose v2, kubectl (K3s targets), helm (srv0), yq, jq, curl, openssl, NFS client utilities, Node.js/npm for local Renovate runs. `scripts/prereqs.sh` prepares the machine: packages, the pinned helm binary, the official Docker bootstrap, the generated machine-fact `.env`, host bind dirs, and the seeded `acme.json`. It is idempotent — re-run after repo changes that add compose bind dirs.
 
 ## K3s & Helm
@@ -107,7 +111,8 @@ Do not put personal group or user names in the charts.
 
 ## Manual first-time setup
 
-One-time web-UI steps for apps with no API seeding:
+These are the post-deploy steps from the first-boot runbook. One-time web-UI
+steps for apps with no API seeding:
 
 - **radarr / sonarr** (`https://radarr.$SERVICES_DOMAIN`, `https://sonarr.$SERVICES_DOMAIN`, Authelia-protected): General → Authentication → Forms (create the admin account); Media Management → Root Folders (`/data/Movies` for radarr, `/data/TV` for sonarr); Download Clients → qBittorrent at `qbittorrent.apps.svc.cluster.local:8080` (credentials from the qBittorrent setup); Indexers via Prowlarr or manual; Connect → Jellyfin (`http://jellyfin.apps.svc.cluster.local:8096`, API key from the Jellyfin dashboard, notify On Import/On Upgrade). The arr API keys come pre-configured — read them with `kubectl -n apps get secret radarr-secret|sonarr-secret`.
 - **prowlarr** (`https://prowlarr.$SERVICES_DOMAIN`): under Settings → Apps, register Radarr (`http://radarr.apps.svc.cluster.local:7878`) and Sonarr (`http://sonarr.apps.svc.cluster.local:8989`) using the keys from their secrets; Settings → Indexers then syncs both. Add FlareSolverr (`http://flaresolverr.apps.svc.cluster.local:8191`) for Cloudflare-protected indexers.
