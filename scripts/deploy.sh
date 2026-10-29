@@ -54,12 +54,14 @@ if [ "$target" != "srv0" ]; then
     echo "==> Validate $target"
     bash "$INFRA_ROOT/scripts/validate.sh" "$target"
     if [ "$dry_run" = 1 ]; then
-        bash "$INFRA_ROOT/scripts/compose.sh" "$target" up -d --remove-orphans --dry-run
+        COMPOSE_SKIP_AUTHELIA_RENDER=1 \
+            bash "$INFRA_ROOT/scripts/compose.sh" "$target" up -d --remove-orphans --dry-run
         echo "deploy: dry run OK ($target)"
         exit 0
     fi
     echo "==> docker compose up ($target)"
-    bash "$INFRA_ROOT/scripts/compose.sh" "$target" up -d --remove-orphans
+    COMPOSE_SKIP_AUTHELIA_RENDER=1 \
+        bash "$INFRA_ROOT/scripts/compose.sh" "$target" up -d --remove-orphans
     echo "deploy: OK ($target)"
     exit 0
 fi

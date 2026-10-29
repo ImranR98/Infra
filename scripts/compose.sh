@@ -68,7 +68,8 @@ fi
 
 # The vps0 Authelia config is generated from the base + access rules. Keep the
 # render automatic for `up` so it cannot go stale.
-if [ "$target" = "vps0" ] && [ "${args[0]:-}" = "up" ] && [ "$dry_run" = 0 ]; then
+if [ "$target" = "vps0" ] && [ "${args[0]:-}" = "up" ] && [ "$dry_run" = 0 ] &&
+    [ "${COMPOSE_SKIP_AUTHELIA_RENDER:-0}" != 1 ]; then
     bash "$INFRA_ROOT/scripts/render-vps0-authelia.sh"
 fi
 
