@@ -42,11 +42,12 @@ docs/                         # architecture/networking/storage/security/operati
 config_template/VARS.env      # committed template for config/VARS.env (universal secrets)
 config/                       # gitignored real values, mirroring targets/<t>/config_template/:
                               #   VARS.env, srv0/{values.yaml,compose.env,public-exposure/},
-                              #   vps0/{compose.env,public-exposure/,authelia/users_database.yml}
+                              #   vps0/{compose.env,public-exposure/,authelia/{users_database,access_control}.yml,
+                              #   dscpln-agent/agent.json}
 targets/<t>/
-  config_template/            # every required variable + generation command (copy to config/<t>/)
+  config_template/            # every required variable + generation command; init-config.sh copies it
   compose/                    # compose.yaml, optional gitignored compose.private.yaml,
-                              #   files/ (verbatim :ro configs), .env (machine facts, from prereqs.sh)
+                              #   files/ (verbatim :ro configs), .env (generated machine facts)
   k3s-base/ k3s-apps/         # srv0 Helm charts; k3s-base carries files/ (generic-device-plugin
                               #   config, alerting, dashboards, AmneziaWG scripts) and the
                               #   nfs-server source; k3s-apps carries the app manifests
@@ -62,7 +63,7 @@ For a from-scratch setup:
 
 1. **DNS first** — `$SERVICES_DOMAIN` must point at vps0, with `home.$SERVICES_DOMAIN` and `*.home.$SERVICES_DOMAIN` for the tunnel; run `scripts/public-exposure-keygen.sh` on srv0 and copy `config/vps0/public-exposure/` to vps0 (the template documents it). cert-manager uses HTTP-01, so it cannot issue certs until the public path through the vps0 hub exists.
 2. **`scripts/prereqs.sh` on every machine** — packages (NFS client), pinned helm, Docker, the machine-fact `.env`, host bind dirs, and the seeded `acme.json`.
-3. **Config** — `cp -r targets/<t>/config_template config/<t>` and fill every value; `cp config_template/VARS.env config/VARS.env`; point `INFRA_ROOT`, `MAIN_PARENT_DIR`, `MEDIA_DIR_PATH` etc. at the machine layout.
+3. **Config** — `bash scripts/init-config.sh <target> [--detect]` and fill every value; only `MAIN_PARENT_DIR`/`SECONDARY_STORAGE_PATH` are required roots, the other paths derive by default. See `docs/configuration.md`.
 4. **Bring vps0 up before srv0** — `validate.sh vps0`, then compose up: srv0's ACME challenges need the edge already serving.
 5. **srv0** — `validate.sh srv0` → `k3s-server.sh` → `kubeconfig-unlock.sh` → the public-exposure client compose sidecar → `srv0-base` → `srv0-apps`. On a first bootstrap, set `BOOTSTRAP_PRIVATE_APPS: "true"` in `config/srv0/values.yaml`; the six user-facing apps stay on the LAN/VPN listener until Authelia is Ready, then set it back to `"false"`.
 6. **Add the other nodes** — run `k3s-join.sh` on the control plane once the nfs-server/csi-driver are up. `--hostpath-main` labels a node that owns the Main host paths; `--scheduling-discouraged` adds the desktop taint.

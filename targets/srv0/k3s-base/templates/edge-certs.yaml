@@ -1,8 +1,10 @@
+{{- $publicHosts := required "PUBLIC_HOSTS must be set in config/srv0/values.yaml" .Values.PUBLIC_HOSTS -}}
+{{- $privateHosts := required "PRIVATE_HOSTS must be set in config/srv0/values.yaml" .Values.PRIVATE_HOSTS -}}
 # Two shared exact-name edge certificates replace the per-app certificates.
 # edge-public-tls is attached to both secure listeners; edge-private-tls is
 # attached only to websecure, so files/traefik never reach the public-exposure
-# listener. Adding a public app means adding its hostname here and re-issuing;
-# the names are exact (not a wildcard), but all public names share one key.
+# listener. Add/remove a public app in PUBLIC_HOSTS and re-issue; the names are
+# exact (not a wildcard), but all public names share one key.
 ---
 apiVersion: cert-manager.io/v1
 kind: Certificate
@@ -15,31 +17,9 @@ spec:
     name: letsencrypt-prod
     kind: ClusterIssuer
   dnsNames:
-    - dscpln.{{ .Values.SERVICES_DOMAIN }}
-    - fmd.{{ .Values.SERVICES_DOMAIN }}
-    - rss.{{ .Values.SERVICES_DOMAIN }}
-    - frigate.{{ .Values.SERVICES_DOMAIN }}
-    - k8s.{{ .Values.SERVICES_DOMAIN }}
-    - ha.{{ .Values.SERVICES_DOMAIN }}
-    - immich.{{ .Values.SERVICES_DOMAIN }}
-    - tv.{{ .Values.SERVICES_DOMAIN }}
-    - links.{{ .Values.SERVICES_DOMAIN }}
-    - music.{{ .Values.SERVICES_DOMAIN }}
-    - nextcloud.{{ .Values.SERVICES_DOMAIN }}
-    - gpt.{{ .Values.SERVICES_DOMAIN }}
-    - opencode.{{ .Values.SERVICES_DOMAIN }}
-    - opodsync.{{ .Values.SERVICES_DOMAIN }}
-    - win.{{ .Values.SERVICES_DOMAIN }}
-    - send.{{ .Values.SERVICES_DOMAIN }}
-    - prowlarr.{{ .Values.SERVICES_DOMAIN }}
-    - qbittorrent.{{ .Values.SERVICES_DOMAIN }}
-    - radarr.{{ .Values.SERVICES_DOMAIN }}
-    - seerr.{{ .Values.SERVICES_DOMAIN }}
-    - sonarr.{{ .Values.SERVICES_DOMAIN }}
-    - auth.{{ .Values.SERVICES_DOMAIN }}
-    - crowdsec.{{ .Values.SERVICES_DOMAIN }}
-    - grafana.{{ .Values.SERVICES_DOMAIN }}
-    - ntfy.{{ .Values.SERVICES_DOMAIN }}
+{{- range $publicHosts }}
+    - {{ . }}.{{ $.Values.SERVICES_DOMAIN }}
+{{- end }}
 ---
 apiVersion: cert-manager.io/v1
 kind: Certificate
@@ -52,5 +32,6 @@ spec:
     name: letsencrypt-prod
     kind: ClusterIssuer
   dnsNames:
-    - files.{{ .Values.SERVICES_DOMAIN }}
-    - traefik.{{ .Values.SERVICES_DOMAIN }}
+{{- range $privateHosts }}
+    - {{ . }}.{{ $.Values.SERVICES_DOMAIN }}
+{{- end }}

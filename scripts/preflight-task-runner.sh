@@ -38,9 +38,7 @@ while [ $# -gt 0 ]; do
 done
 
 if [ -z "$MAIN_PARENT_DIR" ]; then
-    values="$INFRA_ROOT/config/srv0/values.yaml"
-    [ -f "$values" ] || { echo "Error: $values not found; pass --main-dir" >&2; exit 1; }
-    MAIN_PARENT_DIR="$(yq -r '.MAIN_PARENT_DIR // ""' "$values")"
+    MAIN_PARENT_DIR="$(config_yaml srv0 .MAIN_PARENT_DIR || true)"
 fi
 if [ -z "$MAIN_PARENT_DIR" ] || [ "$MAIN_PARENT_DIR" = "null" ]; then
     echo "Error: MAIN_PARENT_DIR is not configured; pass --main-dir" >&2
@@ -48,7 +46,10 @@ if [ -z "$MAIN_PARENT_DIR" ] || [ "$MAIN_PARENT_DIR" = "null" ]; then
 fi
 
 MAIN_DIR="$MAIN_PARENT_DIR/Main"
-CONFIG_DIR="${CONFIG_DIR:-$MAIN_DIR/Code/Automation/dscpln-config}"
+CONFIG_DIR="${CONFIG_DIR:-$(config_yaml srv0 .DSCPLN_CONFIG_PATH || true)}"
+if [ -z "$CONFIG_DIR" ] || [ "$CONFIG_DIR" = "null" ]; then
+    CONFIG_DIR="$MAIN_DIR/Code/Automation/dscpln-config"
+fi
 REQUIRED=(
     "$MAIN_DIR/Backups"
     "$MAIN_DIR/Media"

@@ -68,7 +68,7 @@ spec:
             # The git-tracked ledger repo lives on its own local PV, so the
             # claim (not a nodeSelector) pins the app to srv0.
             - name: dscpln-ledger
-              mountPath: {{ .Values.DSCPLN_LEDGER_PATH }}
+              mountPath: {{ include "path.dscplnLedger" . }}
       volumes:
         - name: tmp
           emptyDir:
@@ -96,7 +96,7 @@ spec:
   persistentVolumeReclaimPolicy: Retain
   storageClassName: hostpath
   local:
-    path: {{ .Values.DSCPLN_LEDGER_PATH }}
+    path: {{ include "path.dscplnLedger" . }}
   nodeAffinity:
     required:
       nodeSelectorTerms:

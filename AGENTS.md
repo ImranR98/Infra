@@ -17,6 +17,10 @@ Infra is the infrastructure-as-code repo for a multi-machine homelab. Everything
 Run `validate.sh` before every `helm upgrade --install`.
 
 ```bash
+# First time only — copy templates (never overwrites) and detect srv0 hardware:
+bash scripts/init-config.sh srv0 --detect
+bash scripts/init-config.sh vps0
+
 # Preflight — read-only, any machine:
 bash scripts/validate.sh srv0
 bash scripts/validate.sh vps0
@@ -30,22 +34,16 @@ helm upgrade --install srv0-apps targets/srv0/k3s-apps -n apps --create-namespac
   -f targets/srv0/k3s-apps/values.yaml -f config/srv0/values.yaml
 helm uninstall srv0-apps -n apps     # delete apps first, then srv0-base
 
-# Compose — from the repo root, ON the target machine:
-# vps0: render Authelia's config from the base + config rules before compose.
-bash scripts/render-vps0-authelia.sh
-docker compose --env-file config/vps0/compose.env --env-file targets/vps0/compose/.env \
-  -f targets/vps0/compose/compose.yaml -f targets/vps0/compose/compose.private.yaml \
-  up -d --remove-orphans
-docker compose --env-file config/vps0/compose.env --env-file targets/vps0/compose/.env \
-  -f targets/vps0/compose/compose.yaml -f targets/vps0/compose/compose.private.yaml \
-  down <svc>                         # then up -d <svc> to restart one service
-docker compose --env-file config/vps0/compose.env --env-file targets/vps0/compose/.env \
-  -f targets/vps0/compose/compose.yaml -f targets/vps0/compose/compose.private.yaml \
-  up -d --force-recreate --no-deps <svc>   # after editing an inline content: config
-docker compose --env-file config/srv0/compose.env \
-  -f targets/srv0/compose/compose.yaml up -d      # public-exposure client
-# pc/bigpc/rpi: docker compose -f targets/<t>/compose/compose.yaml up -d
-#   (no --env-file; the project-dir machine-fact .env auto-loads)
+# Compose — from the repo root, ON the target machine. The wrapper supplies
+# the config env, generated machine facts, private overlay, Compose profiles,
+# and (for vps0) renders Authelia before `up`.
+bash scripts/compose.sh vps0 up -d
+bash scripts/compose.sh vps0 down <svc>                         # then up -d <svc>
+bash scripts/compose.sh vps0 up -d --force-recreate --no-deps <svc>
+bash scripts/compose.sh srv0 up -d                              # public-exposure client
+bash scripts/compose.sh pc up -d
+# `deploy.sh <target>` runs validate + the appropriate Compose/Helm flow.
+# First-time setup: bash scripts/init-config.sh <target> [--detect]
 
 # Backups (Task Runner scheduled task; manual restore):
 bash scripts/restic-restore.sh list
@@ -78,6 +76,7 @@ Scripts warn or hard-fail (`require_target_host`) on hostname/target mismatches.
 
 ## Documentation
 
+- [Configuration](docs/configuration.md) — every config layer, generated file, path default, and command
 - [Architecture](docs/architecture.md) — targets, layout, bootstrap order
 - [Networking](docs/networking.md) — Traefik/Gateway, public exposure, VPN, DNS, static labels
 - [Storage](docs/storage.md) — NFS, `nfs-apps`, backups/restore, performance note
@@ -103,5 +102,5 @@ Scripts warn or hard-fail (`require_target_host`) on hostname/target mismatches.
 - Geoblock uses `get.geojs.io`; do not reintroduce the self-hosted GeoIP service/`geoip-src`.
 - **App repos share one Renovate baseline** — `scripts/check-app-configs.sh` (run by `renovate-daily`) enforces the standard presets, OSV alerts, dependency dashboard, `minimumReleaseAge`, lockfile maintenance, and no automerge; `scripts/merge-renovate-prs.sh` is the only merger.
 - **Helm charts** — only project-maintained charts; `validate.sh` enforces the allowlist. Home Assistant is the single approved third-party exception. Pin `image.repository`/`image.tag` on app-version-sensitive charts so Renovate tracks the app, not just the chart.
-- TLS is `edge-public-tls` (25 exact public SANs) plus `edge-private-tls` (`files`/`traefik`, `websecure` only). Adding a public app means adding its SAN and re-issuing; no per-app certs or wildcards.
+- TLS is `edge-public-tls` (exact SANs from `PUBLIC_HOSTS`) plus `edge-private-tls` (`PRIVATE_HOSTS`, `websecure` only). Adding a public app means adding its label to `PUBLIC_HOSTS` and its route, then re-issuing; no per-app certs or wildcards.
 - **Authelia access control is dual-source** — structural bypasses and the final admin catch-all stay in the charts; group/user/deployment-specific rules live in `config/` (`AUTHELIA_ACCESS_CONTROL_RULES` on srv0; `config/vps0/authelia/access_control.yml` rendered by `scripts/render-vps0-authelia.sh` on vps0). Don't add personal group names to the chart.

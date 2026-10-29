@@ -32,34 +32,28 @@ The IaC system for my homelab and other devices.
 ## Usage examples
 
 ```bash
-# Install prerequisites
+# Install prerequisites on every machine
 bash scripts/prereqs.sh
 
-# Create your configuration from the templates (values.yaml for k3s, compose.env
-# for compose, plus extra files like certs and the Authelia users DB):
-cp -r targets/<target>/config_template config/<target>   # then fill in real values
-cp config_template/VARS.env config/VARS.env              # then fill in
+# Create the gitignored config tree (never overwrites existing files).
+# On srv0, --detect fills MY_UID/GPU_PROFILE/HA_CONBEE/HA_BLUETOOTH.
+bash scripts/init-config.sh srv0 --detect
+bash scripts/init-config.sh vps0
 
-# Validate the target
-bash scripts/validate.sh <target>
+# Fill config/VARS.env, values/compose envs, Authelia users/rules, and the
+# optional vps0 agent config. See docs/configuration.md.
+bash scripts/validate.sh srv0
+bash scripts/validate.sh vps0
 
-# Deploy K3s
-bash scripts/preflight-task-runner.sh --fix # srv0: Main data dirs + config checkout
-bash scripts/kubeconfig-unlock.sh # unlock kubeconfig (so non-sudo can read it temporarily); run in another terminal
-helm upgrade --install srv0-base targets/srv0/k3s-base -n base --create-namespace \
-  -f targets/srv0/k3s-base/values.yaml -f config/srv0/values.yaml
-helm upgrade --install srv0-apps targets/srv0/k3s-apps -n apps --create-namespace \
-  -f targets/srv0/k3s-apps/values.yaml -f config/srv0/values.yaml
+# Deploy one target; srv0 uses Helm, the rest use the Compose wrapper.
+bash scripts/deploy.sh srv0
+bash scripts/deploy.sh vps0
+bash scripts/deploy.sh pc
 
-# Deploy Compose
-# vps0 (VARS-driven, with a config env):
-docker compose --env-file config/vps0/compose.env --env-file targets/vps0/compose/.env \
-  -f targets/vps0/compose/compose.yaml \
-  [-f targets/vps0/compose/compose.private.yaml] up -d --remove-orphans
-# srv0 (public-exposure client sidecar; config env only):
-docker compose --env-file config/srv0/compose.env -f targets/srv0/compose/compose.yaml up -d
-# pc/bigpc/rpi (machine facts only — the project-dir .env auto-loads):
-docker compose -f targets/<target>/compose/compose.yaml up -d
+# Or run Compose directly through the wrapper (env files, machine facts,
+# private overlay, profiles, and vps0 Authelia render are automatic).
+bash scripts/compose.sh vps0 up -d
+bash scripts/compose.sh vps0 logs -f authelia
 
 # Run Renovate manually (the in-cluster jobs do this on a schedule) — machine-local
 bash scripts/renovate.sh [apps|infra|all|clear-cache] [--dry-run]
@@ -67,4 +61,4 @@ bash scripts/renovate.sh [apps|infra|all|clear-cache] [--dry-run]
 
 ## More
 
-Detailed documentation lives in [`docs/`](docs/) (index in [AGENTS.md](AGENTS.md)). Note that while LLMs are used in development, the LLM isn't the one putting its data on the line. [It is just a tool](https://www.normaltech.ai/p/ai-as-normal-technology) and is used like one.
+Detailed documentation lives in [`docs/`](docs/); start with [`docs/configuration.md`](docs/configuration.md) for the complete config surface (index in [AGENTS.md](AGENTS.md)). Note that while LLMs are used in development, the LLM isn't the one putting its data on the line. [It is just a tool](https://www.normaltech.ai/p/ai-as-normal-technology) and is used like one.

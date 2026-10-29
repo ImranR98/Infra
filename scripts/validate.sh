@@ -282,6 +282,11 @@ check_rendered_paths() {
     local pv key want got
     while IFS='|' read -r pv key; do
         want=$(yq -r ".$key // \"\"" "$config_file")
+        # Empty means "derive from MAIN_PARENT_DIR" in the chart helpers; the
+        # rendered path is still checked by the template tests.
+        if [ -z "$want" ] || [ "$want" = "null" ]; then
+            continue
+        fi
         got=$(yq -N "select(.kind == \"PersistentVolume\" and .metadata.name == \"$pv\") | .spec.local.path" <<<"$rendered" | head -1)
         if [ "$got" != "$want" ]; then
             _err "ERROR: rendered PV $pv path does not match $key"
@@ -316,6 +321,53 @@ check_san_routes() {
     if [ -n "$stale" ]; then
         _err "WARNING: edge-public-tls names without an srv0 HTTPRoute (vps0-owned or stale):"
         awk 'NF {print "  " $0}' <<<"$stale" >&2
+    fi
+    [ "$ok" = 1 ]
+}
+
+# check_global_config — cross-file/format checks that don't render a chart.
+check_global_config() {
+    local ok=1 vars_file key val
+    vars_file="$INFRA_ROOT/config/VARS.env"
+    if [ -f "$vars_file" ]; then
+        while IFS= read -r key; do
+            [ -n "$key" ] || continue
+            _err "ERROR: config/VARS.env has a placeholder value: $key"
+            ok=0
+        done < <(grep -E '^[A-Z][A-Z0-9_]*=.*(change_me|REPLACE_ME|<[A-Za-z])' "$vars_file" | cut -d= -f1 | grep -v '^DOCKERHUB_')
+    fi
+
+    local srv_domain srv_email vps_base vps_cloud vps_email profiles
+    srv_domain="$(config_yaml srv0 .SERVICES_DOMAIN || true)"
+    srv_email="$(config_yaml srv0 .DOMAIN_OWNER_EMAIL || true)"
+    vps_base="$(config_env vps0 BASE_SERVICES_DOMAIN || true)"
+    vps_cloud="$(config_env vps0 CLOUD_SERVICES_DOMAIN || true)"
+    vps_email="$(config_env vps0 DOMAIN_OWNER_EMAIL || true)"
+
+    if [ -n "$srv_email" ] && [ -n "$vps_email" ] && [ "$srv_email" != "$vps_email" ]; then
+        _err "ERROR: DOMAIN_OWNER_EMAIL differs between config/srv0/values.yaml and config/vps0/compose.env"
+        ok=0
+    fi
+    if [ -n "$srv_domain" ] && [ -n "$vps_base" ] && [[ "$srv_domain" != *".$vps_base" ]]; then
+        _err "WARNING: SERVICES_DOMAIN '$srv_domain' does not end in BASE_SERVICES_DOMAIN '$vps_base'"
+    fi
+    if [ -n "$vps_cloud" ] && [ -n "$vps_base" ] && [[ "$vps_cloud" != *".$vps_base" ]]; then
+        _err "WARNING: CLOUD_SERVICES_DOMAIN '$vps_cloud' does not end in BASE_SERVICES_DOMAIN '$vps_base'"
+    fi
+
+    if [ "$TARGET" = "vps0" ]; then
+        profiles="$(config_env vps0 COMPOSE_PROFILES || true)"
+        case ",${profiles// /,}," in
+            *,dscpln-agent,*)
+                if [ ! -s "$INFRA_ROOT/config/vps0/dscpln-agent/agent.json" ]; then
+                    _err "ERROR: COMPOSE_PROFILES enables dscpln-agent but config/vps0/dscpln-agent/agent.json is missing"
+                    ok=0
+                elif grep -q '<[A-Za-z]' "$INFRA_ROOT/config/vps0/dscpln-agent/agent.json"; then
+                    _err "ERROR: config/vps0/dscpln-agent/agent.json still contains template placeholders"
+                    ok=0
+                fi
+                ;;
+        esac
     fi
     [ "$ok" = 1 ]
 }
@@ -486,6 +538,8 @@ if [ -d "$template_dir" ]; then
 else
     echo "validate: target '$TARGET' has no config_template (no secret variables) — nothing to check"
 fi
+
+check_global_config || ok=0
 
 config_values="$INFRA_ROOT/config/$TARGET/values.yaml"
 if [ -f "$config_values" ]; then

@@ -120,5 +120,5 @@ spec:
         # scheduling flexibility.
         - name: syncthing-data
           hostPath:
-            path: {{ .Values.MAIN_PARENT_DIR }}/.local/share/syncthing-data
+            path: {{ include "path.syncthingData" . }}
             type: DirectoryOrCreate

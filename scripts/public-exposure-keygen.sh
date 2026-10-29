@@ -51,8 +51,8 @@ if grep -q '^TLS_SERVER_NAME=' "$srv0_env"; then
     echo "migrated config/srv0/compose.env: TLS_SERVER_NAME -> PUBLIC_EXPOSURE_PORT"
 fi
 
-host=$(grep -E '^PUBLIC_EXPOSURE_HOST=' "$srv0_env" | head -1 | cut -d= -f2- | tr -d '"'"'"' ')
-port=$(grep -E '^PUBLIC_EXPOSURE_PORT=' "$srv0_env" | head -1 | cut -d= -f2- | tr -d '"'"'"' ')
+host="$(config_env srv0 PUBLIC_EXPOSURE_HOST || true)"
+port="$(config_env srv0 PUBLIC_EXPOSURE_PORT || true)"
 port="${port:-51822}"
 [ -n "$host" ] || { echo "Error: PUBLIC_EXPOSURE_HOST must be set in $srv0_env" >&2; exit 1; }
 

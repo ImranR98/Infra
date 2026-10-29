@@ -1064,6 +1064,8 @@ services:
     # over the public-exposure tunnel. The same generic image as the K3s
     # dscpln-agent on bigpc; the job/config live in config/vps0/dscpln-agent/.
     dscpln-agent:
+        profiles:
+            - dscpln-agent
         image: ghcr.io/imranr98/dscpln-agent@sha256:dde4901d47fd54857857c6eb0d22204ce3db0fae203b78909540c20a0ffa0356
         container_name: dscpln-agent
         restart: unless-stopped

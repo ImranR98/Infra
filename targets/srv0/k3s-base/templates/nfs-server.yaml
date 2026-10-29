@@ -109,15 +109,15 @@ spec:
             name: nfs-etab
         - name: music-storage
           hostPath:
-            path: {{ .Values.MEDIA_DIR_PATH }}/Music
+            path: {{ include "path.media" . }}/Music
             type: DirectoryOrCreate
         - name: tv-storage
           hostPath:
-            path: {{ .Values.MEDIA_DIR_PATH }}/TV
+            path: {{ include "path.media" . }}/TV
             type: DirectoryOrCreate
         - name: youtube-storage
           hostPath:
-            path: {{ .Values.MEDIA_DIR_PATH }}/YouTube
+            path: {{ include "path.media" . }}/YouTube
             type: DirectoryOrCreate
         - name: arrstack-media-storage
           hostPath:
@@ -129,11 +129,11 @@ spec:
             type: DirectoryOrCreate
         - name: apps-storage
           hostPath:
-            path: {{ .Values.INFRA_ROOT }}/current_target/k3s_live_state/nfs-apps
+            path: {{ include "path.infraRoot" . }}/current_target/k3s_live_state/nfs-apps
             type: DirectoryOrCreate
         - name: code-sandbox-storage
           hostPath:
-            path: {{ .Values.MAIN_PARENT_DIR }}/Main/Code/sandbox
+            path: {{ include "path.sandbox" . }}
             type: DirectoryOrCreate
 ---
 ---

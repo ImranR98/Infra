@@ -69,7 +69,7 @@ bash scripts/deploy.sh srv0
 ```
 
 `srv0-base` must land first: it adds `win.$SERVICES_DOMAIN` to
-`edge-public-tls` (25 SANs now) and the Authelia rule. cert-manager re-issues
+`edge-public-tls` (the `PUBLIC_HOSTS` SAN set) and the Authelia rule. cert-manager re-issues
 the shared certificate; the public route is served once the new secret is
 ready. `srv0-apps` then creates the Secret/PVC/ConfigMap, Postgres, guacd,
 Guacamole, NetworkPolicies, and the HTTPRoute.

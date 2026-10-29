@@ -1,4 +1,4 @@
-{{- $homeDir := required "HOME_DIR must be set in config/srv0/values.yaml" .Values.HOME_DIR -}}
+{{- $homeDir := include "path.home" . -}}
 # backupctl (D$CPLN Task Runner) — the config-driven workflow runner. It runs
 # the scheduled state-backup task as root (the PVC data is owned by fixed
 # Postgres/Redis UIDs) and serves the same UI behind Authelia. The private
@@ -374,11 +374,11 @@ spec:
             claimName: hostpath-main-node-documents-pvc
         - name: infra-current
           hostPath:
-            path: {{ .Values.INFRA_ROOT }}/current_target
+            path: {{ include "path.infraRoot" . }}/current_target
             type: Directory
         - name: state-backups
           hostPath:
-            path: {{ .Values.INFRA_ROOT }}/state_backups
+            path: {{ include "path.infraRoot" . }}/state_backups
             type: DirectoryOrCreate
         - name: backup-data
           persistentVolumeClaim:

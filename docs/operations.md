@@ -85,7 +85,7 @@ Structural rules stay in code: the ACME/app bypass rules and the final admin cat
         - 'group:admins'
         - 'group:family'
   ```
-- **vps0:** `config/vps0/authelia/access_control.yml` (a copy of `targets/vps0/config_template/authelia/access_control.yml`). Before every vps0 `docker compose up`, run `bash scripts/render-vps0-authelia.sh` from the repo root; it injects the rules into the committed base config and writes `current_target/compose_live_state/authelia/config/configuration.yml`. The render step is manual by design. `validate.sh vps0` runs `render --check` when executed on vps0 and fails if the generated file is stale.
+- **vps0:** `config/vps0/authelia/access_control.yml` (a copy of `targets/vps0/config_template/authelia/access_control.yml`). `scripts/compose.sh vps0 up` runs `render-vps0-authelia.sh` automatically; it injects the rules into the committed base config and writes `current_target/compose_live_state/authelia/config/configuration.yml`. `validate.sh vps0` runs `render --check` on vps0 and fails if the generated file is stale.
 
 Do not put personal group or user names in the charts.
 
@@ -134,7 +134,7 @@ App repos are taken from `APP_REPOS` in `config/VARS.env` (see `config_template/
 
 Artifacts: all app images — the six apps, D$CPLN, `moving-sale-2027`, and `opencode-sandbox` — are built and published by their own repo CI; Infra only pins/refreshes their digests. Every app publish job pushes an immutable `:sha-<commit>` candidate, verifies the pulled digest, then promotes `:latest`, so a failed verification never moves `:latest`. The NFS server image (`ghcr.io/<owner>/nfs-server`) stays in this repo: `.github/workflows/nfs-server-image.yml` builds it on `nfs-server-src` changes, verifies the candidate digest, promotes `:latest`, and the daily Renovate job pins the new digest the same day. `nfs-server-src/build.sh` remains the local/emergency path. It installs the latest `nfs-utils` and Alpine packages for its pinned base. No app image is built manually; `opencode-sandbox`'s `build.sh` is its local/emergency path.
 
-Post-update: `git diff` → `bash scripts/validate.sh <target>` → deploy. For srv0, `bash scripts/deploy.sh srv0` runs validate, both chart upgrades, the helm-controller wait, workload rollouts, pod readiness, HelmChart-failure, restart-count, and `/readyz` checks in one pass.
+Post-update: `git diff` → `bash scripts/validate.sh <target>` → `bash scripts/deploy.sh <target>`. For srv0, `deploy.sh srv0` runs both chart upgrades, the helm-controller wait, workload rollouts, pod readiness, HelmChart-failure, restart-count, and `/readyz` checks in one pass. For Compose targets it validates, renders vps0 Authelia when applicable, and runs `compose.sh <target> up -d --remove-orphans`.
 
 ## CI
 

@@ -16,7 +16,7 @@ spec:
   persistentVolumeReclaimPolicy: Retain
   storageClassName: hostpath
   local:
-    path: {{ .Values.MAIN_PARENT_DIR }}/Main
+    path: {{ include "path.main" . }}
   nodeAffinity:
     required:
       nodeSelectorTerms:
@@ -53,7 +53,7 @@ spec:
   persistentVolumeReclaimPolicy: Retain
   storageClassName: hostpath
   local:
-    path: {{ .Values.MAIN_PARENT_DIR }}/deviceSync
+    path: {{ include "path.devicesync" . }}
   nodeAffinity:
     required:
       nodeSelectorTerms:
@@ -90,7 +90,7 @@ spec:
   persistentVolumeReclaimPolicy: Retain
   storageClassName: hostpath
   local:
-    path: {{ .Values.JOURNAL_DIR }}
+    path: {{ include "path.journal" . }}
   nodeAffinity:
     required:
       nodeSelectorTerms:
@@ -127,7 +127,7 @@ spec:
   persistentVolumeReclaimPolicy: Retain
   storageClassName: hostpath
   local:
-    path: {{ .Values.WA_TXT_PATH }}
+    path: {{ include "path.waTxt" . }}
   nodeAffinity:
     required:
       nodeSelectorTerms:
@@ -164,7 +164,7 @@ spec:
   persistentVolumeReclaimPolicy: Retain
   storageClassName: hostpath
   local:
-    path: {{ .Values.MAIN_PARENT_DIR }}/.file-pipelines
+    path: {{ include "path.filePipelines" . }}
   nodeAffinity:
     required:
       nodeSelectorTerms:
@@ -201,7 +201,7 @@ spec:
   persistentVolumeReclaimPolicy: Retain
   storageClassName: hostpath
   local:
-    path: {{ .Values.MAIN_PARENT_DIR }}/Main/Backups
+    path: {{ include "path.backups" . }}
   nodeAffinity:
     required:
       nodeSelectorTerms:
@@ -238,7 +238,7 @@ spec:
   persistentVolumeReclaimPolicy: Retain
   storageClassName: hostpath
   local:
-    path: {{ .Values.MEDIA_DIR_PATH }}
+    path: {{ include "path.media" . }}
   nodeAffinity:
     required:
       nodeSelectorTerms:
@@ -275,7 +275,7 @@ spec:
   persistentVolumeReclaimPolicy: Retain
   storageClassName: hostpath
   local:
-    path: {{ .Values.MAIN_PARENT_DIR }}/Main/Documents
+    path: {{ include "path.documents" . }}
   nodeAffinity:
     required:
       nodeSelectorTerms:
@@ -312,7 +312,7 @@ spec:
   persistentVolumeReclaimPolicy: Retain
   storageClassName: hostpath
   local:
-    path: {{ .Values.MAIN_PARENT_DIR }}/Main/WhatsApp
+    path: {{ include "path.whatsapp" . }}
   nodeAffinity:
     required:
       nodeSelectorTerms:
@@ -349,7 +349,7 @@ spec:
   persistentVolumeReclaimPolicy: Retain
   storageClassName: hostpath
   local:
-    path: {{ .Values.INFRA_ROOT }}
+    path: {{ include "path.infraRoot" . }}
   nodeAffinity:
     required:
       nodeSelectorTerms:

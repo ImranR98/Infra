@@ -23,7 +23,11 @@ source "$INFRA_ROOT/scripts/common.sh"
 
 STATE_BACKUP_DIR="${STATE_BACKUP_DIR:-$INFRA_ROOT/state_backups}"
 RESTIC_REPOSITORY="${RESTIC_REPOSITORY:-$STATE_BACKUP_DIR/restic}"
-DSCPLN_CONFIG_DIR="${DSCPLN_CONFIG_DIR:-$(cd "$INFRA_ROOT/.." && pwd)/Code/Automation/dscpln-config}"
+DSCPLN_CONFIG_DIR="${DSCPLN_CONFIG_DIR:-$(config_yaml srv0 .DSCPLN_CONFIG_PATH || true)}"
+if [ -z "$DSCPLN_CONFIG_DIR" ] || [ "$DSCPLN_CONFIG_DIR" = "null" ]; then
+    _main_parent="$(config_yaml srv0 .MAIN_PARENT_DIR || true)"
+    DSCPLN_CONFIG_DIR="$_main_parent/Main/Code/Automation/dscpln-config"
+fi
 RESTIC_CACHE_DIR="${RESTIC_CACHE_DIR:-$HOME/.cache/restic}"
 SSH_KEY_FILE="${SSH_KEY_FILE:-$INFRA_ROOT/config/state-backup-vps0/id_ed25519}"
 KNOWN_HOSTS="${KNOWN_HOSTS:-$HOME/.ssh/known_hosts}"

@@ -38,7 +38,7 @@ Structural rules stay in code: ACME/app bypasses and the final admin catch-all. 
 
 ## Shared multi-SAN edge certificates
 
-The per-app Let's Encrypt Certificates were replaced by `edge-public-tls` (the 25 exact public hostnames) and `edge-private-tls` (`files`, `traefik`). Every public name currently has an srv0 HTTPRoute; `send` is Plik, not stale. `validate.sh` compares the public SANs with the srv0 route hostnames and warns on drift. The public cert is attached to both secure listeners; the private cert only to `websecure`, so the private names never reach the public-exposure listener. The names are exact (not a wildcard), but all public names share one key, so a key compromise has wildcard-like blast radius; per-host key isolation was traded for fewer Orders and secrets. Adding a public app means adding its SAN and re-issuing.
+The per-app Let's Encrypt Certificates were replaced by `edge-public-tls` (the exact `PUBLIC_HOSTS` list) and `edge-private-tls` (`PRIVATE_HOSTS`). Every public name currently has an srv0 HTTPRoute; `send` is Plik, not stale. `validate.sh` compares the public SANs with the srv0 route hostnames and warns on drift. The public cert is attached to both secure listeners; the private cert only to `websecure`, so the private names never reach the public-exposure listener. The names are exact (not a wildcard), but all public names share one key, so a key compromise has wildcard-like blast radius; per-host key isolation was traded for fewer Orders and secrets. Adding a public app means adding its SAN and re-issuing.
 
 ## Docs split
 

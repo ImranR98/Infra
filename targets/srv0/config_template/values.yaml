@@ -23,6 +23,37 @@
 SERVICES_DOMAIN: "home.example.org"
 DOMAIN_OWNER_EMAIL: "contact@example.org"
 TZ: "America/Toronto"
+# Exact public/private SAN labels appended to SERVICES_DOMAIN. Keep this list
+# in sync with the HTTPRoutes; validate.sh checks route/SAN drift.
+PUBLIC_HOSTS:
+  - dscpln
+  - fmd
+  - rss
+  - frigate
+  - k8s
+  - ha
+  - immich
+  - tv
+  - links
+  - music
+  - nextcloud
+  - gpt
+  - opencode
+  - opodsync
+  - win
+  - send
+  - prowlarr
+  - qbittorrent
+  - radarr
+  - seerr
+  - sonarr
+  - auth
+  - crowdsec
+  - grafana
+  - ntfy
+PRIVATE_HOSTS:
+  - files
+  - traefik
 
 # ====== Ntfy ======
 NTFY_WRITE_ONLY_ACCOUNT_TOKEN: "change_me" # "tk_$(openssl rand -hex 16)"
@@ -40,18 +71,23 @@ GEOBLOCK_CONFIG_SUBSET: |
     - CU
 
 # ====== Host Paths ======
-# Ensure these exist before starting services
+# MAIN_PARENT_DIR and SECONDARY_STORAGE_PATH are the required roots. Every
+# other path below defaults to its conventional location under MAIN_PARENT_DIR;
+# set a value only when your tree differs.
 MAIN_PARENT_DIR: "/path/to/data"
-# Media tree used by the media local PV (Immich /external, file-pipelines,
-# Task Runner) and the NFS Music/TV/YouTube exports.
-MEDIA_DIR_PATH: "/path/to/data/Main/Media"
-# Journal directory backing the external-exposed syslog PV consumed by logtfy.
-JOURNAL_DIR: "/var/log/journal"
-# D$CPLN WhatsApp TXT exports on the wa-txt local PV.
-WA_TXT_PATH: "/path/to/data/Main/Backups/WhatsApp TXT"
 SECONDARY_STORAGE_PATH: "/mnt/k3s_extra_storage"
-# Container home used by the Task Runner/backup app mounts.
-HOME_DIR: "<home-dir>"
+# UID/GID used by containers and hostPath ownership. Set to `id -u`; the
+# bootstrap script fills this from the current user.
+MY_UID: 1000
+# Defaults:
+#   <MAIN_PARENT_DIR>/Main/Media
+MEDIA_DIR_PATH: ""
+#   /var/log/journal
+JOURNAL_DIR: ""
+#   <MAIN_PARENT_DIR>/Main/Backups/WhatsApp TXT
+WA_TXT_PATH: ""
+#   <MAIN_PARENT_DIR>
+HOME_DIR: ""
 # LAN CIDR used by egress/NFS/readiness NetworkPolicies.
 LAN_CIDR: "<lan-cidr>"
 
@@ -313,13 +349,12 @@ PLIK_ADMIN_PASSWORD: "change_me" # openssl rand -hex 16
 FILEBROWSER_JWT_TOKEN_SECRET: "change_me" # openssl rand -base64 32
 
 # ====== D$CPLN ======
-# Directory of the git-tracked Excel ledger. The static `dscpln-ledger` local
-# PV/PVC mounts it at the same path in the pod so the app can read the workbook
-# and commit its changes.
-DSCPLN_LEDGER_PATH: "/path/to/data/Main/Documents/Balance"
+# Directory of the git-tracked Excel ledger. Defaults to
+# <MAIN_PARENT_DIR>/Main/Documents/Balance.
+DSCPLN_LEDGER_PATH: ""
 # Checkout of the private D$CPLN config repo (config.mjs, apps/, tools/).
-# Mounted read-write by the Task Runner and per-app by the other D$CPLN pods.
-DSCPLN_CONFIG_PATH: "/path/to/data/Main/Code/Automation/dscpln-config"
+# Defaults to <MAIN_PARENT_DIR>/Main/Code/Automation/dscpln-config.
+DSCPLN_CONFIG_PATH: ""
 # Per-node D$CPLN archive agents. Each entry renders a dscpln-agent-<name>
 # Deployment/Service, a ConfigMap for agent.json, a local PV/PVC for
 # <stateSubdir>/state (token + state), and a local PV/PVC per data mount. The
@@ -406,7 +441,8 @@ AUTHELIA_GRAFANA_CLIENT_SECRET_HASHABLE: "change_me" # docker run authelia/authe
 AUTHELIA_GRAFANA_CLIENT_SECRET_HASHED: "change_me"
 
 # ====== Infra paths (k3s-chart-only, machine/env layout) ======
-# Repo path. Drives the infra hostpath PV (Renovate + Task Runner) and the
-# nfs-apps current_target; the PV claim, not a nodeSelector, pins the pods.
-INFRA_ROOT: "<path-to-Infra>"
+# Repo path. Defaults to <MAIN_PARENT_DIR>/Main/Infra. Drives the infra
+# hostpath PV (Renovate + Task Runner) and the nfs-apps current_target; the PV
+# claim, not a nodeSelector, pins the pods.
+INFRA_ROOT: ""
 TARGET: "srv0"

@@ -60,8 +60,8 @@ if [ "$module" = public-exposure ]; then
 
     env_file="$INFRA_ROOT/config/$target/compose.env"
     [ -f "$env_file" ] || { echo "Error: $env_file not found" >&2; exit 1; }
-    hub_host=$(grep -E '^PUBLIC_EXPOSURE_HOST=' "$env_file" | head -1 | cut -d= -f2- | tr -d '"'"'"' ')
-    hub_port=$(grep -E '^PUBLIC_EXPOSURE_PORT=' "$env_file" | head -1 | cut -d= -f2- | tr -d '"'"'"' ')
+    hub_host="$(config_env "$target" PUBLIC_EXPOSURE_HOST || true)"
+    hub_port="$(config_env "$target" PUBLIC_EXPOSURE_PORT || true)"
     hub_port="${hub_port:-51822}"
     [ -n "$hub_host" ] || { echo "Error: PUBLIC_EXPOSURE_HOST must be set in $env_file" >&2; exit 1; }
     hub_ip=$(getent hosts "$hub_host" | awk '{print $1; exit}')

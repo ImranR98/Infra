@@ -1,11 +1,8 @@
 #!/bin/bash
-# DESC: Deploy and verify the srv0 K3s charts. Runs validate, upgrades srv0-base
-# then srv0-apps, waits for the helm-controller install jobs and workload
-# rollouts, and checks pod readiness, HelmChart failures, restart counts, and
-# the API server readiness. Workloads scheduled only on NotReady nodes (for
-# example bigpc when it is powered off) are reported as warnings and skipped.
+# DESC: Deploy one target. srv0 runs validate + the K3s base/apps Helm releases
+# and rollout checks; other targets run validate + the standard Compose wrapper.
 #
-# Usage: deploy.sh [srv0] [--dry-run] [--timeout S]
+# Usage: deploy.sh [target] [--dry-run] [--timeout S]
 set -euo pipefail
 
 if [ -z "${INFRA_ROOT:-}" ]; then
@@ -16,7 +13,8 @@ fi
 source "$INFRA_ROOT/scripts/common.sh"
 
 usage() {
-    echo "Usage: $(basename "$0") [srv0] [--dry-run] [--timeout S]" >&2
+    echo "Usage: $(basename "$0") [target] [--dry-run] [--timeout S]" >&2
+    echo "Targets: $(find "$INFRA_ROOT/targets" -mindepth 1 -maxdepth 1 -type d -printf '%f ')" >&2
 }
 
 target="srv0"
@@ -24,7 +22,6 @@ dry_run=0
 timeout=600
 while [ $# -gt 0 ]; do
     case "$1" in
-        srv0) target="srv0" ;;
         --dry-run) dry_run=1 ;;
         --timeout)
             if [ $# -lt 2 ]; then
@@ -38,18 +35,34 @@ while [ $# -gt 0 ]; do
             usage
             exit 0
             ;;
-        *)
+        -*)
             usage
             exit 1
+            ;;
+        *)
+            target="$1"
             ;;
     esac
     shift
 done
-if [ "$target" != "srv0" ]; then
-    echo "Error: deploy.sh currently supports srv0 only; deploy other targets with compose/SSH." >&2
-    exit 1
-fi
 require_target_host "$target"
+
+if [ "$target" != "srv0" ]; then
+    if [ "$target" = "vps0" ]; then
+        bash "$INFRA_ROOT/scripts/render-vps0-authelia.sh"
+    fi
+    echo "==> Validate $target"
+    bash "$INFRA_ROOT/scripts/validate.sh" "$target"
+    if [ "$dry_run" = 1 ]; then
+        bash "$INFRA_ROOT/scripts/compose.sh" "$target" up -d --remove-orphans --dry-run
+        echo "deploy: dry run OK ($target)"
+        exit 0
+    fi
+    echo "==> docker compose up ($target)"
+    bash "$INFRA_ROOT/scripts/compose.sh" "$target" up -d --remove-orphans
+    echo "deploy: OK ($target)"
+    exit 0
+fi
 
 for cmd in helm kubectl jq; do
     command -v "$cmd" >/dev/null 2>&1 || {
