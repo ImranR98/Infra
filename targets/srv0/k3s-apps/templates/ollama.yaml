@@ -91,9 +91,9 @@ spec:
           securityContext:
             allowPrivilegeEscalation: false
 {{- if eq $ollamaGpu "none" }}
-          image: ollama/ollama:0.40.12
+          image: ollama/ollama:0.40.13
 {{- else }}
-          image: ollama/ollama:0.40.12-rocm@sha256:5768ab9d622d7aa2046605f105c372f3a34eb516720216cb95869807e0ed05d3
+          image: ollama/ollama:0.40.13-rocm@sha256:9933c98078d794a290f010af7f93746a1f4b0bde11aceb650ef088d386bb2664
 {{- end }}
           imagePullPolicy: IfNotPresent
           ports:
