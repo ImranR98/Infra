@@ -29,7 +29,7 @@ spec:
   valuesContent: |-
     image:
       repository: falcosecurity/falco
-      tag: 0.45.1
+      tag: 0.45.2
 
     # Flush each event immediately; the Alloy log collector tails the pod log
     # and ships it to Loki for browsing/forensics.
