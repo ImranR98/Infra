@@ -144,7 +144,7 @@ spec:
           level: s0
       containers:
         - name: agent
-          image: ghcr.io/imranr98/dscpln-agent@sha256:dde4901d47fd54857857c6eb0d22204ce3db0fae203b78909540c20a0ffa0356
+          image: ghcr.io/imranr98/dscpln-agent@sha256:22ab91c71038808c2a3315b64d3f16f05edaf8bc0ea72414081bc3321211cdc8
           imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: false

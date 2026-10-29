@@ -118,7 +118,7 @@ spec:
         # Normalize only the directories the app manages plus the top-level
         # data mounts. Do not recurse into the Main trees: they can be large.
         - name: prepare-runtime
-          image: busybox:1.38.0-uclibc@sha256:b699b0c739b2d039afd8e2488a3ccfc0b9a86301d87633448d4a93c57bee8c76
+          image: busybox:1.38.0-uclibc@sha256:ddb91a9b37968119844068ea623ee9603f34ad384e2bd9739b9cf573d513c691
           imagePullPolicy: IfNotPresent
           command:
             - sh
