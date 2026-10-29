@@ -50,11 +50,15 @@ CONFIG_DIR="${CONFIG_DIR:-$(config_yaml srv0 .DSCPLN_CONFIG_PATH || true)}"
 if [ -z "$CONFIG_DIR" ] || [ "$CONFIG_DIR" = "null" ]; then
     CONFIG_DIR="$MAIN_DIR/Code/Automation/dscpln-config"
 fi
+MEDIA_DIR="$(config_yaml srv0 .MEDIA_DIR_PATH || true)"
+if [ -z "$MEDIA_DIR" ] || [ "$MEDIA_DIR" = "null" ]; then
+    MEDIA_DIR="$MAIN_DIR/Media"
+fi
 REQUIRED=(
     "$MAIN_DIR/Backups"
-    "$MAIN_DIR/Media"
+    "$MEDIA_DIR"
     "$MAIN_DIR/Documents"
-    "$MAIN_DIR/Infra/state_backups"
+    "$INFRA_ROOT/state_backups"
 )
 
 fail=0
