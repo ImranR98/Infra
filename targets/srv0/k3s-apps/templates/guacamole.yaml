@@ -57,12 +57,20 @@ CROSS JOIN (VALUES ('READ'), ('UPDATE')) p(permission)
 WHERE e.name = 'shared' AND e.type = 'USER'
 ON CONFLICT DO NOTHING;
 
-INSERT INTO guacamole_connection (connection_name, protocol, max_connections)
-SELECT 'Windows', 'rdp', 1
+-- Unlimited concurrent connections: Guacamole must not reject a new browser
+-- session with "connection in use". Windows still decides whether a second
+-- RDP logon replaces the existing session or is allowed alongside it.
+INSERT INTO guacamole_connection (connection_name, protocol, max_connections, max_connections_per_user)
+SELECT 'Windows', 'rdp', 0, 0
 WHERE NOT EXISTS (
   SELECT 1 FROM guacamole_connection
   WHERE connection_name = 'Windows' AND parent_id IS NULL
 );
+
+UPDATE guacamole_connection
+SET max_connections = 0,
+    max_connections_per_user = 0
+WHERE connection_name = 'Windows' AND parent_id IS NULL;
 
 INSERT INTO guacamole_connection_parameter (connection_id, parameter_name, parameter_value)
 SELECT c.connection_id, p.name, p.value

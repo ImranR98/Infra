@@ -20,7 +20,13 @@ Mac browser ──TLS──> vps0 Traefik ──TLS passthrough──> WireGuard
   `username`/`password`, so guacd prompts for any Windows account.
 - **No Guacamole admin UI step:** the schema and seed run in the
   `guacamole` Deployment's init containers; `guacadmin` is disabled.
-- **One session at a time:** the seeded connection has `max_connections=1`.
+- **Concurrency is unlimited in Guacamole:** the seeded connection uses
+  `max_connections=0` and `max_connections_per_user=0`, so a new browser
+  connection is not rejected with “connection in use.” Windows still decides
+  whether a second RDP logon replaces the existing session or is allowed
+  alongside it. If a stale session must be cleared, restart guacd
+  (`kubectl -n apps rollout restart deploy/guacd`); that drops every active
+  Guacamole session.
 - The Windows firewall allows RDP from the LAN, so the Guacamole stack
   (`guacamole`, `guacd`, `guacamole-db`) is not pinned to a node.
 
@@ -84,7 +90,7 @@ kubectl -n apps exec deploy/guacamole-db -- \
   "SELECT e.name, u.disabled FROM guacamole_entity e JOIN guacamole_user u USING (entity_id);"
 kubectl -n apps exec deploy/guacamole-db -- \
   psql -U guacamole -d guacamole -c \
-  "SELECT connection_name, protocol, max_connections FROM guacamole_connection;"
+  "SELECT connection_name, protocol, max_connections, max_connections_per_user FROM guacamole_connection;"
 curl -sI https://win.$SERVICES_DOMAIN | head -5   # 302 to auth (no geoblock 403)
 ```
 
