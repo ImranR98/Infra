@@ -310,7 +310,7 @@ services:
         logging: *logging
 
     authelia-db:
-        image: redis:alpine@sha256:47b08295737773de3b711fb86f13ae802f5074e96a9a2d29f5f80164ac08c046
+        image: redis:alpine@sha256:21090af93f8324db2f0f0f4f38a7c60369d47d917e000c3423d89d2ae2883537
         container_name: authelia-db
         user: "$MY_UID:$MY_UID"
         environment:
@@ -407,7 +407,7 @@ services:
 
     # Traefik logrotate - caps the host-mounted access log (CrowdSec's acquisition source)
     traefik-logrotate:
-        image: vitess/logrotate:latest@sha256:614883506b9b9b18d5108b65b8bc8c079f6ad7970e45516f636277a526512192
+        image: vitess/logrotate:latest@sha256:ffd7b6c7d1438a3b2e3c1fdd4e199dd55343ec51922ea65a570ca2a69132b129
         container_name: traefik-logrotate
         restart: unless-stopped
         mem_limit: 64M
@@ -419,7 +419,7 @@ services:
 
     # CrowdSec - Intrusion Prevention (LAPI + agent + AppSec in one container)
     crowdsec:
-        image: crowdsecurity/crowdsec:latest@sha256:0f2523fa61ef507f15d953045cface490cc880670c62f2755ced17524107f71a
+        image: crowdsecurity/crowdsec:latest@sha256:65b74942f7e7ed5c60fde4ac15fc4ba715904c398c8b16dd451f4907d90347d4
         container_name: crowdsec
         restart: unless-stopped
         mem_limit: 512M
@@ -592,7 +592,7 @@ services:
     # PixelNtfy - Tracking Pixels
     pixelntfy:
         container_name: pixelntfy
-        image: ghcr.io/imranr98/pixel-ntfy:latest@sha256:2a021446a2c59ce001de26c714e0a18227304a39e1ce3be5ecba2f381761f6ec
+        image: ghcr.io/imranr98/pixel-ntfy:latest@sha256:3351715a69a49049b9b4f211bd778d616191c67988754fe4f2da6af933e4851d
         restart: unless-stopped
         mem_limit: 128M
         cpus: 0.25
@@ -618,7 +618,7 @@ services:
     # ISBN Lookup
     isbn-lookup:
         container_name: isbn-lookup
-        image: ghcr.io/imranr98/isbn-lookup:latest@sha256:cd89756c9bb97f5a4889c1f8ef582f266ae83ab2d3ec1ea1d45f9ffe6fb5809d
+        image: ghcr.io/imranr98/isbn-lookup:latest@sha256:8b07b03b40ae395674817a4f50a596b60ce92c0a79691c99d74f0b5b2ab7248c
         restart: unless-stopped
         mem_limit: 128M
         cpus: 0.25
@@ -844,7 +844,7 @@ services:
 
     # Owncast Auth - Token-based access control for Owncast viewer
     owncast-auth:
-        image: python:3-alpine@sha256:0aa144e9ec2ae8fd80dfd94070ef3e432a0df17b6e5e0091dc05323974ce9913
+        image: python:3-alpine@sha256:20a82dbc2783112ddb91d1534603f802d222a3e63e593cd002eb2ac534e70211
         container_name: owncast-auth
         restart: unless-stopped
         mem_limit: 64M
@@ -1066,7 +1066,7 @@ services:
     dscpln-agent:
         profiles:
             - dscpln-agent
-        image: ghcr.io/imranr98/dscpln-agent@sha256:dde4901d47fd54857857c6eb0d22204ce3db0fae203b78909540c20a0ffa0356
+        image: ghcr.io/imranr98/dscpln-agent@sha256:22ab91c71038808c2a3315b64d3f16f05edaf8bc0ea72414081bc3321211cdc8
         container_name: dscpln-agent
         restart: unless-stopped
         network_mode: host
