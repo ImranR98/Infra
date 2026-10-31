@@ -136,17 +136,38 @@ Expected result:
 
 ### Frigate ONNX model
 
-The ROCm detector needs `yolov9-t-320.onnx` in the Frigate config PVC:
+The ROCm detector needs `/config/model_cache/yolov9-t-320.onnx`. The chart
+provisions it automatically: the `ensure-model` initContainer fetches
+`FRIGATE_MODEL_URL` into the frigate-config PVC and verifies
+`FRIGATE_MODEL_SHA256` before Frigate starts. No manual `kubectl cp` is needed,
+and a fresh or restored PVC is seeded on the next pod start.
+
+The exported model is NCHW float32, so the chart sets
+`model_type: yolo-generic`, `input_tensor: nchw`, and `input_dtype: float`.
+The label map (`/labelmap/coco-80.txt`) ships inside the Frigate image.
+
+To rebuild the artifact (for example after a Frigate model-format change):
 
 ```bash
-kubectl -n apps get pod -l app.kubernetes.io/name=frigate
-kubectl -n apps cp ./yolov9-t-320.onnx <frigate-pod>:/config/model_cache/yolov9-t-320.onnx
+mkdir -p /tmp/yolov9-build/out && cd /tmp/yolov9-build
+podman build --build-arg MODEL_SIZE=t --build-arg IMG_SIZE=320 \
+  -o type=local,dest=out -f- <<'EOF'
+# Paste the Dockerfile from the Frigate object-detector docs, "Download the
+# model" section (python:3.11 build stage + FROM scratch output stage).
+EOF
 ```
 
-The chart expects `/config/model_cache/yolov9-t-320.onnx` and
-`/labelmap/coco-80.txt`. Stage the model before switching
-`FRIGATE_DETECTOR=rocm`; if it is missing, Frigate will fail its detector
-startup.
+Verify the graph is a float32 NCHW 320x320 input with an `[1, 84, 2100]`
+output, then commit the file and its digest together:
+
+```bash
+install -m 644 out/yolov9-t-320.onnx "$INFRA_ROOT/targets/srv0/assets/yolov9-t-320.onnx"
+sha256sum "$INFRA_ROOT/targets/srv0/assets/yolov9-t-320.onnx"
+```
+
+Put the new digest in `targets/srv0/k3s-apps/values.yaml`
+(`FRIGATE_MODEL_SHA256`). The next pod start re-fetches the model and
+replaces the old file.
 
 ## 6. Fallbacks
 

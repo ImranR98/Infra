@@ -34,6 +34,7 @@ assert_has "$tmp/intel.yaml" "infra.local/vaapi"
 assert_has "$tmp/intel.yaml" "infra.local/amd-dgpu"   # Ollama on bigpc
 assert_not "$tmp/intel.yaml" "frigate:0.18.2-rocm"
 assert_not "$tmp/intel.yaml" "tag: v3.3.5-rocm"
+assert_not "$tmp/intel.yaml" "name: ensure-model"
 
 render amd "$tmp/amd.yaml"
 assert_has "$tmp/amd.yaml" "ghcr.io/blakeblackshear/frigate:0.18.2-rocm"
@@ -42,6 +43,13 @@ assert_has "$tmp/amd.yaml" "infra.local/amd-igpu"
 assert_has "$tmp/amd.yaml" "infra.local/amd-dgpu"
 assert_has "$tmp/amd.yaml" "infra.local/vaapi"
 assert_not "$tmp/amd.yaml" "infra.local/intel-gpu"
+# The ROCm detector requires the NCHW float32 yolo-generic model config plus
+# the initContainer that seeds the ONNX artifact into the config PVC.
+assert_has "$tmp/amd.yaml" "model_type: yolo-generic"
+assert_has "$tmp/amd.yaml" "input_tensor: nchw"
+assert_has "$tmp/amd.yaml" "input_dtype: float"
+assert_has "$tmp/amd.yaml" "name: ensure-model"
+assert_has "$tmp/amd.yaml" "yolov9-t-320.onnx"
 
 render none "$tmp/none.yaml"
 assert_has "$tmp/none.yaml" "ghcr.io/blakeblackshear/frigate:0.18.2"
@@ -49,6 +57,7 @@ assert_has "$tmp/none.yaml" "image: ollama/ollama:0.40.12"
 assert_not "$tmp/none.yaml" "infra.local/vaapi"
 assert_not "$tmp/none.yaml" "infra.local/intel-gpu"
 assert_not "$tmp/none.yaml" "infra.local/amd-"
+assert_not "$tmp/none.yaml" "name: ensure-model"
 
 render intel "$tmp/no-hw.yaml" --set HA_CONBEE=false --set HA_BLUETOOTH=false
 assert_not "$tmp/no-hw.yaml" "infra.local/conbee"

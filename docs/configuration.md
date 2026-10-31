@@ -96,6 +96,13 @@ overrides exist for mixed/fallback cases: `FRIGATE_DETECTOR`,
 false. `init-config.sh srv0 --detect` sets all four initial values from the
 current machine.
 
+The ROCm Frigate detector needs an ONNX model. The chart pins it with
+`FRIGATE_MODEL_URL`/`FRIGATE_MODEL_SHA256` (committed defaults in
+`targets/srv0/k3s-apps/values.yaml`); the `ensure-model` initContainer copies
+the artifact into the frigate-config PVC and verifies the digest before Frigate
+starts. The rebuild procedure is in
+[docs/runbooks/hardware-swap.md](runbooks/hardware-swap.md).
+
 ## Public hostnames
 
 `PUBLIC_HOSTS` and `PRIVATE_HOSTS` in `config/srv0/values.yaml` are the exact
