@@ -118,7 +118,7 @@ spec:
         # Normalize only the directories the app manages plus the top-level
         # data mounts. Do not recurse into the Main trees: they can be large.
         - name: prepare-runtime
-          image: busybox:1.38.0-uclibc@sha256:b699b0c739b2d039afd8e2488a3ccfc0b9a86301d87633448d4a93c57bee8c76
+          image: busybox:1.38.0-uclibc@sha256:b2e35951f72501f6a99f1bf45bcfe6d4795be08c518c2f97d0ed2fe776958a3b
           imagePullPolicy: IfNotPresent
           command:
             - sh
@@ -187,7 +187,7 @@ spec:
               mountPath: /config-src
       containers:
         - name: dscpln-task-runner
-          image: ghcr.io/imranr98/dscpln-task-runner:latest@sha256:b94c7cdb2a0778f4e18b4b6ff1dad9c39f75415ead7760389357b7898f0689cb
+          image: ghcr.io/imranr98/dscpln-task-runner:latest@sha256:69ff13500038e6d7b98208646b0843fb360c6ad20e860ffbf9d689d9c3110aa4
           imagePullPolicy: IfNotPresent
           securityContext:
             runAsUser: 0
