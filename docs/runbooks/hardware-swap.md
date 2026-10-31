@@ -152,8 +152,25 @@ To rebuild the artifact (for example after a Frigate model-format change):
 mkdir -p /tmp/yolov9-build/out && cd /tmp/yolov9-build
 podman build --build-arg MODEL_SIZE=t --build-arg IMG_SIZE=320 \
   -o type=local,dest=out -f- <<'EOF'
-# Paste the Dockerfile from the Frigate object-detector docs, "Download the
-# model" section (python:3.11 build stage + FROM scratch output stage).
+FROM python:3.11 AS build
+RUN apt-get update && apt-get install --no-install-recommends -y cmake libgl1 git \
+  && rm -rf /var/lib/apt/lists/*
+WORKDIR /yolov9
+RUN git clone --depth 1 https://github.com/WongKinYiu/yolov9.git .
+# CPU torch is enough for the export and avoids the CUDA stack.
+RUN pip install --no-cache-dir torch torchvision \
+  --index-url https://download.pytorch.org/whl/cpu
+RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir onnx==1.18.0 onnxruntime onnx-simplifier==0.4.* onnxscript
+ARG MODEL_SIZE
+ARG IMG_SIZE
+ADD https://github.com/WongKinYiu/yolov9/releases/download/v0.1/yolov9-${MODEL_SIZE}-converted.pt /yolov9/yolov9-${MODEL_SIZE}.pt
+RUN sed -i "s/torch.load(attempt_download(w), map_location='cpu')/torch.load(attempt_download(w), map_location='cpu', weights_only=False)/g" models/experimental.py
+RUN python3 export.py --weights ./yolov9-${MODEL_SIZE}.pt --imgsz ${IMG_SIZE} --simplify --include onnx
+FROM scratch
+ARG MODEL_SIZE
+ARG IMG_SIZE
+COPY --from=build /yolov9/yolov9-${MODEL_SIZE}.onnx /yolov9-${MODEL_SIZE}-${IMG_SIZE}.onnx
 EOF
 ```
 
