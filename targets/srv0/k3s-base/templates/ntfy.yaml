@@ -125,7 +125,7 @@ spec:
         fsGroup: {{ .Values.MY_UID }}
       containers:
         - name: ntfy
-          image: binwiederhier/ntfy:v2.34.0
+          image: binwiederhier/ntfy:v2.36.0
           securityContext:
             runAsUser: {{ .Values.MY_UID }}
             runAsGroup: {{ .Values.MY_UID }}

@@ -44,16 +44,18 @@ data:
     detectors:
       onnx:
         type: onnx
-    # ROCm/ONNX detector model. Stage yolov9-t-320.onnx in the Frigate config
-    # PVC (see docs/runbooks/hardware-swap.md) before enabling this backend.
+    # ROCm/ONNX detector model. The exported YOLOv9 ONNX is NCHW float32;
+    # yolo-generic selects Frigate's YOLO output parser. The model itself is
+    # fetched into the config PVC by the ensure-model initContainer below.
     model:
       width: 320
       height: 320
-      input_tensor: nhwc
+      input_tensor: nchw
+      input_dtype: float
       input_pixel_format: rgb
       path: /config/model_cache/yolov9-t-320.onnx
       labelmap_path: /labelmap/coco-80.txt
-      model_type: yologeneric
+      model_type: yolo-generic
 {{- else }}
     detectors:
       cpu:
@@ -160,6 +162,47 @@ spec:
               name: config
           command: ["cp"]
           args: ["-v", "/config.yml", "/config/config.yml"]
+{{- if eq $frigateDetector "rocm" }}
+        # Seed the ROCm detector model into the config PVC. The artifact is
+        # committed at targets/srv0/assets/ and pinned by SHA-256; rebuilding
+        # it is documented in docs/runbooks/hardware-swap.md. A missing or
+        # corrupt file is re-fetched on the next pod start.
+        - name: ensure-model
+          image: curlimages/curl:8.23.0
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            # The curl image defaults to a non-root user; the NFS PVC root is
+            # root-owned, so write as root like the app container does.
+            runAsUser: 0
+            runAsGroup: 0
+            seLinuxOptions:
+              level: s0
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              set -eu
+              target=/config/model_cache/yolov9-t-320.onnx
+              want={{ required "FRIGATE_MODEL_SHA256 is required for the ROCm detector" .Values.FRIGATE_MODEL_SHA256 | quote }}
+              url={{ required "FRIGATE_MODEL_URL is required for the ROCm detector" .Values.FRIGATE_MODEL_URL | quote }}
+              if [ -s "$target" ] && [ "$(sha256sum "$target" | cut -d' ' -f1)" = "$want" ]; then
+                echo "frigate model already present"
+                exit 0
+              fi
+              mkdir -p /config/model_cache
+              tmp="$target.part"
+              curl -fsSL --retry 5 --retry-delay 2 -o "$tmp" "$url"
+              got="$(sha256sum "$tmp" | cut -d' ' -f1)"
+              if [ "$got" != "$want" ]; then
+                echo "frigate model sha256 mismatch: got $got" >&2
+                rm -f "$tmp"
+                exit 1
+              fi
+              mv "$tmp" "$target"
+              echo "frigate model staged"
+          volumeMounts:
+            - mountPath: /config
+              name: config
+{{- end }}
         # Frigate writes a preview restart cache on shutdown, then on the next
         # start tries to move it into the tmpfs preview dir and logs a
         # non-fatal error. Clear it before the app starts; previews simply

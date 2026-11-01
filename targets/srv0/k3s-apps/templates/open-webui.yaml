@@ -84,13 +84,13 @@ spec:
   targetNamespace: apps
   createNamespace: false
   failurePolicy: abort
-  version: 17.4.0
+  version: 17.5.0
   valuesContent: |-
     # Explicit image so Renovate tracks Open WebUI independently of the chart
     # appVersion (the chart's stable release still pins 0.12.0).
     image:
       repository: ghcr.io/open-webui/open-webui
-      tag: "v0.12.4"
+      tag: "v0.12.5"
     # OIDC client secret is an env secretKeyRef inside the chart values.
     podAnnotations:
       checksum/openwebui-oidc: {{ .Values.AUTHELIA_OPENWEBUI_CLIENT_SECRET_HASHABLE | sha256sum }}

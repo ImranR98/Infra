@@ -223,7 +223,7 @@ services:
     # (files/public-exposure/forwards.conf). Host effects are lifecycle-bound:
     # stopping the container removes the interface, DNAT and firewall rules.
     public-exposure-server-wg:
-        image: lscr.io/linuxserver/wireguard:latest@sha256:e2f655e1956a6db476bc879bf721f3f8bfed49c6d8fbcf39495d7ecb991d8228
+        image: lscr.io/linuxserver/wireguard:latest@sha256:b677c3f46d524921c8a7c91873479eb7bab190d098fddbbd887ce333ec078c90
         container_name: public-exposure-server-wg
         restart: always
         network_mode: host
@@ -245,7 +245,7 @@ services:
 
     # Prints one line per preboot-client handshake so logtfy can alert on it.
     public-exposure-watch:
-        image: lscr.io/linuxserver/wireguard:latest@sha256:e2f655e1956a6db476bc879bf721f3f8bfed49c6d8fbcf39495d7ecb991d8228
+        image: lscr.io/linuxserver/wireguard:latest@sha256:b677c3f46d524921c8a7c91873479eb7bab190d098fddbbd887ce333ec078c90
         container_name: public-exposure-watch
         restart: unless-stopped
         network_mode: host
@@ -310,7 +310,7 @@ services:
         logging: *logging
 
     authelia-db:
-        image: redis:alpine@sha256:47b08295737773de3b711fb86f13ae802f5074e96a9a2d29f5f80164ac08c046
+        image: redis:alpine@sha256:21090af93f8324db2f0f0f4f38a7c60369d47d917e000c3423d89d2ae2883537
         container_name: authelia-db
         user: "$MY_UID:$MY_UID"
         environment:
@@ -332,7 +332,7 @@ services:
 
     # Traefik - Reverse Proxy
     traefik:
-        image: traefik:v3.7.16@sha256:1336e85aaed293bd63d005086e0dd013b04078b26aaeb1c18b26a2f928af7e65
+        image: traefik:v3.7.17@sha256:30ff62491aacdb862ceb8c9edcf2627da638d7deafdd4b6dab32fe34f8aa3e90
         container_name: traefik
         depends_on:
             dockerproxy:
@@ -407,7 +407,7 @@ services:
 
     # Traefik logrotate - caps the host-mounted access log (CrowdSec's acquisition source)
     traefik-logrotate:
-        image: vitess/logrotate:latest@sha256:614883506b9b9b18d5108b65b8bc8c079f6ad7970e45516f636277a526512192
+        image: vitess/logrotate:latest@sha256:154a10125598116885e302696c88d4a308c26072aa8b21cc0d26f54ceb21aac8
         container_name: traefik-logrotate
         restart: unless-stopped
         mem_limit: 64M
@@ -419,7 +419,7 @@ services:
 
     # CrowdSec - Intrusion Prevention (LAPI + agent + AppSec in one container)
     crowdsec:
-        image: crowdsecurity/crowdsec:latest@sha256:0f2523fa61ef507f15d953045cface490cc880670c62f2755ced17524107f71a
+        image: crowdsecurity/crowdsec:latest@sha256:65b74942f7e7ed5c60fde4ac15fc4ba715904c398c8b16dd451f4907d90347d4
         container_name: crowdsec
         restart: unless-stopped
         mem_limit: 512M
@@ -455,7 +455,7 @@ services:
 
     # CrowdSec Web UI - dashboard for the local LAPI (machine password auth)
     crowdsec_web_ui:
-        image: ghcr.io/theduffman85/crowdsec-web-ui:2026.10.11
+        image: ghcr.io/theduffman85/crowdsec-web-ui:2026.10.13
         container_name: crowdsec_web_ui
         restart: unless-stopped
         mem_limit: 512M
@@ -592,7 +592,7 @@ services:
     # PixelNtfy - Tracking Pixels
     pixelntfy:
         container_name: pixelntfy
-        image: ghcr.io/imranr98/pixel-ntfy:latest@sha256:2a021446a2c59ce001de26c714e0a18227304a39e1ce3be5ecba2f381761f6ec
+        image: ghcr.io/imranr98/pixel-ntfy:latest@sha256:54b60c6dfbf373fbbaf19383f4b735a5cb30ab28a3878da29878cc62c9e2383f
         restart: unless-stopped
         mem_limit: 128M
         cpus: 0.25
@@ -618,7 +618,7 @@ services:
     # ISBN Lookup
     isbn-lookup:
         container_name: isbn-lookup
-        image: ghcr.io/imranr98/isbn-lookup:latest@sha256:cd89756c9bb97f5a4889c1f8ef582f266ae83ab2d3ec1ea1d45f9ffe6fb5809d
+        image: ghcr.io/imranr98/isbn-lookup:latest@sha256:de702db8e1c8e7627fc2e53e3d7d863b67fbd582858286b15f51b907790130f9
         restart: unless-stopped
         mem_limit: 128M
         cpus: 0.25
@@ -844,7 +844,7 @@ services:
 
     # Owncast Auth - Token-based access control for Owncast viewer
     owncast-auth:
-        image: python:3-alpine@sha256:0aa144e9ec2ae8fd80dfd94070ef3e432a0df17b6e5e0091dc05323974ce9913
+        image: python:3-alpine@sha256:20a82dbc2783112ddb91d1534603f802d222a3e63e593cd002eb2ac534e70211
         container_name: owncast-auth
         restart: unless-stopped
         mem_limit: 64M
@@ -974,7 +974,7 @@ services:
             - traefik
         logging: *logging
     shlink_web_client:
-        image: shlinkio/shlink-web-client:stable@sha256:dc8bf3565a25bd0602ff11ee352920830ce457ab58a2b2c62f2ebb23e8c8b9ee
+        image: shlinkio/shlink-web-client:stable@sha256:9ea53f612d361de240555036065e2b8ea0cd0411b0125afaf2f7d39f2a928f18
         container_name: shlink_web_client
         environment:
             - SHLINK_SERVER_URL=https://ln.$BASE_SERVICES_DOMAIN
@@ -1002,7 +1002,7 @@ services:
     # compose stack). Read-only: talks to the existing dockerproxy socket proxy
     # (GET rules only), so no write access to the docker socket is exposed.
     dozzle:
-        image: amir20/dozzle:v11.3.5
+        image: amir20/dozzle:v11.4.0
         container_name: dozzle
         restart: unless-stopped
         mem_limit: 128M
@@ -1029,7 +1029,7 @@ services:
 
     # Uptime Kuma - Service Uptime Monitoring
     uptime:
-        image: louislam/uptime-kuma:2@sha256:20abea8c48a163cf0a7a5d5936ab418e4b742d908704e1f58f6c06e56a9c6b67
+        image: louislam/uptime-kuma:2@sha256:e88415a90dd2f7efecdbc18de0490aff292764a3ac471531bf1d0481725591bd
         container_name: uptime
         restart: unless-stopped
         mem_limit: 512M
@@ -1066,7 +1066,7 @@ services:
     dscpln-agent:
         profiles:
             - dscpln-agent
-        image: ghcr.io/imranr98/dscpln-agent@sha256:dde4901d47fd54857857c6eb0d22204ce3db0fae203b78909540c20a0ffa0356
+        image: ghcr.io/imranr98/dscpln-agent@sha256:ab06b4b787002fc2d97b7e2aba652cb9536fc41fa0258dc13637b168e23e304a
         container_name: dscpln-agent
         restart: unless-stopped
         network_mode: host
