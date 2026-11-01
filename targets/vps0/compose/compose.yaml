@@ -407,7 +407,7 @@ services:
 
     # Traefik logrotate - caps the host-mounted access log (CrowdSec's acquisition source)
     traefik-logrotate:
-        image: vitess/logrotate:latest@sha256:154a10125598116885e302696c88d4a308c26072aa8b21cc0d26f54ceb21aac8
+        image: vitess/logrotate:latest@sha256:b62c15b3b6350743dbd6c4c092c8426f260a1d53bd7171516e8f7f36aa495834
         container_name: traefik-logrotate
         restart: unless-stopped
         mem_limit: 64M
@@ -890,7 +890,7 @@ services:
 
     # Logtfy - Log Monitoring and ntfy Alerting
     logtfy:
-        image: ghcr.io/imranr98/logtfy:latest@sha256:ba5213006cd5153b8ac7164766d4ba388dfd85eb72a22d09439e2bd9c2b05de6
+        image: ghcr.io/imranr98/logtfy:latest@sha256:cc6e29cbdbfeef7c04e04a4a3cf1fc5974258bb3073166d9e49e088c1fde2ddc
         container_name: logtfy
         hostname: $TARGET
         restart: unless-stopped
@@ -1066,7 +1066,7 @@ services:
     dscpln-agent:
         profiles:
             - dscpln-agent
-        image: ghcr.io/imranr98/dscpln-agent@sha256:ab06b4b787002fc2d97b7e2aba652cb9536fc41fa0258dc13637b168e23e304a
+        image: ghcr.io/imranr98/dscpln-agent@sha256:7d8b721607157ef2267bcb84b42ce5a17e3a8a8cbdc4349ccef7aecb64564fd3
         container_name: dscpln-agent
         restart: unless-stopped
         network_mode: host
