@@ -18,7 +18,9 @@
   "prHourlyLimit": 10,
   "prConcurrentLimit": 10,
   "automerge": false,
-  "platformAutomerge": true,
+  "automergeType": "pr",
+  "automergeStrategy": "squash",
+  "platformAutomerge": false,
   "lockFileMaintenance": {
     "enabled": true,
     "schedule": [
