@@ -53,7 +53,10 @@ assert_has "$tmp/amd.yaml" "yolov9-t-320.onnx"
 
 render none "$tmp/none.yaml"
 assert_has "$tmp/none.yaml" "ghcr.io/blakeblackshear/frigate:0.18.2"
-assert_has "$tmp/none.yaml" "image: ollama/ollama:0.40.12"
+# The Ollama tag is Renovate-managed; assert the CPU image is present without
+# the ROCm suffix instead of pinning the current version here.
+assert_has "$tmp/none.yaml" "image: ollama/ollama:"
+assert_not "$tmp/none.yaml" "ollama/ollama:.*-rocm"
 assert_not "$tmp/none.yaml" "infra.local/vaapi"
 assert_not "$tmp/none.yaml" "infra.local/intel-gpu"
 assert_not "$tmp/none.yaml" "infra.local/amd-"
