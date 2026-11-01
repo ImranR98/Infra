@@ -223,7 +223,7 @@ services:
     # (files/public-exposure/forwards.conf). Host effects are lifecycle-bound:
     # stopping the container removes the interface, DNAT and firewall rules.
     public-exposure-server-wg:
-        image: lscr.io/linuxserver/wireguard:latest@sha256:b677c3f46d524921c8a7c91873479eb7bab190d098fddbbd887ce333ec078c90
+        image: lscr.io/linuxserver/wireguard:latest@sha256:236f9a9a89c701bc83f6d41007157dc77361114d14e56a08e846bb4499622e97
         container_name: public-exposure-server-wg
         restart: always
         network_mode: host
@@ -245,7 +245,7 @@ services:
 
     # Prints one line per preboot-client handshake so logtfy can alert on it.
     public-exposure-watch:
-        image: lscr.io/linuxserver/wireguard:latest@sha256:b677c3f46d524921c8a7c91873479eb7bab190d098fddbbd887ce333ec078c90
+        image: lscr.io/linuxserver/wireguard:latest@sha256:236f9a9a89c701bc83f6d41007157dc77361114d14e56a08e846bb4499622e97
         container_name: public-exposure-watch
         restart: unless-stopped
         network_mode: host
@@ -641,7 +641,7 @@ services:
 
     # MeTube - YouTube Downloader
     metube:
-        image: ghcr.io/alexta69/metube:latest@sha256:845a67373a9f9e62b88e5f9067867202200d63db3615a051acbd77b09e86b9ce
+        image: ghcr.io/alexta69/metube:latest@sha256:a97f455f4b56044debe1a5ce31ff01a9cb20e9e36322ba04f8dd2bb0539b9ec7
         container_name: metube
         volumes:
             - ../../../current_target/compose_live_state/metube:/downloads
