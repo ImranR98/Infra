@@ -164,6 +164,15 @@
   ],
   "packageRules": [
     {
+      "description": "Digest pins and refreshes are the manual rollout gate; bypass the release-age delay so new app images can be pinned immediately",
+      "matchUpdateTypes": [
+        "digest",
+        "pinDigest",
+        "pin"
+      ],
+      "minimumReleaseAge": "0 days"
+    },
+    {
       "description": "One PR for all docker digest pins and refreshes (the noisy batch); version bumps stay separate",
       "matchUpdateTypes": [
         "pin",
