@@ -1,0 +1,4 @@
+# CI-friendly policy: info-level style notes do not fail a deploy, and the
+# gitignored config/VARS.env is not available in CI.
+severity=warning
+disable=SC1091
