@@ -407,8 +407,8 @@ check_cluster_hardware() {
 
     local checks=()
     case "$profile" in
-        intel) checks=("srv0 intel-gpu" "srv0 vaapi") ;;
-        amd) checks=("srv0 amd-igpu" "srv0 vaapi") ;;
+        intel) checks=("srv0 intel-gpu" "srv0 vaapi" "bigpc amd-dgpu") ;;
+        amd) checks=("srv0 amd-igpu" "srv0 vaapi" "bigpc amd-dgpu") ;;
         none) checks=() ;;
         *)
             _err "WARNING: unknown GPU_PROFILE '$profile'"

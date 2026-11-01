@@ -43,7 +43,7 @@ The bootstrap self-computes the repo root but honors a pre-set `INFRA_ROOT` (the
 
 - Explain current behavior and non-obvious WHYs only — never history ("used to", "previously", "replaces the old X"). Past designs live in git history.
 - Keep comments minimal: file headers say what the file IS; don't restate code or narrate steps.
-- No device names (srv0/vps0/pc/rpi) in shared code (`scripts/`) — keep it generic ("the preboot reader reads keys from `config/<hostname>/public-exposure/`", not "from srv0's keys"). Per-device facts belong in `targets/<t>/`; README.md and the docs are the only shared files that may name targets.
+- No device names (srv0/vps0/bigpc/pc/rpi) in shared code (`scripts/`) — keep it generic ("the preboot reader reads keys from `config/<hostname>/public-exposure/`", not "from srv0's keys"). Per-device facts belong in `targets/<t>/`; README.md and the docs are the only shared files that may name targets.
 - Docs describe the current codebase only; delete migration/historical notes once a migration lands.
 - After editing, `grep -rniE 'the old|previously|formerly|replaces the old|is gone' scripts targets` should return nothing but legitimate current-behavior notes.
 

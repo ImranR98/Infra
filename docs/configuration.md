@@ -153,5 +153,6 @@ profiles, and render vps0 Authelia before `up`.
 - `hostpath-main` is a singleton
 - `external-exposed` intentionally serves both the public edge and the LAN
   bridge/port-blocker
-- Machine hostnames are expected to match target names (`srv0`, `vps0`, `pc`,
-  `rpi`) for host-level scripts and Compose.
+- Machine hostnames are expected to match the names used here (`srv0`,
+  `vps0`, `pc`, `bigpc`, `rpi`) for host-level scripts; Compose targets must
+  match their target directory.
