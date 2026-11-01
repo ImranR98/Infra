@@ -1,7 +1,7 @@
 # Runbook: first bootstrap
 
 This is the end-to-end path from a fresh clone to a working reference stack.
-It assumes the five-machine topology (`srv0`, `vps0`, `pc`, `bigpc`, `rpi`).
+It assumes the four-machine topology (`srv0`, `vps0`, `pc`, `rpi`).
 Skip or remove targets/apps you do not use; see **Minimal stack** below.
 
 The reference stack is a personal app catalog, not a blank starter. The
@@ -21,14 +21,14 @@ Decide:
 - which optional app groups you use: arr stack, Frigate/rpi, D$CPLN,
   Guacamole, ConBee/Bluetooth, GPU workloads
 - `MAIN_PARENT_DIR` and `SECONDARY_STORAGE_PATH`
-- whether srv0/bigpc use LUKS
+- whether srv0 uses LUKS
 
 Set hostnames before `prereqs.sh`; host-level scripts and Compose expect the
 hostname to match the target directory:
 
 ```bash
 sudo hostnamectl set-hostname srv0
-# vps0, pc, bigpc, rpi similarly
+# vps0, pc, rpi similarly
 ```
 
 ## 1. DNS and vps0 edge
@@ -213,9 +213,6 @@ Install initramfs unlock:
 ```bash
 # srv0, remote unlock through the public-exposure tunnel
 bash scripts/preboot.sh public-exposure
-
-# bigpc, LAN unlock if its root is LUKS-encrypted
-bash scripts/preboot.sh crypt-ssh
 ```
 
 Test a reboot before relying on remote unlock.
@@ -291,24 +288,7 @@ bash scripts/deploy.sh srv0
 checks. `BOOTSTRAP_PRIVATE_APPS` is still `true`, so Home Assistant, Immich,
 Jellyfin, Linkwarden, Navidrome, and Opodsync are LAN/VPN-only.
 
-## 9. Join bigpc and deploy the other targets
-
-On srv0:
-
-```bash
-bash scripts/k3s-join.sh <bigpc-ip> <bigpc-user> \
-  --role agent --scheduling-discouraged
-```
-
-Do not pass `--hostpath-main` to bigpc; that label is a singleton for srv0.
-
-On bigpc:
-
-```bash
-cd ~/Infra
-bash scripts/prereqs.sh
-bash scripts/deploy.sh bigpc
-```
+## 9. Deploy the other targets
 
 On pc:
 
@@ -412,7 +392,7 @@ D$CPLN portal/balance/file-pipelines/task-runner apps.
 | Symptom | Likely cause |
 |---|---|
 | `init-config` fails on `yq` | `prereqs.sh` was not run first |
-| Compose says target mismatch | hostname is not `srv0`/`vps0`/`pc`/`bigpc`/`rpi` |
+| Compose says target mismatch | hostname is not `srv0`/`vps0`/`pc`/`rpi` |
 | vps0 cannot start the public-exposure hub | `config/vps0/public-exposure/pubexp-server0.conf` was not copied |
 | cert-manager HTTP-01 fails | DNS/`PUBLIC_HOSTS` mismatch, vps0 down, or port 80 blocked |
 | Frigate rejects the camera or password | rpi was not started or `FRIGATE_RTSP_PASSWORD` was not updated |

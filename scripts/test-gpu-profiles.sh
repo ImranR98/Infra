@@ -31,7 +31,7 @@ render intel "$tmp/intel.yaml"
 assert_has "$tmp/intel.yaml" "infra.local/intel-gpu"
 assert_has "$tmp/intel.yaml" "tag: v3.3.5-openvino"
 assert_has "$tmp/intel.yaml" "infra.local/vaapi"
-assert_has "$tmp/intel.yaml" "infra.local/amd-dgpu"   # Ollama on bigpc
+assert_has "$tmp/intel.yaml" "infra.local/amd-dgpu"   # Ollama requests the dGPU regardless of profile
 assert_not "$tmp/intel.yaml" "frigate:0.18.2-rocm"
 assert_not "$tmp/intel.yaml" "tag: v3.3.5-rocm"
 assert_not "$tmp/intel.yaml" "name: ensure-model"

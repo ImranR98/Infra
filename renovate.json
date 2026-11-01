@@ -222,7 +222,7 @@
       "enabled": false
     },
     {
-      "description": "Compose-side syncthing on pc/bigpc is watchtower-owned",
+      "description": "Compose-side syncthing on pc is watchtower-owned",
       "matchManagers": [
         "docker-compose"
       ],

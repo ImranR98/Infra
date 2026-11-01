@@ -154,4 +154,4 @@ profiles, and render vps0 Authelia before `up`.
 - `external-exposed` intentionally serves both the public edge and the LAN
   bridge/port-blocker
 - Machine hostnames are expected to match target names (`srv0`, `vps0`, `pc`,
-  `bigpc`, `rpi`) for host-level scripts and Compose.
+  `rpi`) for host-level scripts and Compose.

@@ -8,7 +8,6 @@
 |---|---|---|
 | `srv0` | K3s control-plane + public-exposure client Compose sidecar | Main home server, LUKS-encrypted root; most workloads |
 | `vps0` | Compose | Public VPS: Traefik edge, public-exposure WireGuard hub, web apps |
-| `bigpc` | Compose + K3s agent | Desktop: Ollama on AMD RX 9070 (ROCm) via agent node; syncthing |
 | `pc` | Compose | Desktop: socket-proxy, watchtower, syncthing |
 | `rpi` | Compose | Pi 400 webcam → authenticated RTSP (go2rtc), consumed by Frigate on srv0 |
 
@@ -82,9 +81,8 @@ For the full walkthrough, use `docs/runbooks/first-boot.md`. In short:
    `deploy.sh srv0`. Set `BOOTSTRAP_PRIVATE_APPS: "true"` for the first boot;
    the six user-facing apps stay LAN/VPN-only until Authelia is Ready, then
    set it back to `"false"` and redeploy.
-7. **Add the other nodes** — `k3s-join.sh` for bigpc; deploy `pc`, `bigpc`,
-   and `rpi` with `deploy.sh`. `--hostpath-main` is a singleton for srv0;
-   `--scheduling-discouraged` adds the desktop taint.
+7. **Add the other nodes** — deploy `pc` and `rpi` with `deploy.sh`.
+   `--hostpath-main` is a singleton for srv0.
 8. **Machine-local extras** — `wireguard.sh`, `preboot.sh`.
 9. **Post-deploy** — the manual first-time setup below (app seeding,
    crowdsec-web-ui machine registration, VPN profiles).

@@ -78,7 +78,7 @@ Then run `bash scripts/compose.sh vps0 ps <services>` to confirm health. `-A`
 (agent forwarding) is only needed so the remote `git pull` can authenticate to
 the git host; a deploy key there removes the need for it.
 
-## pc / bigpc / rpi — print these, do not run
+## pc / rpi — print these, do not run
 
 ```bash
 # on the machine, in its repo checkout:
