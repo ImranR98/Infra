@@ -2,8 +2,9 @@
 # DESC: Install system prerequisites on THIS machine: packages (incl. the
 # NFS client dependencies), the pinned helm binary, Docker (official
 # bootstrap), and the machine-fact .env + host bind dirs for the local compose
-# target (hostname == target). Idempotent — re-run after repo changes that add
-# compose bind dirs.
+# target (hostname == target). Node/npm come from the distro only when no
+# working Node and no version manager (fnm/nvm/volta/asdf/mise) is already
+# present. Idempotent — re-run after repo changes that add compose bind dirs.
 set -euo pipefail
 
 if [ -z "${INFRA_ROOT:-}" ]; then
@@ -28,17 +29,43 @@ usage() {
 
 [ $# -ge 1 ] && { [ "$1" = "-h" ] || [ "$1" = "--help" ]; } && usage
 
+# Node only backs the manual Renovate run (scripts/renovate.sh) and the
+# explorer dev server, so prefer whatever is already there: installing the
+# distro packages on top of a version manager (or an existing Node) shadows it
+# and breaks the manager's per-shell versions.
+install_node=true
+node_manager=""
+if command -v node >/dev/null 2>&1 && command -v npm >/dev/null 2>&1; then
+    install_node=false
+    echo "==> Using existing Node at $(command -v node)"
+else
+    for candidate in "${FNM_DIR:-$HOME/.local/share/fnm}" "$HOME/.fnm" \
+        "${NVM_DIR:-$HOME/.nvm}" "$HOME/.volta" "$HOME/.asdf" \
+        "$HOME/.local/share/mise"; do
+        if [ -d "$candidate" ]; then
+            node_manager="$candidate"
+            break
+        fi
+    done
+    if [ -n "$node_manager" ]; then
+        install_node=false
+        echo "==> Found Node version manager at $node_manager — not installing distro nodejs/npm"
+        echo "    Activate it to use Node (e.g. fnm env --use-on-cd, or nvm use)."
+    fi
+fi
+
 if command -v dnf >/dev/null 2>&1; then
     PKG_CMD=(dnf install -y)
-    PACKAGES=(yq jq curl python3 openssl shellcheck yamllint git acl nfs-utils nodejs npm wireguard-tools)
+    PACKAGES=(yq jq curl python3 openssl shellcheck yamllint git acl nfs-utils wireguard-tools)
 elif command -v apt-get >/dev/null 2>&1; then
     $SU apt-get update -y
     PKG_CMD=(apt-get install -y)
-    PACKAGES=(yq jq curl python3 openssl shellcheck yamllint git acl nfs-common nodejs npm wireguard-tools)
+    PACKAGES=(yq jq curl python3 openssl shellcheck yamllint git acl nfs-common wireguard-tools)
 else
     echo "Error: neither dnf nor apt-get found — cannot install packages" >&2
     exit 1
 fi
+[ "$install_node" = true ] && PACKAGES+=(nodejs npm)
 
 echo "==> Installing packages"
 $SU "${PKG_CMD[@]}" "${PACKAGES[@]}"
@@ -141,13 +168,23 @@ fi
 
 echo "==> Verifying prerequisites"
 missing=0
-for tool in helm docker yq jq curl python3 openssl shellcheck yamllint node; do
+for tool in helm docker yq jq curl python3 openssl shellcheck yamllint node npm npx; do
     if command -v "$tool" >/dev/null 2>&1; then
         echo "  [OK] $tool"
-    else
-        echo "  [MISSING] $tool"
-        missing=1
+        continue
     fi
+    case "$tool" in
+        node | npm | npx)
+            # A detected version manager owns Node; it is just not initialized
+            # in this non-interactive shell, so this is not a failed prereq.
+            if [ -n "$node_manager" ]; then
+                echo "  [SKIP] $tool (version manager at $node_manager is not initialized)"
+                continue
+            fi
+            ;;
+    esac
+    echo "  [MISSING] $tool"
+    missing=1
 done
 if docker compose version >/dev/null 2>&1; then
     echo "  [OK] docker compose"

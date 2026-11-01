@@ -1,9 +1,10 @@
 ---
 # Scheduled Renovate runner. One pure Renovate pass over the Infra and app
-# repos; no merge/wait/notification wrapper. App repos use GitHub native
-# auto-merge, and all Infra PRs are handled manually by the renovate-pr-ops
-# skill. The runner needs only the token, repo list, Docker Hub host rules, and
-# git author; it does not mount the Infra checkout or any scripts.
+# repos; no custom merge/wait/notification wrapper. Renovate auto-merges
+# non-major app updates after their test check, and all Infra PRs are handled
+# manually by the renovate-pr-ops skill. The runner needs only the token, repo
+# list, Docker Hub host rules, and git author; it does not mount the Infra
+# checkout or any scripts.
 apiVersion: v1
 kind: Secret
 metadata:

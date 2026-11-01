@@ -1,0 +1,99 @@
+tours:
+- id: start-here
+  title: Start here
+  subtitle: The system in one request
+  description: The two machines, the request path, the per-router edge, WireGuard basics, the tunnel, the Gateway, Immich, and the NFS data behind it. Begin with this tour.
+  recommended: true
+  duration: 12 min
+  chapters:
+  - request
+  - home
+  - edge
+  - vps-security
+  - wireguard-basics
+  - tunnel
+  - cluster-entry
+  - app-route
+  - app-inside
+  - data
+  - recap
+- id: public-edge
+  title: The public edge
+  subtitle: Routing, TLS, and per-router auth
+  description: How vps0 routes by hostname, which routers use CrowdSec, geoblock, or Authelia, and where srv0 terminates the shared certificates. Auth is per-router, not per-zone.
+  duration: 8 min
+  chapters:
+  - edge
+  - vps-security
+  - cluster-entry
+- id: wireguard
+  title: WireGuard
+  subtitle: The tunnel and the VPN
+  description: Point-to-point WireGuard, the public-exposure tunnel and its DNAT rules, the full-tunnel AmneziaWG VPN, and the initramfs unlock path.
+  duration: 8 min
+  chapters:
+  - wireguard-basics
+  - tunnel
+  - amneziawg
+  - preboot
+- id: apps-data
+  title: Apps and data
+  subtitle: srv0 workloads, storage, and hardware
+  description: The K3s base/apps split, the app catalog, Immich internals, route authentication, the device plugin, the contextual machines, NFS, and backups.
+  duration: 12 min
+  chapters:
+  - k3s-model
+  - app-catalog
+  - app-route
+  - app-inside
+  - app-auth
+  - gpu
+  - other-machines
+  - data
+  - backups
+- id: operations
+  title: Keeping it running
+  subtitle: Updates, CI, backups, monitoring, and isolation
+  description: The six-hourly Renovate runner, app auto-merge, the manual Infra gate, CI, schedules, the State Backups task, Grafana and Falco, and the NetworkPolicy/SELinux boundary.
+  duration: 10 min
+  chapters:
+  - updates
+  - ci
+  - schedules
+  - backups
+  - watching
+  - isolation
+- id: config-decisions
+  title: Configuration and decisions
+  subtitle: The working tree, config layers, and tradeoffs
+  description: How targets, scripts, and config fit together, the values and dotenv layers, and the accepted tradeoffs that should not be re-flagged.
+  duration: 7 min
+  chapters:
+  - repo-layout
+  - config
+  - decisions
+- id: first-boot
+  title: First boot
+  subtitle: From a fresh clone to the reference stack
+  description: DNS and the edge first, then prerequisites, configuration, tunnel material, vps0, srv0, optional nodes, verification, and the manual web-UI steps.
+  duration: 12 min
+  chapters:
+  - boot-dns
+  - boot-prereqs
+  - boot-config
+  - boot-tunnel
+  - boot-vps
+  - boot-srv
+  - boot-nodes
+  - boot-verify
+  - boot-manual
+- id: maintenance
+  title: Maintenance
+  subtitle: Hardware, storage, Windows, and recovery
+  description: The srv0 motherboard swap, the current NFS storage path, the Guacamole/Windows route, and restic recovery.
+  duration: 10 min
+  chapters:
+  - hardware-swap
+  - storage-migration
+  - windows-remote
+  - restore

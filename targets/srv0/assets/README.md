@@ -13,5 +13,4 @@ ROCm/ONNX detector.
 The file lives outside the Helm chart so the release Secret stays below the
 1 MiB limit. The `ensure-model` initContainer in
 `targets/srv0/k3s-apps/templates/frigate.yaml` fetches it into the
-frigate-config PVC and verifies the digest before Frigate starts. Rebuild
-instructions are in [docs/runbooks/hardware-swap.md](../../../docs/runbooks/hardware-swap.md).
+frigate-config PVC and verifies the digest before Frigate starts. The explorer's Maintenance tour covers the srv0 motherboard swap and the model staging around this artifact.

@@ -39,7 +39,7 @@ FILEBROWSER_ADMIN_GROUP: "admins"
 # not bloat the Helm release Secret. The ensure-model initContainer fetches it
 # into the frigate-config PVC and verifies the digest before Frigate starts.
 # Update the URL and SHA-256 together when rebuilding the model; see
-# docs/runbooks/hardware-swap.md for the build recipe.
+# targets/srv0/assets/README.md for the build recipe.
 FRIGATE_MODEL_URL: "https://raw.githubusercontent.com/ImranR98/Infra/master/targets/srv0/assets/yolov9-t-320.onnx"
 FRIGATE_MODEL_SHA256: "1faaa8baafd9b9075f700e589701ca004f2d9fb98b2138fb2d778607a7783fbb"
 

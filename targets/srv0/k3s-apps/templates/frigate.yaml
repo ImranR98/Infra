@@ -165,7 +165,7 @@ spec:
 {{- if eq $frigateDetector "rocm" }}
         # Seed the ROCm detector model into the config PVC. The artifact is
         # committed at targets/srv0/assets/ and pinned by SHA-256; rebuilding
-        # it is documented in docs/runbooks/hardware-swap.md. A missing or
+        # it is documented in targets/srv0/assets/README.md. A missing or
         # corrupt file is re-fetched on the next pod start.
         - name: ensure-model
           image: curlimages/curl:8.23.0

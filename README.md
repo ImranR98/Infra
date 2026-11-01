@@ -14,6 +14,25 @@ The IaC system for my homelab and other devices.
   <img src="./architecture.svg" alt="Infra architecture overview" width="800"/>
 </p>
 
+## Guided documentation
+
+The architecture, request path, public edge, WireGuard, apps/data, operations, configuration, first boot, and maintenance walkthroughs live in the guided explorer app in `explorer/`. It requires Node.js 18+ and npm.
+
+```bash
+cd explorer
+npm install   # first run only
+npm run dev
+```
+
+Open <http://localhost:4173/>. For a production build:
+
+```bash
+npm run build
+npm run preview
+```
+
+The explorer is the documentation for this repo; `AGENTS.md` remains the contributor/operations guide.
+
 ## Project Goals
 
 - **Infrastructure as Code**: Everything should be declarative and automated, using standard tooling wherever possible. Custom scripts should be minimal and only where necessary.
@@ -27,7 +46,7 @@ The IaC system for my homelab and other devices.
   - **Comprehensive Monitoring and Alerting** is done using [Alloy](https://grafana.com/docs/alloy/) + [Prometheus](https://prometheus.io/), [Loki](https://grafana.com/docs/loki/latest/), [Grafana](https://grafana.com/), [Ntfy.sh](https://ntfy.sh/) + [Logtfy](https://github.com/ImranR98/Logtfy), [Headlamp](https://headlamp.dev/), [Dozzle](https://dozzle.dev/), and [Uptime Kuma](https://github.com/louislam/uptime-kuma).
   - **[Falco](https://falco.org/)** flags suspicious activity on K3s nodes.
   - **A Honeypot ([Opencanary](https://github.com/thinkst/opencanary))** is used to discover intruders.
-  - **Regular update checking** is done via [Renovate](https://www.mend.io/renovate/): app dependency PRs auto-merge when their test gate passes, while Infra digest/chart PRs are reviewed and merged manually.
+  - **Regular update checking** is done via [Renovate](https://www.mend.io/renovate/): a six-hourly Renovate-only run opens PRs and auto-merges non-major app updates after their test gate, while every Infra digest/chart PR is a manual rollout gate.
 
 ## Usage examples
 
@@ -41,7 +60,7 @@ bash scripts/init-config.sh srv0 --detect
 bash scripts/init-config.sh vps0
 
 # Fill config/VARS.env, values/compose envs, Authelia users/rules, and the
-# optional vps0 agent config. See docs/configuration.md.
+# optional vps0 agent config. The explorer Configuration tour covers the full surface.
 bash scripts/validate.sh srv0
 bash scripts/validate.sh vps0
 
@@ -61,7 +80,6 @@ bash scripts/renovate.sh [apps|infra|all|clear-cache] [--dry-run]
 
 ## More
 
-Detailed documentation lives in [`docs/`](docs/); start with
-[`docs/runbooks/first-boot.md`](docs/runbooks/first-boot.md) for the end-to-end
-install, then [`docs/configuration.md`](docs/configuration.md) for the complete
-config surface (index in [AGENTS.md](AGENTS.md)). Note that while LLMs are used in development, the LLM isn't the one putting its data on the line. [It is just a tool](https://www.normaltech.ai/p/ai-as-normal-technology) and is used like one.
+The guided explorer is the documentation: start with the **Start here** tour, then use the topic tours for the public edge, WireGuard, apps/data, operations, configuration/decisions, first boot, and maintenance. Contributor and agent rules remain in [AGENTS.md](AGENTS.md).
+
+Note that while LLMs are used in development, the LLM isn't the one putting its data on the line. [It is just a tool](https://www.normaltech.ai/p/ai-as-normal-technology) and is used like one.

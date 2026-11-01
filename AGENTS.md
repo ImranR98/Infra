@@ -76,16 +76,15 @@ Scripts warn or hard-fail (`require_target_host`) on hostname/target mismatches.
 
 ## Documentation
 
-- [Configuration](docs/configuration.md) — every config layer, generated file, path default, and command
-- [First boot](docs/runbooks/first-boot.md) — end-to-end install order, minimal stack, common failures
-- [Architecture](docs/architecture.md) — targets, layout, bootstrap order
-- [Networking](docs/networking.md) — Traefik/Gateway, public exposure, VPN, DNS, static labels
-- [Storage](docs/storage.md) — NFS, `nfs-apps`, backups/restore, performance note
-- [Security](docs/security.md) — auth, NetworkPolicies, SELinux, accepted tradeoffs
-- [Operations](docs/operations.md) — K3s/Helm, provisioning, upgrades, Renovate, alerting, first-time setup
-- [Development](docs/development.md) — scripts, config, Compose, validation
-- [Decisions](docs/decisions.md) — full NFS, static labels, public geoblock, header-gate removal, accepted duplication
-- [Runbooks](docs/runbooks/) — first bootstrap, NFS storage migration
+The guided explorer in `explorer/` is the documentation. Start it with:
+
+```bash
+cd explorer
+npm install   # first run only
+npm run dev
+```
+
+Open <http://localhost:4173/>. The tours cover the request path, public edge, WireGuard, apps/data, operations, configuration/decisions, first boot, and maintenance. `explorer/README.md` documents the app itself.
 
 ## Rules
 

@@ -98,13 +98,6 @@ if [ -z "${RENOVATE_GITHUB_TOKEN:-}" ]; then
     exit 1
 fi
 
-# The gomod manager (WASM plugin) needs a Go toolchain when an update is
-# pending — install it with scripts/prereqs.sh.
-if ! command -v go >/dev/null 2>&1; then
-    echo "Warning: 'go' not found — pending gomod updates will crash the run." >&2
-    echo "Install with: scripts/prereqs.sh (or let the in-cluster renovate-daily CronJob handle it)." >&2
-fi
-
 export RENOVATE_TOKEN="$RENOVATE_GITHUB_TOKEN"
 if [ -n "${DOCKERHUB_USER:-}" ] && [ -n "${DOCKERHUB_TOKEN:-}" ]; then
     RENOVATE_HOST_RULES="$(node -e 'console.log(JSON.stringify([{matchHost:"docker.io",hostType:"docker",username:process.env.DOCKERHUB_USER,password:process.env.DOCKERHUB_TOKEN}]))')"

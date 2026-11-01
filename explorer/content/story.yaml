@@ -1,0 +1,1925 @@
+title: Infra guided tours
+subtitle: Eight linear tours through the public edge, the tunnel, the apps, and the routines that keep them running.
+cover:
+  kicker: Guided tours
+  title: Infra guided tours
+  intro: Eight linear tours built from the repo and source. Start with the request path, then go deeper on one layer. There is no free-exploration atlas.
+  startLabel: Start the recommended tour
+  resumeLabel: Resume
+stages:
+- Request
+- Shape
+- Edge
+- Tunnel
+- Cluster
+- App
+- Data
+- Operations
+- Access
+- Recap
+steps:
+- id: request
+  stage: Request
+  title: You open a URL
+  body: A request to `https://immich.$SERVICES_DOMAIN` resolves to **vps0**, the only machine with a public IP. `vps0` is a cloud VPS running Docker Compose for public-facing services.
+  deepDive: '`srv0` is the home server: a K3s control plane with a LUKS-encrypted root, most workloads, and the data. It has no public address. The public edge stays small: `vps0` terminates public TLS; `srv0` owns the apps and the storage.'
+  reveal:
+  - external/internet
+  - vps0
+  focus:
+  - external/internet
+  - vps0
+  edges:
+  - from: external/internet
+    to: vps0
+    type: routes-to
+    label: '443'
+  flow:
+  - - external/internet
+  - - vps0
+  zones:
+  - id: internet
+    label: THE INTERNET
+    members:
+    - external/internet
+  - id: vps0
+    label: vps0 · public edge
+    members:
+    - vps0
+  code:
+  - path: README.md
+    summary: The two-machine overview and the project goals.
+  - path: targets/vps0/compose/compose.yaml
+    summary: vps0 services, routers, and the public edge.
+- id: home
+  stage: Shape
+  title: The service is actually at home
+  body: 'The service runs on **srv0**, the K3s control plane at home. `srv0` also runs one Compose sidecar: the public-exposure WireGuard client.
+
+
+    `vps0` and `srv0` are joined by the public-exposure tunnel. It carries selected public ports into the cluster without exposing the LAN.'
+  deepDive: 'The sidecar is the one piece of `srv0` that is not Kubernetes. It owns `pubexp-client0` (`10.99.0.2/32`) and removes the interface when the container stops.
+
+
+    `bigpc` is an optional K3s worker with a discrete AMD GPU; it is not a peer machine in this request path.'
+  reveal:
+  - srv0
+  focus:
+  - vps0
+  - srv0
+  edges:
+  - from: vps0
+    to: srv0
+    type: tunnels-to
+    label: private path
+  flow:
+  - - vps0
+  - - srv0
+  zones:
+  - id: vps0
+    label: vps0 · public edge
+    members:
+    - vps0
+  - id: srv0
+    label: srv0 · home cluster
+    members:
+    - srv0
+  code:
+  - path: targets/srv0/compose/compose.yaml
+    summary: The srv0 public-exposure client sidecar.
+  - path: targets/srv0/k3s-base/values.yaml
+    summary: Committed defaults for the srv0 platform chart.
+  gapX: 96
+- id: edge
+  stage: Edge
+  title: vps0 routing
+  body: '`vps0` uses one Traefik instance to route by Host/SNI. Local services are discovered from Docker labels. `home.$BASE_SERVICES_DOMAIN` and `*.home.$BASE_SERVICES_DOMAIN` go through the file provider.
+
+
+    `$BASE_SERVICES_DOMAIN` is the public zone and `$CLOUD_SERVICES_DOMAIN` is the SSO zone, but the label only chooses the hostname. The router''s middleware chain decides what protection a host gets.'
+  deepDive: 'The file provider forwards home hostnames to `10.99.0.2:80` / `10.99.0.2:8443` with `tls.passthrough` and PROXY protocol v2. `vps0` never terminates `srv0`''s TLS or holds its private keys; cert-manager on `srv0` owns the Let''s Encrypt lifecycle.
+
+
+    `plausible.$BASE_SERVICES_DOMAIN` is Cloudflare-proxied. Traefik trusts the Cloudflare edge ranges in `forwardedHeaders`, so logs and CrowdSec see real client IPs.'
+  reveal:
+  - vps0/service/traefik
+  focus:
+  - vps0
+  - vps0/service/traefik
+  edges:
+  - from: vps0
+    to: vps0/service/traefik
+    type: routes-to
+    label: '443'
+  flow:
+  - - vps0
+  - - vps0/service/traefik
+  zones:
+  - id: vps0
+    label: vps0 · public edge
+    members:
+    - vps0
+    - vps0/service/traefik
+- id: vps-security
+  stage: Edge
+  title: vps0 security
+  body: 'Authelia, CrowdSec, and geoblock are **per-router middlewares**, not properties of a domain. A `$CLOUD_SERVICES_DOMAIN` host is not automatically protected, and a `$BASE_SERVICES_DOMAIN` host is not automatically open.
+
+
+    CrowdSec is the baseline on public routers. Geoblock is an allowlist with explicit exceptions. Authelia is applied to selected cloud routers, not every cloud host.'
+  deepDive: 'The base-domain routers are CrowdSec-only: `plausible`, `apps.obtainium`, and `ln` (Shlink). The `ikom` base-domain name is only a redirect.
+
+
+    Cloud routers with Authelia include `auth`, `traefik`, `crowdsec`, `ytdl`, `ikom`, `times`, `sale`, `ui.ln`, `docker`, and `uptime`. `pixelntfy`, `isbn`, and `attentiongame` use CrowdSec only; `owncast` adds `owncast-auth` and geoblock. `ytdl` and `ikom` skip geoblock, and `times` has a static-asset router without Authelia. The router label is the source of truth.'
+  reveal:
+  - vps0/service/crowdsec
+  - vps0/service/authelia
+  focus:
+  - vps0/service/traefik
+  - vps0/service/crowdsec
+  - vps0/service/authelia
+  edges:
+  - from: vps0/service/traefik
+    to: vps0/service/crowdsec
+    type: guarded-by
+    label: baseline
+  - from: vps0/service/traefik
+    to: vps0/service/authelia
+    type: guarded-by
+    label: selected
+  code:
+  - path: targets/vps0/compose/compose.yaml
+    summary: vps0 services and their per-router middleware chains.
+  - path: targets/vps0/compose/files/crowdsec/acquis.yaml
+    summary: CrowdSec reads the Traefik access log.
+  flow:
+  - - vps0/service/traefik
+  - - vps0/service/crowdsec
+    - vps0/service/authelia
+  zones:
+  - id: vps0
+    label: vps0 · public edge
+    members:
+    - vps0/service/traefik
+    - vps0/service/crowdsec
+    - vps0/service/authelia
+  gapX: 84
+- id: wireguard-basics
+  stage: Tunnel
+  title: WireGuard basics
+  body: 'A WireGuard interface is a private network link between two peers. Each peer has a private key and a public key; each interface has a tunnel address and an allowed-address set.
+
+
+    `vps0` has the public IP and listens on `51822/udp`. `srv0` has no public address. The public-exposure link gives them point-to-point `/32` addresses: `vps0` is `10.99.0.1/32`, and `srv0` is `10.99.0.2/32`.'
+  deepDive: 'WireGuard carries only the traffic its `AllowedIPs` match. This tunnel is not a general VPN and does not expose the LAN; it forwards selected public ports.
+
+
+    The separate AmneziaWG VPN is a full-tunnel service for remote clients. Keys and peer configs are generated by `scripts/public-exposure-keygen.sh`; do not hand-edit them.'
+  reveal:
+  - concept/public-exposure
+  focus:
+  - vps0
+  - concept/public-exposure
+  - srv0
+  edges:
+  - from: vps0
+    to: concept/public-exposure
+    type: tunnels-to
+    label: 10.99.0.1/32
+  - from: concept/public-exposure
+    to: srv0
+    type: tunnels-to
+    label: 10.99.0.2/32
+  code:
+  - path: scripts/public-exposure-keygen.sh
+    summary: Generates the public-exposure keys and peer configs.
+  - path: targets/vps0/compose/files/public-exposure/forwards.conf
+    summary: Public ports forwarded into the tunnel.
+  flow:
+  - - vps0
+  - - concept/public-exposure
+  - - srv0
+  zones:
+  - id: vps0
+    label: vps0 · 10.99.0.1/32
+    members:
+    - vps0
+  - id: tunnel
+    label: WIREGUARD · POINT-TO-POINT
+    members:
+    - concept/public-exposure
+  - id: srv0
+    label: srv0 · 10.99.0.2/32
+    members:
+    - srv0
+- id: tunnel
+  stage: Tunnel
+  title: The tunnel
+  body: '`vps0` forwards selected public ports over the tunnel with kernel DNAT. For `home.$BASE_SERVICES_DOMAIN` and `*.home.$BASE_SERVICES_DOMAIN`, it does not terminate `srv0`''s TLS: the file provider forwards to `10.99.0.2:80` / `10.99.0.2:8443` with `tls.passthrough` and PROXY protocol v2.
+
+
+    `public-exposure-server-wg` on `vps0` (host network, `NET_ADMIN`, linuxserver/wireguard) creates `pubexp-server0` (`10.99.0.1/32`, ListenPort `51822/udp`). `public-exposure-client-wg` on `srv0` is a Compose sidecar and owns `pubexp-client0` (`10.99.0.2/32`).'
+  deepDive: 'The MTU is 1340 because the `srv0`↔`vps0` path is 1420, and both sides clamp TCP MSS. All host effects are applied on container start and removed through a SIGTERM trap.
+
+
+    The hub also DNATs the preboot port (`8887/tcp`) to `10.99.0.4:22` and the AmneziaWG endpoint (`51820/udp`) to `srv0`''s listener. A `masq` flag SNATs flows whose target would otherwise reply through its own default route; qBittorrent keeps real peer source IPs.'
+  reveal:
+  - concept/public-exposure
+  - vps0/service/public-exposure-server-wg
+  - srv0/service/public-exposure-client-wg
+  focus:
+  - vps0
+  - concept/public-exposure
+  - vps0/service/public-exposure-server-wg
+  - srv0/service/public-exposure-client-wg
+  - srv0
+  edges:
+  - from: vps0
+    to: vps0/service/public-exposure-server-wg
+    type: runs
+    label: hub
+  - from: vps0/service/public-exposure-server-wg
+    to: concept/public-exposure
+    type: provides
+    label: tunnel
+  - from: concept/public-exposure
+    to: srv0/service/public-exposure-client-wg
+    type: tunnels-to
+    label: point-to-point
+  - from: srv0
+    to: srv0/service/public-exposure-client-wg
+    type: runs
+    label: ''
+  flow:
+  - - vps0
+    - vps0/service/public-exposure-server-wg
+  - - concept/public-exposure
+  - - srv0
+    - srv0/service/public-exposure-client-wg
+  zones:
+  - id: vps0
+    label: vps0 · 10.99.0.1/32
+    members:
+    - vps0
+    - vps0/service/public-exposure-server-wg
+  - id: tunnel
+    label: WIREGUARD · POINT-TO-POINT
+    members:
+    - concept/public-exposure
+  - id: srv0
+    label: srv0 · 10.99.0.2/32
+    members:
+    - srv0
+    - srv0/service/public-exposure-client-wg
+- id: cluster-entry
+  stage: Cluster
+  title: srv0's front door
+  body: 'The shared Gateway `srv0` in `base` exposes `web:80` (HTTP, plik only), `websecure:443` (LAN/VPN) and `websecure-proxy:8443` (PROXY protocol v2 from the public-exposure hub; trustedIPs are exactly `10.99.0.1/32`).
+
+
+    TLS terminates on the listeners with two shared exact-name Certificates in `base` (`edge-certs.yaml`): `edge-public-tls` (the `PUBLIC_HOSTS` list) is attached to both secure listeners, and `edge-private-tls` (`PRIVATE_HOSTS`, currently `files`/`traefik`) only to `websecure`, so the private names never reach the public-exposure listener.
+
+    '
+  deepDive: 'HTTPRoutes and Middlewares live in `base` because Traefik resolves Middleware `ExtensionRef` filters only in the route''s namespace.
+
+
+    The names are exact, not a wildcard, but all public names share one key; adding a public app means adding its label to `PUBLIC_HOSTS` and re-issuing. Traefik runs as a pod-network DaemonSet with hostPorts 80/443/8443 and no Service, so the CNI hostPort DNAT is the only way in and it preserves real client sources.
+
+
+
+    Traefik can also route to any address reachable from its pods using a selectorless Service plus a hand-written EndpointSlice. The HTTPRoute and certificate setup is the same as for a pod-backed Service.'
+  reveal:
+  - srv0/base/gateway
+  - srv0/base/edge-certs
+  focus:
+  - srv0/service/public-exposure-client-wg
+  - srv0/base/gateway
+  - srv0/base/edge-certs
+  edges:
+  - from: srv0/service/public-exposure-client-wg
+    to: srv0/base/gateway
+    type: forwards-to
+    label: 10.99.0.2:8443
+  - from: srv0/base/gateway
+    to: srv0/base/edge-certs
+    type: presents
+    label: shared TLS
+  flow:
+  - - srv0/service/public-exposure-client-wg
+  - - srv0/base/gateway
+  - - srv0/base/edge-certs
+  zones:
+  - id: srv0
+    label: srv0 · home cluster
+    members:
+    - srv0/service/public-exposure-client-wg
+    - srv0/base/gateway
+    - srv0/base/edge-certs
+- id: app-route
+  stage: App
+  title: The app route
+  body: 'The **HTTPRoute** matches `immich.$SERVICES_DOMAIN`, adds geoblock and CrowdSec, and sends the request to the Immich service.
+
+
+    Immich is a chart-managed app. The template owns the route, the database secret, the PVCs, the NetworkPolicies, and the seed hook. The Immich chart owns the server, machine learning, Postgres, and Valkey.'
+  deepDive: 'Immich has its own authentication and an Authelia OIDC client, but no forward-auth filter. That is deliberate: the native apps and its login flow work better without an extra redirect.
+
+
+    The six apps with their own authentication are Home Assistant, Immich, Jellyfin, Linkwarden, Navidrome, and Opodsync. Their routes keep CrowdSec; Jellyfin also has `jellyfin-ratelimit`.
+
+    '
+  reveal:
+  - srv0/apps/media/immich
+  - srv0/apps/media/immich/httproute/immich-ingress
+  focus:
+  - srv0/base/gateway
+  - srv0/apps/media/immich/httproute/immich-ingress
+  - srv0/apps/media/immich
+  edges:
+  - from: srv0/base/gateway
+    to: srv0/apps/media/immich/httproute/immich-ingress
+    type: routes-to
+    label: immich
+  - from: srv0/apps/media/immich/httproute/immich-ingress
+    to: srv0/apps/media/immich
+    type: routes-to
+    label: service
+  flow:
+  - - srv0/base/gateway
+  - - srv0/apps/media/immich/httproute/immich-ingress
+  - - srv0/apps/media/immich
+  zones:
+  - id: srv0
+    label: srv0 · home cluster
+    members:
+    - srv0/base/gateway
+    - srv0/apps/media/immich/httproute/immich-ingress
+    - srv0/apps/media/immich
+- id: app-inside
+  stage: App
+  title: Inside Immich
+  body: 'The chart runs four moving parts: the **server**, **machine learning**, **Postgres**, and **Valkey**.
+
+
+    The server uses the vendor-neutral `infra.local/vaapi` resource. Machine learning uses `intel-gpu` (OpenVINO) or bigpc''s `amd-dgpu` (ROCm), with CPU fallbacks. `GPU_PROFILE` (`intel|amd|none`) selects the media/ML backends. Frigate recordings and the Jellyfin libraries stay on NFS.
+
+    '
+  deepDive: 'The database claim is backed up; the library claim is the primary photo store on `nfs-apps`. Immich''s external library is the read-only media local PV.
+
+
+    The seed hook creates the first admin through the sign-up API and persists the generated password in the `immich-seed-admin` Secret. The security group holds the NetworkPolicies and RBAC that bound the chart.
+
+    '
+  reveal:
+  - srv0/apps/media/immich/helmchart/immich
+  - srv0/apps/media/immich/data
+  - srv0/apps/media/immich/security
+  focus:
+  - srv0/apps/media/immich
+  - srv0/apps/media/immich/helmchart/immich
+  - srv0/apps/media/immich/data
+  - srv0/apps/media/immich/security
+  edges:
+  - from: srv0/apps/media/immich
+    to: srv0/apps/media/immich/helmchart/immich
+    type: configures
+    label: chart
+  - from: srv0/apps/media/immich
+    to: srv0/apps/media/immich/data
+    type: groups
+    label: ''
+  - from: srv0/apps/media/immich
+    to: srv0/apps/media/immich/security
+    type: groups
+    label: ''
+  flow:
+  - - srv0/apps/media/immich
+  - - srv0/apps/media/immich/helmchart/immich
+    - srv0/apps/media/immich/data
+    - srv0/apps/media/immich/security
+  zones:
+  - id: srv0
+    label: srv0 · Immich
+    members:
+    - srv0/apps/media/immich
+    - srv0/apps/media/immich/helmchart/immich
+    - srv0/apps/media/immich/data
+    - srv0/apps/media/immich/security
+- id: data
+  stage: Data
+  title: Where the photo lives
+  body: 'The `nfs-server` pod in `base` exports host paths; `csi-driver-nfs` mounts them. The app-data export is `/exports/apps` → `{{ .Values.INFRA_ROOT }}/current_target/k3s_live_state/nfs-apps`, with `no_root_squash` (needed by CSI subdir creation and Postgres chowns).
+
+
+    The dynamic StorageClass **`nfs-apps`** is the default. It provisions `subDir: ${pvc.metadata.namespace}/${pvc.metadata.name}`, `mountPermissions: "0777"`, `reclaimPolicy: Retain`, `onDelete: retain`, `volumeBindingMode: Immediate`, and `allowVolumeExpansion: false` (sizes are advisory; NFS has no quota).
+
+    '
+  deepDive: 'Migrated PVCs use `ReadWriteMany` so backup/restore pods can run on any node. The CSI driver is the only NFS client (hostNetwork node plugin); all mounts use `nfsvers=4.2`.
+
+
+    NFS is excellent for read-heavy/sequential workloads and media. SQLite/WAL and Postgres are latency-sensitive: the full-NFS migration accepted the measured cost (~3× SQLite p95 and ~2.6× Postgres latency under load). Immich Postgres requires `IGNORE_DATABASE_FSTYPE=true` to start on NFS.
+
+
+    `hostpath-main` is a singleton: exactly one node owns the Main tree. A hostPath must not be the only reason a pod is pinned; back it with a statically bound `hostpath` PV/PVC and let the claim do the scheduling.
+
+
+
+    Shared media and static host paths are separate. `host-volumes` defines statically bound `hostpath` PV/PVC pairs for the Main tree; the media, Jellyfin, Frigate, and code-sandbox shares are static NFS PVs, not dynamically provisioned.'
+  reveal:
+  - srv0/base/nfs-server
+  - srv0/base/csi-driver-nfs
+  - srv0/base/csi-driver-nfs/storageclass/nfs-apps
+  - srv0/apps/media/immich/pvc/immich-library-pvc
+  focus:
+  - srv0/base/nfs-server
+  - srv0/base/csi-driver-nfs
+  - srv0/base/csi-driver-nfs/storageclass/nfs-apps
+  - srv0/apps/media/immich/pvc/immich-library-pvc
+  edges:
+  - from: srv0/apps/media/immich/pvc/immich-library-pvc
+    to: srv0/base/csi-driver-nfs/storageclass/nfs-apps
+    type: provisioned-by
+    label: nfs-apps
+  - from: srv0/base/csi-driver-nfs/storageclass/nfs-apps
+    to: srv0/base/csi-driver-nfs
+    type: managed-by
+    label: CSI
+  - from: srv0/base/csi-driver-nfs
+    to: srv0/base/nfs-server
+    type: mounts
+    label: NFS 4.2
+  - from: srv0
+    to: srv0/base/nfs-server
+    type: runs
+    label: base namespace
+  flow:
+  - - srv0/apps/media/immich/pvc/immich-library-pvc
+  - - srv0/base/csi-driver-nfs/storageclass/nfs-apps
+    - srv0/base/csi-driver-nfs
+  - - srv0/base/nfs-server
+  zones:
+  - id: data
+    label: DATA
+    members:
+    - srv0/apps/media/immich/pvc/immich-library-pvc
+    - srv0/base/csi-driver-nfs/storageclass/nfs-apps
+    - srv0/base/csi-driver-nfs
+    - srv0/base/nfs-server
+- id: updates
+  stage: Operations
+  title: How changes arrive
+  body: 'The scheduled Renovate runner is one pure K3s CronJob on `srv0` (`base`, `targets/srv0/k3s-base/templates/renovate.yaml`), `renovate-daily`, every six hours (`0 */6 * * *`). It runs Renovate only: Renovate opens or refreshes PRs and auto-merges non-major app updates after their required `test` check. It does not add a custom merge/wait/notify wrapper.
+
+
+    App repos extend `renovate-preset.json`; majors wait on the Dependency Dashboard. Infra Renovate PRs are never auto-merged. They are the manual rollout gate handled by the `renovate-pr-ops` skill.'
+  deepDive: 'The runner gets `RENOVATE_TOKEN`, the repo list, Docker Hub host rules, and the git author from the `renovate-secrets` Secret. It mounts no repo or scripts and runs as the image''s non-root user.
+
+
+    A suspended `renovate-infra` CronJob is the on-demand template. After an app PR merges and its image `publish` job completes, the `renovate-pr-ops` skill creates a Job from it, so the new Infra digest PR appears immediately instead of waiting for the next six-hourly run. The skill also handles app exceptions (blocked PRs, approved majors) and presents the Infra batch for approval. `infra-digest-pin` marks image pins that need a deploy; merging is inert until `scripts/deploy.sh <target>`. The manual on-demand runner remains `scripts/renovate.sh`.'
+  reveal:
+  - srv0/base/renovate/cronjob/renovate-daily
+  - srv0/base/renovate/cronjob/renovate-infra
+  - concept/renovate-pr-ops
+  focus:
+  - srv0/ops/renovate
+  - srv0/base/renovate
+  - srv0/base/renovate/cronjob/renovate-daily
+  - external/github
+  - concept/renovate-pr-ops
+  - srv0/base/renovate/cronjob/renovate-infra
+  edges:
+  - from: srv0/ops/renovate
+    to: srv0/base/renovate
+    type: configured-by
+    label: policy
+  - from: srv0/base/renovate
+    to: srv0/base/renovate/cronjob/renovate-daily
+    type: runs
+    label: six-hourly
+  - from: srv0/base/renovate/cronjob/renovate-daily
+    to: external/github
+    type: opens-prs
+    label: PRs
+  - from: external/github
+    to: concept/renovate-pr-ops
+    type: publish
+    label: image publish
+  - from: concept/renovate-pr-ops
+    to: srv0/base/renovate/cronjob/renovate-infra
+    type: creates-job
+    label: on demand
+  flow:
+  - - srv0/ops/renovate
+    - srv0/base/renovate
+  - - srv0/base/renovate/cronjob/renovate-daily
+    - external/github
+    - concept/renovate-pr-ops
+  - - srv0/base/renovate/cronjob/renovate-infra
+  zones:
+  - id: renovate
+    label: RENOVATE · SPLIT GATE
+    members:
+    - srv0/ops/renovate
+    - srv0/base/renovate
+    - srv0/base/renovate/cronjob/renovate-daily
+    - external/github
+    - concept/renovate-pr-ops
+    - srv0/base/renovate/cronjob/renovate-infra
+  code:
+  - path: targets/srv0/k3s-base/templates/renovate.yaml
+    summary: The six-hourly CronJob and the suspended Infra-only template.
+  - path: renovate.json
+    summary: 'Infra policy: managers, package rules, and automerge disabled.'
+  - path: renovate-preset.json
+    summary: 'Shared app-repo policy: non-major auto-merge; majors manual.'
+  - path: scripts/renovate.sh
+    summary: Manual on-demand runner for local use.
+  - path: scripts/repos.sh
+    summary: Shared INFRA_REPO and APP_REPOS lists.
+- id: backups
+  stage: Operations
+  title: How it survives
+  body: 'The **State Backups** task in the D$CPLN Task Runner is the active backup system. It runs on a schedule (default Sundays 04:00) and has a manual **Run now**.
+
+
+    One encrypted, deduplicated restic repository at `state_backups/restic` contains every PVC labelled `auto-backup=true` under `current_target/k3s_live_state/nfs-apps/<namespace>/<pvc>`, the srv0 Compose state, and the vps0 Compose state, fetched over SSH with the existing key.
+
+    '
+  deepDive: 'The Task Runner backup instance runs as root in the `apps` namespace so it can read the Postgres/Redis-owned PVC data; it mounts the Infra tree read-only and only `state_backups/` writable.
+
+
+    `retention` maps to `restic forget --keep-last N --prune` (default 7). Each run also does `restic check --read-data-subset=1%`.
+
+
+    Restore is intentionally outside the app: `scripts/restic-restore.sh list`, `... pvc <name> [snapshot] [--live]`, and `... compose srv0|vps0 [snapshot] [--live]`. The script works on a fresh cluster and uses the repo/password/key directly.
+
+    '
+  reveal:
+  - srv0/ops/backups
+  - concept/backups/restic-repository
+  - script/restic-restore
+  focus:
+  - srv0/ops/backups
+  - concept/backups/restic-repository
+  - script/restic-restore
+  edges:
+  - from: srv0
+    to: srv0/ops/backups
+    type: runs
+    label: scheduled task
+  - from: srv0/ops/backups
+    to: concept/backups/restic-repository
+    type: writes
+    label: restic
+  - from: concept/backups/restic-repository
+    to: script/restic-restore
+    type: restored-by
+    label: manual
+  flow:
+  - - srv0/ops/backups
+  - - concept/backups/restic-repository
+  - - script/restic-restore
+  zones:
+  - id: ops
+    label: OPERATIONS
+    members:
+    - srv0/ops/backups
+    - concept/backups/restic-repository
+    - script/restic-restore
+- id: watching
+  stage: Operations
+  title: Watching the system
+  body: 'Grafana provisions one webhook contact point (`ntfy`) plus file-backed alerting config: 27 rules in the **Falco** folder, the policy tree (`group_by: alertname`, 12h repeat), and the markdown body template group.
+
+
+    Falco runs as a DaemonSet on srv0 and bigpc with the modern eBPF driver. It is the runtime counterpart to CrowdSec (L7) and opencanary (honeypot): syscall rules catch shells, credential access, crypto miners, and escape helpers that HTTP-layer tools cannot see.
+
+    '
+  deepDive: 'Falco events are JSON on stdout and Alloy''s pod-log collector ships them to Loki. Metrics drive Grafana alerts; response is manual. There is no Talon/auto-remediation and no k8saudit plugin yet.
+
+
+    Alerting is designed to be quiet when bigpc is powered off. `falco-daemonset-not-ready` is critical only when Falco is not ready on a **Ready** node; `falco-warning-events` requires a warning to recur for 30 minutes. Known false alarms are excepted in `custom-rules.yaml`.
+
+    '
+  reveal:
+  - srv0/base/monitoring
+  - srv0/base/ntfy
+  - srv0/base/falco
+  focus:
+  - srv0/base/monitoring
+  - srv0/base/ntfy
+  - srv0/base/falco
+  edges:
+  - from: srv0
+    to: srv0/base/monitoring
+    type: runs
+    label: telemetry
+  - from: srv0/base/monitoring
+    to: srv0/base/ntfy
+    type: notifies
+    label: alerts
+  - from: srv0/base/falco
+    to: srv0/base/monitoring
+    type: observes
+    label: events
+  flow:
+  - - srv0/base/falco
+  - - srv0/base/monitoring
+  - - srv0/base/ntfy
+  zones:
+  - id: ops
+    label: OPERATIONS
+    members:
+    - srv0/base/falco
+    - srv0/base/monitoring
+    - srv0/base/ntfy
+- id: isolation
+  stage: Operations
+  title: Isolation and secrets
+  body: 'K3s enforces NetworkPolicies through kube-router. `namespaces` installs the baseline policies; each app template adds its own. The kube-system policy admits ports 80/443/8000/8443 to Traefik, and `allow-traefik-ingress` admits the public-exposure hub (`10.99.0.1/32`) and remote-access clients (`10.100.0.0/24`).
+
+
+    On Fedora, SELinux labels hostPath data. Pods that share a host tree need pod-level `seLinuxOptions.level: s0`; syncthing, Falco, and node-exporter use `spc_t`. Secrets stay in gitignored `config/`. HelmChart values are readable by anyone who can `get` the CR, so namespace access is the boundary.'
+  deepDive: '`nfs-apps` uses `no_root_squash` and is reachable only from the LAN CIDR; backup and restore pods run as root. `hostpath-main` is a singleton. SSH hardening and fail2ban live outside the repo.
+
+
+    Several routes are public by design: `gpt`, `fmd`, and `rss` are geoblock + CrowdSec only; `seerr` is geoblock only; `owncast`''s RTMP ingest is protected only by its stream key. Do not add SSO or geoblock without accepting the constraint.
+
+
+    `vps0` exposes the Docker socket only through read-only `socket-proxy` containers; watchtower on `pc`/`bigpc` uses the read-write proxy with `cap_drop: ALL`, a read-only root, and a 512M limit. qBittorrent''s default password is accepted because Authelia, geoblock, and CrowdSec gate the UI.
+
+    Charts that support secret references use them; where a chart only accepts plain YAML, the component uses `valuesSecrets` projected from a namespaced Secret.'
+  reveal:
+  - srv0/base/namespaces
+  - srv0/base/falco
+  - srv0/base/nfs-server
+  focus:
+  - srv0/base/namespaces
+  - srv0/base/gateway
+  - srv0/base/falco
+  - srv0/base/nfs-server
+  flow:
+  - - srv0/base/namespaces
+    - srv0/base/gateway
+  - - srv0/base/falco
+    - srv0/base/nfs-server
+  zones:
+  - id: srv0
+    label: srv0 · isolation
+    members:
+    - srv0/base/namespaces
+    - srv0/base/gateway
+    - srv0/base/falco
+    - srv0/base/nfs-server
+  edges:
+  - from: srv0/base/namespaces
+    to: srv0/base/gateway
+    type: guards
+    label: baseline
+  code:
+  - path: targets/srv0/k3s-base/templates/namespaces.yaml
+    summary: Namespace baselines and the kube-system edge policy.
+  - path: targets/srv0/k3s-base/templates/falco.yaml
+    summary: Falco DaemonSet, SELinux settings, and least-privilege driver.
+  - path: targets/srv0/k3s-base/templates/nfs-server.yaml
+    summary: LAN-only NFS export with no_root_squash.
+- id: recap
+  stage: Recap
+  title: The mental model
+  recap: true
+  body: 'The request path is **Internet → vps0 edge → tunnel → srv0 Gateway → HTTPRoute → workload → NFS data.**
+
+
+    `vps0` owns the public address and TLS. `srv0` owns the apps, the data, and the cross-cutting layers: Authelia and CrowdSec, Renovate, State Backups, monitoring, and remote access. The tunnel joins them without exposing the LAN.'
+  deepDive: 'The reference stack is a personal app catalog, not a blank starter. Remove unused templates/services and their `PUBLIC_HOSTS` labels before the first deploy.
+
+
+    To follow another layer, use the public-edge, WireGuard, apps-and-data, operations, configuration, first-boot, or maintenance tour.'
+  focus:
+  - external/internet
+  - vps0
+  - concept/public-exposure
+  - srv0/base/gateway
+  - srv0/apps/media/immich
+  - srv0/base/nfs-server
+  - srv0
+  edges:
+  - from: external/internet
+    to: vps0
+    type: routes-to
+    label: '443'
+  - from: vps0
+    to: concept/public-exposure
+    type: tunnels-to
+    label: home.*
+  - from: concept/public-exposure
+    to: srv0/base/gateway
+    type: forwards-to
+    label: TLS passthrough
+  - from: srv0/base/gateway
+    to: srv0/apps/media/immich
+    type: routes-to
+    label: HTTPRoute
+  - from: srv0/apps/media/immich
+    to: srv0/base/nfs-server
+    type: mounts
+    label: nfs-apps
+  flow:
+  - - external/internet
+    - vps0
+  - - concept/public-exposure
+    - srv0/base/gateway
+  - - srv0/apps/media/immich
+    - srv0/base/nfs-server
+  zones:
+  - id: path
+    label: THE PATH
+    members:
+    - external/internet
+    - vps0
+    - concept/public-exposure
+    - srv0/base/gateway
+    - srv0/apps/media/immich
+    - srv0/base/nfs-server
+- id: amneziawg
+  stage: Access
+  title: Remote-access VPN
+  body: 'The full-tunnel **AmneziaWG VPN server** runs as a hostNetwork pod pinned by `nodeSelector: infra.local/external-exposed`. It uses the userspace `amneziawg-go` implementation and creates `ra-amneziawg0` at `10.100.0.1/24`.
+
+
+    The companion `remote-access-dns` pod binds `10.100.0.1:53` and answers every `*.$SERVICES_DOMAIN` name with `10.100.0.1`, so clients keep using the normal service URLs.'
+  deepDive: '`vps0` DNATs `51820/udp` to `10.99.0.2:51830` over the public-exposure tunnel; flannel owns 51820 inside the cluster. Only AmneziaWG-capable clients can connect; vanilla WireGuard clients cannot.
+
+
+    Profiles are fetched with `scripts/remote-access-client.sh <client>`; DNS `10.100.0.1`, MTU `1180`, and keepalive `25` are part of the generated profile. To regenerate, delete `/wg/ra-amneziawg0.conf` or the PVC and restart the pod.'
+  reveal:
+  - srv0/base/vpn
+  focus:
+  - srv0
+  - srv0/base/vpn
+  edges:
+  - from: vps0
+    to: concept/public-exposure
+    type: forwards-to
+    label: 51820/udp
+  - from: concept/public-exposure
+    to: srv0/base/vpn
+    type: tunnels-to
+    label: '51830'
+  - from: srv0
+    to: srv0/base/vpn
+    type: runs
+    label: host network
+  code:
+  - path: targets/srv0/k3s-base/templates/vpn.yaml
+    summary: The AmneziaWG pod, DNS pod, keygen, and profile PVC.
+  - path: scripts/remote-access-client.sh
+    summary: Fetches a generated client profile.
+  flow:
+  - - vps0
+  - - concept/public-exposure
+  - - srv0
+    - srv0/base/vpn
+  zones:
+  - id: vps0
+    label: vps0 · public edge
+    members:
+    - vps0
+  - id: tunnel
+    label: PUBLIC-EXPOSURE TUNNEL
+    members:
+    - concept/public-exposure
+  - id: srv0
+    label: srv0 · remote access
+    members:
+    - srv0
+    - srv0/base/vpn
+- id: preboot
+  stage: Access
+  title: Preboot unlock
+  body: '`scripts/preboot.sh public-exposure` installs a dracut module that brings up `pubexp-pre0` in the initramfs. The `vps0` hub DNATs `8887/tcp` to `10.99.0.4:22`, so dropbear is reachable before the root filesystem is unlocked.
+
+
+    Remote SSH uses the same tunnel: `vps0`''s sshd connects to `10.99.0.2:22`.'
+  deepDive: 'The preboot key is separate from the runtime keys. Re-run `preboot.sh public-exposure` on `srv0` after rotating it.
+
+
+    When adding initramfs networking, verify with `lsinitrd` that the module, `wg`, `ip`, and the needed firmware are present. Drivers do not retry firmware loads after `pivot_root`.'
+  reveal:
+  - script/preboot
+  focus:
+  - srv0
+  - script/preboot
+  - concept/public-exposure
+  edges:
+  - from: vps0
+    to: concept/public-exposure
+    type: forwards-to
+    label: 8887/tcp
+  - from: concept/public-exposure
+    to: srv0
+    type: tunnels-to
+    label: 10.99.0.4:22
+  - from: srv0
+    to: script/preboot
+    type: boots
+    label: initramfs
+  code:
+  - path: scripts/preboot.sh
+    summary: Installs the initramfs WireGuard client and dropbear.
+  flow:
+  - - vps0
+  - - concept/public-exposure
+  - - srv0
+    - script/preboot
+  zones:
+  - id: vps0
+    label: vps0 · public edge
+    members:
+    - vps0
+  - id: tunnel
+    label: PUBLIC-EXPOSURE TUNNEL
+    members:
+    - concept/public-exposure
+  - id: srv0
+    label: srv0 · initramfs
+    members:
+    - srv0
+    - script/preboot
+- id: k3s-model
+  stage: App
+  title: The K3s split
+  body: '`srv0` runs K3s. The Helm chart `srv0-base` installs the platform in `base`; `srv0-apps` installs the workload catalog in `apps`.
+
+
+    Base owns the Gateway and certificates, storage, auth and security, observability, node lifecycle, and the Renovate CronJob. Apps assume those pieces exist.
+
+    '
+  deepDive: 'The charts produce `srv0-base` and `srv0-apps`; apply base before apps and delete in reverse. Upstream app charts are `HelmChart` CRs owned by k3s''s helm-controller, not dependencies of our chart.
+
+
+    `descheduler` and `system-upgrade-controller` are base components. K3s version changes are owned by the system-upgrade plans. Most app templates are file-scoped: the resources in one file are the app''s ownership and security record.'
+  reveal:
+  - srv0/base
+  - srv0/apps
+  - srv0/cluster
+  focus:
+  - srv0
+  - srv0/base
+  - srv0/apps
+  - srv0/cluster
+  flow:
+  - - srv0
+  - - srv0/base
+    - srv0/apps
+  - - srv0/cluster
+  zones:
+  - id: srv0
+    label: srv0 · home cluster
+    members:
+    - srv0
+    - srv0/base
+    - srv0/apps
+    - srv0/cluster
+  edges:
+  - from: srv0
+    to: srv0/base
+    type: runs
+    label: platform
+  - from: srv0
+    to: srv0/apps
+    type: runs
+    label: workloads
+  - from: srv0
+    to: srv0/cluster
+    type: runs
+    label: nodes
+  code:
+  - path: targets/srv0/k3s-base/Chart.yaml
+    summary: The platform chart.
+  - path: targets/srv0/k3s-apps/Chart.yaml
+    summary: The app chart.
+  - path: scripts/deploy.sh
+    summary: Applies both charts and waits for rollouts.
+- id: app-catalog
+  stage: App
+  title: The app catalog
+  body: 'Apps are grouped by purpose: media, home, arr, productivity, tools, D$CPLN, and security. Each app owns its route, storage claims, middleware chain, probes, and image pins.
+
+
+    The per-app blocks are deliberately explicit: the PVCs, HTTPRoute filters, and probe stanzas are the app''s ownership and security record.'
+  deepDive: 'A generator would hide the differences that matter. Frigate recordings and the Jellyfin libraries stay on NFS. Immich uses the NFS primary library and a read-only media local PV for its external library.
+
+
+    The six apps with their own authentication are covered in the app-authentication chapter.'
+  reveal:
+  - srv0/apps/media
+  - srv0/apps/home
+  - srv0/apps/arr
+  - srv0/apps/productivity
+  - srv0/apps/tools
+  - srv0/apps/dscpln
+  - srv0/apps/security
+  focus:
+  - srv0/apps/media
+  - srv0/apps/home
+  - srv0/apps/arr
+  - srv0/apps/productivity
+  - srv0/apps/tools
+  - srv0/apps/dscpln
+  - srv0/apps/security
+  flow:
+  - - srv0/apps/media
+    - srv0/apps/home
+    - srv0/apps/arr
+    - srv0/apps/productivity
+  - - srv0/apps/tools
+    - srv0/apps/dscpln
+    - srv0/apps/security
+  zones:
+  - id: srv0
+    label: srv0 · apps
+    members:
+    - srv0/apps/media
+    - srv0/apps/home
+    - srv0/apps/arr
+    - srv0/apps/productivity
+    - srv0/apps/tools
+    - srv0/apps/dscpln
+    - srv0/apps/security
+  edges: []
+  code:
+  - path: targets/srv0/k3s-apps/templates/immich.yaml
+    summary: A chart-managed app with route, PVCs, NetworkPolicies, and a seed hook.
+  - path: targets/srv0/k3s-apps/templates/frigate.yaml
+    summary: A raw-manifest app with NFS media and a GPU detector.
+  - path: targets/srv0/k3s-apps/values.yaml
+    summary: Committed app defaults.
+- id: app-auth
+  stage: App
+  title: App authentication
+  body: 'Routes with their own authentication do not use Authelia forward-auth: Home Assistant, Immich, Jellyfin, Linkwarden, Navidrome, and Opodsync. Immich still has an Authelia OIDC client. Jellyfin uses CrowdSec and `jellyfin-ratelimit`.
+
+
+    Other `srv0` routes deliberately skip Authelia. `gpt` (Open WebUI), `fmd`, and `rss` (FreshRSS) are geoblock + CrowdSec only; `seerr` is geoblock only; `tv` (Jellyfin) is CrowdSec + rate limit and no geoblock. The route''s middleware chain is the source of truth.'
+  deepDive: '`BOOTSTRAP_PRIVATE_APPS: "true"` temporarily removes the `websecure-proxy` parentRef from those six routes so they stay LAN/VPN-only until Authelia is Ready; set it back to `"false"` after bootstrap.
+
+
+    The custom header-gate WASM plugin and its chain are gone. Do not add Authelia forward-auth to these six without changing their native-app login flow.'
+  reveal:
+  - srv0/base/authelia
+  - srv0/apps/media/immich
+  - srv0/apps/home/homeassistant
+  - srv0/apps/media/jellyfin
+  focus:
+  - srv0/base/gateway
+  - srv0/base/authelia
+  - srv0/apps/media/immich
+  - srv0/apps/home/homeassistant
+  - srv0/apps/media/jellyfin
+  flow:
+  - - srv0/base/gateway
+  - - srv0/base/authelia
+  - - srv0/apps/media/immich
+    - srv0/apps/home/homeassistant
+    - srv0/apps/media/jellyfin
+  zones:
+  - id: srv0
+    label: srv0 · route auth
+    members:
+    - srv0/base/gateway
+    - srv0/base/authelia
+    - srv0/apps/media/immich
+    - srv0/apps/home/homeassistant
+    - srv0/apps/media/jellyfin
+  edges:
+  - from: srv0/base/gateway
+    to: srv0/base/authelia
+    type: guarded-by
+    label: selected routes
+  - from: srv0/base/gateway
+    to: srv0/apps/media/immich
+    type: routes-to
+    label: no forward-auth
+  - from: srv0/base/gateway
+    to: srv0/apps/home/homeassistant
+    type: routes-to
+    label: no forward-auth
+  - from: srv0/base/gateway
+    to: srv0/apps/media/jellyfin
+    type: routes-to
+    label: no forward-auth
+  code:
+  - path: targets/srv0/k3s-base/templates/authelia.yaml
+    summary: The Authelia chart, OIDC clients, and access-control insertion point.
+  - path: targets/srv0/k3s-apps/templates/immich.yaml
+    summary: An app route without Authelia forward-auth.
+- id: gpu
+  stage: App
+  title: Hardware resources
+  body: 'The generic device plugin scans each node''s sysfs and `/dev` and advertises hardware as resources: `infra.local/intel-gpu`, `amd-igpu`, `amd-dgpu`, `vaapi`, and `conbee`.
+
+
+    Workloads request the resource they need. On the current Intel `srv0`, that is `intel-gpu` + `vaapi`; after the board swap it is `amd-igpu` + `vaapi`. Immich ML uses `intel-gpu` (OpenVINO) or `bigpc`''s `amd-dgpu` (ROCm). `GPU_PROFILE` (`intel|amd|none`) selects the media/ML backends. A node without the device advertises zero.'
+  deepDive: 'The plugin normalizes device names to `renderD128`/`card0`/`ttyACM0`, so a workload does not depend on enumeration order or a node label.
+
+
+    bigpc is an optional K3s worker with the RX 9070. It is not a peer machine in this walk; it supplies `amd-dgpu` when present.'
+  reveal:
+  - srv0/base/generic-device-plugin
+  - target/bigpc
+  focus:
+  - srv0/apps/media/immich
+  - srv0/base/generic-device-plugin
+  - target/bigpc
+  flow:
+  - - srv0/apps/media/immich
+  - - srv0/base/generic-device-plugin
+  - - target/bigpc
+  zones:
+  - id: srv0
+    label: srv0 · hardware
+    members:
+    - srv0/apps/media/immich
+    - srv0/base/generic-device-plugin
+  - id: context
+    label: optional context
+    members:
+    - target/bigpc
+  edges:
+  - from: srv0/apps/media/immich
+    to: srv0/base/generic-device-plugin
+    type: requests
+    label: vaapi / gpu
+  - from: srv0/base/generic-device-plugin
+    to: target/bigpc
+    type: advertises
+    label: amd-dgpu
+  code:
+  - path: targets/srv0/k3s-base/files/generic-device-plugin-init.sh
+    summary: Generates the device resources from sysfs and /dev.
+  - path: targets/srv0/k3s-base/templates/generic-device-plugin.yaml
+    summary: The plugin DaemonSet and its SELinux/device mounts.
+  - path: targets/srv0/k3s-apps/templates/immich.yaml
+    summary: Immich VAAPI and ML resource requests.
+- id: other-machines
+  stage: App
+  title: The other machines
+  body: '`bigpc` is an optional K3s agent and desktop. It advertises `amd-dgpu` on the RX 9070 and runs Ollama; Compose also runs syncthing. `rpi` is a Pi 400 that turns a webcam into an authenticated RTSP stream with go2rtc, consumed by Frigate on `srv0`.
+
+
+    `pc` is Compose-only: a socket proxy, watchtower, and syncthing. None of the three is on the `srv0`/`vps0` request path.'
+  deepDive: '`bigpc` is tainted `scheduling-discouraged` (PreferNoSchedule) and runs the D$CPLN archive agent on local PV/PVCs. `rpi`''s go2rtc password is generated on first start under `current_target/compose_live_state/go2rtc/`; the WebUI is loopback-only.
+
+
+    `pc` and `bigpc` run watchtower only for syncthing; `srv0`, `vps0`, and `rpi` rely on Renovate.'
+  reveal:
+  - target/bigpc
+  - target/rpi
+  focus:
+  - target/bigpc
+  - target/rpi
+  - srv0/base/generic-device-plugin
+  - srv0/apps/media/frigate
+  flow:
+  - - target/bigpc
+    - target/rpi
+  - - srv0/base/generic-device-plugin
+    - srv0/apps/media/frigate
+  zones:
+  - id: context
+    label: CONTEXTUAL MACHINES
+    members:
+    - target/bigpc
+    - target/rpi
+  - id: srv0
+    label: srv0 CONSUMERS
+    members:
+    - srv0/base/generic-device-plugin
+    - srv0/apps/media/frigate
+  edges:
+  - from: target/bigpc
+    to: srv0/base/generic-device-plugin
+    type: advertises
+    label: amd-dgpu
+  - from: target/rpi
+    to: srv0/apps/media/frigate
+    type: feeds
+    label: RTSP
+  code:
+  - path: targets/bigpc/compose/compose.yaml
+    summary: 'bigpc Compose services: socket proxy, watchtower, syncthing.'
+  - path: targets/rpi/compose/compose.yaml
+    summary: go2rtc and the generated stream password.
+  - path: targets/srv0/k3s-base/templates/generic-device-plugin.yaml
+    summary: Hardware resources generated from sysfs and /dev.
+  gapX: 76
+- id: ci
+  stage: Operations
+  title: CI
+  body: 'GitHub Actions runs the validation workflow on every push/PR: shellcheck, yamllint, Helm lint/render with the committed config template, the device-plugin fixtures, the GPU profile renders, the Renovate config validator, actionlint, and `git diff --check`.
+
+
+    The NFS server image workflow builds on `nfs-server-src` changes, verifies the candidate digest, promotes `:latest`, and leaves digest pinning to Renovate.
+
+    '
+  deepDive: 'The full `validate.sh` remains the local review gate because it needs the filled `config/` tree. The CI workflow uses the committed template as a non-secret values overlay.
+
+
+    App repos carry their own `test` → candidate → verify → promote workflow; Infra pins the resulting digests.'
+  reveal:
+  - workflow/validate
+  - workflow/nfs-server-image
+  - srv0/base/nfs-server
+  focus:
+  - workflow/validate
+  - workflow/nfs-server-image
+  - srv0/base/nfs-server
+  flow:
+  - - workflow/validate
+    - workflow/nfs-server-image
+  - - srv0/base/nfs-server
+  zones:
+  - id: ops
+    label: CI
+    members:
+    - workflow/validate
+    - workflow/nfs-server-image
+    - srv0/base/nfs-server
+  edges:
+  - from: workflow/nfs-server-image
+    to: srv0/base/nfs-server
+    type: publishes
+    label: image
+  code:
+  - path: .github/workflows/validate.yml
+    summary: The CI validation jobs and pinned tool versions.
+  - path: .github/workflows/nfs-server-image.yml
+    summary: Builds, verifies, and promotes the NFS image.
+  - path: scripts/validate.sh
+    summary: The full local preflight.
+- id: repo-layout
+  stage: Operations
+  title: The working tree
+  body: 'Everything a target needs lives in `targets/<t>/`; shared logic lives in `scripts/`; secrets live in the gitignored `config/`. There is no build step.
+
+
+    Target-selecting scripts take `<target>` as their first argument. Machine-local scripts (`prereqs`, `renovate`, `preboot`, `wireguard`, `kubeconfig-unlock`, `k3s-server`, `k3s-join`, `restic-restore`) act on the machine they run on.'
+  deepDive: '`current_target/` is runtime state; leave it alone. `config/` mirrors each target''s `config_template/`. `compose.sh` supplies the config env, generated machine facts, private overlay, and profiles, and renders vps0 Authelia before `up`.
+
+
+    Run `validate.sh <target>` before every `helm upgrade --install`; it is read-only. Hostnames must match the target directory; scripts warn or hard-fail.
+
+
+    Scripts share one shape: `# DESC:`, `set -euo pipefail`, `usage()`, and `common.sh`; target-selecting scripts call `require_target`, and mutating ones call `require_target_host`. The common environment includes `$INFRA_ROOT`, `$TARGET`, `$COMPOSE_STATE_DIR`, `$STATE_BACKUP_DIR`, and `$MY_UID`.'
+  reveal:
+  - script/validate
+  - script/deploy
+  focus:
+  - srv0/base
+  - srv0/apps
+  - script/validate
+  - script/deploy
+  - script/compose
+  flow:
+  - - srv0/base
+    - srv0/apps
+  - - script/validate
+    - script/deploy
+    - script/compose
+  zones:
+  - id: tree
+    label: WORKING TREE
+    members:
+    - srv0/base
+    - srv0/apps
+    - script/validate
+    - script/deploy
+    - script/compose
+  edges:
+  - from: srv0/base
+    to: script/validate
+    type: validates
+    label: Helm
+  - from: srv0/apps
+    to: script/validate
+    type: validates
+    label: Helm
+  - from: script/validate
+    to: script/deploy
+    type: gates
+    label: preflight
+  - from: script/deploy
+    to: script/compose
+    type: uses
+    label: Compose
+  code:
+  - path: AGENTS.md
+    summary: Repo rules, commands, and the target layout.
+  - path: scripts/deploy.sh
+    summary: Validates and runs the Helm or Compose flow for a target.
+  - path: scripts/compose.sh
+    summary: 'Compose wrapper: config env, machine facts, overlay, profiles, Authelia render.'
+- id: config
+  stage: Operations
+  title: Configuration layers
+  body: 'Manual automation secrets live in `config/VARS.env`. `srv0` Helm values live in `config/srv0/values.yaml`, including the Renovate token and repo inputs rendered into the CronJob Secret. `vps0` uses `config/vps0/compose.env`, plus real files for Authelia users/rules and public-exposure keys.
+
+
+    The committed templates under `targets/*/config_template/` document every key and generation command. `init-config.sh` copies them without overwriting; `validate.sh` rejects placeholders.'
+  deepDive: 'Only `MAIN_PARENT_DIR` and `SECONDARY_STORAGE_PATH` are required path roots; the rest derive. Machine facts are generated into `targets/<t>/compose/.env`, not config envs.
+
+
+    Secrets never touch git. `config/` is gitignored; values sit there as plain text.
+
+
+
+    `COMPOSE_PROFILES=dscpln-agent` enables the optional vps0 archive agent. Generated files — `targets/<t>/compose/.env`, the public-exposure keys, `current_target/`, and the rendered Authelia config — are not hand-edited.
+
+
+    `config/VARS.env` is for manual `scripts/renovate.sh`; the scheduled CronJob reads its chart Secret (`renovate-secrets`) and does not mount the repo.'
+  reveal:
+  - srv0/config/values
+  - vps0/config/compose
+  - config/VARS
+  focus:
+  - srv0/config/values
+  - vps0/config/compose
+  - config/VARS
+  flow:
+  - - srv0/config/values
+  - - vps0/config/compose
+  - - config/VARS
+  zones:
+  - id: config
+    label: CONFIGURATION
+    members:
+    - srv0/config/values
+    - vps0/config/compose
+    - config/VARS
+  edges: []
+  code:
+  - path: targets/srv0/config_template/values.yaml
+    summary: Every srv0 Helm key, with generation commands.
+  - path: targets/vps0/config_template/compose.env
+    summary: Every vps0 Compose key.
+  - path: config_template/VARS.env
+    summary: Universal manual Renovate/CI secrets.
+- id: schedules
+  stage: Operations
+  title: Schedules
+  body: 'The six-hourly Renovate CronJob (`0 */6 * * *`, America/Toronto) is a pure PR run with overlap forbidden. The suspended `renovate-infra` template is not on a schedule; the skill creates a Job from it after app images publish.
+
+
+    The `vps0` image-prune timer runs monthly. The State Backups task defaults to Sundays 04:00. The Task Runner owns the backup schedule; the CronJob owns update discovery. Neither is a watchtower-style continuous updater.'
+  deepDive: 'Renovate''s `startingDeadlineSeconds` and 7200s `activeDeadlineSeconds` keep a hung run from blocking the next six-hour slot. The `vps0` timer is a systemd oneshot service; the Task Runner backup task is backup-only and restore is `scripts/restic-restore.sh`.
+
+
+    Host packages are separate. `vps0` runs `unattended-upgrades`. `srv0` and `bigpc` are Fedora: `dnf5-plugin-automatic` is not installed by default; enable security-only updates with `upgrade_type = security` and `reboot = never`, then check `dnf5 needs-restarting -r` and reboot in a maintenance window.'
+  reveal:
+  - srv0/base/renovate
+  - vps0/ops/docker-prune
+  focus:
+  - srv0/base/renovate
+  - vps0/ops/docker-prune
+  flow:
+  - - srv0/base/renovate
+  - - vps0/ops/docker-prune
+  zones:
+  - id: ops
+    label: SCHEDULES
+    members:
+    - srv0/base/renovate
+    - vps0/ops/docker-prune
+  edges: []
+  code:
+  - path: targets/srv0/k3s-base/templates/renovate.yaml
+    summary: The six-hourly CronJob and the suspended Infra-only template.
+  - path: targets/vps0/docker-prune/docker-image-prune.timer
+    summary: The monthly image-prune timer.
+- id: decisions
+  stage: Operations
+  title: Accepted tradeoffs
+  body: 'The current design accepts a small set of deliberate tradeoffs: full NFS storage with higher SQLite/Postgres latency, static singleton node labels, claims-based scheduling, a public geoblock API, shared multi-SAN edge certificates, and backups that are backup-only with restore outside the app.
+
+
+    These are current decisions, not migration history. Do not re-flag one without reading the source that implements it.
+
+    '
+  deepDive: 'Each card names the source that implements the choice. Read it before changing one.
+
+
+    The remaining accepted choices are the removed header gate (`BOOTSTRAP_PRIVATE_APPS`), Prometheus instead of Mimir, Authelia ownership split between chart and config, shared multi-SAN edge certificates, public GHCR packages for app images, the NFS image tracking latest branch packages, the sale-site subdomain audiences, Falco as runtime security, the Renovate app/Infra split, and the accepted duplication list. Do not consolidate the accepted duplication without reading the reasoning.'
+  reveal:
+  - decision/storage/nfs-latency
+  - decision/auth/app-own-login
+  - decision/cluster/hostpath-singleton
+  - decision/auth/geoblock-api
+  - decision/storage/restic-backups
+  - decision/updates/merge-is-not-deploy
+  focus:
+  - decision/storage/nfs-latency
+  - decision/auth/app-own-login
+  - decision/cluster/hostpath-singleton
+  - decision/auth/geoblock-api
+  - decision/storage/restic-backups
+  - decision/updates/merge-is-not-deploy
+  flow:
+  - - decision/storage/nfs-latency
+    - decision/auth/app-own-login
+    - decision/cluster/hostpath-singleton
+  - - decision/auth/geoblock-api
+    - decision/storage/restic-backups
+    - decision/updates/merge-is-not-deploy
+  zones:
+  - id: decisions
+    label: DECISIONS
+    members:
+    - decision/storage/nfs-latency
+    - decision/auth/app-own-login
+    - decision/cluster/hostpath-singleton
+    - decision/auth/geoblock-api
+    - decision/storage/restic-backups
+    - decision/updates/merge-is-not-deploy
+  edges: []
+  code:
+  - path: targets/srv0/k3s-base/templates/nfs-server.yaml
+    summary: NFS server implementation.
+  - path: targets/srv0/k3s-base/templates/gateway.yaml
+    summary: Shared Gateway listeners.
+  - path: targets/srv0/k3s-base/templates/renovate.yaml
+    summary: The six-hourly and suspended Infra Renovate runners.
+- id: boot-dns
+  stage: Bootstrap
+  title: DNS and the edge
+  body: 'Point `SERVICES_DOMAIN`/`*.$SERVICES_DOMAIN`, `CLOUD_SERVICES_DOMAIN`/`*.$CLOUD_SERVICES_DOMAIN`, and any base-domain apps at vps0.
+
+
+    Open vps0''s public ports: 80/tcp, 443/tcp, 51822/udp for the public-exposure hub, 51820/udp for the AmneziaWG DNAT, 8887/tcp for preboot, and 56881 tcp/udp for qBittorrent if used.
+
+    '
+  deepDive: vps0's file provider routes `home.$BASE_SERVICES_DOMAIN` and `*.home.$BASE_SERVICES_DOMAIN` over the public-exposure tunnel to srv0. `PUBLIC_HOSTS` drives the exact TLS SAN list; remove any hostname you do not serve before the first srv0 deploy.
+  reveal:
+  - vps0
+  - vps0/service/traefik
+  focus:
+  - vps0
+  - vps0/service/traefik
+  flow:
+  - - vps0
+  - - vps0/service/traefik
+  zones:
+  - id: vps0
+    label: vps0 · public edge
+    members:
+    - vps0
+    - vps0/service/traefik
+  edges:
+  - from: vps0
+    to: vps0/service/traefik
+    type: routes-to
+    label: '443'
+  code:
+  - path: targets/vps0/compose/compose.yaml
+    summary: Edge services and routes.
+  - path: targets/vps0/compose/files/public-exposure/forwards.conf
+    summary: Public ports forwarded into the tunnel.
+- id: boot-prereqs
+  stage: Bootstrap
+  title: Prerequisites
+  body: 'Run `scripts/prereqs.sh` on every machine. It installs packages, the pinned Helm binary, Docker, the machine-fact `.env`, host bind dirs, and the Traefik ACME seed.
+
+
+    Run it on srv0 and vps0 before `init-config.sh`; `init-config` needs `yq` from prereqs.
+
+    '
+  deepDive: '`prereqs.sh` is idempotent; re-run it after repo changes that add Compose bind dirs. On srv0, confirm `MAIN_PARENT_DIR` and `SECONDARY_STORAGE_PATH` exist and the LUKS/remote-unlock drivers are in the initramfs.'
+  reveal:
+  - script/prereqs
+  - script/init-config
+  focus:
+  - script/prereqs
+  - script/init-config
+  flow:
+  - - script/prereqs
+  - - script/init-config
+  zones:
+  - id: ops
+    label: BOOTSTRAP
+    members:
+    - script/prereqs
+    - script/init-config
+  edges:
+  - from: script/prereqs
+    to: script/init-config
+    type: enables
+    label: yq
+  code:
+  - path: scripts/prereqs.sh
+    summary: Machine packages, Docker, Helm, and machine facts.
+  - path: scripts/init-config.sh
+    summary: Copies config templates without overwriting.
+- id: boot-config
+  stage: Bootstrap
+  title: Configuration
+  body: 'Run `init-config.sh srv0 --detect` on srv0 and `init-config.sh vps0` on vps0. Fill `config/srv0/values.yaml`, `config/vps0/compose.env`, `config/VARS.env`, and the Authelia files.
+
+
+    Set `BOOTSTRAP_PRIVATE_APPS: "true"` for the first boot so the six apps with their own authentication stay LAN/VPN-only until Authelia is Ready.
+
+    '
+  deepDive: 'The `--detect` pass sets `MY_UID`, `GPU_PROFILE`, `HA_CONBEE`, and `HA_BLUETOOTH` from the current hardware. It does not generate passwords, hashes, or GitHub tokens.
+
+
+    Only `MAIN_PARENT_DIR` and `SECONDARY_STORAGE_PATH` are required path roots; the rest derive.'
+  reveal:
+  - srv0/config/values
+  - vps0/config/compose
+  - config/VARS
+  focus:
+  - srv0/config/values
+  - vps0/config/compose
+  - config/VARS
+  flow:
+  - - srv0/config/values
+  - - vps0/config/compose
+  - - config/VARS
+  zones:
+  - id: config
+    label: CONFIGURATION
+    members:
+    - srv0/config/values
+    - vps0/config/compose
+    - config/VARS
+  edges: []
+  code:
+  - path: targets/srv0/config_template/values.yaml
+    summary: Every srv0 key and generation command.
+  - path: targets/vps0/config_template/compose.env
+    summary: Every vps0 key.
+  - path: config_template/VARS.env
+    summary: Universal manual Renovate/CI secrets.
+- id: boot-tunnel
+  stage: Bootstrap
+  title: Tunnel material
+  body: 'After `config/srv0/compose.env` is filled, run `scripts/public-exposure-keygen.sh` on srv0. It writes the srv0 and vps0 key material and the qBittorrent tunnel keys.
+
+
+    Copy `config/vps0/public-exposure/` to vps0. Do not hand-edit the generated files.
+
+    '
+  deepDive: Install initramfs unlock on srv0 with `scripts/preboot.sh public-exposure`; use `preboot.sh crypt-ssh` on bigpc if its root is LUKS-encrypted. Test a reboot before relying on remote unlock.
+  reveal:
+  - script/public-exposure-keygen
+  - concept/public-exposure
+  - script/preboot
+  focus:
+  - script/public-exposure-keygen
+  - concept/public-exposure
+  - script/preboot
+  flow:
+  - - script/public-exposure-keygen
+  - - concept/public-exposure
+  - - script/preboot
+  zones:
+  - id: tunnel
+    label: TUNNEL MATERIAL
+    members:
+    - script/public-exposure-keygen
+    - concept/public-exposure
+    - script/preboot
+  edges:
+  - from: script/public-exposure-keygen
+    to: concept/public-exposure
+    type: writes
+    label: keys
+  - from: concept/public-exposure
+    to: script/preboot
+    type: enables
+    label: initramfs
+  code:
+  - path: scripts/public-exposure-keygen.sh
+    summary: Generates keys and peer configs.
+  - path: scripts/preboot.sh
+    summary: Installs the initramfs unlock module.
+- id: boot-vps
+  stage: Bootstrap
+  title: Bring up vps0
+  body: 'Deploy vps0 before srv0. `scripts/deploy.sh vps0` renders Authelia and runs Compose; srv0''s ACME challenges need the edge serving.
+
+
+    The public-exposure hub needs its WireGuard conf copied from srv0. Traefik needs DNS and the public ports.
+
+    '
+  deepDive: '`scripts/compose.sh vps0 up -d` is the direct wrapper. It supplies the config env, machine facts, private overlay, and profiles, and renders Authelia before `up`.'
+  reveal:
+  - vps0
+  - vps0/edge
+  focus:
+  - vps0
+  - vps0/edge
+  flow:
+  - - vps0
+  - - vps0/edge
+  zones:
+  - id: vps0
+    label: vps0 · public edge
+    members:
+    - vps0
+    - vps0/edge
+  edges:
+  - from: vps0
+    to: vps0/edge
+    type: runs
+    label: edge
+  code:
+  - path: scripts/deploy.sh
+    summary: The target deploy flow.
+  - path: scripts/compose.sh
+    summary: The Compose wrapper.
+  - path: scripts/render-vps0-authelia.sh
+    summary: Renders the live Authelia config.
+- id: boot-srv
+  stage: Bootstrap
+  title: Bootstrap srv0
+  body: 'On srv0, run `scripts/preflight-task-runner.sh --fix` if using D$CPLN, then `k3s-server.sh`, unlock the kubeconfig in another terminal, bring up the Compose sidecar, and run `scripts/deploy.sh srv0`.
+
+
+    Set `BOOTSTRAP_PRIVATE_APPS: "true"` for the first boot; set it back to `"false"` and redeploy once Authelia is Ready.
+
+    '
+  deepDive: '`deploy.sh srv0` runs both chart upgrades, waits for helm-controller, checks rollouts, pod readiness, HelmChart failures, restart counts, and API readiness.
+
+
+    The admin kubeconfig stays root-only; use `kubeconfig-unlock.sh` for a dev session.'
+  reveal:
+  - srv0
+  - srv0/cluster
+  - script/k3s-server
+  - script/deploy
+  focus:
+  - srv0
+  - srv0/cluster
+  - script/k3s-server
+  - script/deploy
+  flow:
+  - - srv0
+  - - srv0/cluster
+  - - script/k3s-server
+    - script/deploy
+  zones:
+  - id: srv0
+    label: srv0 · bootstrap
+    members:
+    - srv0
+    - srv0/cluster
+    - script/k3s-server
+    - script/deploy
+  edges:
+  - from: srv0
+    to: srv0/cluster
+    type: runs
+    label: K3s
+  - from: srv0/cluster
+    to: script/k3s-server
+    type: prepares
+    label: installer
+  - from: srv0
+    to: script/deploy
+    type: deploys
+    label: charts
+  code:
+  - path: scripts/k3s-server.sh
+    summary: Control-plane bootstrap and static labels.
+  - path: scripts/kubeconfig-unlock.sh
+    summary: Temporary admin kubeconfig access.
+  - path: scripts/deploy.sh
+    summary: Chart upgrades and rollout checks.
+- id: boot-nodes
+  stage: Bootstrap
+  title: Optional nodes
+  body: 'Add bigpc with `scripts/k3s-join.sh` only if you want a GPU worker. It joins as an agent by default; `--hostpath-main` is a singleton replacement for the Main-data owner, not a second owner.
+
+
+    `pc` and `rpi` are separate Compose targets; they are not part of the srv0/vps0 request path.
+
+    '
+  deepDive: '`k3s-join.sh` streams node prep and the installer over SSH with the token on stdin, never argv. It waits for Ready, then applies the taint and optional labels.
+
+
+    `--scheduling-discouraged` adds a PreferNoSchedule taint for a desktop worker.'
+  reveal:
+  - target/bigpc
+  - script/k3s-join
+  focus:
+  - target/bigpc
+  - script/k3s-join
+  - script/validate
+  flow:
+  - - target/bigpc
+  - - script/k3s-join
+  - - script/validate
+  zones:
+  - id: context
+    label: OPTIONAL
+    members:
+    - target/bigpc
+    - script/k3s-join
+    - script/validate
+  edges:
+  - from: script/k3s-join
+    to: target/bigpc
+    type: joins
+    label: agent
+  - from: script/k3s-join
+    to: script/validate
+    type: then
+    label: verify
+  code:
+  - path: scripts/k3s-join.sh
+    summary: Joins a node over SSH with token-on-stdin.
+  - path: scripts/validate.sh
+    summary: Target preflight.
+- id: boot-verify
+  stage: Bootstrap
+  title: Verify
+  body: 'Run `scripts/validate.sh srv0` and `scripts/validate.sh vps0`. Check nodes, pods, PVCs, Helm releases, the Authelia URL, Immich, Frigate, Home Assistant, vps0 `docker compose ps`, and one restore listing.
+
+
+    `deploy.sh` performs the rollout, pod, HelmChart-failure, restart-count, and API readiness checks in one pass.
+
+    '
+  deepDive: If `deploy.sh` cannot reach the cluster, `kubeconfig-unlock.sh` is not running. If apps remain LAN/VPN-only, `BOOTSTRAP_PRIVATE_APPS` is still true.
+  reveal:
+  - script/validate
+  - srv0/ops/tooling
+  - vps0
+  focus:
+  - script/validate
+  - srv0/ops/tooling
+  - vps0
+  flow:
+  - - script/validate
+  - - srv0/ops/tooling
+  - - vps0
+  zones:
+  - id: ops
+    label: VERIFY
+    members:
+    - script/validate
+    - srv0/ops/tooling
+    - vps0
+  edges:
+  - from: script/validate
+    to: srv0/ops/tooling
+    type: uses
+    label: preflight
+  code:
+  - path: scripts/validate.sh
+    summary: Config and chart preflight.
+  - path: scripts/deploy.sh
+    summary: Rollout and readiness checks.
+- id: boot-manual
+  stage: Bootstrap
+  title: Manual first-time setup
+  body: 'Some first-boot steps have no API seed: Radarr/Sonarr authentication and root folders, Prowlarr apps and indexers, Seerr''s Jellyfin login, FileBrowser''s first OIDC user, the Frigate↔Home Assistant MQTT integration, CrowdSec Web UI LAPI registration, and the VPN client profile.
+
+
+    Do these once after `deploy.sh` reports healthy.'
+  deepDive: 'The arr API keys are pre-configured in `radarr-secret`/`sonarr-secret`; Prowlarr registers Radarr and Sonarr with them. Seerr logs in through Jellyfin. Frigate uses `mosquitto:1883` and writes recordings under `$SECONDARY_STORAGE_PATH/frigate`.
+
+
+    CrowdSec Web UI: register the LAPI machine with `CROWDSEC_WEBUI_LAPI_PASSWORD`, then create the first admin. On `srv0`: `kubectl -n base exec deploy/crowdsec-lapi -- cscli machines add crowdsec-web-ui --password ''<value>'' -f /dev/null`; on `vps0`: `docker exec crowdsec ...`. VPN profiles: `scripts/remote-access-client.sh <client>`.'
+  reveal:
+  - srv0/apps/arr/radarr
+  - srv0/apps/arr/prowlarr
+  - srv0/apps/media/seerr
+  - srv0/apps/home/homeassistant
+  - srv0/apps/media/frigate
+  - srv0/base/crowdsec-web-ui
+  focus:
+  - srv0/apps/arr/radarr
+  - srv0/apps/arr/prowlarr
+  - srv0/apps/media/seerr
+  - srv0/apps/home/homeassistant
+  - srv0/apps/media/frigate
+  - srv0/base/crowdsec-web-ui
+  flow:
+  - - srv0/apps/arr/radarr
+    - srv0/apps/arr/prowlarr
+    - srv0/apps/media/seerr
+  - - srv0/apps/home/homeassistant
+    - srv0/apps/media/frigate
+    - srv0/base/crowdsec-web-ui
+  zones:
+  - id: setup
+    label: FIRST-BOOT SETUP
+    members:
+    - srv0/apps/arr/radarr
+    - srv0/apps/arr/prowlarr
+    - srv0/apps/media/seerr
+    - srv0/apps/home/homeassistant
+    - srv0/apps/media/frigate
+    - srv0/base/crowdsec-web-ui
+  edges:
+  - from: srv0/apps/arr/prowlarr
+    to: srv0/apps/arr/radarr
+    type: configures
+    label: registers
+  - from: srv0/apps/media/frigate
+    to: srv0/apps/home/homeassistant
+    type: feeds
+    label: MQTT
+  code:
+  - path: targets/srv0/k3s-apps/templates/radarr.yaml
+    summary: Radarr service, secrets, and storage.
+  - path: targets/srv0/k3s-apps/templates/frigate.yaml
+    summary: Frigate, MQTT env, NFS media, and the GPU detector.
+  - path: scripts/remote-access-client.sh
+    summary: Fetches an AmneziaWG client profile from the pod PVC.
+- id: hardware-swap
+  stage: Maintenance
+  title: srv0 motherboard swap
+  body: 'The hardware swap moves the Framework 13 AMD 7840U mainboard from `pc` into `srv0`, and the Intel i5-1240P board into `pc`. RAM is not interchangeable: DDR5 stays with the AMD board, DDR4 stays with Intel.
+
+
+    After the swap, the device plugin should advertise `amd-igpu` and `vaapi` on srv0, and no `intel-gpu`. Set `GPU_PROFILE: "amd"` in `config/srv0/values.yaml`, then validate and deploy.
+
+    '
+  deepDive: 'Before disassembly, take a restic backup and an etcd snapshot, record `helm get values` for both releases, and verify the initramfs has the USB NIC/storage modules.
+
+
+    Frigate''s ROCm detector needs `yolov9-t-320.onnx` in the config PVC before switching `FRIGATE_DETECTOR=rocm`. Fallbacks are `FRIGATE_GPU_RESOURCE=amd-dgpu`, `FRIGATE_DETECTOR=cpu`, `IMMICH_ML_BACKEND=cpu`, `JELLYFIN_HWACCEL=none`, `IMMICH_SERVER_HWACCEL=none`, and `GPU_PROFILE=none`.'
+  reveal:
+  - srv0/cluster
+  - srv0/base/generic-device-plugin
+  - script/test-gpu-profiles
+  focus:
+  - srv0/cluster
+  - srv0/base/generic-device-plugin
+  - script/test-gpu-profiles
+  flow:
+  - - srv0/cluster
+  - - srv0/base/generic-device-plugin
+  - - script/test-gpu-profiles
+  zones:
+  - id: srv0
+    label: srv0 · hardware
+    members:
+    - srv0/cluster
+    - srv0/base/generic-device-plugin
+    - script/test-gpu-profiles
+  edges:
+  - from: srv0/cluster
+    to: srv0/base/generic-device-plugin
+    type: runs
+    label: device scan
+  - from: srv0/base/generic-device-plugin
+    to: script/test-gpu-profiles
+    type: verified-by
+    label: profiles
+  code:
+  - path: targets/srv0/k3s-base/files/generic-device-plugin-init.sh
+    summary: Generates hardware resources from sysfs and /dev.
+  - path: scripts/test-gpu-profiles.sh
+    summary: Renders the Intel/AMD/none profiles.
+- id: storage-migration
+  stage: Maintenance
+  title: Storage migration
+  body: 'The current storage path for application PVCs is the NFS-backed `nfs-apps` class: the `nfs-server` pod plus `csi-driver-nfs`. Sizes are advisory and PVCs are `ReadWriteMany`.
+
+
+    Restores use `scripts/restic-restore.sh`; there is no tar-based PVC path.'
+  deepDive: 'The app-data export is `/exports/apps` → `current_target/k3s_live_state/nfs-apps` with `no_root_squash`. `IGNORE_DATABASE_FSTYPE=true` is required for Immich Postgres on NFS.
+
+
+    The tradeoff is measured: about 3× SQLite p95 and 2.6× Postgres latency under load compared with block storage.'
+  reveal:
+  - srv0/base/nfs-server
+  - srv0/base/csi-driver-nfs
+  - concept/backups/restic-repository
+  - script/restic-restore
+  focus:
+  - srv0/base/nfs-server
+  - srv0/base/csi-driver-nfs
+  - concept/backups/restic-repository
+  - script/restic-restore
+  flow:
+  - - srv0/base/nfs-server
+  - - srv0/base/csi-driver-nfs
+  - - concept/backups/restic-repository
+    - script/restic-restore
+  zones:
+  - id: data
+    label: STORAGE
+    members:
+    - srv0/base/nfs-server
+    - srv0/base/csi-driver-nfs
+    - concept/backups/restic-repository
+    - script/restic-restore
+  edges:
+  - from: srv0/base/csi-driver-nfs
+    to: srv0/base/nfs-server
+    type: mounts
+    label: NFS 4.2
+  - from: concept/backups/restic-repository
+    to: script/restic-restore
+    type: restored-by
+    label: manual
+  code:
+  - path: targets/srv0/k3s-base/templates/nfs-server.yaml
+    summary: The NFS server and exports.
+  - path: targets/srv0/k3s-base/templates/csi-driver-nfs.yaml
+    summary: The default nfs-apps StorageClass.
+  - path: scripts/restic-restore.sh
+    summary: Manual restore path.
+- id: windows-remote
+  stage: Maintenance
+  title: Windows remote desktop
+  body: 'Guacamole runs in `srv0-apps`; the public path is `vps0` Traefik → public-exposure tunnel → `srv0` Traefik → Guacamole → guacd → Windows:3389.
+
+
+    Authelia gates the route; the Windows credentials are prompted by guacd on each connection and are not stored. `win` has no geoblock.'
+  deepDive: 'The Authelia rule lives in `AUTHELIA_ACCESS_CONTROL_RULES` in `config/srv0/values.yaml`, not the chart. `guacadmin` is disabled; the seeded connection has `max_connections=1`.
+
+
+    The Windows firewall allows RDP from the LAN, so the Guacamole stack is not pinned. `win-header-auth` sets `X-Guac-User: shared` after forward-auth; the Service is ClusterIP and NetworkPolicies admit only Traefik.'
+  reveal:
+  - srv0/apps/home/guacamole
+  - srv0/base/gateway
+  - srv0/base/authelia
+  focus:
+  - srv0/base/gateway
+  - srv0/base/authelia
+  - srv0/apps/home/guacamole
+  flow:
+  - - srv0/base/gateway
+  - - srv0/base/authelia
+  - - srv0/apps/home/guacamole
+  zones:
+  - id: srv0
+    label: srv0 · Guacamole
+    members:
+    - srv0/base/gateway
+    - srv0/base/authelia
+    - srv0/apps/home/guacamole
+  edges:
+  - from: srv0/base/gateway
+    to: srv0/base/authelia
+    type: guarded-by
+    label: one_factor
+  - from: srv0/base/gateway
+    to: srv0/apps/home/guacamole
+    type: routes-to
+    label: win
+  code:
+  - path: targets/srv0/k3s-apps/templates/guacamole.yaml
+    summary: Guacamole, guacd, DB, seed, and NetworkPolicies.
+  - path: targets/srv0/k3s-base/templates/traefik.yaml
+    summary: The win-header-auth middleware.
+- id: restore
+  stage: Maintenance
+  title: Restore
+  body: 'The State Backups task is backup-only. `scripts/restic-restore.sh list` lists snapshots; `pvc <name>` and `compose srv0|vps0` stage by default and accept `--live`.
+
+
+    The script works on a fresh cluster with the repository, password, and key. It does not depend on Task Runner being deployed.
+
+    '
+  deepDive: 'The repository is at `state_backups/restic` in the Syncthing-replicated Main/Infra tree. Only srv0 writes it; wait for Syncthing to settle before restoring from a peer.
+
+
+    The restic password lives in the private `dscpln-config` checkout. Record it off-cluster; a fresh restore needs it.'
+  reveal:
+  - srv0/ops/backups
+  - concept/backups/restic-repository
+  - script/restic-restore
+  focus:
+  - srv0/ops/backups
+  - concept/backups/restic-repository
+  - script/restic-restore
+  flow:
+  - - srv0/ops/backups
+  - - concept/backups/restic-repository
+  - - script/restic-restore
+  zones:
+  - id: ops
+    label: RESTORE
+    members:
+    - srv0/ops/backups
+    - concept/backups/restic-repository
+    - script/restic-restore
+  edges:
+  - from: srv0/ops/backups
+    to: concept/backups/restic-repository
+    type: writes
+    label: restic
+  - from: concept/backups/restic-repository
+    to: script/restic-restore
+    type: restored-by
+    label: manual
+  code:
+  - path: scripts/restic-restore.sh
+    summary: Lists and restores PVC/Compose snapshots.
+  - path: targets/srv0/k3s-apps/templates/dscpln-task-runner.yaml
+    summary: The Task Runner backup instance.

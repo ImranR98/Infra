@@ -1,0 +1,47 @@
+# Editorial grouping for the explorer. The graph is discovered from the repo;
+# this file only decides which scene a component belongs to.
+srv0:
+  media:
+    - immich
+    - jellyfin
+    - frigate
+    - navidrome
+    - opodsync
+    - seerr
+    - hooks
+  home:
+    - homeassistant
+    - mosquitto
+    - syncthing
+    - guacamole
+  arr:
+    - prowlarr
+    - qbittorrent
+    - radarr
+    - sonarr
+    - flaresolverr
+  productivity:
+    - nextcloud
+    - linkwarden
+    - freshrss
+    - plik
+    - filebrowser
+    - fmd
+  tools:
+    - open-webui
+    - ollama
+    - opencode
+    - headlamp
+    - logtfy
+  dscpln:
+    - dscpln-agent
+    - dscpln-balance-xlsx
+    - dscpln-file-pipelines
+    - dscpln-ingress
+    - dscpln-lockdown
+    - dscpln-portal
+    - dscpln-storage
+    - dscpln-task-runner
+    - dscpln-whatsapp-txt
+  security:
+    - opencanary
