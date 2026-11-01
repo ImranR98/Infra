@@ -85,7 +85,7 @@ check_yaml_vars() {
         [ -n "$k" ] || continue
         if KEY="$k" yq -e \
             '.[strenv(KEY)] | .. | select(tag == "!!str") |
-             select(test("change_me|changeme|REPLACE_ME|<[A-Za-z]|p=abc"))' \
+             select(test("change_me|changeme|REPLACE_ME|<[A-Za-z0-9 _./-]+>|p=abc"))' \
             "$config_file" >/dev/null 2>&1; then
             nested+="$k"$'\n'
         fi
@@ -163,7 +163,7 @@ check_config_files() {
             values.yaml) check_yaml_vars "$tfile" "$cfile" || ok=0 ;;
             compose.env) check_env_vars "$tfile" "$cfile" || ok=0 ;;
             *)
-                if grep -qE 'change_me|changeme|REPLACE_ME|<[A-Za-z]' "$cfile"; then
+                if grep -qE 'change_me|changeme|REPLACE_ME|<[A-Za-z0-9 _./-]+>' "$cfile"; then
                     _err "ERROR: $cfile still contains template placeholders"
                     ok=0
                 fi

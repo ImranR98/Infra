@@ -446,3 +446,12 @@ AUTHELIA_GRAFANA_CLIENT_SECRET_HASHED: "change_me"
 # claim, not a nodeSelector, pins the pods.
 INFRA_ROOT: ""
 TARGET: "srv0"
+
+# Renovate runner (targets/srv0/k3s-base/templates/renovate.yaml). Fill these in
+# config/<target>/values.yaml; the token and Docker Hub credentials are secrets.
+RENOVATE_GITHUB_TOKEN: "change_me"
+DOCKERHUB_USER: "change_me"
+DOCKERHUB_TOKEN: "change_me"
+INFRA_REPO: "owner/Infra"
+APP_REPOS: "owner/app1,owner/app2"
+RENOVATE_GIT_AUTHOR: "Renovate Bot <renovate@example.com>"

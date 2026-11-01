@@ -1,46 +1,47 @@
 ---
-# Daily Renovate routine. One job owns the whole sequence:
-#   1. Renovate Infra, nfs-server source only (derived image deps)
-#   2. Renovate the app/ops repos
-#   3. Merge the derived-image PR once its checks pass
-#   4. Wait for the app/derived GitHub Actions publishes to settle
-#   5. Renovate Infra (full) so the new digests are pinned the same day
-#   6. Notifications (per-PR + one CI failure digest)
-# The repo lists live in scripts/repos.sh; the runner script is mounted
-# read-only alongside config/VARS.env and .git/config.
+# Scheduled Renovate runner. One pure Renovate pass over the Infra and app
+# repos; no merge/wait/notification wrapper. App repos use GitHub native
+# auto-merge, and all Infra PRs are handled manually by the renovate-pr-ops
+# skill. The runner needs only the token, repo list, Docker Hub host rules, and
+# git author; it does not mount the Infra checkout or any scripts.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: renovate-secrets
+  namespace: base
+type: Opaque
+stringData:
+  token: {{ $.Values.RENOVATE_GITHUB_TOKEN | quote }}
+  repositories: {{ printf "%s,%s" $.Values.INFRA_REPO $.Values.APP_REPOS | quote }}
+  infraRepository: {{ $.Values.INFRA_REPO | quote }}
+  gitAuthor: {{ $.Values.RENOVATE_GIT_AUTHOR | quote }}
+  hostRules: {{ if and $.Values.DOCKERHUB_USER $.Values.DOCKERHUB_TOKEN }}{{ list (dict "matchHost" "docker.io" "hostType" "docker" "username" $.Values.DOCKERHUB_USER "password" $.Values.DOCKERHUB_TOKEN) | toJson | quote }}{{ else }}[]{{ end }}
+---
 apiVersion: batch/v1
 kind: CronJob
 metadata:
   name: renovate-daily
   namespace: base
 spec:
-  schedule: "0 16 * * *"
+  schedule: "0 */6 * * *"
   timeZone: America/Toronto
   startingDeadlineSeconds: 3600
   concurrencyPolicy: Forbid
-  successfulJobsHistoryLimit: 1
-  failedJobsHistoryLimit: 1
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
   jobTemplate:
     spec:
-      # A hung run must not block the next day's run (concurrencyPolicy: Forbid).
-      activeDeadlineSeconds: 14400
-      backoffLimit: 2
+      # A hung run must not block the next schedule (concurrencyPolicy: Forbid).
+      activeDeadlineSeconds: 7200
+      backoffLimit: 1
       template:
         metadata:
           labels:
-            # Admitted by ntfy's allow-notification-ingress NetworkPolicy.
             app: renovate
         spec:
           restartPolicy: Never
           securityContext:
-            runAsUser: {{ $.Values.MY_UID }}
-            # Containerbase's /opt/containerbase tree is root:root 775, so the
-            # dynamic tool installs (install-tool node/npm: lockfile updates)
-            # need group 0; the uid stays unprivileged for the repo mounts.
-            runAsGroup: 0
-            # Pods sharing the Main tree need pod-level s0 (container-level is ignored).
-            seLinuxOptions:
-              level: s0
+            runAsNonRoot: true
           containers:
             - name: renovate
               image: renovate/renovate:44.198.3@sha256:bf344aa39d5b592ec728e1db5c3e1d940a5093a89a4598073efcb18d592d121c
@@ -52,52 +53,118 @@ spec:
                 seccompProfile:
                   type: RuntimeDefault
               env:
-                - name: NTFY_URL
-                  value: "http://ntfy.base.svc.cluster.local:3000"
-                - name: NTFY_TOPIC
-                  value: "{{ $.Values.TARGET }}_services_renovate"
-                - name: NTFY_TOKEN
+                - name: RENOVATE_TOKEN
                   valueFrom:
                     secretKeyRef:
-                      name: renovate-ntfy-token
+                      name: renovate-secrets
                       key: token
+                - name: RENOVATE_REPOSITORIES
+                  valueFrom:
+                    secretKeyRef:
+                      name: renovate-secrets
+                      key: repositories
+                - name: RENOVATE_HOST_RULES
+                  valueFrom:
+                    secretKeyRef:
+                      name: renovate-secrets
+                      key: hostRules
+                - name: RENOVATE_GIT_AUTHOR
+                  valueFrom:
+                    secretKeyRef:
+                      name: renovate-secrets
+                      key: gitAuthor
+                - name: RENOVATE_PLATFORM
+                  value: github
+                - name: RENOVATE_AUTODISCOVER
+                  value: "false"
+                - name: RENOVATE_ONBOARDING
+                  value: "false"
+                - name: RENOVATE_REQUIRE_CONFIG
+                  value: required
+                - name: RENOVATE_CACHE_TTL_OVERRIDE
+                  value: '{"datasource-docker-hub-cache":10080}'
+                - name: LOG_LEVEL
+                  value: info
               resources:
                 limits:
                   memory: 2Gi
                 requests:
                   memory: 768Mi
                   cpu: 100m
-              command:
-                - bash
-                - /repo/scripts/renovate-daily.sh
-              volumeMounts:
-                # The Infra PVC is a local PV pinned by
-                # infra.local/hostpath-main, so the CronJob is scheduled on the
-                # node that owns the repo without a pod nodeSelector.
-                - name: infra
-                  mountPath: /repo/config/VARS.env
-                  subPath: config/VARS.env
-                  readOnly: true
-                - name: infra
-                  mountPath: /repo/.git/config
-                  subPath: .git/config
-                  readOnly: true
-                - name: infra
-                  mountPath: /repo/scripts
-                  subPath: scripts
-                  readOnly: true
-          volumes:
-            - name: infra
-              persistentVolumeClaim:
-                claimName: hostpath-main-node-infra-pvc
 ---
-# Write-only ntfy token for the PR/CI notifier (same value the Grafana contact
-# point uses).
-apiVersion: v1
-kind: Secret
+# Suspended template for on-demand Infra-only runs. The renovate-pr-ops skill
+# creates a Job from this CronJob after app images publish so the new digest PR
+# appears immediately instead of waiting for the next six-hourly run.
+apiVersion: batch/v1
+kind: CronJob
 metadata:
-  name: renovate-ntfy-token
+  name: renovate-infra
   namespace: base
-type: Opaque
-stringData:
-  token: "{{ .Values.NTFY_WRITE_ONLY_ACCOUNT_TOKEN }}"
+spec:
+  schedule: "0 0 1 1 *"
+  timeZone: America/Toronto
+  suspend: true
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      activeDeadlineSeconds: 7200
+      backoffLimit: 1
+      template:
+        metadata:
+          labels:
+            app: renovate
+        spec:
+          restartPolicy: Never
+          securityContext:
+            runAsNonRoot: true
+          containers:
+            - name: renovate
+              image: renovate/renovate:44.198.3@sha256:bf344aa39d5b592ec728e1db5c3e1d940a5093a89a4598073efcb18d592d121c
+              imagePullPolicy: IfNotPresent
+              securityContext:
+                allowPrivilegeEscalation: false
+                capabilities:
+                  drop: ["ALL"]
+                seccompProfile:
+                  type: RuntimeDefault
+              env:
+                - name: RENOVATE_TOKEN
+                  valueFrom:
+                    secretKeyRef:
+                      name: renovate-secrets
+                      key: token
+                - name: RENOVATE_REPOSITORIES
+                  valueFrom:
+                    secretKeyRef:
+                      name: renovate-secrets
+                      key: infraRepository
+                - name: RENOVATE_HOST_RULES
+                  valueFrom:
+                    secretKeyRef:
+                      name: renovate-secrets
+                      key: hostRules
+                - name: RENOVATE_GIT_AUTHOR
+                  valueFrom:
+                    secretKeyRef:
+                      name: renovate-secrets
+                      key: gitAuthor
+                - name: RENOVATE_PLATFORM
+                  value: github
+                - name: RENOVATE_AUTODISCOVER
+                  value: "false"
+                - name: RENOVATE_ONBOARDING
+                  value: "false"
+                - name: RENOVATE_REQUIRE_CONFIG
+                  value: required
+                - name: RENOVATE_CACHE_TTL_OVERRIDE
+                  value: '{"datasource-docker-hub-cache":10080}'
+                - name: LOG_LEVEL
+                  value: info
+              resources:
+                limits:
+                  memory: 2Gi
+                requests:
+                  memory: 768Mi
+                  cpu: 100m

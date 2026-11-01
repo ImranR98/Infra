@@ -8,6 +8,8 @@
   "prConcurrentLimit": 20,
   "automerge": false,
   "dependencyDashboard": true,
+  "minimumReleaseAge": "3 days",
+  "osvVulnerabilityAlerts": true,
   "labels": [
     "deps"
   ],
