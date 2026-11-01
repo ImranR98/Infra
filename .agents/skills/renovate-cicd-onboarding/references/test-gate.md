@@ -1,14 +1,15 @@
 # Test gate
 
-The gate exists to make major updates safe to automate. A suite that only proves
-the app starts is not enough for major auto-merge; a suite that proves the
+The gate exists to make major updates safe to merge after approval. A suite that
+only proves the app starts is not enough for a major; a suite that proves the
 critical behavior and the production image works may be.
 
 ## Sufficiency criteria
 
-A major update may auto-merge only when all of these are true:
+A major update may be merged (after the dashboard approval) only when all of
+these are true:
 
-1. The `test` job runs on every PR and the daily merge helper requires it to be `success` (public repos may also enforce it via branch protection; private repos cannot, so the helper is the gate).
+1. The `test` job runs on every PR and Renovate's automerge waits for it to be `success` (public repos may also enforce it via branch protection; private repos rely on Renovate's check result).
 2. Install/build/lint/typecheck pass from the lockfile.
 3. Tests exercise the app's primary behavior, not just construction.
 4. The production image builds and passes a smoke test.

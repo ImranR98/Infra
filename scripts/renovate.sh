@@ -1,7 +1,7 @@
 #!/bin/bash
 # DESC: Run Renovate manually for apps, Infra, or both — opens update PRs on
-# GitHub. The in-cluster renovate-daily CronJob uses
-# scripts/renovate-daily.sh; use this for on-demand runs.
+# GitHub. The scheduled runner is the pure renovate-daily CronJob; use this for
+# on-demand runs.
 set -euo pipefail
 
 if [ -z "${INFRA_ROOT:-}" ]; then
@@ -18,13 +18,13 @@ usage() {
 Usage: renovate.sh [apps|infra|all|clear-cache] [renovate options...]
 
   apps         Run Renovate for the app/ops repos (see config/VARS.env).
-  infra        Run Renovate only for the Infra repo, then the CI digest.
+  infra        Run Renovate only for the Infra repo.
   all          Run both sets (default).
   clear-cache  Delete Renovate's persistent package/datasource cache.
 
-The scheduled routine (derived nfs pass -> apps -> config check -> merges ->
-publish wait -> full Infra) is scripts/renovate-daily.sh; use this script for
-on-demand runs.
+The scheduled runner is the pure renovate-daily CronJob (Renovate only, no
+merges). Use this script for on-demand runs. App non-major PRs auto-merge via
+Renovate; Infra PRs are handled manually by the renovate-pr-ops skill.
 
 Examples:
   bash scripts/renovate.sh apps --dry-run
@@ -147,57 +147,4 @@ export HOME
 trap 'rm -rf "$HOME"' EXIT
 mkdir -p "$RENOVATE_CACHE_DIR"
 
-# Notifications only cover PRs opened after this timestamp.
-RUN_START="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-
 npx --yes -p renovate renovate "$@"
-
-# Publish a notification for each PR this run opened. Dry runs create none and
-# are skipped; a notification failure must not fail the run. The ntfy settings
-# live in config/srv0/values.yaml (srv0 owns the ntfy service) — machines
-# without that config skip with a warning.
-dry_run=false
-for arg in "$@"; do
-    case "$arg" in
-        --dry-run*) dry_run=true ;;
-    esac
-done
-if [ "$dry_run" = true ]; then
-    exit 0
-fi
-
-ntfy_values_file="$INFRA_ROOT/config/srv0/values.yaml"
-if [ ! -f "$ntfy_values_file" ] || ! command -v yq >/dev/null 2>&1; then
-    echo "Warning: $ntfy_values_file not readable (or yq missing) — skipping Renovate notifications." >&2
-    exit 0
-fi
-
-ntfy_token="$(yq -r '.NTFY_WRITE_ONLY_ACCOUNT_TOKEN // ""' "$ntfy_values_file")"
-ntfy_domain="$(yq -r '.SERVICES_DOMAIN // ""' "$ntfy_values_file")"
-ntfy_target="$(yq -r '.TARGET // ""' "$ntfy_values_file")"
-if [ -z "$ntfy_token" ] || [ -z "$ntfy_domain" ] || [ -z "$ntfy_target" ]; then
-    echo "Warning: ntfy settings incomplete in $ntfy_values_file — skipping Renovate notifications." >&2
-    exit 0
-fi
-
-export NTFY_URL="https://ntfy.$ntfy_domain"
-export NTFY_TOPIC="${ntfy_target}_services_renovate"
-export NTFY_TOKEN="$ntfy_token"
-
-IFS=',' read -r -a repo_list <<<"$repos"
-notify_args=()
-for repo in "${repo_list[@]}"; do
-    if [ -n "$repo" ]; then
-        notify_args+=(--repo "$repo")
-    fi
-done
-
-bash "$INFRA_ROOT/scripts/renovate-notify.sh" --since "$RUN_START" "${notify_args[@]}" ||
-    echo "Warning: Renovate notifier failed." >&2
-
-# The scheduled infra run reports failed app CI runs; do the same when this
-# manual run includes Infra.
-if [ "$selection" != "apps" ]; then
-    bash "$INFRA_ROOT/scripts/ci-notify.sh" ||
-        echo "Warning: CI notifier failed." >&2
-fi

@@ -55,11 +55,10 @@ sudo bash scripts/update-node-ip.sh [--ip X] [--force]
 # Machine-local (no target):
 bash scripts/prereqs.sh
 bash scripts/renovate.sh [apps|infra|all|clear-cache] [--dry-run]   # on-demand
-bash scripts/renovate-daily.sh [--dry-run|--derived-only]           # scheduled routine
-bash scripts/check-app-configs.sh                                  # app Renovate baseline
-bash scripts/merge-renovate-prs.sh --repos "<owner>/Infra" --only-label derived-image \
-  --require-check test
-bash scripts/wait-for-runs.sh --since <ISO8601>
+# The scheduled runner is the pure (six-hourly) renovate-daily CronJob:
+# app PRs auto-merge via Renovate after test; Infra PRs are the manual gate,
+# handled by the renovate-pr-ops skill (which waits for app publishes and
+# triggers the on-demand renovate-infra Job).
 bash scripts/preboot.sh public-exposure|crypt-ssh
 bash scripts/wireguard.sh <path/to/wg0.conf>
 bash scripts/k3s-server.sh
@@ -102,7 +101,7 @@ Scripts warn or hard-fail (`require_target_host`) on hostname/target mismatches.
 - **Hardware is requested through the generic device plugin** — use `infra.local/intel-gpu`, `infra.local/amd-igpu`, `infra.local/amd-dgpu`, `infra.local/vaapi`, or `infra.local/conbee` rather than a node label as a hardware proxy. The plugin generates resources from sysfs and `/dev` at startup; device paths are normalized to `renderD128`/`ttyACM0`.
 - **Accelerator selection is config, not chart edits** — `GPU_PROFILE` (`intel|amd|none`) chooses the media/ML backends; per-app overrides (`FRIGATE_DETECTOR`, `IMMICH_ML_BACKEND`, `JELLYFIN_HWACCEL`, `IMMICH_SERVER_HWACCEL`, `OLLAMA_GPU`) exist for mixed/fallback cases. `HA_CONBEE`/`HA_BLUETOOTH` gate the HA hardware mounts.
 - Geoblock uses `get.geojs.io`; do not reintroduce the self-hosted GeoIP service/`geoip-src`.
-- **App repos share one Renovate baseline** — `scripts/check-app-configs.sh` (run by `renovate-daily`) enforces the standard presets, OSV alerts, dependency dashboard, `minimumReleaseAge`, lockfile maintenance, and no automerge; `scripts/merge-renovate-prs.sh` is the only merger.
+- **Renovate splits app and Infra** — app repos extend `renovate-preset.json`; Renovate auto-merges non-major app updates after the `test` check, while majors wait on the Dependency Dashboard. Infra Renovate PRs are never auto-merged: the `renovate-pr-ops` skill merges app exceptions, waits for the app `publish` job, triggers the on-demand `renovate-infra` Job, and presents Infra PRs for approval. No app checkout is assumed; use the GitHub API or a temporary clone.
 - **Helm charts** — only project-maintained charts; `validate.sh` enforces the allowlist. Home Assistant is the single approved third-party exception. Pin `image.repository`/`image.tag` on app-version-sensitive charts so Renovate tracks the app, not just the chart.
 - TLS is `edge-public-tls` (exact SANs from `PUBLIC_HOSTS`) plus `edge-private-tls` (`PRIVATE_HOSTS`, `websecure` only). Adding a public app means adding its label to `PUBLIC_HOSTS` and its route, then re-issuing; no per-app certs or wildcards.
 - **Authelia access control is dual-source** — structural bypasses and the final admin catch-all stay in the charts; group/user/deployment-specific rules live in `config/` (`AUTHELIA_ACCESS_CONTROL_RULES` on srv0; `config/vps0/authelia/access_control.yml` rendered by `scripts/render-vps0-authelia.sh` on vps0). Don't add personal group names to the chart.

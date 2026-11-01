@@ -89,4 +89,4 @@ For the full walkthrough, use `docs/runbooks/first-boot.md`. In short:
 9. **Post-deploy** — the manual first-time setup below (app seeding,
    crowdsec-web-ui machine registration, VPN profiles).
 
-The `renovate-daily` job mounts this repo from `INFRA_ROOT`, so the checkout can live anywhere (it need not be under `MAIN_PARENT_DIR/Main`). Task Runner instead mounts the private `dscpln-config` checkout at `$MAIN_PARENT_DIR/Main/Code/Automation/dscpln-config`.
+The Renovate runner is a pure CronJob with env/Secret inputs; it does not mount this repo, so an Infra checkout is not required on the node for Renovate. Task Runner instead mounts the private `dscpln-config` checkout at `$MAIN_PARENT_DIR/Main/Code/Automation/dscpln-config`.

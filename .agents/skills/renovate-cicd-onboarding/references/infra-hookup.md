@@ -61,9 +61,9 @@ A new `ghcr.io/imranr98/*` image is covered automatically; do not add a per-app
 digest group. Third-party images stay in the `docker digests` batch.
 
 The Infra repo's `automerge` is `false`; do not change that policy without
-consent. Image digest pins get the `infra-digest-pin` label and stay open for
-the `renovate-pr-ops` skill; every other Infra PR is merged by the daily job
-after `Validate`.
+consent. Image digest pins get the `infra-digest-pin` label, and every Infra PR
+is handled by the `renovate-pr-ops` skill with user approval. App non-major
+Renovate PRs auto-merge after `test`; majors wait on the Dependency Dashboard.
 
 ## Deployment references
 

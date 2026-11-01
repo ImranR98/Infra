@@ -1,52 +1,58 @@
 #!/bin/bash
-# DESC: List open Renovate dependency PRs for the repo containing this skill.
-# Resolves GITHUB_TOKEN, then RENOVATE_GITHUB_TOKEN, then config/VARS.env (never printed).
-# Prints one block per PR (number, updated, files, branch, labels, title, diff URL);
-# --json prints the raw API objects instead.
+# DESC: Cross-repo Renovate inventory for the Infra repo and every APP_REPOS
+# entry. Lists open Renovate PRs with their checks, recent app merges (for the
+# app -> publish -> Infra refresh ordering), and failed default-branch CI runs.
+# Uses the GitHub API only; never assumes an app checkout.
+# Usage: list-prs.sh [--recent [HOURS]]   (default: 24h)
 set -euo pipefail
 
 usage() {
-    echo "Usage: $(basename "$0") [--json]"
+    echo "Usage: $(basename "$0") [--recent [HOURS]]"
     echo
-    echo "Lists open PRs for the repo's origin remote, flagging Renovate PRs"
-    echo "(renovate/* branch or deps label). Requires curl + python3."
-    echo "Resolves GITHUB_TOKEN, then RENOVATE_GITHUB_TOKEN, then config/VARS.env automatically;"
-    echo "set GITHUB_TOKEN to override."
+    echo "Lists open Renovate PRs across INFRA_REPO and APP_REPOS, plus recent"
+    echo "merged Renovate PRs and failed default-branch CI runs. Default recent"
+    echo "window: 24 hours. Requires curl + python3 and a GitHub token."
     exit 1
 }
 
-json=false
+recent_hours=24
 case "${1:-}" in
     "") ;;
-    --json) json=true ;;
+    --recent)
+        recent_hours="${2:-24}"
+        case "$recent_hours" in
+            '' | *[!0-9]*) usage ;;
+        esac
+        ;;
     *) usage ;;
 esac
 
 script_dir="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
 repo_root="$(cd "$script_dir/../../../.." && pwd)"
+
+if [ -z "${INFRA_REPO:-}" ] && [ -f "$repo_root/config/VARS.env" ]; then
+    set -a
+    # shellcheck disable=SC1091
+    . "$repo_root/config/VARS.env"
+    set +a
+fi
+
 origin="$(git -C "$repo_root" remote get-url origin 2>/dev/null || true)"
-if [ -z "$origin" ]; then
-    echo "Error: no 'origin' remote found in $repo_root" >&2
+if [ -z "${INFRA_REPO:-}" ] && [ -n "$origin" ]; then
+    INFRA_REPO="$(python3 - "$origin" <<'PY'
+import re
+import sys
+match = re.search(r"github\.com[:/]([^/]+)/([^/]+?)(?:\.git)?$", sys.argv[1])
+print(f"{match.group(1)}/{match.group(2)}" if match else "")
+PY
+)"
+fi
+if [ -z "${INFRA_REPO:-}" ]; then
+    echo "Error: set INFRA_REPO in config/VARS.env (or use a GitHub origin remote)." >&2
     exit 1
 fi
 
-repo_slug="$(python3 - "$origin" <<'PY'
-import re
-import sys
-
-match = re.search(r"github\.com[:/]([^/]+)/([^/]+?)(?:\.git)?$", sys.argv[1])
-if not match:
-    sys.exit("Error: origin is not a GitHub URL: " + sys.argv[1])
-print(f"{match.group(1)}/{match.group(2)}")
-PY
-)"
-
-body="$(mktemp)"
-headers="$(mktemp)"
-trap 'rm -f "$body" "$headers"' EXIT
-
-# Resolve the token without printing it. Prefer an explicit GITHUB_TOKEN,
-# then RENOVATE_GITHUB_TOKEN, then the local gitignored token file.
+# Resolve the token without printing it.
 if [ -z "${GITHUB_TOKEN:-}" ] && [ -n "${RENOVATE_GITHUB_TOKEN:-}" ]; then
     GITHUB_TOKEN="$RENOVATE_GITHUB_TOKEN"
 fi
@@ -59,110 +65,159 @@ if [ -z "${GITHUB_TOKEN:-}" ] && [ -f "$repo_root/config/VARS.env" ]; then
 fi
 if [ -n "${GITHUB_TOKEN:-}" ]; then
     export GITHUB_TOKEN
-fi
-
-auth=()
-if [ -n "${GITHUB_TOKEN:-}" ]; then
-    auth=(-H "Authorization: Bearer $GITHUB_TOKEN")
-fi
-
-code="$(curl -sS -D "$headers" -o "$body" -w '%{http_code}' \
-    -H 'Accept: application/vnd.github+json' "${auth[@]}" \
-    "https://api.github.com/repos/$repo_slug/pulls?state=open&per_page=100")" || {
-    echo "Error: request to api.github.com failed (network or proxy?)" >&2
-    exit 1
-}
-
-if [ "$code" != "200" ]; then
-    echo "Error: GitHub API returned HTTP $code for $repo_slug" >&2
-    python3 - "$body" <<'PY' >&2 || true
-import json
-import sys
-
-try:
-    print(json.load(open(sys.argv[1])).get("message", ""))
-except Exception:
-    pass
-PY
-    if [ "$code" = "403" ] || [ "$code" = "429" ]; then
-        echo "Hint: anonymous rate limit exhausted — set GITHUB_TOKEN." >&2
-    fi
-    exit 1
-fi
-
-if [ "$json" = "true" ]; then
-    python3 -m json.tool "$body"
 else
-    python3 - "$body" <<'PY'
-import json
-import sys
+    echo "Error: no GitHub token found (GITHUB_TOKEN/RENOVATE_GITHUB_TOKEN)." >&2
+    exit 1
+fi
 
-prs = json.load(open(sys.argv[1]))
-if not prs:
-    print("No open PRs.")
-for pr in sorted(prs, key=lambda p: p["number"]):
-    labels = ",".join(label["name"] for label in pr["labels"]) or "-"
-    renovate = pr["head"]["ref"].startswith("renovate/") or "deps" in labels
-    kind = "renovate" if renovate else "other"
-    print(f"#{pr['number']}  {pr['updated_at'][:10]}  [{kind}]  {pr['head']['ref']}")
-    print(f"    {pr['title']}")
-    print(f"    labels={labels}")
-    print(f"    diff={pr['diff_url']}")
-PY
-    remaining="$(grep -i '^x-ratelimit-remaining:' "$headers" | tr -d '\r' | awk '{print $2}')"
-    if [ -n "$remaining" ]; then
-        echo "rate-limit remaining: $remaining"
-    fi
-    python3 - "$body" "$repo_slug" <<'PY'
+export INFRA_REPO APP_REPOS="${APP_REPOS:-}"
+
+exec python3 - "$recent_hours" <<'PY'
 import json
 import os
 import sys
+import urllib.error
+import urllib.parse
 import urllib.request
+from datetime import datetime, timedelta, timezone
 
-prs = json.load(open(sys.argv[1]))
-repo = sys.argv[2]
-token = os.environ.get("GITHUB_TOKEN")
-
-
-def get(url):
-    headers = {"Accept": "application/vnd.github+json"}
-    if token:
-        headers["Authorization"] = f"Bearer {token}"
-    req = urllib.request.Request(url, headers=headers)
-    return json.load(urllib.request.urlopen(req, timeout=15))
+hours = int(sys.argv[1])
+token = os.environ.get("GITHUB_TOKEN", "")
+infra = os.environ["INFRA_REPO"]
+apps = [repo.strip() for repo in os.environ.get("APP_REPOS", "").split(",") if repo.strip()]
+repos = [infra] + [repo for repo in apps if repo != infra]
+api = "https://api.github.com"
+failed_conclusions = {"failure", "timed_out", "action_required", "startup_failure"}
+since = datetime.now(timezone.utc) - timedelta(hours=48)
 
 
-try:
-    alerts = get(f"https://api.github.com/repos/{repo}/dependabot/alerts?state=open&per_page=100")
-    if not alerts:
-        print("Dependabot alerts: none")
-    else:
-        print(f"Dependabot alerts: {len(alerts)} open")
-        for alert in alerts[:10]:
-            advisory = alert.get("security_advisory") or {}
-            package = (alert.get("dependency") or {}).get("package") or {}
-            print(
-                f"  - {package.get('name', '?')} {advisory.get('severity', '?')} "
-                f"{advisory.get('ghsa_id', '?')}: {advisory.get('summary', '')}"
-            )
-except Exception as exc:
-    print(f"Dependabot alerts: unavailable ({exc})")
-
-for pr in prs:
-    sha = pr["head"]["sha"]
+def get(url, attempt=1):
+    request = urllib.request.Request(
+        url,
+        headers={
+            "Authorization": f"Bearer {token}",
+            "Accept": "application/vnd.github+json",
+            "User-Agent": "infra-renovate-inventory",
+        },
+    )
     try:
-        data = get(f"https://api.github.com/repos/{repo}/commits/{sha}/check-runs")
-        checks = data.get("check_runs", [])
-        failed = [
-            c for c in checks
-            if c.get("conclusion") in ("failure", "timed_out", "cancelled", "action_required")
-        ]
-        pending = [c for c in checks if c.get("status") != "completed"]
-        if failed or pending:
-            print(f"#{pr['number']} checks: {len(failed)} failed, {len(pending)} pending")
-            for check in failed[:5]:
-                print(f"  - {check.get('name')}: {check.get('conclusion')}")
+        with urllib.request.urlopen(request, timeout=25) as response:
+            return json.load(response)
+    except Exception:
+        if attempt >= 3:
+            raise
+        import time
+
+        time.sleep(2)
+        return get(url, attempt + 1)
+
+
+def parse_ts(value):
+    try:
+        return datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+    except ValueError:
+        return None
+
+
+def is_renovate(pr):
+    branch = str((pr.get("head") or {}).get("ref", ""))
+    labels = [label.get("name") for label in pr.get("labels") or []]
+    return branch.startswith("renovate/") or "deps" in labels
+
+
+def check_summary(repo, pr):
+    try:
+        checks = get(f"{api}/repos/{repo}/commits/{pr['head']['sha']}/check-runs?per_page=100").get(
+            "check_runs", []
+        )
     except Exception as exc:
-        print(f"#{pr['number']} checks: unavailable ({exc})")
+        return f"checks: unavailable ({exc})"
+    failed = [check for check in checks if check.get("conclusion") in failed_conclusions]
+    pending = [check for check in checks if check.get("status") != "completed"]
+    if not checks:
+        return "checks: none"
+    lines = [f"checks: {len(failed)} failed, {len(pending)} pending"]
+    for check in failed[:5]:
+        lines.append(f"    - {check.get('name')}: {check.get('conclusion')} {check.get('html_url') or ''}".rstrip())
+    for check in pending[:5]:
+        lines.append(f"    - {check.get('name')}: {check.get('status')}")
+    return "\n".join(lines)
+
+
+def recent_merges(repo, cutoff):
+    try:
+        prs = get(f"{api}/repos/{repo}/pulls?state=closed&per_page=100&sort=updated&direction=desc")
+    except Exception as exc:
+        return f"recent merges: unavailable ({exc})"
+    merged = []
+    for pr in prs:
+        if not is_renovate(pr) or not pr.get("merged_at"):
+            continue
+        merged_at = parse_ts(pr.get("merged_at"))
+        if merged_at is None or merged_at < cutoff:
+            continue
+        merged.append(
+            f"  MERGED #{pr['number']} sha={pr.get('merge_commit_sha') or '?'} "
+            f"at={pr['merged_at']} {pr.get('title', '')[:110]}"
+        )
+    if not merged:
+        return f"recent merges ({hours}h): none"
+    return f"recent merges ({hours}h): {len(merged)}\n" + "\n".join(merged)
+
+
+def ci_failures(repo, branch):
+    try:
+        runs = get(
+            f"{api}/repos/{repo}/actions/runs?branch={urllib.parse.quote(branch)}&event=push&per_page=100"
+        ).get("workflow_runs", [])
+    except Exception as exc:
+        return f"CI failures (48h): unavailable ({exc})"
+    newest = {}
+    for run in runs:
+        created = parse_ts(run.get("created_at"))
+        if created is None or created < since:
+            continue
+        key = run.get("workflow_id")
+        if key not in newest or created > newest[key][0]:
+            newest[key] = (created, run)
+    failures = [run for _, run in newest.values() if run.get("conclusion") == "failure"]
+    if not failures:
+        return "CI failures (48h): none"
+    lines = [f"CI failures (48h): {len(failures)}"]
+    for run in failures[:5]:
+        lines.append(f"  - {run.get('name')} {run.get('html_url')}")
+    return "\n".join(lines)
+
+
+exit_code = 0
+for repo in repos:
+    try:
+        meta = get(f"{api}/repos/{repo}")
+        branch = meta["default_branch"]
+        prs = [
+            pr
+            for pr in get(f"{api}/repos/{repo}/pulls?state=open&per_page=100")
+            if is_renovate(pr)
+        ]
+        kind = "infra" if repo == infra else "app"
+        print(f"\n== {repo} ({kind}) default={branch}")
+        print(f"open Renovate PRs: {len(prs)}")
+        for pr in sorted(prs, key=lambda item: item["number"]):
+            detail = get(f"{api}/repos/{repo}/pulls/{pr['number']}")
+            labels = ",".join(label["name"] for label in detail.get("labels") or []) or "-"
+            mergeable = detail.get("mergeable_state") or ("mergeable" if detail.get("mergeable") else "unknown")
+            print(
+                f"  #{detail['number']} {detail['head']['ref']} updated={detail['updated_at'][:10]} "
+                f"mergeable={mergeable} labels={labels}"
+            )
+            print(f"    {detail.get('title', '')[:120]}")
+            print(f"    head={detail['head']['sha']}")
+            print("    " + check_summary(repo, detail).replace("\n", "\n    "))
+        print(recent_merges(repo, datetime.now(timezone.utc) - timedelta(hours=hours)))
+        print(ci_failures(repo, branch))
+    except Exception as exc:
+        print(f"\n== {repo}: unavailable ({exc})")
+        exit_code = 1
+
+sys.exit(exit_code)
 PY
-fi

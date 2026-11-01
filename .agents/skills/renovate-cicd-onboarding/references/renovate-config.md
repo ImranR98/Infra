@@ -6,68 +6,42 @@ rule lives in the deployment repo (see `infra-hookup.md` for this environment).
 
 ## Base config
 
-Adapt, don't cargo-cult. Start from the app's actual ecosystems.
+App repos extend the shared preset and keep only app-specific rules:
 
 ```json
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": [
-    "config:recommended",
-    "docker:pinDigests",
-    "helpers:pinGitHubActionDigests",
-    ":configMigration"
-  ],
-  "osvVulnerabilityAlerts": true,
-  "dependencyDashboard": true,
-  "rangeStrategy": "replace",
-  "lockFileMaintenance": {
-    "enabled": true,
-    "schedule": ["at any time"]
-  },
-  "packageRules": [
-    {
-      "description": "Batch non-major npm updates; majors stay visible",
-      "matchManagers": ["npm"],
-      "matchUpdateTypes": ["minor", "patch", "pin", "digest"],
-      "groupName": "npm deps (non-major)"
-    },
-    {
-      "description": "Docker base image pins and digest refreshes",
-      "matchManagers": ["dockerfile"],
-      "matchUpdateTypes": ["digest", "pinDigest"],
-      "groupName": "docker base images"
-    },
-    {
-      "description": "GitHub Actions updates",
-      "matchManagers": ["github-actions"],
-      "groupName": "github actions"
-    }
-  ]
+  "extends": ["github>ImranR98/Infra//renovate-preset"],
+  "packageRules": []
 }
 ```
 
-Every app repo carries `security:minimumReleaseAgeNpm` plus a top-level
-`"minimumReleaseAge": "3 days"`; keep both. Do not add presets that require an
-ecosystem the app does not use.
+The preset carries `config:recommended`, `docker:pinDigests`,
+`helpers:pinGitHubActionDigests`, `security:minimumReleaseAgeNpm`,
+`:configMigration`, OSV alerts, the dependency dashboard, `rangeStrategy:
+replace`, `minimumReleaseAge`, weekly lockfile maintenance, non-major grouping,
+and the automerge policy (non-majors after `test`, majors dashboard-gated).
+Do not duplicate those rules in the app repo. Add a local `packageRule` only for
+an app-specific exception (for example an intentionally unversioned tool or a
+major held behind a peer range). Do not add presets that require an ecosystem
+the app does not use.
 
 ## Merge policy
 
-This homelab does **not** use Renovate or GitHub platform automerge in app repos.
-The Infra `renovate-daily` job merges every green app PR with
-`scripts/merge-renovate-prs.sh` after the required `test` check is `success`
-(including majors and lockfile maintenance). The helper updates behind branches
-and is the only merge path, so public and private repos behave identically and
-private repos do not need branch protection.
+App repos extend the shared preset
+`github>ImranR98/Infra//renovate-preset`. Renovate auto-merges **non-major**
+updates (patch/minor/digest/pin/lockfile maintenance) itself after the required
+`test` check passes. Majors wait on the Dependency Dashboard until approved.
+This works for private repos too because it uses Renovate's own PR merge, not
+GitHub platform auto-merge or branch protection.
 
 - Required: a `test` job that runs on every PR and fails on real errors.
-- Do **not** add `automerge`, `platformAutomerge`, `automergeType`, or
-  `automergeStrategy`; the daily helper is the gate.
-- Add the repo to `APP_REPOS` in `scripts/repos.sh`; the daily job runs Renovate,
-  requires `test`, and merges.
-- `scripts/check-app-configs.sh` must pass: standard presets, OSV alerts,
-  dependency dashboard, `rangeStrategy: replace`, `minimumReleaseAge`, and
-  lockfile maintenance where a lockfile exists.
-- Only proceed with majors when [the test gate](test-gate.md) is sufficient.
+- Do not set app-local `automerge` rules; the shared preset owns them.
+- Add the repo to `APP_REPOS` in `config/VARS.env`; `scripts/repos.sh` reads it.
+- Majors/0.x breaking changes/DB migrations need user consent; use
+  [the test gate](test-gate.md) and the app's changelog.
+- The `renovate-pr-ops` skill handles exceptions and the app → publish → Infra
+  digest ordering; it never assumes an app checkout.
 
 ## Grouping
 

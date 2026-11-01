@@ -173,14 +173,11 @@
       "groupName": "docker digests"
     },
     {
-      "description": "nfs-server derived image deps: isolated PR, merged by the daily job after the PR image test",
+      "description": "nfs-server source deps: isolated PR; after merge the image workflow rebuilds and a later Infra Renovate pass opens the digest PR",
       "matchFileNames": [
         "targets/srv0/k3s-base/nfs-server-src/**"
       ],
-      "groupName": "derived image deps",
-      "addLabels": [
-        "derived-image"
-      ],
+      "groupName": "nfs source deps",
       "automerge": false
     },
     {
@@ -304,7 +301,7 @@
       ]
     },
     {
-      "description": "Final image digest pins require a manual rollout; label them so the daily Infra merge skips them",
+      "description": "Final image digest pins are the manual rollout gate; label them for the renovate-pr-ops skill",
       "matchUpdateTypes": [
         "digest",
         "pinDigest",

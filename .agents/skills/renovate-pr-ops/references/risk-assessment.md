@@ -27,14 +27,28 @@ headlamp, navidrome, linkwarden, freshrss, opencanary.
 dozzle, metube, uptime-kuma, plausible, shlink, owncast, isbn-lookup, pixelntfy,
 logtfy, opodsync, syncthing, watchtower, socket proxies, tech-sale/home-sale, strelaysrv.
 
+**App repos** — the first-party apps in `APP_REPOS` (PixelNtfy, ISBN-Lookup,
+our-times, order-manager, moving-sale-2027, Logtfy, opencode-sandbox, DSCPLN,
+dscpln-config). Treat user-facing apps with data/auth as elevated; small tools as
+standard. Their image publish is part of the change, so a green `test` is the
+merge gate and a successful `publish` is the rollout gate.
+
 ## Tier rules
 
-- **Tier A** — merge autonomously: digest/patch for standard/elevated; minor for standard.
+- **Tier A** — merge autonomously: digest/patch for standard/elevated; minor for
+  standard. App non-major updates are normally auto-merged by Renovate after
+  `test`; the skill only handles exceptions.
 - **Tier B** — research, then merge autonomously if clean: minor for elevated;
   digest/patch for critical; 0.x or chart bumps with no breaking signals.
-- **Tier C** — user consent to merge: any major; k8s minor; 0.x minor with breaking
-  signals or manual migrations; critical components at minor or above; DB engines.
-- Escalate one tier when unsure. A Tier C merge and its deploy are separate consent asks.
+- **Tier C** — user consent: app or Infra major; k8s minor; 0.x minor with
+  breaking signals or manual migrations; critical components at minor or above;
+  DB engines. App majors are dashboard-gated by Renovate and need approval
+  before a PR is opened.
+- **Infra PRs** — always the human gate. The skill researches and validates,
+  then waits for explicit approval before merging. This is separate from the
+  deploy consent.
+- Escalate one tier when unsure. A Tier C merge and its deploy are separate
+  consent asks.
 
 ## Research recipes
 
@@ -57,6 +71,11 @@ logtfy, opodsync, syncthing, watchtower, socket proxies, tech-sale/home-sale, st
 - For apps with a database: check whether migrations are automatic and additive
   (low risk) or manual/destructive (Tier C). Example: opodsync 0.6.0 auto-migrates
   with index-only SQL — safe.
+- App PRs merge with squash; after the merge, wait for the default-branch
+  `publish` job (`wait-for-publish.sh`) before refreshing Infra. A green `test`
+  only built a local image; it did not push `:latest`.
+- If the app merge only touched docs/workflow/Renovate config, the publish is
+  skipped; do not refresh Infra or expect a digest change.
 
 ### Digest refreshes under a floating tag
 
@@ -88,7 +107,16 @@ then run `validate.sh srv0` (renders both charts and rejects `<no value>`).
 - k3s Plan bumps also roll k3s's bundled Traefik/coredns charts; after the upgrade
   confirm the `HelmChartConfig` customizations survived (Traefik args, Gateway
   `Programmed=True`, plugins).
-- Longhorn minor upgrades must be sequential.
+- `nfs-apps` is the default StorageClass; do not add new Longhorn PVs. App data on
+  a host path must use the statically bound `hostpath` PV/PVC whose `nodeAffinity`
+  pins the owning node.
+- App PRs use the shared preset (`github>ImranR98/Infra//renovate-preset`).
+  Non-major updates are auto-merged by Renovate after the `test` check; majors are
+  Dependency Dashboard approvals. If a major is approved and merged, it still
+  goes through the app's own tests and image publish.
+- App PR → image publish → Infra digest pin is a chain. Merge the app PR, wait for
+  the `publish` job, then run the Infra refresh; never merge a digest pin for an
+  app whose publish failed. The Infra digest PR is the manual rollout gate.
 - Compose syncthing is watchtower-owned (Renovate disabled for it); srv0's K3s
   syncthing is Renovate-managed.
 - Home Assistant's Frigate integration and Advanced Camera Card pins are
@@ -102,7 +130,10 @@ then run `validate.sh srv0` (renders both charts and rejects `<no value>`).
   bundles a Traefik bump and Gateway API CRDs, rolling node upgrade. Tier C; held for
   consent, then deployed with the upgrade-watch playbook.
 - **opodsync `0.5.3` → `0.6.0`** — 0.x minor; upstream changelog was features/fixes and
-  the migration is automatic and index-only. Tier B; merged autonomously.
+  the migration is automatic and index-only. Tier B; Renovate auto-merged it after
+  the app tests passed.
 - **`authelia/authelia:latest` digest refresh** — digest present, image label showed
-  4.39.27 (patch on the same major). Tier B; merged autonomously.
-- **immich server + ML patch pair** — patch, coupled versions. Tier A/B; merge together.
+  4.39.27 (patch on the same major). Tier B; presented for approval, then merged
+  and deployed.
+- **immich server + ML patch pair** — patch, coupled versions. Tier A/B; merge
+  together as one Infra PR after approval.
