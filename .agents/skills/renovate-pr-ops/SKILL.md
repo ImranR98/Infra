@@ -1,6 +1,6 @@
 ---
 name: renovate-pr-ops
-description: Cross-repo Renovate operations for the Infra homelab. Triage and merge app-repo Renovate PRs, wait for their image publish jobs, refresh the Infra Renovate run so new digest PRs appear, work the Infra PRs (the manual gate), and deploy on consent. Use when asked to review or merge Renovate PRs across any repo, fix a stalled Renovate or image-publish flow, or deploy merged updates to srv0, vps0, pc, or rpi.
+description: Cross-repo Renovate operations for the Infra homelab. Triage and merge app-repo Renovate PRs, wait for their image publish jobs, refresh the Infra Renovate run so new digest PRs appear, work the Infra PRs (the manual gate), and deploy on consent. Use when asked to review or merge Renovate PRs across any repo, fix a stalled Renovate or image-publish flow, or deploy merged updates to srv0, vps0, pc, bigpc, or rpi.
 ---
 
 # Renovate PR Ops
@@ -48,7 +48,7 @@ that are the human gate.
 - Never commit the user's in-progress Infra work; stash it for local merges and
   restore it afterwards.
 - Deploy only where this checkout has access (srv0 locally, vps0 over SSH). For
-  pc/rpi, print the commands for the user to run instead.
+  pc/bigpc/rpi, print the commands for the user to run instead.
 
 ## Autonomy contract
 
@@ -210,7 +210,7 @@ ask, then deploy in risk order using
    target and verified repo path.
 4. k3s Plan bumps (Tier C): apply `srv0-base`, then follow the upgrade-watch
    playbook.
-5. pc/rpi: emit the `git pull` + compose commands; do not attempt them.
+5. pc/bigpc/rpi: emit the `git pull` + compose commands; do not attempt them.
 
 ### Derived images (nfs-server)
 

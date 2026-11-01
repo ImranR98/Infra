@@ -8,6 +8,7 @@ Infra is the infrastructure-as-code repo for a multi-machine homelab. Everything
 |---|---|---|
 | `srv0` | K3s control-plane + public-exposure client Compose sidecar | Main home server, LUKS-encrypted root; most workloads |
 | `vps0` | Compose | Public VPS: Traefik edge, public-exposure WireGuard hub, web apps |
+| `bigpc` | Compose + K3s agent | Desktop: Ollama on AMD RX 9070 (ROCm); syncthing |
 | `pc` | Compose | Desktop: socket-proxy, watchtower, syncthing |
 | `rpi` | Compose | Pi 400 webcam → authenticated RTSP (go2rtc), consumed by Frigate on srv0 |
 

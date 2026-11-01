@@ -1,0 +1,89 @@
+name: bigpc
+
+x-logging: &logging
+    options:
+        max-size: 10m
+        max-file: 5
+
+x-socket-proxy-priv: &socket-proxy-priv
+    image: wollomatic/socket-proxy:1
+    restart: unless-stopped
+    read_only: true
+    mem_limit: 512M
+    cap_drop:
+        - ALL
+    security_opt:
+        - no-new-privileges
+    user: "65534:$DOCKER_GID"
+    healthcheck:
+        test: ["CMD", "./healthcheck"]
+        interval: 10s
+        timeout: 5s
+        retries: 2
+    logging: *logging
+
+services:
+    dockerproxy_priv:
+        <<: *socket-proxy-priv
+        container_name: dockerproxy_priv
+        command:
+            - "-loglevel=info"
+            - '-allowGET=/v1\..{1,2}/(containers/.*|images/.*)'
+            - '-allowPOST=/v1\..{1,2}/(containers/.*|images/.*|networks/.*)'
+            - '-allowDELETE=/v1\..{1,2}/(containers/.*|images/.*)'
+            - "-allowHEAD=/_ping"
+            - "-shutdowngracetime=5"
+            - "-watchdoginterval=600"
+            - "-stoponwatchdog"
+            - "-proxysocketendpoint=/socket/docker.sock"
+            - "-proxysocketendpointfilemode=0600"
+            - "-allowhealthcheck"
+        volumes:
+            - /var/run/docker.sock:/var/run/docker.sock:ro
+            - dockerproxy_priv:/socket/
+        labels:
+            - "com.centurylinklabs.watchtower.enable=false"
+
+    watchtower:
+        container_name: watchtower
+        restart: unless-stopped
+        mem_limit: 512M
+        image: nickfedor/watchtower:latest@sha256:62fb91130ddb493f869cad7e198fa260dd16c5da293ed092cbd5d8781566f7a6
+        volumes:
+            - dockerproxy_priv:/socket/:ro
+        depends_on:
+            - dockerproxy_priv
+        environment:
+            WATCHTOWER_CLEANUP: "true"
+            WATCHTOWER_POLL_INTERVAL: 7200
+            DOCKER_HOST: "unix:///socket/docker.sock"
+        logging: *logging
+
+    syncthing:
+        image: syncthing/syncthing
+        container_name: syncthing
+        restart: unless-stopped
+        mem_limit: 2G
+        # spc_t so files moved into the synced tree with foreign labels stay
+        # readable; :Z would bulk-relabel the whole home and still miss later moves.
+        security_opt:
+            - label=type:spc_t
+        environment:
+            - PUID=$MY_UID
+            - PGID=$MY_UID
+            # Loopback-only GUI (the image defaults to 0.0.0.0); use an SSH
+            # tunnel to reach it.
+            - STGUIADDRESS=127.0.0.1:8384
+        volumes:
+            - /home/$MY_USERNAME:/var/syncthing
+            - /mnt/ssd2:/mnt/ssd2
+        network_mode: host
+        logging: *logging
+
+volumes:
+    dockerproxy_priv:
+        driver: local
+        driver_opts:
+            type: tmpfs
+            device: tmpfs
+            o: size=1k,uid=65534,gid=0,mode=0700,noexec

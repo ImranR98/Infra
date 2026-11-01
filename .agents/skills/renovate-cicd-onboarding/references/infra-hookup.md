@@ -71,8 +71,8 @@ Find every reference and update it:
 
 - `targets/vps0/compose/compose.yaml` — Compose images on vps0.
 - `targets/srv0/k3s-apps/templates/*.yaml` — K3s workloads.
-- `targets/pc/compose/compose.yaml`, `targets/rpi/compose/compose.yaml` — if
-  the app is deployed there.
+- `targets/bigpc/compose/compose.yaml`, `targets/pc/compose/compose.yaml`,
+  `targets/rpi/compose/compose.yaml` — if the app is deployed there.
 - docs/runbooks that pin the image or document a manual build.
 
 Search for the old registry/namespace/image and for `image:`. Update all
