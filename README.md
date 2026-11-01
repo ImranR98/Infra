@@ -14,25 +14,6 @@ The IaC system for my homelab and other devices.
   <img src="./architecture.svg" alt="Infra architecture overview" width="800"/>
 </p>
 
-## Guided documentation
-
-The architecture, request path, public edge, WireGuard, apps/data, operations, configuration, first boot, and maintenance walkthroughs live in the guided explorer app in `explorer/`. It requires Node.js 18+ and npm.
-
-```bash
-cd explorer
-npm install   # first run only
-npm run dev
-```
-
-Open <http://localhost:4173/>. For a production build:
-
-```bash
-npm run build
-npm run preview
-```
-
-The explorer is the documentation for this repo; `AGENTS.md` remains the contributor/operations guide.
-
 ## Project Goals
 
 - **Infrastructure as Code**: Everything should be declarative and automated, using standard tooling wherever possible. Custom scripts should be minimal and only where necessary.
@@ -77,6 +58,25 @@ bash scripts/compose.sh vps0 logs -f authelia
 # Run Renovate manually (the in-cluster jobs do this on a schedule) — machine-local
 bash scripts/renovate.sh [apps|infra|all|clear-cache] [--dry-run]
 ```
+
+## Guided documentation
+
+The architecture, request path, public edge, WireGuard, apps/data, operations, configuration, first boot, and maintenance walkthroughs live in the guided explorer app in `explorer/`. It requires Node.js 18+ and npm.
+
+```bash
+cd explorer
+npm install   # first run only
+npm run dev
+```
+
+Open <http://localhost:4173/>. For a production build:
+
+```bash
+npm run build
+npm run preview
+```
+
+The explorer is the documentation for this repo; `AGENTS.md` remains the contributor/operations guide.
 
 ## More
 
