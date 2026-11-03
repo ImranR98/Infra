@@ -386,9 +386,14 @@ check_agent_schema() {
             _err "ERROR: DSCPLN_AGENTS.$name.configSubdir is obsolete; use stateSubdir"
             ok=0
         fi
-        bad=$(yq ".DSCPLN_AGENTS[\"$name\"].dataMounts // [] | .[] | select((has(\"name\") | not) or (has(\"subdir\") | not) or (has(\"mountPath\") | not) or has(\"readOnly\")) | .name // \"<unnamed>\"" "$config_file" 2>/dev/null || true)
+        bad=$(yq ".DSCPLN_AGENTS[\"$name\"].dataMounts // [] | .[] | select((has(\"name\") | not) or (has(\"subdir\") | not) or (has(\"mountPath\") | not)) | .name // \"<unnamed>\"" "$config_file" 2>/dev/null || true)
         if [ -n "$bad" ]; then
-            _err "ERROR: DSCPLN_AGENTS.$name.dataMounts has invalid entries (need name/subdir/mountPath; readOnly is obsolete): $bad"
+            _err "ERROR: DSCPLN_AGENTS.$name.dataMounts has invalid entries (need name/subdir/mountPath): $bad"
+            ok=0
+        fi
+        bad=$(yq ".DSCPLN_AGENTS[\"$name\"].dataMounts // [] | .[] | select(has(\"readOnly\") and ((.readOnly | type) != \"!!bool\")) | .name // \"<unnamed>\"" "$config_file" 2>/dev/null || true)
+        if [ -n "$bad" ]; then
+            _err "ERROR: DSCPLN_AGENTS.$name.dataMounts[].readOnly must be a boolean: $bad"
             ok=0
         fi
     done < <(yq '.DSCPLN_AGENTS // {} | keys | .[]' "$config_file")

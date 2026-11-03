@@ -160,6 +160,20 @@
       "depNameTemplate": "helm/helm",
       "datasourceTemplate": "github-releases",
       "versioningTemplate": "semver"
+    },
+    {
+      "customType": "regex",
+      "description": "Ludusavi release fetched by the bigpc agent's generic artifact init",
+      "managerFilePatterns": [
+        "/^targets\\/srv0\\/k3s-apps\\/values\\.yaml$/"
+      ],
+      "matchStrings": [
+        "LUDUSAVI_VERSION:\\s*\"(?<currentValue>\\d+\\.\\d+\\.\\d+)\""
+      ],
+      "depNameTemplate": "mtkennerly/ludusavi",
+      "datasourceTemplate": "github-releases",
+      "versioningTemplate": "semver",
+      "extractVersionTemplate": "^v(?<version>\\d+\\.\\d+\\.\\d+)$"
     }
   ],
   "packageRules": [

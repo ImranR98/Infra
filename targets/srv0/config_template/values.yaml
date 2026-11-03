@@ -355,26 +355,51 @@ DSCPLN_LEDGER_PATH: ""
 # Checkout of the private D$CPLN config repo (config.mjs, apps/, tools/).
 # Defaults to <MAIN_PARENT_DIR>/Main/Code/Automation/dscpln-config.
 DSCPLN_CONFIG_PATH: ""
-# Per-node D$CPLN archive agents. Each entry renders a dscpln-agent-<name>
+# Per-node D$CPLN agents. Each entry renders a dscpln-agent-<name>
 # Deployment/Service, a ConfigMap for agent.json, a local PV/PVC for
-# <stateSubdir>/state (token + state), and a local PV/PVC per data mount. The
-# PV nodeAffinity pins the pod to the named node. Data mounts are always
-# read-only. Example (the real config belongs in config/srv0/values.yaml):
+# <stateSubdir>/state (token + state), a local PV/PVC per data mount, and one
+# artifact-fetch initContainer per artifact. The PV nodeAffinity pins the pod
+# to the named node.
+#
+# Data mounts are read-only by default; set `readOnly: false` for an output
+# directory. `runtime: gtk` selects dscpln-agent-gtk; otherwise the slim agent
+# is used. A process job runs a configured binary, writes an optional request
+# body to <configDir>/<configFile>, and can summarize/validate JSON stdout.
+# Artifact versions come from committed values (LUDUSAVI_VERSION for Ludusavi)
+# unless an artifact sets its own `version`. The real config belongs in
+# config/srv0/values.yaml:
 # DSCPLN_AGENTS:
-#   bigpc:
-#     node: bigpc
+#   node1:
+#     node: node1
 #     stateSubdir: dscpln-agent
+#     runtime: gtk
+#     artifacts:
+#       - name: tool
+#         repo: owner/tool
+#         asset: tool-v{version}-linux.tar.gz
+#         member: tool
+#         dest: /state/tool/bin/tool
+#         checkArgs: --version
 #     config: |
 #       {
 #         "listen": "0.0.0.0",
 #         "port": 8788,
 #         "stateDir": "/state",
-#         "jobs": {}
+#         "jobs": {
+#           "tool": {
+#             "type": "process",
+#             "binary": "/state/tool/bin/tool",
+#             "args": ["--config", "{configDir}"],
+#             "configDir": "/state/tool/config",
+#             "configFile": "config.yaml",
+#             "timeoutSeconds": 1800
+#           }
+#         }
 #       }
 #     dataMounts:
-#       - name: installs
-#         subdir: Games/Installs
-#         mountPath: /data/installs
+#       - name: input
+#         subdir: data/input
+#         mountPath: /data/input
 DSCPLN_AGENTS: {}
 # Balance app config (workbook path, sheets, API state) lives in the private
 # dscpln-config repo under apps/balance-xlsx/.

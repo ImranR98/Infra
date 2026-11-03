@@ -47,3 +47,6 @@ FRIGATE_MODEL_SHA256: "1faaa8baafd9b9075f700e589701ca004f2d9fb98b2138fb2d778607a
 # Deployment-specific map lives in config/srv0/values.yaml. Each entry renders
 # dscpln-agent-<name> plus local PV/PVCs pinned by kubernetes.io/hostname.
 DSCPLN_AGENTS: {}
+# Ludusavi release fetched by the bigpc agent's generic artifact init. The
+# private agent config references this version; Renovate tracks it here.
+LUDUSAVI_VERSION: "0.31.0"

@@ -1,14 +1,15 @@
-# Generic D$CPLN archive agents. One Deployment/Service per DSCPLN_AGENTS
-# entry; each entry gets a ConfigMap for agent.json, a local PV/PVC for the
-# state tree, and a local PV/PVC per data mount. The PV nodeAffinity pins the
-# pod to the node that owns the paths, so no pod nodeSelector is needed. The
-# job definitions are deployment config, not host files.
-{{- $root := . -}}
-{{- range $name, $agent := .Values.DSCPLN_AGENTS }}
+# Generic D$CPLN agents. One Deployment/Service per DSCPLN_AGENTS entry; each
+# entry gets a ConfigMap for agent.json, a local PV/PVC for the state tree, a
+# local PV/PVC per data mount, and one artifact-fetch initContainer per
+# artifact. The PV nodeAffinity pins the pod to the node that owns the paths,
+# so no pod nodeSelector is needed. Job definitions are deployment config.
+{{ $root := . }}
+{{ range $name, $agent := .Values.DSCPLN_AGENTS }}
 {{- $node := required (printf "DSCPLN_AGENTS.%s.node" $name) $agent.node -}}
 {{- $stateSubdir := required (printf "DSCPLN_AGENTS.%s.stateSubdir" $name) $agent.stateSubdir -}}
 {{- $statePath := printf "%s/%s" $root.Values.MAIN_PARENT_DIR $stateSubdir -}}
 {{- $configJSON := required (printf "DSCPLN_AGENTS.%s.config" $name) $agent.config -}}
+{{- $gtk := eq (default "slim" $agent.runtime) "gtk" -}}
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -142,9 +143,68 @@ spec:
         seLinuxOptions:
           type: spc_t
           level: s0
+      {{- if $agent.artifacts }}
+      initContainers:
+      {{- range $artifact := $agent.artifacts }}
+      {{- $artifactName := required (printf "DSCPLN_AGENTS.%s.artifacts[].name" $name) $artifact.name }}
+      {{- $artifactRepo := required (printf "DSCPLN_AGENTS.%s.artifacts[%s].repo" $name $artifactName) $artifact.repo }}
+      {{- $artifactAsset := required (printf "DSCPLN_AGENTS.%s.artifacts[%s].asset" $name $artifactName) $artifact.asset }}
+      {{- $artifactMember := required (printf "DSCPLN_AGENTS.%s.artifacts[%s].member" $name $artifactName) $artifact.member }}
+      {{- $artifactDest := required (printf "DSCPLN_AGENTS.%s.artifacts[%s].dest" $name $artifactName) $artifact.dest }}
+      {{- $artifactVersion := default $root.Values.LUDUSAVI_VERSION $artifact.version }}
+      {{- $artifactAsset = replace "{version}" $artifactVersion $artifactAsset }}
+      {{- $artifactURL := printf "https://github.com/%s/releases/download/v%s/%s" $artifactRepo $artifactVersion $artifactAsset }}
+        - name: fetch-{{ $artifactName }}
+          {{- if $gtk }}
+          image: ghcr.io/imranr98/dscpln-agent-gtk@sha256:218af7376f322428351a6859d8e42b43c04dd9a0e96a63e3935aaa7393073192
+          {{- else }}
+          image: ghcr.io/imranr98/dscpln-agent@sha256:de5a063f6cc2caaa036d9de715be800b91eb04b0b67df2d7a243439f21d3c601
+          {{- end }}
+          imagePullPolicy: IfNotPresent
+          command:
+            - /app/fetch-artifact.sh
+          env:
+            - name: ARTIFACT_URL
+              value: {{ $artifactURL | quote }}
+            - name: ARTIFACT_VERSION
+              value: {{ $artifactVersion | quote }}
+            - name: ARTIFACT_MEMBER
+              value: {{ $artifactMember | quote }}
+            - name: ARTIFACT_DEST
+              value: {{ $artifactDest | quote }}
+            - name: ARTIFACT_CHECK_ARGS
+              value: {{ $artifact.checkArgs | default "" | quote }}
+          volumeMounts:
+            - name: state
+              mountPath: /state
+              subPath: state
+            - name: tmp
+              mountPath: /tmp
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+            seccompProfile:
+              type: RuntimeDefault
+            seLinuxOptions:
+              level: s0
+          resources:
+            limits:
+              memory: 256Mi
+            requests:
+              memory: 32Mi
+              cpu: 10m
+      {{- end }}
+      {{- end }}
       containers:
         - name: agent
-          image: ghcr.io/imranr98/dscpln-agent@sha256:7d8b721607157ef2267bcb84b42ce5a17e3a8a8cbdc4349ccef7aecb64564fd3
+          {{- if $gtk }}
+          image: ghcr.io/imranr98/dscpln-agent-gtk@sha256:218af7376f322428351a6859d8e42b43c04dd9a0e96a63e3935aaa7393073192
+          {{- else }}
+          image: ghcr.io/imranr98/dscpln-agent@sha256:de5a063f6cc2caaa036d9de715be800b91eb04b0b67df2d7a243439f21d3c601
+          {{- end }}
           imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: false
@@ -182,10 +242,13 @@ spec:
             - name: state
               mountPath: /state
               subPath: state
+            # Writable parent for HOME; the host data mounts sit below it.
+            - name: home
+              mountPath: /home/imranr
             {{ range $mount := $agent.dataMounts }}
             - name: data-{{ $mount.name }}
               mountPath: {{ required (printf "DSCPLN_AGENTS.%s.dataMounts[%s].mountPath" $name $mount.name) $mount.mountPath }}
-              readOnly: true
+              readOnly: {{ if hasKey $mount "readOnly" }}{{ $mount.readOnly }}{{ else }}true{{ end }}
             {{ end }}
             - name: tmp
               mountPath: /tmp
@@ -196,6 +259,8 @@ spec:
         - name: state
           persistentVolumeClaim:
             claimName: dscpln-agent-{{ $name }}-config-pvc
+        - name: home
+          emptyDir: {}
         {{ range $mount := $agent.dataMounts }}
         - name: data-{{ $mount.name }}
           persistentVolumeClaim:

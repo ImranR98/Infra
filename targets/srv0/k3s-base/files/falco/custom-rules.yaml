@@ -156,3 +156,16 @@
         - [host, dnf5, /var/log/dnf5.log]
   override:
     exceptions: append
+
+# Ludusavi is fetched by the bigpc agent's artifact init and run by its process
+# job from the state PVC. Scope to that pod and the canonical/staged binary so
+# any other dropped executable still fires the Critical rule.
+- rule: Drop and execute new binary in container
+  exceptions:
+    - name: dscpln_agent_bigpc_ludusavi
+      fields: [k8s.ns.name, k8s.pod.name, proc.name, proc.exe]
+      comps: ["=", startswith, "=", startswith]
+      values:
+        - [apps, dscpln-agent-bigpc-, ludusavi, /state/ludusavi/bin/]
+  override:
+    exceptions: append
