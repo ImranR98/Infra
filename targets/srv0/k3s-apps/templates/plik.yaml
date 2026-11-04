@@ -9,6 +9,15 @@ AssumeHTTPS         = true
 SourceIpHeader      = "X-Forwarded-For"
 SessionTimeout      = "365d"
 
+# Root-level keys must stay above the [table] sections — TOML would otherwise
+# treat them as keys of the preceding table and silently ignore them.
+MaxFileSizeStr       = "10GB"
+DefaultTTLStr        = "30d"
+MaxTTLStr            = "0"   # 0 = no limit (default expiry stays 30d)
+
+DefaultAdminLogin    = "admin"
+DefaultAdminPassword = "{{ .Values.PLIK_ADMIN_PASSWORD }}"
+
 DataBackend = "file"
 [DataBackendConfig]
     Directory = "/data/files"
@@ -16,13 +25,6 @@ DataBackend = "file"
 [MetadataBackendConfig]
     Driver = "sqlite3"
     ConnectionString = "/data/state/plik.db"
-
-MaxFileSizeStr      = "10GB"
-DefaultTTLStr       = "30d"
-MaxTTLStr           = "30d"
-
-DefaultAdminLogin    = "admin"
-DefaultAdminPassword = "{{ .Values.PLIK_ADMIN_PASSWORD }}"
 {{- end -}}
 ---
 apiVersion: gateway.networking.k8s.io/v1
