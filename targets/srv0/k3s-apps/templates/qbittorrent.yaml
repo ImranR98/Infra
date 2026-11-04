@@ -164,7 +164,7 @@ spec:
         # WAN. The interface/routes persist for the pod's lifetime; the kernel
         # handles re-handshaking.
         - name: qbittorrent-wg
-          image: lscr.io/linuxserver/wireguard:latest@sha256:b677c3f46d524921c8a7c91873479eb7bab190d098fddbbd887ce333ec078c90
+          image: lscr.io/linuxserver/wireguard:latest@sha256:236f9a9a89c701bc83f6d41007157dc77361114d14e56a08e846bb4499622e97
           command:
             - /bin/bash
             - -c
@@ -190,7 +190,7 @@ spec:
               readOnly: true
       containers:
         - name: qbittorrent
-          image: lscr.io/linuxserver/qbittorrent:latest@sha256:75ecbb1c89ab7b0a21c4bde40b4820e4f1649d2d56d83b91913422155e8d2a5f
+          image: lscr.io/linuxserver/qbittorrent:latest@sha256:05c1454f9a32967affc1f34f67f8cc0cc57dd805dca45489fe797095a6286556
           lifecycle:
             postStart:
               exec:

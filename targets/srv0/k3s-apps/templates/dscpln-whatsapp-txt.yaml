@@ -26,7 +26,7 @@ spec:
       automountServiceAccountToken: false
       containers:
         - name: dscpln-whatsapp-txt
-          image: ghcr.io/imranr98/dscpln-watxt:latest@sha256:d2412c4a16802a0721aee1fad26b2bfd73204b682cf428c8bcb26776564c5f39
+          image: ghcr.io/imranr98/dscpln-watxt:latest@sha256:db4547a912f850088151303965423a611f3ad8a540e783d51370bc78220b48ed
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
