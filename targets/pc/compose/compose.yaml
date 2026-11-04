@@ -76,6 +76,7 @@ services:
             - STGUIADDRESS=127.0.0.1:8384
         volumes:
             - /home/$MY_USERNAME:/var/syncthing
+            - /run/media/$MY_USERNAME:/run/media/user
         network_mode: host
         logging: *logging
 
