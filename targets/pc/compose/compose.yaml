@@ -76,7 +76,10 @@ services:
             - STGUIADDRESS=127.0.0.1:8384
         volumes:
             - /home/$MY_USERNAME:/var/syncthing
-            - /run/media/$MY_USERNAME:/run/media/user
+            # rslave so USB devices mounted by udisks after the container
+            # starts show up inside too (the default rprivate would freeze
+            # the mount tree as it was at container creation).
+            - /run/media/$MY_USERNAME:/run/media/user:rslave
         network_mode: host
         logging: *logging
 
