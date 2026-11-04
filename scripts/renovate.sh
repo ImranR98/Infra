@@ -35,7 +35,14 @@ EOF
 
 selection="${1:-all}"
 case "$selection" in
-    apps | infra | all) shift ;;
+    apps | infra | all)
+        # Only consume an argument when one was supplied: with no args the
+        # selection defaults to `all`, and `shift` with zero positional
+        # parameters returns 1 (silently aborting under `set -e`).
+        if [ "$#" -gt 0 ]; then
+            shift
+        fi
+        ;;
     clear-cache | --clear-cache) selection=clear-cache; shift ;;
     -h | --help)
         usage
