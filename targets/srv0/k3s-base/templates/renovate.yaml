@@ -1,10 +1,10 @@
 ---
-# Scheduled Renovate runner. One pure Renovate pass over the Infra and app
-# repos; no custom merge/wait/notification wrapper. Renovate auto-merges
-# non-major app updates after their test check, and all Infra PRs are handled
-# manually by the renovate-pr-ops skill. The runner needs only the token, repo
-# list, Docker Hub host rules, and git author; it does not mount the Infra
-# checkout or any scripts.
+# Scheduled Renovate runner. One Renovate pass over the Infra and app repos;
+# it does not merge or wait. Renovate auto-merges non-major app updates after
+# their test check, and all Infra PRs are handled manually by the
+# renovate-pr-ops skill. The runner mounts only two small chart files (a run
+# wrapper and the PR notifier), not the Infra checkout; it needs the token,
+# repo list, Docker Hub host rules, git author, and the ntfy write token.
 apiVersion: v1
 kind: Secret
 metadata:
@@ -17,6 +17,32 @@ stringData:
   infraRepository: {{ $.Values.INFRA_REPO | quote }}
   gitAuthor: {{ $.Values.RENOVATE_GIT_AUTHOR | quote }}
   hostRules: {{ if and $.Values.DOCKERHUB_USER $.Values.DOCKERHUB_TOKEN }}{{ list (dict "matchHost" "docker.io" "hostType" "docker" "username" $.Values.DOCKERHUB_USER "password" $.Values.DOCKERHUB_TOKEN) | toJson | quote }}{{ else }}[]{{ end }}
+---
+# Run wrapper + post-run PR notifier. The wrapper runs Renovate, then posts an
+# ntfy message for the open deps PRs this run created or refreshed. The
+# notification is best-effort and never changes the Job's exit status; failed
+# runs keep reaching the Grafana job-failed/stale alerts.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: renovate-scripts
+  namespace: base
+data:
+  run.sh: |-
+{{ .Files.Get "files/renovate-run.sh" | indent 4 }}
+  renovate-notify.js: |-
+{{ .Files.Get "files/renovate-notify.js" | indent 4 }}
+---
+# Write-only ntfy token for the PR notifier (same value the Grafana contact
+# point uses).
+apiVersion: v1
+kind: Secret
+metadata:
+  name: renovate-ntfy-token
+  namespace: base
+type: Opaque
+stringData:
+  token: {{ .Values.NTFY_WRITE_ONLY_ACCOUNT_TOKEN | quote }}
 ---
 apiVersion: batch/v1
 kind: CronJob
@@ -86,12 +112,30 @@ spec:
                   value: '{"datasource-docker-hub-cache":10080}'
                 - name: LOG_LEVEL
                   value: info
+                - name: NTFY_URL
+                  value: "http://ntfy.base.svc.cluster.local:3000"
+                - name: NTFY_TOPIC
+                  value: "{{ $.Values.TARGET }}_services_renovate"
+                - name: NTFY_TOKEN
+                  valueFrom:
+                    secretKeyRef:
+                      name: renovate-ntfy-token
+                      key: token
+              command: ["bash", "/opt/renovate/run.sh"]
+              volumeMounts:
+                - name: scripts
+                  mountPath: /opt/renovate
+                  readOnly: true
               resources:
                 limits:
                   memory: 2Gi
                 requests:
                   memory: 768Mi
                   cpu: 100m
+          volumes:
+            - name: scripts
+              configMap:
+                name: renovate-scripts
 ---
 # Suspended template for on-demand Infra-only runs. The renovate-pr-ops skill
 # creates a Job from this CronJob after app images publish so the new digest PR
@@ -163,9 +207,27 @@ spec:
                   value: '{"datasource-docker-hub-cache":10080}'
                 - name: LOG_LEVEL
                   value: info
+                - name: NTFY_URL
+                  value: "http://ntfy.base.svc.cluster.local:3000"
+                - name: NTFY_TOPIC
+                  value: "{{ $.Values.TARGET }}_services_renovate"
+                - name: NTFY_TOKEN
+                  valueFrom:
+                    secretKeyRef:
+                      name: renovate-ntfy-token
+                      key: token
+              command: ["bash", "/opt/renovate/run.sh"]
+              volumeMounts:
+                - name: scripts
+                  mountPath: /opt/renovate
+                  readOnly: true
               resources:
                 limits:
                   memory: 2Gi
                 requests:
                   memory: 768Mi
                   cpu: 100m
+          volumes:
+            - name: scripts
+              configMap:
+                name: renovate-scripts
