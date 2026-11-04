@@ -29,6 +29,14 @@
   },
   "packageRules": [
     {
+      "description": "vite and @vitejs/plugin-react are peer-coupled: plugin-react 6 needs vite 7/8 and vite 8 needs plugin-react 6, so a major of either alone cannot resolve a lockfile. Group them so one branch carries both.",
+      "matchPackageNames": [
+        "vite",
+        "@vitejs/plugin-react"
+      ],
+      "groupName": "vite toolchain"
+    },
+    {
       "description": "Auto-merge non-major updates after the required test check",
       "matchUpdateTypes": [
         "minor",
