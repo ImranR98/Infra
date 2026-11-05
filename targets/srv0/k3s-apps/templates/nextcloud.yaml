@@ -133,7 +133,7 @@ spec:
         fsGroup: 33
       containers:
         - name: nextcloud
-          image: nextcloud:35.0.2@sha256:57ef13427eb50e6fac64933e0f50cc4a2abaa142dfaf52dfb6c658382dd103a8
+          image: nextcloud:35.0.2@sha256:d88929dc8386420b8963f86cabb667fdaf733eef9dcf8fc98e226801a32c023c
           securityContext:
             allowPrivilegeEscalation: false
           ports:
