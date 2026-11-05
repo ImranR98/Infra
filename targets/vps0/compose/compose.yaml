@@ -310,7 +310,7 @@ services:
         logging: *logging
 
     authelia-db:
-        image: redis:alpine@sha256:21090af93f8324db2f0f0f4f38a7c60369d47d917e000c3423d89d2ae2883537
+        image: redis:alpine@sha256:1166a1ab81198ff768528df2c9e668c82206aae3ef4af2757efac386376fb79c
         container_name: authelia-db
         user: "$MY_UID:$MY_UID"
         environment:
@@ -332,7 +332,7 @@ services:
 
     # Traefik - Reverse Proxy
     traefik:
-        image: traefik:v3.7.17@sha256:68ae5fe5b64ca166704b746a9e8afcd385e36b3f569a5691401bf652d57b3748
+        image: traefik:v3.7.17@sha256:321153f6f732f912cf5c6f0597fe38743fc7895d482d7d8804a479ae0403e151
         container_name: traefik
         depends_on:
             dockerproxy:
@@ -407,7 +407,7 @@ services:
 
     # Traefik logrotate - caps the host-mounted access log (CrowdSec's acquisition source)
     traefik-logrotate:
-        image: vitess/logrotate:latest@sha256:07ba02e9df59eea35955311826fd81a576670d5fa821b0f58e469dcaab51d74d
+        image: vitess/logrotate:latest@sha256:02037cb9de7a06e7fc26835deba8f8c80d46a8c21362a91c46bdde380472417a
         container_name: traefik-logrotate
         restart: unless-stopped
         mem_limit: 64M
@@ -536,7 +536,7 @@ services:
     # non-MY_UID user (ClickHouse 101, Plausible 999) — self-heals ownership
     # drift (e.g. a host-side chown). Re-runs on every up after a down.
     state-fixperms:
-        image: alpine:latest@sha256:be2656061b536c1883c4034790e21d0a09c5aaaf51968b89368a3c0371ea2c9a
+        image: alpine:latest@sha256:ce9e1e6d23f04a0b7593445a062a9fc73ed52f8260b9396f77a958295ad18ee7
         container_name: state-fixperms
         restart: no
         cap_drop:
@@ -844,7 +844,7 @@ services:
 
     # Owncast Auth - Token-based access control for Owncast viewer
     owncast-auth:
-        image: python:3-alpine@sha256:20a82dbc2783112ddb91d1534603f802d222a3e63e593cd002eb2ac534e70211
+        image: python:3-alpine@sha256:2b4b04f31a4a009c1fadf7ce9338471f288488199cf43dcd1af71f244ea550aa
         container_name: owncast-auth
         restart: unless-stopped
         mem_limit: 64M
