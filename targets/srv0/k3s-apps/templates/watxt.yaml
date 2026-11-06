@@ -1,7 +1,9 @@
+# W@TXT: browse, import and merge WhatsApp chat exports.
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: dscpln-whatsapp-txt
+  name: watxt
   namespace: apps
 spec:
   replicas: 1
@@ -9,46 +11,38 @@ spec:
     type: Recreate
   selector:
     matchLabels:
-      app: dscpln-whatsapp-txt
+      app: watxt
   template:
     metadata:
       labels:
-        app: dscpln-whatsapp-txt
+        app: watxt
     spec:
       securityContext:
         runAsUser: {{ .Values.MY_UID }}
         runAsGroup: {{ .Values.MY_UID }}
-        # spc_t: the Main tree is shared with the host and can carry foreign
-        # labels; s0 keeps written files category-free for the host.
         seLinuxOptions:
           type: spc_t
           level: s0
       automountServiceAccountToken: false
       containers:
-        - name: dscpln-whatsapp-txt
-          image: ghcr.io/imranr98/dscpln-watxt:latest@sha256:db4547a912f850088151303965423a611f3ad8a540e783d51370bc78220b48ed
+        - name: watxt
+          image: ghcr.io/imranr98/watxt:latest@sha256:6167891ff1a644c1b1c463304536f9ece3af68c3d1358fb53a616528ad0e0da7
           securityContext:
-            allowPrivilegeEscalation: false
-            readOnlyRootFilesystem: true
-            seccompProfile:
-              type: RuntimeDefault
-            capabilities:
-              drop:
-                - ALL
+            {{- include "dscpln.containerSecurityContext" (dict "uid" .Values.MY_UID "readOnlyRootFilesystem" true) | nindent 12 }}
           ports:
             - containerPort: 8787
           env:
-            - name: APP
-              value: whatsapp-txt
+            - name: WATXT_CONFIG
+              value: /config/config.json
             - name: BASE_PATH
-              value: /watxt
+              value: ""
             - name: AUTH_MODE
               value: proxy-header
+            - name: APP_ORIGIN
+              value: "https://watxt.{{ .Values.SERVICES_DOMAIN }}"
           readinessProbe:
-            {{- include "dscpln.readinessProbe" (dict "path" "/watxt/api/health" "port" "8787" "initialDelaySeconds" 10) | nindent 12 }}
+            {{- include "dscpln.readinessProbe" (dict "path" "/api/health" "port" "8787" "initialDelaySeconds" 10) | nindent 12 }}
           resources:
-            # The whole conversation index is held in memory, and imports merge
-            # in-process, so give it room beyond the usual Node baseline.
             limits:
               memory: 1Gi
             requests:
@@ -57,6 +51,9 @@ spec:
           volumeMounts:
             - name: tmp
               mountPath: /tmp
+            - name: config
+              mountPath: /config
+              readOnly: true
             - name: data
               mountPath: /data
       volumes:
@@ -64,8 +61,11 @@ spec:
           emptyDir:
             medium: Memory
             sizeLimit: 256Mi
+        - name: config
+          persistentVolumeClaim:
+            claimName: watxt-app-config-pvc
         - name: data
           persistentVolumeClaim:
             claimName: hostpath-main-node-wa-txt-pvc
 ---
-{{ include "dscpln.service" (dict "name" "dscpln-whatsapp-txt" "port" 8787) }}
+{{ include "dscpln.service" (dict "name" "watxt" "port" 8787) }}

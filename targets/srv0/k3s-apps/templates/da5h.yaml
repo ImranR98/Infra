@@ -1,11 +1,11 @@
-# Lockdown UI and its privileged port blocker.
+# DA5H: infrastructure dashboard with Lockdown as its first module.
 #
-# The UI is a normal D$CPLN app behind the shared ingress. The blocker is a
-# separate host-network pod pinned to srv0. It listens only on the flannel
-# bridge address and requires a token held in the Secret below. The UI server
-# is the only client; the browser never receives the token.
+# The dashboard and Lockdown API are a normal app behind Authelia. The blocker
+# is a separate host-network pod pinned to srv0; it listens only on the flannel
+# bridge address and requires the token below. The dashboard server is the only
+# client; the browser never receives the token.
 ---
-{{- $secret := lookup "v1" "Secret" .Release.Namespace "dscpln-lockdown-port-blocker-token" -}}
+{{- $secret := lookup "v1" "Secret" .Release.Namespace "da5h-port-blocker-token" -}}
 {{- $token := "" -}}
 {{- if and $secret $secret.data (index $secret.data "token") -}}
 {{- $token = index $secret.data "token" | b64dec -}}
@@ -15,7 +15,7 @@
 apiVersion: v1
 kind: Secret
 metadata:
-  name: dscpln-lockdown-port-blocker-token
+  name: da5h-port-blocker-token
   namespace: apps
 type: Opaque
 data:
@@ -24,7 +24,7 @@ data:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: dscpln-lockdown
+  name: da5h
   namespace: apps
 spec:
   replicas: 1
@@ -32,64 +32,64 @@ spec:
     type: Recreate
   selector:
     matchLabels:
-      app: dscpln-lockdown
+      app: da5h
   template:
     metadata:
       labels:
-        app: dscpln-lockdown
+        app: da5h
       annotations:
         checksum/token: {{ $token | sha256sum }}
     spec:
-      # The blocker is reachable at srv0's flannel bridge address, so the UI
-      # must run on srv0; the config PV pins the config host tree as well.
       nodeSelector:
         infra.local/external-exposed: "true"
       securityContext:
         {{- include "dscpln.podSecurityContext" (dict "uid" .Values.MY_UID) | nindent 8 }}
       automountServiceAccountToken: false
       containers:
-        - name: dscpln-lockdown
-          image: ghcr.io/imranr98/dscpln-lockdown:latest@sha256:db4547a912f850088151303965423a611f3ad8a540e783d51370bc78220b48ed
+        - name: da5h
+          image: ghcr.io/imranr98/da5h:latest@sha256:218b09022da666807ced6e780990472d10db1d351c31661e784efbfda14279c7
           securityContext:
             {{- include "dscpln.containerSecurityContext" (dict "uid" .Values.MY_UID "readOnlyRootFilesystem" true) | nindent 12 }}
           ports:
             - name: http
-              containerPort: 8086
+              containerPort: 8080
           env:
-            - name: APP
-              value: lockdown
             - name: PORT
-              value: "8086"
+              value: "8080"
             - name: BASE_PATH
-              value: /lockdown
+              value: ""
             - name: AUTH_MODE
               value: proxy-header
+            - name: AUTH_EXEMPT_PATHS
+              value: /api/notify
             - name: PORT_BLOCKER_URL
               value: http://10.42.0.1:8794
             - name: PORT_BLOCKER_TOKEN
               valueFrom:
                 secretKeyRef:
-                  name: dscpln-lockdown-port-blocker-token
+                  name: da5h-port-blocker-token
                   key: token
-            - name: LOCKDOWN_CONFIG
+            - name: DA5H_CONFIG
               value: /config/config.json
+            - name: LOCKDOWN_CONFIG
+              value: /config/lockdown.json
+            - name: APP_ORIGIN
+              value: "https://da5h.{{ .Values.SERVICES_DOMAIN }}"
             - name: UV_USE_IO_URING
               value: "0"
           resources:
             limits:
-              memory: 128Mi
+              memory: 256Mi
             requests:
-              memory: 32Mi
-              cpu: 10m
+              memory: 64Mi
+              cpu: 20m
           readinessProbe:
-            {{- include "dscpln.readinessProbe" (dict "path" "/lockdown/api/health" "port" "http") | nindent 12 }}
+            {{- include "dscpln.readinessProbe" (dict "path" "/api/health" "port" "http") | nindent 12 }}
           volumeMounts:
             - name: tmp
               mountPath: /tmp
             - name: config
               mountPath: /config
-              subPath: apps/lockdown
-              readOnly: true
       volumes:
         - name: tmp
           emptyDir:
@@ -97,14 +97,14 @@ spec:
             sizeLimit: 64Mi
         - name: config
           persistentVolumeClaim:
-            claimName: dscpln-config-pvc
+            claimName: da5h-app-config-pvc
 ---
-{{ include "dscpln.service" (dict "name" "dscpln-lockdown" "targetPort" "http" "port" 8086) }}
+{{ include "dscpln.service" (dict "name" "da5h" "targetPort" "http" "port" 8080) }}
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: dscpln-port-blocker
+  name: da5h-blocker
   namespace: apps
 spec:
   replicas: 1
@@ -112,11 +112,11 @@ spec:
     type: Recreate
   selector:
     matchLabels:
-      app: dscpln-port-blocker
+      app: da5h-blocker
   template:
     metadata:
       labels:
-        app: dscpln-port-blocker
+        app: da5h-blocker
       annotations:
         checksum/token: {{ $token | sha256sum }}
     spec:
@@ -130,8 +130,9 @@ spec:
           type: spc_t
           level: s0
       containers:
-        - name: dscpln-port-blocker
-          image: ghcr.io/imranr98/dscpln-lockdown:latest@sha256:db4547a912f850088151303965423a611f3ad8a540e783d51370bc78220b48ed
+        - name: da5h-blocker
+          image: ghcr.io/imranr98/da5h:latest@sha256:218b09022da666807ced6e780990472d10db1d351c31661e784efbfda14279c7
+          command: ["node", "src/lockdown/blocker.mjs"]
           securityContext:
             runAsUser: 0
             runAsGroup: 0
@@ -148,8 +149,6 @@ spec:
             - name: http
               containerPort: 8794
           env:
-            - name: APP
-              value: port-blocker
             - name: PORT
               value: "8794"
             - name: PORT_BLOCKER_HOST
@@ -157,10 +156,10 @@ spec:
             - name: PORT_BLOCKER_TOKEN
               valueFrom:
                 secretKeyRef:
-                  name: dscpln-lockdown-port-blocker-token
+                  name: da5h-port-blocker-token
                   key: token
             - name: LOCKDOWN_CONFIG
-              value: /config/config.json
+              value: /config/lockdown.json
           resources:
             limits:
               memory: 64Mi
@@ -180,7 +179,6 @@ spec:
               mountPath: /tmp
             - name: config
               mountPath: /config
-              subPath: apps/lockdown
               readOnly: true
       volumes:
         - name: tmp
@@ -189,4 +187,30 @@ spec:
             sizeLimit: 16Mi
         - name: config
           persistentVolumeClaim:
-            claimName: dscpln-config-pvc
+            claimName: da5h-app-config-pvc
+---
+# Other apps relay notifications through DA5H's /api/notify.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-da5h-notify-ingress
+  namespace: apps
+spec:
+  podSelector:
+    matchLabels:
+      app: da5h
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: dscpln
+        - podSelector:
+            matchLabels:
+              app: fl0w
+        - podSelector:
+            matchLabels:
+              app: watxt
+      ports:
+        - port: 8080
+  policyTypes:
+    - Ingress

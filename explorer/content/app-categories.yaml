@@ -34,14 +34,12 @@ srv0:
     - headlamp
     - logtfy
   dscpln:
-    - dscpln-agent
-    - dscpln-balance-xlsx
-    - dscpln-file-pipelines
-    - dscpln-ingress
-    - dscpln-lockdown
-    - dscpln-portal
-    - dscpln-storage
-    - dscpln-task-runner
-    - dscpln-whatsapp-txt
+    - dscpln
+    - watxt
+    - fl0w
+    - fl0w-agent-bigpc
+    - da5h
+    - dscpln-ledger
+    - app-config-storage
   security:
     - opencanary

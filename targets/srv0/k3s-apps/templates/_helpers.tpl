@@ -1,5 +1,5 @@
 {{/*
-Shared building blocks for the D$CPLN app templates. Each app still owns its
+Shared building blocks for the app templates. Each app still owns its
 Deployment (mounts, env, schedule, image) while the repeated bits — pod and
 container security contexts, the readiness probe, and the Service — come from
 these named templates.

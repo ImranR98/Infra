@@ -539,13 +539,13 @@ steps:
 - id: backups
   stage: Operations
   title: How it survives
-  body: 'The **State Backups** task in the D$CPLN Task Runner is the active backup system. It runs on a schedule (default Sundays 04:00) and has a manual **Run now**.
+  body: 'The **State Backups** task in the FL0W is the active backup system. It runs on a schedule (default Sundays 04:00) and has a manual **Run now**.
 
 
     One encrypted, deduplicated restic repository at `state_backups/restic` contains every PVC labelled `auto-backup=true` under `current_target/k3s_live_state/nfs-apps/<namespace>/<pvc>`, the srv0 Compose state, and the vps0 Compose state, fetched over SSH with the existing key.
 
     '
-  deepDive: 'The Task Runner backup instance runs as root in the `apps` namespace so it can read the Postgres/Redis-owned PVC data; it mounts the Infra tree read-only and only `state_backups/` writable.
+  deepDive: 'The FL0W backup instance runs as root in the `apps` namespace so it can read the Postgres/Redis-owned PVC data; it mounts the Infra tree read-only and only `state_backups/` writable.
 
 
     `retention` maps to `restic forget --keep-last N --prune` (default 7). Each run also does `restic check --read-data-subset=1%`.
@@ -1069,7 +1069,7 @@ steps:
 
 
     `pc` is Compose-only: a socket proxy, watchtower, and syncthing. None of the three is on the `srv0`/`vps0` request path.'
-  deepDive: '`bigpc` is tainted `scheduling-discouraged` (PreferNoSchedule) and runs the D$CPLN archive agent on local PV/PVCs. `rpi`''s go2rtc password is generated on first start under `current_target/compose_live_state/go2rtc/`; the WebUI is loopback-only.
+  deepDive: '`bigpc` is tainted `scheduling-discouraged` (PreferNoSchedule) and runs the FL0W archive agent on local PV/PVCs. `rpi`''s go2rtc password is generated on first start under `current_target/compose_live_state/go2rtc/`; the WebUI is loopback-only.
 
 
     `pc` and `bigpc` run watchtower only for syncthing; `srv0`, `vps0`, and `rpi` rely on Renovate.'
@@ -1234,7 +1234,7 @@ steps:
 
 
 
-    `COMPOSE_PROFILES=dscpln-agent` enables the optional vps0 archive agent. Generated files — `targets/<t>/compose/.env`, the public-exposure keys, `current_target/`, and the rendered Authelia config — are not hand-edited.
+    `COMPOSE_PROFILES=fl0w-agent` enables the optional vps0 archive agent. Generated files — `targets/<t>/compose/.env`, the public-exposure keys, `current_target/`, and the rendered Authelia config — are not hand-edited.
 
 
     `config/VARS.env` is for manual `scripts/renovate.sh`; the scheduled CronJob reads its chart Secret (`renovate-secrets`) and does not mount the repo.'
@@ -1271,8 +1271,8 @@ steps:
   body: 'The six-hourly Renovate CronJob (`0 */6 * * *`, America/Toronto) is a pure PR run with overlap forbidden. The suspended `renovate-infra` template is not on a schedule; the skill creates a Job from it after app images publish.
 
 
-    The `vps0` image-prune timer runs monthly. The State Backups task defaults to Sundays 04:00. The Task Runner owns the backup schedule; the CronJob owns update discovery. Neither is a watchtower-style continuous updater.'
-  deepDive: 'Renovate''s `startingDeadlineSeconds` and 7200s `activeDeadlineSeconds` keep a hung run from blocking the next six-hour slot. The `vps0` timer is a systemd oneshot service; the Task Runner backup task is backup-only and restore is `scripts/restic-restore.sh`.
+    The `vps0` image-prune timer runs monthly. The State Backups task defaults to Sundays 04:00. FL0W owns the backup schedule; the CronJob owns update discovery. Neither is a watchtower-style continuous updater.'
+  deepDive: 'Renovate''s `startingDeadlineSeconds` and 7200s `activeDeadlineSeconds` keep a hung run from blocking the next six-hour slot. The `vps0` timer is a systemd oneshot service; the FL0W backup task is backup-only and restore is `scripts/restic-restore.sh`.
 
 
     Host packages are separate. `vps0` runs `unattended-upgrades`. `srv0` and `bigpc` are Fedora: `dnf5-plugin-automatic` is not installed by default; enable security-only updates with `upgrade_type = security` and `reboot = never`, then check `dnf5 needs-restarting -r` and reboot in a maintenance window.'
@@ -1542,7 +1542,7 @@ steps:
 - id: boot-srv
   stage: Bootstrap
   title: Bootstrap srv0
-  body: 'On srv0, run `scripts/preflight-task-runner.sh --fix` if using D$CPLN, then `k3s-server.sh`, unlock the kubeconfig in another terminal, bring up the Compose sidecar, and run `scripts/deploy.sh srv0`.
+  body: 'On srv0, run `scripts/preflight-task-runner.sh --fix` if using FL0W, then `k3s-server.sh`, unlock the kubeconfig in another terminal, bring up the Compose sidecar, and run `scripts/deploy.sh srv0`.
 
 
     Set `BOOTSTRAP_PRIVATE_APPS: "true"` for the first boot; set it back to `"false"` and redeploy once Authelia is Ready.
@@ -1883,13 +1883,13 @@ steps:
   body: 'The State Backups task is backup-only. `scripts/restic-restore.sh list` lists snapshots; `pvc <name>` and `compose srv0|vps0` stage by default and accept `--live`.
 
 
-    The script works on a fresh cluster with the repository, password, and key. It does not depend on Task Runner being deployed.
+    The script works on a fresh cluster with the repository, password, and key. It does not depend on FL0W being deployed.
 
     '
   deepDive: 'The repository is at `state_backups/restic` in the Syncthing-replicated Main/Infra tree. Only srv0 writes it; wait for Syncthing to settle before restoring from a peer.
 
 
-    The restic password lives in the private `dscpln-config` checkout. Record it off-cluster; a fresh restore needs it.'
+    The restic password lives in the private `fl0w-config` checkout. Record it off-cluster; a fresh restore needs it.'
   reveal:
   - srv0/ops/backups
   - concept/backups/restic-repository
@@ -1921,5 +1921,5 @@ steps:
   code:
   - path: scripts/restic-restore.sh
     summary: Lists and restores PVC/Compose snapshots.
-  - path: targets/srv0/k3s-apps/templates/dscpln-task-runner.yaml
-    summary: The Task Runner backup instance.
+  - path: targets/srv0/k3s-apps/templates/fl0w.yaml
+    summary: The FL0W backup instance.

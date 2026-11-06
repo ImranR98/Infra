@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# DESC: Check (and optionally create) the host paths the Task Runner mounts.
+# DESC: Check (and optionally create) the host paths FL0W mounts.
 # Run this on the host that owns the Main tree before the first deploy.
 #
 #   bash scripts/preflight-task-runner.sh
@@ -19,7 +19,7 @@ set_my_uid
 
 FIX=0
 MAIN_PARENT_DIR="${MAIN_PARENT_DIR:-}"
-CONFIG_DIR="${TASK_RUNNER_CONFIG_DIR:-}"
+CONFIG_DIR="${FL0W_CONFIG_DIR:-}"
 while [ $# -gt 0 ]; do
     case "$1" in
         --fix) FIX=1 ;;
@@ -46,9 +46,9 @@ if [ -z "$MAIN_PARENT_DIR" ] || [ "$MAIN_PARENT_DIR" = "null" ]; then
 fi
 
 MAIN_DIR="$MAIN_PARENT_DIR/Main"
-CONFIG_DIR="${CONFIG_DIR:-$(config_yaml srv0 .DSCPLN_CONFIG_PATH || true)}"
+CONFIG_DIR="${CONFIG_DIR:-$(config_yaml srv0 .FL0W_CONFIG_PATH || true)}"
 if [ -z "$CONFIG_DIR" ] || [ "$CONFIG_DIR" = "null" ]; then
-    CONFIG_DIR="$MAIN_DIR/Code/Automation/dscpln-config"
+    CONFIG_DIR="$MAIN_DIR/Code/Apps/FL0W/config"
 fi
 MEDIA_DIR="$(config_yaml srv0 .MEDIA_DIR_PATH || true)"
 if [ -z "$MEDIA_DIR" ] || [ "$MEDIA_DIR" = "null" ]; then
@@ -77,14 +77,14 @@ check_dir() {
     fi
 }
 
-echo "==> Task Runner host paths (UID $MY_UID)"
+echo "==> FL0W host paths (UID $MY_UID)"
 for dir in "${REQUIRED[@]}"; do
     check_dir "$dir"
 done
 
 if [ ! -d "$CONFIG_DIR" ]; then
     echo "  [MISSING] $CONFIG_DIR" >&2
-    echo "Clone the private dscpln-config repo there as UID $MY_UID first." >&2
+    echo "Clone the private fl0w-config repo there as UID $MY_UID first." >&2
     exit 1
 fi
 owner="$(stat -c %u "$CONFIG_DIR")"
@@ -113,4 +113,4 @@ done
 if [ "$fail" -ne 0 ]; then
     exit 1
 fi
-echo "==> Task Runner host paths are ready"
+echo "==> FL0W host paths are ready"

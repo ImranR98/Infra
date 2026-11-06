@@ -41,7 +41,19 @@ chart-scoped.
 {{- end -}}
 
 {{- define "path.dscplnConfig" -}}
-{{- if .Values.DSCPLN_CONFIG_PATH -}}{{ .Values.DSCPLN_CONFIG_PATH }}{{- else -}}{{ include "path.main" . }}/Code/Automation/dscpln-config{{- end -}}
+{{- if .Values.DSCPLN_CONFIG_PATH -}}{{ .Values.DSCPLN_CONFIG_PATH }}{{- else -}}{{ include "path.main" . }}/Code/Apps/DSCPLN/config{{- end -}}
+{{- end -}}
+
+{{- define "path.watxtConfig" -}}
+{{- if .Values.WATXT_CONFIG_PATH -}}{{ .Values.WATXT_CONFIG_PATH }}{{- else -}}{{ include "path.main" . }}/Code/Apps/WATXT/config{{- end -}}
+{{- end -}}
+
+{{- define "path.fl0wConfig" -}}
+{{- if .Values.FL0W_CONFIG_PATH -}}{{ .Values.FL0W_CONFIG_PATH }}{{- else -}}{{ include "path.main" . }}/Code/Apps/FL0W/config{{- end -}}
+{{- end -}}
+
+{{- define "path.da5hConfig" -}}
+{{- if .Values.DA5H_CONFIG_PATH -}}{{ .Values.DA5H_CONFIG_PATH }}{{- else -}}{{ include "path.main" . }}/Code/Apps/DA5H/config{{- end -}}
 {{- end -}}
 
 {{- define "path.dscplnLedger" -}}

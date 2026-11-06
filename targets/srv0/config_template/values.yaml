@@ -27,6 +27,9 @@ TZ: "America/Toronto"
 # in sync with the HTTPRoutes; validate.sh checks route/SAN drift.
 PUBLIC_HOSTS:
   - dscpln
+  - watxt
+  - fl0w
+  - da5h
   - fmd
   - rss
   - frigate
@@ -348,30 +351,34 @@ PLIK_ADMIN_PASSWORD: "change_me" # openssl rand -hex 16
 # method; the client secret is AUTHELIA_FILEBROWSER_CLIENT_SECRET_HASHABLE.
 FILEBROWSER_JWT_TOKEN_SECRET: "change_me" # openssl rand -base64 32
 
-# ====== D$CPLN ======
+# ====== D$CPLN / FL0W / W@TXT / DA5H ======
 # Directory of the git-tracked Excel ledger. Defaults to
 # <MAIN_PARENT_DIR>/Main/Documents/Balance.
 DSCPLN_LEDGER_PATH: ""
-# Checkout of the private D$CPLN config repo (config.mjs, apps/, tools/).
-# Defaults to <MAIN_PARENT_DIR>/Main/Code/Automation/dscpln-config.
+# Private config checkouts. Each app keeps its config repo in a gitignored
+# config/ directory inside its own checkout. Defaults:
+#   <MAIN_PARENT_DIR>/Main/Code/Apps/<app>/config
 DSCPLN_CONFIG_PATH: ""
-# Per-node D$CPLN agents. Each entry renders a dscpln-agent-<name>
+WATXT_CONFIG_PATH: ""
+FL0W_CONFIG_PATH: ""
+DA5H_CONFIG_PATH: ""
+# Per-node FL0W agents. Each entry renders a fl0w-agent-<name>
 # Deployment/Service, a ConfigMap for agent.json, a local PV/PVC for
 # <stateSubdir>/state (token + state), a local PV/PVC per data mount, and one
 # artifact-fetch initContainer per artifact. The PV nodeAffinity pins the pod
 # to the named node.
 #
 # Data mounts are read-only by default; set `readOnly: false` for an output
-# directory. `runtime: gtk` selects dscpln-agent-gtk; otherwise the slim agent
+# directory. `runtime: gtk` selects fl0w-agent-gtk; otherwise the slim agent
 # is used. A process job runs a configured binary, writes an optional request
 # body to <configDir>/<configFile>, and can summarize/validate JSON stdout.
 # Artifact versions come from committed values (LUDUSAVI_VERSION for Ludusavi)
 # unless an artifact sets its own `version`. The real config belongs in
 # config/srv0/values.yaml:
-# DSCPLN_AGENTS:
+# FL0W_AGENTS:
 #   node1:
 #     node: node1
-#     stateSubdir: dscpln-agent
+#     stateSubdir: fl0w-agent
 #     runtime: gtk
 #     artifacts:
 #       - name: tool
@@ -400,13 +407,13 @@ DSCPLN_CONFIG_PATH: ""
 #       - name: input
 #         subdir: data/input
 #         mountPath: /data/input
-DSCPLN_AGENTS: {}
-# Balance app config (workbook path, sheets, API state) lives in the private
-# dscpln-config repo under apps/balance-xlsx/.
+FL0W_AGENTS: {}
+# D$CPLN config (workbook path, sheets, API state) lives in the private
+# dscpln-config repo; FL0W, W@TXT and DA5H have their own config repos.
 
-# ====== backupctl (bridge instance) ======
-# Git identity for commits made by backupctl tasks (the app also runs on srv0;
-# config.mjs `host:` fields pin tasks per machine).
+# ====== FL0W task git identity ======
+# Git identity for commits made by FL0W tasks (config.mjs `host:` fields pin
+# tasks per machine).
 BACKUPCTL_GIT_NAME: "change_me"
 BACKUPCTL_GIT_EMAIL: "change_me"
 

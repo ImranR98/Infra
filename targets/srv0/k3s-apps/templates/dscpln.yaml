@@ -1,7 +1,10 @@
+# D$CPLN: the balance dashboard backed by the workbook ledger.
+# Public host root; the token-protected external API bypasses Authelia at /api.
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: dscpln-balance-xlsx
+  name: dscpln
   namespace: apps
 spec:
   replicas: 1
@@ -9,61 +12,51 @@ spec:
     type: Recreate
   selector:
     matchLabels:
-      app: dscpln-balance-xlsx
+      app: dscpln
   template:
     metadata:
       labels:
-        app: dscpln-balance-xlsx
+        app: dscpln
     spec:
       securityContext:
         {{- include "dscpln.podSecurityContext" (dict "uid" .Values.MY_UID "seType" "spc_t" "seLevel" "s0") | nindent 8 }}
       automountServiceAccountToken: false
       containers:
-        - name: dscpln-balance-xlsx
-          image: ghcr.io/imranr98/dscpln-balance:latest@sha256:db4547a912f850088151303965423a611f3ad8a540e783d51370bc78220b48ed
+        - name: dscpln
+          image: ghcr.io/imranr98/dscpln:latest@sha256:3dc36ab3d95d456b455cc8ad0776f800b4000098d18b36f050ab022897458f89
           securityContext:
             {{- include "dscpln.containerSecurityContext" (dict "uid" .Values.MY_UID "readOnlyRootFilesystem" true) | nindent 12 }}
           ports:
             - containerPort: 3300
           resources:
-            # ExcelJS loads the whole workbook (including the hidden sheets),
-            # so the app needs well over the usual Node baseline.
             limits:
               memory: 2Gi
             requests:
               memory: 256Mi
           readinessProbe:
-            {{- include "dscpln.readinessProbe" (dict "path" "/balance/api/health" "port" "3300") | nindent 12 }}
+            {{- include "dscpln.readinessProbe" (dict "path" "/api/health" "port" "3300") | nindent 12 }}
           env:
-            - name: APP
-              value: balance
-            # Silence Node/libuv io_uring SELinux denials on Fedora nodes.
+            - name: BASE_PATH
+              value: ""
             - name: UV_USE_IO_URING
               value: "0"
             - name: NODE_OPTIONS
               value: "--max-old-space-size=1536"
-            - name: BASE_PATH
-              value: /balance
             - name: DSCPLN_CONFIG
               value: /config/config.json
             - name: AUTH_MODE
               value: proxy-header
-            # The whole /balance/api prefix bypasses Authelia (scripts call it
-            # without a browser session; the app token protects the sensitive
-            # endpoints), so those requests never carry Remote-User either.
             - name: AUTH_EXEMPT_PATHS
               value: /api
-            - name: DSCPLN_ORIGIN
+            - name: APP_ORIGIN
               value: "https://dscpln.{{ .Values.SERVICES_DOMAIN }}"
-            # Notifications relay through the portal (ntfy URL/token live there).
-            - name: DSCPLN_PORTAL_URL
-              value: http://dscpln-portal:8080
+            - name: NOTIFY_RELAY_URL
+              value: http://da5h:8080
           volumeMounts:
             - name: tmp
               mountPath: /tmp
             - name: config
               mountPath: /config
-              subPath: apps/balance-xlsx
               readOnly: true
             # The git-tracked ledger repo lives on its own local PV, so the
             # claim (not a nodeSelector) pins the app to srv0.
@@ -76,12 +69,12 @@ spec:
             sizeLimit: 256Mi
         - name: config
           persistentVolumeClaim:
-            claimName: dscpln-config-pvc
+            claimName: dscpln-app-config-pvc
         - name: dscpln-ledger
           persistentVolumeClaim:
             claimName: dscpln-ledger-pvc
 ---
-{{ include "dscpln.service" (dict "name" "dscpln-balance-xlsx" "port" 3300) }}
+{{ include "dscpln.service" (dict "name" "dscpln" "port" 3300) }}
 ---
 apiVersion: v1
 kind: PersistentVolume
@@ -120,22 +113,22 @@ spec:
       storage: 100Mi
   volumeName: dscpln-ledger-pv
 ---
-# The task-runner's Wealthsimple import calls the external API directly;
-# deny-all-ingress otherwise blocks pod-to-pod traffic.
+# FL0W's Wealthsimple import calls the external API directly; deny-all-ingress
+# otherwise blocks pod-to-pod traffic.
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: allow-dscpln-task-runner-ingress
+  name: allow-fl0w-dscpln-ingress
   namespace: apps
 spec:
   podSelector:
     matchLabels:
-      app: dscpln-balance-xlsx
+      app: dscpln
   ingress:
     - from:
         - podSelector:
             matchLabels:
-              app: dscpln-task-runner
+              app: fl0w
       ports:
         - port: 3300
   policyTypes:

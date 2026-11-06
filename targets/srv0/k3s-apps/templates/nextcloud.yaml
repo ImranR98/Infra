@@ -84,9 +84,8 @@ spec:
   policyTypes:
     - Ingress
 ---
-# The D$CPLN Task Runner's Contacts job discovers and exports address
-# books/calendars over DAV, so it is allowed to reach Nextcloud (the namespace
-# default is Traefik only).
+# FL0W's Contacts job discovers and exports address books/calendars over DAV,
+# so it is allowed to reach Nextcloud (the namespace default is Traefik only).
 ---
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
@@ -101,7 +100,7 @@ spec:
     - from:
         - podSelector:
             matchLabels:
-              app: dscpln-task-runner
+              app: fl0w
       ports:
         - protocol: TCP
           port: 80

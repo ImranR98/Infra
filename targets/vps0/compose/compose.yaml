@@ -1060,14 +1060,14 @@ services:
         logging: *logging
         # If services are unreachable: ufw allow from 172.19.0.0/24 to any port 443 proto tcp
 
-    # D$CPLN archive agent: streams the vps0 Compose state to the Task Runner
-    # over the public-exposure tunnel. The same generic image as the K3s
-    # dscpln-agent on bigpc; the job/config live in config/vps0/dscpln-agent/.
-    dscpln-agent:
+    # FL0W archive agent: streams the vps0 Compose state to FL0W over the
+    # public-exposure tunnel. The same generic image as the K3s fl0w-agent on
+    # bigpc; the job/config live in config/vps0/fl0w-agent/.
+    fl0w-agent:
         profiles:
-            - dscpln-agent
-        image: ghcr.io/imranr98/dscpln-agent@sha256:de5a063f6cc2caaa036d9de715be800b91eb04b0b67df2d7a243439f21d3c601
-        container_name: dscpln-agent
+            - fl0w-agent
+        image: ghcr.io/imranr98/fl0w-agent@sha256:7455b78268c652f3baf40614465f9186c6f0b1cc51b4d90422649603dd413e29
+        container_name: fl0w-agent
         restart: unless-stopped
         network_mode: host
         depends_on:
@@ -1081,7 +1081,7 @@ services:
         security_opt:
             - no-new-privileges:true
         volumes:
-            - ../../../config/vps0/dscpln-agent/agent.json:/config/agent.json:ro
+            - ../../../config/vps0/fl0w-agent/agent.json:/config/agent.json:ro
             - ../../../current_target/compose_live_state:/data/state:ro
             - ../../../current_target/dscpln-agent/state:/state
         tmpfs:

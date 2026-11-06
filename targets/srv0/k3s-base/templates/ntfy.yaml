@@ -68,14 +68,14 @@ spec:
           podSelector:
             matchLabels:
               app: logtfy
-        # Portal notification relay: the only D$CPLN publisher (apps post to
-        # the portal, never to ntfy directly).
+        # DA5H notification relay: the only publisher (apps post to DA5H,
+        # never to ntfy directly).
         - namespaceSelector:
             matchLabels:
               kubernetes.io/metadata.name: apps
           podSelector:
             matchLabels:
-              app: dscpln-portal
+              app: da5h
         - namespaceSelector:
             matchLabels:
               kubernetes.io/metadata.name: apps

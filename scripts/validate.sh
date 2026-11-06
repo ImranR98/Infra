@@ -295,7 +295,10 @@ check_rendered_paths() {
     done <<'EOF'
 hostpath-main-node-infra-pv|INFRA_ROOT
 hostpath-main-node-media-pv|MEDIA_DIR_PATH
-dscpln-config-pv|DSCPLN_CONFIG_PATH
+dscpln-app-config-pv|DSCPLN_CONFIG_PATH
+watxt-app-config-pv|WATXT_CONFIG_PATH
+fl0w-app-config-pv|FL0W_CONFIG_PATH
+da5h-app-config-pv|DA5H_CONFIG_PATH
 external-exposed-node-syslog-pv|JOURNAL_DIR
 EOF
     [ "$ok" = 1 ]
@@ -357,12 +360,12 @@ check_global_config() {
     if [ "$TARGET" = "vps0" ]; then
         profiles="$(config_env vps0 COMPOSE_PROFILES || true)"
         case ",${profiles// /,}," in
-            *,dscpln-agent,*)
-                if [ ! -s "$INFRA_ROOT/config/vps0/dscpln-agent/agent.json" ]; then
-                    _err "ERROR: COMPOSE_PROFILES enables dscpln-agent but config/vps0/dscpln-agent/agent.json is missing"
+            *,fl0w-agent,*)
+                if [ ! -s "$INFRA_ROOT/config/vps0/fl0w-agent/agent.json" ]; then
+                    _err "ERROR: COMPOSE_PROFILES enables fl0w-agent but config/vps0/fl0w-agent/agent.json is missing"
                     ok=0
-                elif grep -q '<[A-Za-z]' "$INFRA_ROOT/config/vps0/dscpln-agent/agent.json"; then
-                    _err "ERROR: config/vps0/dscpln-agent/agent.json still contains template placeholders"
+                elif grep -q '<[A-Za-z]' "$INFRA_ROOT/config/vps0/fl0w-agent/agent.json"; then
+                    _err "ERROR: config/vps0/fl0w-agent/agent.json still contains template placeholders"
                     ok=0
                 fi
                 ;;

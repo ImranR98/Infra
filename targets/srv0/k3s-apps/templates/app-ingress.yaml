@@ -1,12 +1,7 @@
-# D$CPLN consolidated ingress: ONE TLS certificate and ONE HTTPRoute serving
-# every function under https://dscpln.<domain>/<function> (plus the portal at
-# /).
+# Per-app ingress. Each app has its own host.
 #
-# Routes live in `base` because Traefik resolves Middleware ExtensionRefs only
-# in the route's namespace, and the shared middlewares live there.
-#
-# Rule order matters: the token-protected external API bypasses Authelia and
-# must be matched before the /balance catch-all.
+# Rule order matters on the D$CPLN host: the token-protected external API
+# bypasses Authelia and must match before the UI catch-all.
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
@@ -15,7 +10,6 @@ metadata:
   namespace: base
 spec:
   parentRefs:
-    # Public (websecure-proxy, via the vps0 tunnel) + LAN/VPN (websecure).
     - name: srv0
       sectionName: websecure
     - name: srv0
@@ -23,15 +17,10 @@ spec:
   hostnames:
     - dscpln.{{ .Values.SERVICES_DOMAIN }}
   rules:
-    # The external API is deliberately unauthenticated at the proxy: it is
-    # token-protected by the app and called by scripts, not browsers. geoblock
-    # and CrowdSec still apply; Authelia does not (the token itself lives on
-    # /balance/settings, which stays behind the catch-all below). The app's
-    # Remote-User guard mirrors this with AUTH_EXEMPT_PATHS=/api.
     - matches:
         - path:
             type: PathPrefix
-            value: /balance/api
+            value: /api
       filters:
         - type: ExtensionRef
           extensionRef:
@@ -44,129 +33,9 @@ spec:
             kind: Middleware
             name: crowdsec-bouncer
       backendRefs:
-        - name: dscpln-balance-xlsx
+        - name: dscpln
           namespace: apps
           port: 3300
-    - matches:
-        - path:
-            type: PathPrefix
-            value: /balance
-      filters:
-        - type: ExtensionRef
-          extensionRef:
-            group: traefik.io
-            kind: Middleware
-            name: geoblock
-        - type: ExtensionRef
-          extensionRef:
-            group: traefik.io
-            kind: Middleware
-            name: crowdsec-bouncer
-        - type: ExtensionRef
-          extensionRef:
-            group: traefik.io
-            kind: Middleware
-            name: forwardauth-authelia
-      backendRefs:
-        - name: dscpln-balance-xlsx
-          namespace: apps
-          port: 3300
-    - matches:
-        - path:
-            type: PathPrefix
-            value: /pipelines
-      filters:
-        - type: ExtensionRef
-          extensionRef:
-            group: traefik.io
-            kind: Middleware
-            name: geoblock
-        - type: ExtensionRef
-          extensionRef:
-            group: traefik.io
-            kind: Middleware
-            name: crowdsec-bouncer
-        # The UI can delete files, so access is admin-only two_factor
-        # (wildcard rule in authelia.yaml).
-        - type: ExtensionRef
-          extensionRef:
-            group: traefik.io
-            kind: Middleware
-            name: forwardauth-authelia
-      backendRefs:
-        - name: dscpln-file-pipelines
-          namespace: apps
-          port: 8791
-    - matches:
-        - path:
-            type: PathPrefix
-            value: /watxt
-      filters:
-        - type: ExtensionRef
-          extensionRef:
-            group: traefik.io
-            kind: Middleware
-            name: geoblock
-        - type: ExtensionRef
-          extensionRef:
-            group: traefik.io
-            kind: Middleware
-            name: crowdsec-bouncer
-        - type: ExtensionRef
-          extensionRef:
-            group: traefik.io
-            kind: Middleware
-            name: forwardauth-authelia
-      backendRefs:
-        - name: dscpln-whatsapp-txt
-          namespace: apps
-          port: 8787
-    - matches:
-        - path:
-            type: PathPrefix
-            value: /tasks
-      filters:
-        - type: ExtensionRef
-          extensionRef:
-            group: traefik.io
-            kind: Middleware
-            name: geoblock
-        - type: ExtensionRef
-          extensionRef:
-            group: traefik.io
-            kind: Middleware
-            name: crowdsec-bouncer
-        # Can run arbitrary configured tasks and write into the backup tree.
-        - type: ExtensionRef
-          extensionRef:
-            group: traefik.io
-            kind: Middleware
-            name: forwardauth-authelia
-      backendRefs:
-        - name: dscpln-task-runner
-          namespace: apps
-          port: 8085
-    - matches:
-        - path:
-            type: PathPrefix
-            value: /lockdown
-      filters:
-        # Deliberately no geoblock: this is the out-of-house break-glass page,
-        # and the operator travels outside the normal country allowlist.
-        - type: ExtensionRef
-          extensionRef:
-            group: traefik.io
-            kind: Middleware
-            name: crowdsec-bouncer
-        - type: ExtensionRef
-          extensionRef:
-            group: traefik.io
-            kind: Middleware
-            name: forwardauth-authelia
-      backendRefs:
-        - name: dscpln-lockdown
-          namespace: apps
-          port: 8086
     - matches:
         - path:
             type: PathPrefix
@@ -188,6 +57,144 @@ spec:
             kind: Middleware
             name: forwardauth-authelia
       backendRefs:
-        - name: dscpln-portal
+        - name: dscpln
+          namespace: apps
+          port: 3300
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: watxt-ingress
+  namespace: base
+spec:
+  parentRefs:
+    - name: srv0
+      sectionName: websecure
+    - name: srv0
+      sectionName: websecure-proxy
+  hostnames:
+    - watxt.{{ .Values.SERVICES_DOMAIN }}
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      filters:
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: geoblock
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: crowdsec-bouncer
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: forwardauth-authelia
+      backendRefs:
+        - name: watxt
+          namespace: apps
+          port: 8787
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: fl0w-ingress
+  namespace: base
+spec:
+  parentRefs:
+    - name: srv0
+      sectionName: websecure
+    - name: srv0
+      sectionName: websecure-proxy
+  hostnames:
+    - fl0w.{{ .Values.SERVICES_DOMAIN }}
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      filters:
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: geoblock
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: crowdsec-bouncer
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: forwardauth-authelia
+      backendRefs:
+        - name: fl0w
+          namespace: apps
+          port: 8085
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: da5h-ingress
+  namespace: base
+spec:
+  parentRefs:
+    - name: srv0
+      sectionName: websecure
+    - name: srv0
+      sectionName: websecure-proxy
+  hostnames:
+    - da5h.{{ .Values.SERVICES_DOMAIN }}
+  rules:
+    # Deliberately no geoblock: Lockdown is the out-of-house break-glass page,
+    # and the operator travels outside the normal country allowlist.
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /lockdown
+      filters:
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: crowdsec-bouncer
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: forwardauth-authelia
+      backendRefs:
+        - name: da5h
+          namespace: apps
+          port: 8080
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      filters:
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: geoblock
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: crowdsec-bouncer
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: forwardauth-authelia
+      backendRefs:
+        - name: da5h
           namespace: apps
           port: 8080

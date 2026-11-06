@@ -1,0 +1,49 @@
+# Per-app private config checkouts. Each app keeps its config repo in a
+# gitignored config/ directory inside its own checkout; these narrow local PVs
+# expose only that directory to the cluster. The hostpath-main affinity pins
+# every consumer to srv0, so the workloads need no nodeSelector.
+{{- $apps := list
+  (dict "name" "dscpln" "path" (include "path.dscplnConfig" .) "size" "1Gi")
+  (dict "name" "watxt" "path" (include "path.watxtConfig" .) "size" "1Gi")
+  (dict "name" "fl0w" "path" (include "path.fl0wConfig" .) "size" "4Gi")
+  (dict "name" "da5h" "path" (include "path.da5hConfig" .) "size" "1Gi")
+-}}
+{{- range $app := $apps }}
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: {{ $app.name }}-app-config-pv
+spec:
+  capacity:
+    storage: {{ $app.size }}
+  volumeMode: Filesystem
+  accessModes:
+    - ReadWriteMany
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: hostpath
+  local:
+    path: {{ $app.path }}
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - key: infra.local/hostpath-main
+              operator: In
+              values:
+                - "true"
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ $app.name }}-app-config-pvc
+  namespace: apps
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: hostpath
+  resources:
+    requests:
+      storage: {{ $app.size }}
+  volumeName: {{ $app.name }}-app-config-pv
+{{- end }}

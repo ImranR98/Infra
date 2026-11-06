@@ -1,5 +1,5 @@
 #!/bin/bash
-# restic-restore.sh — manual restore for the D$CPLN State Backups repository.
+# restic-restore.sh — manual restore for the FL0W State Backups repository.
 #
 # The app is backup-only; this script is the recovery path and works without
 # the app (or on a fresh cluster). Run it on srv0 with the repo present.
@@ -23,10 +23,10 @@ source "$INFRA_ROOT/scripts/common.sh"
 
 STATE_BACKUP_DIR="${STATE_BACKUP_DIR:-$INFRA_ROOT/state_backups}"
 RESTIC_REPOSITORY="${RESTIC_REPOSITORY:-$STATE_BACKUP_DIR/restic}"
-DSCPLN_CONFIG_DIR="${DSCPLN_CONFIG_DIR:-$(config_yaml srv0 .DSCPLN_CONFIG_PATH || true)}"
-if [ -z "$DSCPLN_CONFIG_DIR" ] || [ "$DSCPLN_CONFIG_DIR" = "null" ]; then
+FL0W_CONFIG_DIR="${FL0W_CONFIG_DIR:-${DSCPLN_CONFIG_DIR:-$(config_yaml srv0 .FL0W_CONFIG_PATH || true)}}"
+if [ -z "$FL0W_CONFIG_DIR" ] || [ "$FL0W_CONFIG_DIR" = "null" ]; then
     _main_parent="$(config_yaml srv0 .MAIN_PARENT_DIR || true)"
-    DSCPLN_CONFIG_DIR="$_main_parent/Main/Code/Automation/dscpln-config"
+    FL0W_CONFIG_DIR="$_main_parent/Main/Code/Apps/FL0W/config"
 fi
 RESTIC_CACHE_DIR="${RESTIC_CACHE_DIR:-$HOME/.cache/restic}"
 SSH_KEY_FILE="${SSH_KEY_FILE:-$INFRA_ROOT/config/state-backup-vps0/id_ed25519}"
@@ -34,17 +34,17 @@ KNOWN_HOSTS="${KNOWN_HOSTS:-$HOME/.ssh/known_hosts}"
 VPS0_HOST="${VPS0_HOST:-vps0.example.org}"
 VPS0_USER="${VPS0_USER:-root}"
 
-# The repository password lives outside git in the private dscpln-config
+# The repository password lives outside git in the private fl0w-config
 # checkout; the old public default was removed during the 2026-10 migration.
 if [ -z "${RESTIC_PASSWORD:-}" ]; then
-    if [ -r "$DSCPLN_CONFIG_DIR/secrets/restic-password" ]; then
-        RESTIC_PASSWORD="$(cat "$DSCPLN_CONFIG_DIR/secrets/restic-password")"
-    elif [ -r "$DSCPLN_CONFIG_DIR/secrets.json" ] && command -v jq >/dev/null 2>&1; then
-        RESTIC_PASSWORD="$(jq -r '.restic_password // empty' "$DSCPLN_CONFIG_DIR/secrets.json")"
+    if [ -r "$FL0W_CONFIG_DIR/secrets/restic-password" ]; then
+        RESTIC_PASSWORD="$(cat "$FL0W_CONFIG_DIR/secrets/restic-password")"
+    elif [ -r "$FL0W_CONFIG_DIR/secrets.json" ] && command -v jq >/dev/null 2>&1; then
+        RESTIC_PASSWORD="$(jq -r '.restic_password // empty' "$FL0W_CONFIG_DIR/secrets.json")"
     fi
 fi
 [ -n "${RESTIC_PASSWORD:-}" ] || {
-    echo "RESTIC_PASSWORD is not set and $DSCPLN_CONFIG_DIR/secrets/restic-password is missing" >&2
+    echo "RESTIC_PASSWORD is not set and $FL0W_CONFIG_DIR/secrets/restic-password is missing" >&2
     exit 1
 }
 

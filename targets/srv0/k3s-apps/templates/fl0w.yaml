@@ -1,15 +1,10 @@
 {{- $homeDir := include "path.home" . -}}
-# backupctl (D$CPLN Task Runner) — the config-driven workflow runner. It runs
-# the scheduled state-backup task as root (the PVC data is owned by fixed
-# Postgres/Redis UIDs) and serves the same UI behind Authelia. The private
-# dscpln-config checkout supplies config.mjs, apps/ and tools/; it is mounted
-# read-write so the UI can persist task-meta.json and Contacts Discover can
-# update tools/contacts/config.json. `host:` fields pin tasks to a machine
-# (BACKUPCTL_HOST).
+# FL0W: unified tasks + file pipelines.
+#
+# One process runs the task scheduler, the file-pipeline watcher/queue and the
+# optional Selenium login browser. It runs as root so backup tasks can read
+# every app PVC; user-data tasks drop to MY_UID via their run_as fields.
 ---
-# Deliberately NOT labeled auto-backup: this holds tool venvs (captured scrape
-# output). Backing it up would copy financial/2FA-adjacent data onto every
-# synced device. Task Runner state lives in the gitignored config-repo folder.
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -23,8 +18,6 @@ spec:
     requests:
       storage: 1Gi
 ---
-# Restic cache and backup-runner scratch. Deliberately NOT auto-backup: the
-# cache is derived data and the runner state can contain paths/metadata.
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -38,11 +31,6 @@ spec:
     requests:
       storage: 10Gi
 ---
-# Chrome profiles for the login-browser sidecar: logins survive pod restarts
-# (the scraper tools point their --user-data-dir under /home/seluser/.config).
-# Deliberately NOT labeled auto-backup: these profiles carry live third-party
-# sessions (bank/Instacart); a plain-tar archive in the Syncthing-replicated
-# k3s_state_backups tree would be a session-hijack kit.
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -56,17 +44,16 @@ spec:
     requests:
       storage: 1Gi
 ---
-# The backup task lists the auto-backup PVCs; it does not modify them.
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: dscpln-task-runner-backup
+  name: fl0w-backup
   namespace: apps
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: dscpln-task-runner-backup
+  name: fl0w-backup
 rules:
   - apiGroups: [""]
     resources: ["persistentvolumeclaims"]
@@ -75,20 +62,20 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: dscpln-task-runner-backup
+  name: fl0w-backup
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: dscpln-task-runner-backup
+  name: fl0w-backup
 subjects:
   - kind: ServiceAccount
-    name: dscpln-task-runner-backup
+    name: fl0w-backup
     namespace: apps
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: dscpln-task-runner
+  name: fl0w
   namespace: apps
 spec:
   replicas: 1
@@ -97,26 +84,21 @@ spec:
     type: Recreate
   selector:
     matchLabels:
-      app: dscpln-task-runner
+      app: fl0w
   template:
     metadata:
       labels:
-        app: dscpln-task-runner
+        app: fl0w
     spec:
-      serviceAccountName: dscpln-task-runner-backup
+      serviceAccountName: fl0w-backup
       automountServiceAccountToken: true
       securityContext:
-        # Root is required to read the Postgres/Redis-owned PVC data; spc_t
-        # lets the pod read the user-home config checkout without relabeling.
-        # User-data tasks drop to MY_UID via their run_as field.
         runAsUser: 0
         runAsGroup: {{ .Values.MY_UID }}
         seLinuxOptions:
           type: spc_t
           level: s0
       initContainers:
-        # Normalize only the directories the app manages plus the top-level
-        # data mounts. Do not recurse into the Main trees: they can be large.
         - name: prepare-runtime
           image: busybox:1.38.0-uclibc@sha256:b2e35951f72501f6a99f1bf45bcfe6d4795be08c518c2f97d0ed2fe776958a3b
           imagePullPolicy: IfNotPresent
@@ -127,8 +109,6 @@ spec:
               uid={{ .Values.MY_UID }}
               gid={{ .Values.MY_UID }}
 
-              # Home is writable by user-data tasks (ProtonMail, venvs, adb,
-              # temp files). Keep the root private but traversable.
               mkdir -p {{ $homeDir }}/.cache {{ $homeDir }}/.venvs {{ $homeDir }}/.android {{ $homeDir }}/tmp
               chown "$uid:$gid" {{ $homeDir }}
               chmod 0755 {{ $homeDir }}
@@ -137,27 +117,24 @@ spec:
                 chmod 0700 "$d"
               done
 
-              # User tasks write to these mounted trees; only normalize their
-              # top level so this stays fast and safe on large data sets.
               for d in {{ $homeDir }}/Main/Backups {{ $homeDir }}/Main/Media {{ $homeDir }}/Main/Documents; do
                 [ -d "$d" ] || continue
                 chown "$uid:$gid" "$d"
                 chmod 2775 "$d"
               done
 
-              # The config repo stores UI metadata, schedules and run state.
-              chown "$uid:$gid" /config-src
-              chmod 2755 /config-src
-              mkdir -p /config-src/.task-runner
-              chown -R "$uid:$gid" /config-src/.task-runner
-              find /config-src/.task-runner -type d -exec chmod 0700 {} \;
-              if [ -e /config-src/task-meta.json ]; then
-                chown "$uid:$gid" /config-src/task-meta.json
-                chmod 0664 /config-src/task-meta.json
+              chown "$uid:$gid" /config
+              chmod 2755 /config
+              mkdir -p /config/.state
+              chown -R "$uid:$gid" /config/.state
+              find /config/.state -type d -exec chmod 0700 {} \;
+              if [ -e /config/task-meta.json ]; then
+                chown "$uid:$gid" /config/task-meta.json
+                chmod 0664 /config/task-meta.json
               fi
-              if [ -e /config-src/tools/contacts/config.json ]; then
-                chown "$uid:$gid" /config-src/tools/contacts/config.json
-                chmod 0644 /config-src/tools/contacts/config.json
+              if [ -e /config/tools/contacts/config.json ]; then
+                chown "$uid:$gid" /config/tools/contacts/config.json
+                chmod 0644 /config/tools/contacts/config.json
               fi
           securityContext:
             runAsUser: 0
@@ -183,11 +160,11 @@ spec:
               mountPath: {{ $homeDir }}/Main/Media
             - name: main-documents
               mountPath: {{ $homeDir }}/Main/Documents
-            - name: config-src
-              mountPath: /config-src
+            - name: config
+              mountPath: /config
       containers:
-        - name: dscpln-task-runner
-          image: ghcr.io/imranr98/dscpln-task-runner:latest@sha256:db4547a912f850088151303965423a611f3ad8a540e783d51370bc78220b48ed
+        - name: fl0w
+          image: ghcr.io/imranr98/fl0w:latest@sha256:4a1b56d138174bf301f99b6a0b27e341d26318474640f5fa6d5dc7ece769fa31
           imagePullPolicy: IfNotPresent
           securityContext:
             runAsUser: 0
@@ -197,12 +174,9 @@ spec:
               drop:
                 - ALL
               add:
-                # The backup repository and host paths are owned by MY_UID.
                 - DAC_OVERRIDE
                 - FOWNER
                 - CHOWN
-                # Drop user-data tasks to the host UID/GID; the server stays
-                # root so backup tasks can still read every app PVC.
                 - SETUID
                 - SETGID
             seccompProfile:
@@ -213,34 +187,24 @@ spec:
             - name: http
               containerPort: 8085
           env:
-            - name: APP
-              value: task-runner
             - name: HOME
               value: {{ $homeDir }}
             - name: TZ
               value: America/Toronto
-            # Tasks pinned to another machine show as unavailable on this one.
-            - name: BACKUPCTL_HOST
-              value: srv0
-            - name: BACKUPCTL_CONFIG_FILE
-              value: /config-src/config.mjs
-            # The monorepo root baked into the image (the repo_dir token).
+            - name: FL0W_CONFIG
+              value: /config/config.mjs
+            - name: FL0W_PIPELINES_CONFIG
+              value: /config/apps/file-pipelines/config.json
+            - name: FL0W_STATE_DIR
+              value: /config/.state
+            - name: FL0W_TMP_DIR
+              value: {{ $homeDir }}/tmp
             - name: BACKUPCTL_REPO_DIR
               value: /app
-            # Gitignored state folder in the config repo; owned by the host
-            # user so Syncthing can carry run/schedule state.
-            - name: BACKUPCTL_STATE_DIR
-              value: /config-src/.task-runner
-            - name: BACKUPCTL_STATE_UID
-              value: "{{ .Values.MY_UID }}"
-            - name: BACKUPCTL_STATE_GID
-              value: "{{ .Values.MY_UID }}"
-            - name: BACKUPCTL_TMP_DIR
-              value: {{ $homeDir }}/tmp
-            # Scheduled workflows (State Backups) run on this instance.
+            - name: BACKUPCTL_HOST
+              value: srv0
             - name: BACKUPCTL_SCHEDULES
               value: "1"
-            # Git identity for task commits (lib.sh git-commit).
             - name: GIT_AUTHOR_NAME
               value: {{ .Values.BACKUPCTL_GIT_NAME | quote }}
             - name: GIT_AUTHOR_EMAIL
@@ -250,56 +214,54 @@ spec:
             - name: GIT_COMMITTER_EMAIL
               value: {{ .Values.BACKUPCTL_GIT_EMAIL | quote }}
             - name: BASE_PATH
-              value: /tasks
-            # Requests must carry Authelia's Remote-User (stamped by Traefik
-            # forward-auth); the raw /browser WS upgrade is checked too.
+              value: ""
             - name: AUTH_MODE
               value: proxy-header
             - name: AUTH_EXEMPT_PATHS
               value: /api/metrics
-            # Login-browser sidecar: noVNC viewer proxied at /tasks/browser/,
-            # WebDriver for the scraper tools (local Chrome when unset).
             - name: BROWSER_REMOTE
               value: http://localhost:7900
             - name: SELENIUM_REMOTE_URL
               value: http://localhost:4444
-            # Notification relay and deep links.
-            - name: DSCPLN_PORTAL_URL
-              value: http://dscpln-portal:8080
-            - name: DSCPLN_ORIGIN
-              value: "https://dscpln.{{ .Values.SERVICES_DOMAIN }}"
-            # State backups: restic cache and the target GID for the setgid
-            # restic repository.
+            - name: NOTIFY_RELAY_URL
+              value: http://da5h:8080
+            - name: APP_ORIGIN
+              value: "https://fl0w.{{ .Values.SERVICES_DOMAIN }}"
             - name: RESTIC_CACHE_DIR
               value: /backup-data/restic-cache
             - name: RESTIC_GID
               value: "{{ .Values.MY_UID }}"
           resources:
-            # Restic can hold a large index/check working set; the browser
-            # sidecar has its own limit.
             limits:
               memory: 2Gi
             requests:
               memory: 256Mi
               cpu: 50m
           readinessProbe:
-            {{- include "dscpln.readinessProbe" (dict "path" "/tasks/api/health" "port" "http") | nindent 12 }}
+            {{- include "dscpln.readinessProbe" (dict "path" "/api/health" "port" "http") | nindent 12 }}
           volumeMounts:
             - name: tmp
               mountPath: /tmp
             - name: staging
               mountPath: /staging
+            - name: source
+              mountPath: /source
+            - name: destination-media
+              mountPath: /destination/Media
+            - name: destination-backups
+              mountPath: /destination/Backups
+            - name: destination-whatsapp
+              mountPath: /destination/WhatsApp
+            - name: appdata
+              mountPath: /appdata
             - name: home
               mountPath: {{ $homeDir }}
-            # Narrow per-tree mounts (the tasks only ever touch these three
-            # top-level dirs); no whole-Main mount.
             - name: main-backups
               mountPath: {{ $homeDir }}/Main/Backups
             - name: main-media
               mountPath: {{ $homeDir }}/Main/Media
             - name: main-documents
               mountPath: {{ $homeDir }}/Main/Documents
-            # The backup task reads the live K3s app data and Compose state.
             - name: infra-current
               mountPath: {{ $homeDir }}/Main/Infra/current_target
               readOnly: true
@@ -307,19 +269,11 @@ spec:
               mountPath: {{ $homeDir }}/Main/Infra/state_backups
             - name: backup-data
               mountPath: /backup-data
-            # The Syncthing-synced private config checkout; a directory mount
-            # (not a file) so atomic config replacements are seen. Writable:
-            # the UI commits task-meta.json and Contacts Discover edits its
-            # collection list here.
-            - name: config-src
-              mountPath: /config-src
-        # The Selenium sidecar a scraper task drives; its viewer is embedded
-        # in the task cards for manual logins (2FA). One session at a time.
+            - name: config
+              mountPath: /config
         - name: browser
           image: selenium/standalone-chromium:4.51.0@sha256:c7c17cd79c62819a8329df00e610dbc4073c279da034a6f37135d454eb0d8870
           securityContext:
-            # The image runs Chrome as seluser (1200); the pod fsGroup (MY_UID)
-            # owns the profile volume, so join that group for write access.
             runAsUser: 1200
             runAsGroup: {{ .Values.MY_UID }}
             allowPrivilegeEscalation: false
@@ -329,7 +283,6 @@ spec:
             seccompProfile:
               type: RuntimeDefault
           env:
-            # Manual logins/2FA can idle for a long time.
             - name: SE_SESSION_TIMEOUT
               value: "7200"
             - name: SE_NODE_MAX_SESSIONS
@@ -360,6 +313,21 @@ spec:
         - name: staging
           emptyDir:
             sizeLimit: 8Gi
+        - name: source
+          persistentVolumeClaim:
+            claimName: hostpath-main-node-devicesync-pvc
+        - name: destination-media
+          persistentVolumeClaim:
+            claimName: hostpath-main-node-media-pvc
+        - name: destination-backups
+          persistentVolumeClaim:
+            claimName: hostpath-main-node-backups-pvc
+        - name: destination-whatsapp
+          persistentVolumeClaim:
+            claimName: hostpath-main-node-whatsapp-pvc
+        - name: appdata
+          persistentVolumeClaim:
+            claimName: hostpath-main-node-file-pipelines-pvc
         - name: home
           persistentVolumeClaim:
             claimName: backupctl-home-pvc
@@ -383,12 +351,9 @@ spec:
         - name: backup-data
           persistentVolumeClaim:
             claimName: task-runner-backup-pvc
-        # The private config checkout (config.mjs + apps/ + tools/) lives on
-        # the shared config PV; writable because the UI commits task-meta.json
-        # and Contacts Discover edits its collection list here.
-        - name: config-src
+        - name: config
           persistentVolumeClaim:
-            claimName: dscpln-config-pvc
+            claimName: fl0w-app-config-pvc
         - name: browser-profile
           persistentVolumeClaim:
             claimName: backupctl-browser-pvc
@@ -397,32 +362,31 @@ spec:
             medium: Memory
             sizeLimit: 1Gi
 ---
-{{ include "dscpln.service" (dict "name" "dscpln-task-runner" "targetPort" "http" "port" 8085) }}
+{{ include "dscpln.service" (dict "name" "fl0w" "targetPort" "http" "port" 8085) }}
 ---
-# Scrape the Task Runner's per-task run gauges (the dead-man switch).
 apiVersion: monitoring.coreos.com/v1
 kind: PodMonitor
 metadata:
-  name: dscpln-task-runner
+  name: fl0w
   namespace: apps
 spec:
   selector:
     matchLabels:
-      app: dscpln-task-runner
+      app: fl0w
   podMetricsEndpoints:
     - port: http
-      path: /tasks/api/metrics
+      path: /api/metrics
       interval: 60s
 ---
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: allow-dscpln-task-runner-metrics-ingress
+  name: allow-fl0w-metrics-ingress
   namespace: apps
 spec:
   podSelector:
     matchLabels:
-      app: dscpln-task-runner
+      app: fl0w
   ingress:
     - from:
         - namespaceSelector:
@@ -436,3 +400,45 @@ spec:
           port: 8085
   policyTypes:
     - Ingress
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-fl0w-vps0-agent-egress
+  namespace: apps
+spec:
+  podSelector:
+    matchLabels:
+      app: fl0w
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - ipBlock:
+            cidr: 10.99.0.1/32
+      ports:
+        - protocol: TCP
+          port: 8788
+---
+# Quest wireless ADB is a LAN device; everything else in the app is cluster or
+# public-internet traffic.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-fl0w-adb-egress
+  namespace: apps
+spec:
+  podSelector:
+    matchLabels:
+      app: fl0w
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - ipBlock:
+            cidr: {{ .Values.LAN_CIDR }}
+      ports:
+        - protocol: TCP
+          port: 5555
+        - protocol: TCP
+          port: 5037

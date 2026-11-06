@@ -1,24 +1,24 @@
-# Generic D$CPLN agents. One Deployment/Service per DSCPLN_AGENTS entry; each
+# Generic FL0W agents. One Deployment/Service per FL0W_AGENTS entry; each
 # entry gets a ConfigMap for agent.json, a local PV/PVC for the state tree, a
 # local PV/PVC per data mount, and one artifact-fetch initContainer per
 # artifact. The PV nodeAffinity pins the pod to the node that owns the paths,
 # so no pod nodeSelector is needed. Job definitions are deployment config.
 {{ $root := . }}
-{{ range $name, $agent := .Values.DSCPLN_AGENTS }}
-{{- $node := required (printf "DSCPLN_AGENTS.%s.node" $name) $agent.node -}}
-{{- $stateSubdir := required (printf "DSCPLN_AGENTS.%s.stateSubdir" $name) $agent.stateSubdir -}}
+{{ range $name, $agent := .Values.FL0W_AGENTS }}
+{{- $node := required (printf "FL0W_AGENTS.%s.node" $name) $agent.node -}}
+{{- $stateSubdir := required (printf "FL0W_AGENTS.%s.stateSubdir" $name) $agent.stateSubdir -}}
 {{- $statePath := printf "%s/%s" $root.Values.MAIN_PARENT_DIR $stateSubdir -}}
-{{- $configJSON := required (printf "DSCPLN_AGENTS.%s.config" $name) $agent.config -}}
+{{- $configJSON := required (printf "FL0W_AGENTS.%s.config" $name) $agent.config -}}
 {{- $gtk := eq (default "slim" $agent.runtime) "gtk" -}}
 ---
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: dscpln-agent-{{ $name }}-config
+  name: fl0w-agent-{{ $name }}-config
   namespace: apps
   labels:
-    app.kubernetes.io/name: dscpln-agent
-    dscpln-agent: {{ $name }}
+    app.kubernetes.io/name: fl0w-agent
+    fl0w-agent: {{ $name }}
 data:
   agent.json: |
 {{ $configJSON | indent 4 }}
@@ -28,7 +28,7 @@ data:
 apiVersion: v1
 kind: PersistentVolume
 metadata:
-  name: dscpln-agent-{{ $name }}-config-pv
+  name: fl0w-agent-{{ $name }}-config-pv
 spec:
   capacity:
     storage: 1Gi
@@ -51,7 +51,7 @@ spec:
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: dscpln-agent-{{ $name }}-config-pvc
+  name: fl0w-agent-{{ $name }}-config-pvc
   namespace: apps
 spec:
   accessModes:
@@ -60,16 +60,16 @@ spec:
   resources:
     requests:
       storage: 1Gi
-  volumeName: dscpln-agent-{{ $name }}-config-pv
+  volumeName: fl0w-agent-{{ $name }}-config-pv
 {{ range $mount := $agent.dataMounts }}
-{{- $mountName := required (printf "DSCPLN_AGENTS.%s.dataMounts[].name" $name) $mount.name -}}
-{{- $mountSubdir := required (printf "DSCPLN_AGENTS.%s.dataMounts[%s].subdir" $name $mountName) $mount.subdir -}}
+{{- $mountName := required (printf "FL0W_AGENTS.%s.dataMounts[].name" $name) $mount.name -}}
+{{- $mountSubdir := required (printf "FL0W_AGENTS.%s.dataMounts[%s].subdir" $name $mountName) $mount.subdir -}}
 {{- $dataPath := printf "%s/%s" $root.Values.MAIN_PARENT_DIR $mountSubdir -}}
 ---
 apiVersion: v1
 kind: PersistentVolume
 metadata:
-  name: dscpln-agent-{{ $name }}-{{ $mountName }}-pv
+  name: fl0w-agent-{{ $name }}-{{ $mountName }}-pv
 spec:
   capacity:
     storage: {{ $mount.capacity | default "4096Gi" }}
@@ -92,7 +92,7 @@ spec:
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: dscpln-agent-{{ $name }}-{{ $mountName }}-pvc
+  name: fl0w-agent-{{ $name }}-{{ $mountName }}-pvc
   namespace: apps
 spec:
   accessModes:
@@ -101,17 +101,17 @@ spec:
   resources:
     requests:
       storage: {{ $mount.capacity | default "4096Gi" }}
-  volumeName: dscpln-agent-{{ $name }}-{{ $mountName }}-pv
+  volumeName: fl0w-agent-{{ $name }}-{{ $mountName }}-pv
 {{ end }}
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: dscpln-agent-{{ $name }}
+  name: fl0w-agent-{{ $name }}
   namespace: apps
   labels:
-    app.kubernetes.io/name: dscpln-agent
-    dscpln-agent: {{ $name }}
+    app.kubernetes.io/name: fl0w-agent
+    fl0w-agent: {{ $name }}
 spec:
   replicas: 1
   revisionHistoryLimit: 2
@@ -119,13 +119,13 @@ spec:
     type: Recreate
   selector:
     matchLabels:
-      app: dscpln-agent-{{ $name }}
+      app: fl0w-agent-{{ $name }}
   template:
     metadata:
       labels:
-        app: dscpln-agent-{{ $name }}
-        app.kubernetes.io/name: dscpln-agent
-        dscpln-agent: {{ $name }}
+        app: fl0w-agent-{{ $name }}
+        app.kubernetes.io/name: fl0w-agent
+        fl0w-agent: {{ $name }}
       annotations:
         checksum/config: {{ $configJSON | sha256sum }}
     spec:
@@ -146,19 +146,19 @@ spec:
       {{- if $agent.artifacts }}
       initContainers:
       {{- range $artifact := $agent.artifacts }}
-      {{- $artifactName := required (printf "DSCPLN_AGENTS.%s.artifacts[].name" $name) $artifact.name }}
-      {{- $artifactRepo := required (printf "DSCPLN_AGENTS.%s.artifacts[%s].repo" $name $artifactName) $artifact.repo }}
-      {{- $artifactAsset := required (printf "DSCPLN_AGENTS.%s.artifacts[%s].asset" $name $artifactName) $artifact.asset }}
-      {{- $artifactMember := required (printf "DSCPLN_AGENTS.%s.artifacts[%s].member" $name $artifactName) $artifact.member }}
-      {{- $artifactDest := required (printf "DSCPLN_AGENTS.%s.artifacts[%s].dest" $name $artifactName) $artifact.dest }}
+      {{- $artifactName := required (printf "FL0W_AGENTS.%s.artifacts[].name" $name) $artifact.name }}
+      {{- $artifactRepo := required (printf "FL0W_AGENTS.%s.artifacts[%s].repo" $name $artifactName) $artifact.repo }}
+      {{- $artifactAsset := required (printf "FL0W_AGENTS.%s.artifacts[%s].asset" $name $artifactName) $artifact.asset }}
+      {{- $artifactMember := required (printf "FL0W_AGENTS.%s.artifacts[%s].member" $name $artifactName) $artifact.member }}
+      {{- $artifactDest := required (printf "FL0W_AGENTS.%s.artifacts[%s].dest" $name $artifactName) $artifact.dest }}
       {{- $artifactVersion := default $root.Values.LUDUSAVI_VERSION $artifact.version }}
       {{- $artifactAsset = replace "{version}" $artifactVersion $artifactAsset }}
       {{- $artifactURL := printf "https://github.com/%s/releases/download/v%s/%s" $artifactRepo $artifactVersion $artifactAsset }}
         - name: fetch-{{ $artifactName }}
           {{- if $gtk }}
-          image: ghcr.io/imranr98/dscpln-agent-gtk@sha256:218af7376f322428351a6859d8e42b43c04dd9a0e96a63e3935aaa7393073192
+          image: ghcr.io/imranr98/fl0w-agent-gtk@sha256:436da63942115e3749db8f79e01740abf8a42628cded066269a887890a7d9705
           {{- else }}
-          image: ghcr.io/imranr98/dscpln-agent@sha256:de5a063f6cc2caaa036d9de715be800b91eb04b0b67df2d7a243439f21d3c601
+          image: ghcr.io/imranr98/fl0w-agent@sha256:7455b78268c652f3baf40614465f9186c6f0b1cc51b4d90422649603dd413e29
           {{- end }}
           imagePullPolicy: IfNotPresent
           command:
@@ -201,9 +201,9 @@ spec:
       containers:
         - name: agent
           {{- if $gtk }}
-          image: ghcr.io/imranr98/dscpln-agent-gtk@sha256:218af7376f322428351a6859d8e42b43c04dd9a0e96a63e3935aaa7393073192
+          image: ghcr.io/imranr98/fl0w-agent-gtk@sha256:436da63942115e3749db8f79e01740abf8a42628cded066269a887890a7d9705
           {{- else }}
-          image: ghcr.io/imranr98/dscpln-agent@sha256:de5a063f6cc2caaa036d9de715be800b91eb04b0b67df2d7a243439f21d3c601
+          image: ghcr.io/imranr98/fl0w-agent@sha256:7455b78268c652f3baf40614465f9186c6f0b1cc51b4d90422649603dd413e29
           {{- end }}
           imagePullPolicy: IfNotPresent
           securityContext:
@@ -247,7 +247,7 @@ spec:
               mountPath: /home/imranr
             {{ range $mount := $agent.dataMounts }}
             - name: data-{{ $mount.name }}
-              mountPath: {{ required (printf "DSCPLN_AGENTS.%s.dataMounts[%s].mountPath" $name $mount.name) $mount.mountPath }}
+              mountPath: {{ required (printf "FL0W_AGENTS.%s.dataMounts[%s].mountPath" $name $mount.name) $mount.mountPath }}
               readOnly: {{ if hasKey $mount "readOnly" }}{{ $mount.readOnly }}{{ else }}true{{ end }}
             {{ end }}
             - name: tmp
@@ -255,16 +255,16 @@ spec:
       volumes:
         - name: config
           configMap:
-            name: dscpln-agent-{{ $name }}-config
+            name: fl0w-agent-{{ $name }}-config
         - name: state
           persistentVolumeClaim:
-            claimName: dscpln-agent-{{ $name }}-config-pvc
+            claimName: fl0w-agent-{{ $name }}-config-pvc
         - name: home
           emptyDir: {}
         {{ range $mount := $agent.dataMounts }}
         - name: data-{{ $mount.name }}
           persistentVolumeClaim:
-            claimName: dscpln-agent-{{ $name }}-{{ $mount.name }}-pvc
+            claimName: fl0w-agent-{{ $name }}-{{ $mount.name }}-pvc
         {{ end }}
         - name: tmp
           emptyDir: {}
@@ -272,11 +272,11 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: dscpln-agent-{{ $name }}
+  name: fl0w-agent-{{ $name }}
   namespace: apps
 spec:
   selector:
-    app: dscpln-agent-{{ $name }}
+    app: fl0w-agent-{{ $name }}
   ports:
     - name: http
       port: 8788
@@ -286,38 +286,19 @@ spec:
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: allow-task-runner-agent-ingress
+  name: allow-fl0w-agent-ingress
   namespace: apps
 spec:
   podSelector:
     matchLabels:
-      app.kubernetes.io/name: dscpln-agent
+      app.kubernetes.io/name: fl0w-agent
   policyTypes:
     - Ingress
   ingress:
     - from:
         - podSelector:
             matchLabels:
-              app: dscpln-task-runner
-      ports:
-        - protocol: TCP
-          port: 8788
----
-apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
-metadata:
-  name: allow-dscpln-task-runner-vps0-agent-egress
-  namespace: apps
-spec:
-  podSelector:
-    matchLabels:
-      app: dscpln-task-runner
-  policyTypes:
-    - Egress
-  egress:
-    - to:
-        - ipBlock:
-            cidr: 10.99.0.1/32
+              app: fl0w
       ports:
         - protocol: TCP
           port: 8788

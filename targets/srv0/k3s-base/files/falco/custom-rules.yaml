@@ -162,10 +162,10 @@
 # any other dropped executable still fires the Critical rule.
 - rule: Drop and execute new binary in container
   exceptions:
-    - name: dscpln_agent_bigpc_ludusavi
+    - name: fl0w_agent_bigpc_ludusavi
       fields: [k8s.ns.name, k8s.pod.name, proc.name, proc.exe]
       comps: ["=", startswith, "=", startswith]
       values:
-        - [apps, dscpln-agent-bigpc-, ludusavi, /state/ludusavi/bin/]
+        - [apps, fl0w-agent-bigpc-, ludusavi, /state/ludusavi/bin/]
   override:
     exceptions: append
