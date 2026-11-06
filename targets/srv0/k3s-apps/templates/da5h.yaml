@@ -47,7 +47,7 @@ spec:
       automountServiceAccountToken: false
       containers:
         - name: da5h
-          image: ghcr.io/imranr98/da5h:latest@sha256:186544e49567f4af966e53282dc7883c6f592f7dfeec8f3b13e1f10a5a250e6a
+          image: ghcr.io/imranr98/da5h:latest@sha256:6d03420a8ab4de472c50b4a6461c125d851fc7fd25b3bdda2ca07886dcf69751
           securityContext:
             {{- include "dscpln.containerSecurityContext" (dict "uid" .Values.MY_UID "readOnlyRootFilesystem" true) | nindent 12 }}
           ports:
@@ -131,7 +131,7 @@ spec:
           level: s0
       containers:
         - name: da5h-blocker
-          image: ghcr.io/imranr98/da5h:latest@sha256:186544e49567f4af966e53282dc7883c6f592f7dfeec8f3b13e1f10a5a250e6a
+          image: ghcr.io/imranr98/da5h:latest@sha256:6d03420a8ab4de472c50b4a6461c125d851fc7fd25b3bdda2ca07886dcf69751
           command: ["node", "src/lockdown/blocker.mjs"]
           securityContext:
             runAsUser: 0
