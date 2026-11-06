@@ -112,7 +112,7 @@ spec:
     - name: srv0
       sectionName: websecure-proxy
   hostnames:
-    - fl0w.{{ .Values.SERVICES_DOMAIN }}
+    - flow.{{ .Values.SERVICES_DOMAIN }}
   rules:
     - matches:
         - path:
@@ -151,7 +151,7 @@ spec:
     - name: srv0
       sectionName: websecure-proxy
   hostnames:
-    - da5h.{{ .Values.SERVICES_DOMAIN }}
+    - dash.{{ .Values.SERVICES_DOMAIN }}
   rules:
     # Deliberately no geoblock: Lockdown is the out-of-house break-glass page,
     # and the operator travels outside the normal country allowlist.

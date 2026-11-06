@@ -74,7 +74,7 @@ spec:
             - name: LOCKDOWN_CONFIG
               value: /config/lockdown.json
             - name: APP_ORIGIN
-              value: "https://da5h.{{ .Values.SERVICES_DOMAIN }}"
+              value: "https://dash.{{ .Values.SERVICES_DOMAIN }}"
             - name: UV_USE_IO_URING
               value: "0"
           resources:

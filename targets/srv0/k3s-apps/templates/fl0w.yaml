@@ -226,7 +226,7 @@ spec:
             - name: NOTIFY_RELAY_URL
               value: http://da5h:8080
             - name: APP_ORIGIN
-              value: "https://fl0w.{{ .Values.SERVICES_DOMAIN }}"
+              value: "https://flow.{{ .Values.SERVICES_DOMAIN }}"
             - name: RESTIC_CACHE_DIR
               value: /backup-data/restic-cache
             - name: RESTIC_GID
