@@ -1062,7 +1062,7 @@ services:
 
     # FL0W archive agent: streams the vps0 Compose state to FL0W over the
     # public-exposure tunnel. The same generic image as the K3s fl0w-agent on
-    # bigpc; the job/config live in config/vps0/fl0w-agent/.
+    # bigpc; the job/config live in config/vps0/dscpln-agent/ (legacy path, kept for continuity).
     fl0w-agent:
         profiles:
             - fl0w-agent
@@ -1081,7 +1081,7 @@ services:
         security_opt:
             - no-new-privileges:true
         volumes:
-            - ../../../config/vps0/fl0w-agent/agent.json:/config/agent.json:ro
+            - ../../../config/vps0/dscpln-agent/agent.json:/config/agent.json:ro
             - ../../../current_target/compose_live_state:/data/state:ro
             - ../../../current_target/dscpln-agent/state:/state
         tmpfs:

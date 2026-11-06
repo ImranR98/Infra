@@ -361,11 +361,11 @@ check_global_config() {
         profiles="$(config_env vps0 COMPOSE_PROFILES || true)"
         case ",${profiles// /,}," in
             *,fl0w-agent,*)
-                if [ ! -s "$INFRA_ROOT/config/vps0/fl0w-agent/agent.json" ]; then
-                    _err "ERROR: COMPOSE_PROFILES enables fl0w-agent but config/vps0/fl0w-agent/agent.json is missing"
+                if [ ! -s "$INFRA_ROOT/config/vps0/dscpln-agent/agent.json" ]; then
+                    _err "ERROR: COMPOSE_PROFILES enables fl0w-agent but config/vps0/dscpln-agent/agent.json is missing"
                     ok=0
-                elif grep -q '<[A-Za-z]' "$INFRA_ROOT/config/vps0/fl0w-agent/agent.json"; then
-                    _err "ERROR: config/vps0/fl0w-agent/agent.json still contains template placeholders"
+                elif grep -q '<[A-Za-z]' "$INFRA_ROOT/config/vps0/dscpln-agent/agent.json"; then
+                    _err "ERROR: config/vps0/dscpln-agent/agent.json still contains template placeholders"
                     ok=0
                 fi
                 ;;
