@@ -23,7 +23,7 @@ spec:
       automountServiceAccountToken: false
       containers:
         - name: dscpln
-          image: ghcr.io/imranr98/dscpln:latest@sha256:3dc36ab3d95d456b455cc8ad0776f800b4000098d18b36f050ab022897458f89
+          image: ghcr.io/imranr98/dscpln:latest@sha256:1bd274e9ae139286a356624f3a5039598b1b40f0137f607198fa61c05c11188e
           securityContext:
             {{- include "dscpln.containerSecurityContext" (dict "uid" .Values.MY_UID "readOnlyRootFilesystem" true) | nindent 12 }}
           ports:

@@ -1066,7 +1066,7 @@ services:
     fl0w-agent:
         profiles:
             - fl0w-agent
-        image: ghcr.io/imranr98/fl0w-agent@sha256:7455b78268c652f3baf40614465f9186c6f0b1cc51b4d90422649603dd413e29
+        image: ghcr.io/imranr98/fl0w-agent@sha256:0650cecd23ec609028bbd8a2703c96d57327c8ad3e9dd64f6af9f9d110e5c62f
         container_name: fl0w-agent
         restart: unless-stopped
         network_mode: host
