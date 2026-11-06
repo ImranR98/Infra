@@ -442,3 +442,24 @@ spec:
           port: 5555
         - protocol: TCP
           port: 5037
+---
+# DA5H's dashboard proxy reads the live FL0W job summary.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-da5h-fl0w-ingress
+  namespace: apps
+spec:
+  podSelector:
+    matchLabels:
+      app: fl0w
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: da5h
+      ports:
+        - protocol: TCP
+          port: 8085
+  policyTypes:
+    - Ingress

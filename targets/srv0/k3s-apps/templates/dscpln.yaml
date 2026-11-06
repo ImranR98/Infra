@@ -129,6 +129,9 @@ spec:
         - podSelector:
             matchLabels:
               app: fl0w
+        - podSelector:
+            matchLabels:
+              app: da5h
       ports:
         - port: 3300
   policyTypes:

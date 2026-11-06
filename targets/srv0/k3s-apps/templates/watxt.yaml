@@ -69,3 +69,23 @@ spec:
             claimName: hostpath-main-node-wa-txt-pvc
 ---
 {{ include "dscpln.service" (dict "name" "watxt" "port" 8787) }}
+---
+# DA5H's dashboard proxy reads the live W@TXT summary.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-da5h-watxt-ingress
+  namespace: apps
+spec:
+  podSelector:
+    matchLabels:
+      app: watxt
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: da5h
+      ports:
+        - port: 8787
+  policyTypes:
+    - Ingress
