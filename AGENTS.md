@@ -46,7 +46,7 @@ bash scripts/compose.sh pc up -d
 # `deploy.sh <target>` runs validate + the appropriate Compose/Helm flow.
 # First-time setup: bash scripts/init-config.sh <target> [--detect]
 
-# Backups (Task Runner scheduled task; manual restore):
+# Backups (FL0W scheduled task; manual restore):
 bash scripts/restic-restore.sh list
 bash scripts/restic-restore.sh pvc <pvc-name> [snapshot] [--live]
 bash scripts/restic-restore.sh compose srv0|vps0 [snapshot] [--live]
