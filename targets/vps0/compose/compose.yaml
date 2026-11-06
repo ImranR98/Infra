@@ -233,6 +233,7 @@ services:
           - ../../../config/vps0/public-exposure/pubexp-server0.conf:/etc/wireguard/pubexp-server0.conf:ro
           - ./files/public-exposure/server-entrypoint.sh:/usr/local/bin/server-entrypoint.sh:ro
           - ./files/public-exposure/apply-forwards.sh:/usr/local/bin/apply-forwards.sh:ro
+          - ../../../scripts/mtu-watch.sh:/usr/local/bin/mtu-watch.sh:ro
           - ./files/public-exposure/forwards.conf:/etc/public-exposure/forwards.conf:ro
         entrypoint: ["/bin/bash", "/usr/local/bin/server-entrypoint.sh"]
         healthcheck:

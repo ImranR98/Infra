@@ -20,6 +20,7 @@ services:
         volumes:
           - ../../../config/srv0/public-exposure/pubexp-client0.conf:/etc/wireguard/pubexp-client0.conf:ro
           - ./files/public-exposure/client-entrypoint.sh:/usr/local/bin/client-entrypoint.sh:ro
+          - ../../../scripts/mtu-watch.sh:/usr/local/bin/mtu-watch.sh:ro
         entrypoint: ["/bin/bash", "/usr/local/bin/client-entrypoint.sh"]
         healthcheck:
             test: ["CMD", "wg", "show", "pubexp-client0"]

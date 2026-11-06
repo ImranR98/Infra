@@ -7,8 +7,12 @@ set -euo pipefail
 
 IF=pubexp-client0
 CONF=/etc/wireguard/pubexp-client0.conf
+WATCH_PID=""
 
 cleanup() {
+    if [[ -n "$WATCH_PID" ]]; then
+        kill "$WATCH_PID" 2>/dev/null || true
+    fi
     wg-quick down "$CONF" 2>/dev/null || true
     ip link del "$IF" 2>/dev/null || true
     while iptables -D INPUT -i "$IF" -j ACCEPT 2>/dev/null; do :; done
@@ -25,7 +29,7 @@ cleanup
 iptables -I INPUT 1 -i "$IF" -j ACCEPT
 iptables -I FORWARD 1 -i "$IF" -j ACCEPT
 iptables -I FORWARD 1 -o "$IF" -j ACCEPT
-# The srv0<->vps0 path MTU can drop to 1380; the tunnel is 1300. Clamp
+# The srv0<->vps0 path MTU can drop to 1380; the tunnel is 1280 (the watcher adjusts it). Clamp
 # forwarded pod traffic and locally-originated host traffic so large segments
 # are never black-holed.
 iptables -t mangle -A FORWARD -o "$IF" -p tcp --tcp-flags SYN,RST SYN \
@@ -33,6 +37,9 @@ iptables -t mangle -A FORWARD -o "$IF" -p tcp --tcp-flags SYN,RST SYN \
 iptables -t mangle -A OUTPUT -o "$IF" -p tcp --tcp-flags SYN,RST SYN \
     -j TCPMSS --clamp-mss-to-pmtu
 wg-quick up "$CONF"
+# Keep the tunnel MTU under whatever the current WAN path supports.
+bash /usr/local/bin/mtu-watch.sh "$IF" &
+WATCH_PID=$!
 echo "public-exposure-client-wg: $IF up"
 
 while true; do

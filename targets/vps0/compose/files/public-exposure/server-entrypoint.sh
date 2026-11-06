@@ -7,8 +7,12 @@ set -euo pipefail
 
 IF=pubexp-server0
 CONF=/etc/wireguard/pubexp-server0.conf
+WATCH_PID=""
 
 cleanup() {
+    if [[ -n "$WATCH_PID" ]]; then
+        kill "$WATCH_PID" 2>/dev/null || true
+    fi
     bash /usr/local/bin/apply-forwards.sh down || true
     wg-quick down "$CONF" 2>/dev/null || true
     ip link del "$IF" 2>/dev/null || true
@@ -17,6 +21,9 @@ trap 'cleanup; exit 0' TERM INT
 
 cleanup
 wg-quick up "$CONF"
+# Keep the tunnel MTU under whatever the current WAN path supports.
+bash /usr/local/bin/mtu-watch.sh "$IF" &
+WATCH_PID=$!
 bash /usr/local/bin/apply-forwards.sh up
 echo "public-exposure-server-wg: $IF up, port mappings applied"
 

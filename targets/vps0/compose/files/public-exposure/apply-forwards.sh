@@ -5,7 +5,7 @@
 # "masq" SNATs the flow to the hub address so replies from targets that route
 # via their own default (host services, initramfs) come back through the
 # tunnel. Also clamps TCP MSS to the tunnel MTU (the srv0<->vps0 path MTU can
-# drop to 1380, so the tunnel MTU is 1300). Invoked by the public-exposure-server-wg
+# drop to 1380, so the tunnel MTU defaults to 1280 and is adjusted by mtu-watch). Invoked by the public-exposure-server-wg
 # entrypoint, so every host rule is tied to that container's lifecycle; `up`
 # removes stale copies first.
 set -euo pipefail
