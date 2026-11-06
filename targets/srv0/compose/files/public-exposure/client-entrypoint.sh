@@ -16,6 +16,8 @@ cleanup() {
     while iptables -D FORWARD -o "$IF" -j ACCEPT 2>/dev/null; do :; done
     while iptables -t mangle -D FORWARD -o "$IF" -p tcp --tcp-flags SYN,RST SYN \
         -j TCPMSS --clamp-mss-to-pmtu 2>/dev/null; do :; done
+    while iptables -t mangle -D OUTPUT -o "$IF" -p tcp --tcp-flags SYN,RST SYN \
+        -j TCPMSS --clamp-mss-to-pmtu 2>/dev/null; do :; done
 }
 trap 'cleanup; exit 0' TERM INT
 
@@ -23,9 +25,12 @@ cleanup
 iptables -I INPUT 1 -i "$IF" -j ACCEPT
 iptables -I FORWARD 1 -i "$IF" -j ACCEPT
 iptables -I FORWARD 1 -o "$IF" -j ACCEPT
-# The srv0<->vps0 path is 1420 MTU; clamp forwarded SYNs (qBittorrent and other
-# pod traffic) to the tunnel MTU so large segments aren't black-holed.
+# The srv0<->vps0 path MTU can drop to 1380; the tunnel is 1300. Clamp
+# forwarded pod traffic and locally-originated host traffic so large segments
+# are never black-holed.
 iptables -t mangle -A FORWARD -o "$IF" -p tcp --tcp-flags SYN,RST SYN \
+    -j TCPMSS --clamp-mss-to-pmtu
+iptables -t mangle -A OUTPUT -o "$IF" -p tcp --tcp-flags SYN,RST SYN \
     -j TCPMSS --clamp-mss-to-pmtu
 wg-quick up "$CONF"
 echo "public-exposure-client-wg: $IF up"
