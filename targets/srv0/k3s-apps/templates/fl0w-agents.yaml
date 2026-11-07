@@ -156,9 +156,9 @@ spec:
       {{- $artifactURL := printf "https://github.com/%s/releases/download/v%s/%s" $artifactRepo $artifactVersion $artifactAsset }}
         - name: fetch-{{ $artifactName }}
           {{- if $gtk }}
-          image: ghcr.io/imranr98/fl0w-agent-gtk@sha256:e7c8cac44c55762b7550a5f828619fe8745aaf4318cb21fb4197b10406e5f65a
+          image: ghcr.io/imranr98/fl0w-agent-gtk@sha256:75f35e0c2364dafafd22ea1c51185792105669ee75853a5eb1bccaef7cc56e41
           {{- else }}
-          image: ghcr.io/imranr98/fl0w-agent@sha256:0650cecd23ec609028bbd8a2703c96d57327c8ad3e9dd64f6af9f9d110e5c62f
+          image: ghcr.io/imranr98/fl0w-agent@sha256:e060eb762b70054faf7c3a3fecdb09f0a3284da4985471ff4a67464660ba9407
           {{- end }}
           imagePullPolicy: IfNotPresent
           command:
@@ -201,9 +201,9 @@ spec:
       containers:
         - name: agent
           {{- if $gtk }}
-          image: ghcr.io/imranr98/fl0w-agent-gtk@sha256:e7c8cac44c55762b7550a5f828619fe8745aaf4318cb21fb4197b10406e5f65a
+          image: ghcr.io/imranr98/fl0w-agent-gtk@sha256:75f35e0c2364dafafd22ea1c51185792105669ee75853a5eb1bccaef7cc56e41
           {{- else }}
-          image: ghcr.io/imranr98/fl0w-agent@sha256:0650cecd23ec609028bbd8a2703c96d57327c8ad3e9dd64f6af9f9d110e5c62f
+          image: ghcr.io/imranr98/fl0w-agent@sha256:e060eb762b70054faf7c3a3fecdb09f0a3284da4985471ff4a67464660ba9407
           {{- end }}
           imagePullPolicy: IfNotPresent
           securityContext:

@@ -311,7 +311,7 @@ services:
         logging: *logging
 
     authelia-db:
-        image: redis:alpine@sha256:1166a1ab81198ff768528df2c9e668c82206aae3ef4af2757efac386376fb79c
+        image: redis:alpine@sha256:71885d8cc6e42f2bc0aa2eb853bfc4be200b5108a46ac50e117ae1df0531fb80
         container_name: authelia-db
         user: "$MY_UID:$MY_UID"
         environment:
@@ -333,7 +333,7 @@ services:
 
     # Traefik - Reverse Proxy
     traefik:
-        image: traefik:v3.7.17@sha256:321153f6f732f912cf5c6f0597fe38743fc7895d482d7d8804a479ae0403e151
+        image: traefik:v3.7.17@sha256:f4bb143d1135a579b630ed491e17ec50f6f7c9c6a30585ff3d385471d2a86f5a
         container_name: traefik
         depends_on:
             dockerproxy:
@@ -408,7 +408,7 @@ services:
 
     # Traefik logrotate - caps the host-mounted access log (CrowdSec's acquisition source)
     traefik-logrotate:
-        image: vitess/logrotate:latest@sha256:02037cb9de7a06e7fc26835deba8f8c80d46a8c21362a91c46bdde380472417a
+        image: vitess/logrotate:latest@sha256:6b2b39cc5dac339fbc06acf8c1c5c7eb39de9b9254174aea4cea0315ebf2a0f2
         container_name: traefik-logrotate
         restart: unless-stopped
         mem_limit: 64M
@@ -537,7 +537,7 @@ services:
     # non-MY_UID user (ClickHouse 101, Plausible 999) — self-heals ownership
     # drift (e.g. a host-side chown). Re-runs on every up after a down.
     state-fixperms:
-        image: alpine:latest@sha256:ce9e1e6d23f04a0b7593445a062a9fc73ed52f8260b9396f77a958295ad18ee7
+        image: alpine:latest@sha256:3f4d6b32e26703c6082839234f43769d5046b3ac7c910033911d1e71d8cd630a
         container_name: state-fixperms
         restart: no
         cap_drop:
@@ -619,7 +619,7 @@ services:
     # ISBN Lookup
     isbn-lookup:
         container_name: isbn-lookup
-        image: ghcr.io/imranr98/isbn-lookup:latest@sha256:de702db8e1c8e7627fc2e53e3d7d863b67fbd582858286b15f51b907790130f9
+        image: ghcr.io/imranr98/isbn-lookup:latest@sha256:21995da61f8dd9befad7fbac4239591f0922701fa66526dc5ff7d54e6a221a4d
         restart: unless-stopped
         mem_limit: 128M
         cpus: 0.25
@@ -642,7 +642,7 @@ services:
 
     # MeTube - YouTube Downloader
     metube:
-        image: ghcr.io/alexta69/metube:latest@sha256:a97f455f4b56044debe1a5ce31ff01a9cb20e9e36322ba04f8dd2bb0539b9ec7
+        image: ghcr.io/alexta69/metube:latest@sha256:96dfbf0d5b2944e4ee38f6ce1b34bb0e75a1a3c74eaefd93424ed11284cb72b2
         container_name: metube
         volumes:
             - ../../../current_target/compose_live_state/metube:/downloads
@@ -845,7 +845,7 @@ services:
 
     # Owncast Auth - Token-based access control for Owncast viewer
     owncast-auth:
-        image: python:3-alpine@sha256:2b4b04f31a4a009c1fadf7ce9338471f288488199cf43dcd1af71f244ea550aa
+        image: python:3-alpine@sha256:a0f2e268f2ce8f3709611a90054ec6a8ae31f6251f5896b8648b9bb99835e30a
         container_name: owncast-auth
         restart: unless-stopped
         mem_limit: 64M
@@ -1067,7 +1067,7 @@ services:
     fl0w-agent:
         profiles:
             - fl0w-agent
-        image: ghcr.io/imranr98/fl0w-agent@sha256:0650cecd23ec609028bbd8a2703c96d57327c8ad3e9dd64f6af9f9d110e5c62f
+        image: ghcr.io/imranr98/fl0w-agent@sha256:e060eb762b70054faf7c3a3fecdb09f0a3284da4985471ff4a67464660ba9407
         container_name: fl0w-agent
         restart: unless-stopped
         network_mode: host
