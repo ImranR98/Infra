@@ -91,10 +91,10 @@ services:
         image: ghcr.io/ggml-org/llama.cpp:server-intel
         container_name: llama-sycl
         restart: unless-stopped
-        # One model is resident at a time (--models-max 1). At 128K the Qwen
-        # models need ~34G; Gemma at 32K needs ~29G. Raise only if models-max
-        # increases or a larger model is added.
-        mem_limit: 40G
+        # One model is resident at a time (--models-max 1). 54G leaves ~8 GiB
+        # of the 62 GiB total for GNOME and host services. At 128K the Qwen
+        # models need ~34G; Gemma at 32K needs ~29G.
+        mem_limit: 54G
         # card0 + renderD128; Level Zero uses the render node.
         devices:
             - /dev/dri:/dev/dri
