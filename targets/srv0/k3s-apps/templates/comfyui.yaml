@@ -103,9 +103,6 @@ spec:
         app.kubernetes.io/instance: comfyui
     spec:
       automountServiceAccountToken: false
-      # The vram-idle sidecar needs to see the ComfyUI process so it can
-      # restart it after an idle period (see below).
-      shareProcessNamespace: true
       terminationGracePeriodSeconds: 120
       securityContext:
         {{- include "dscpln.podSecurityContext" (dict "uid" .Values.MY_UID "seType" "spc_t" "seLevel" "s0") | nindent 8 }}
@@ -245,52 +242,6 @@ spec:
             periodSeconds: 30
             timeoutSeconds: 5
             failureThreshold: 5
-        # ComfyUI keeps the FLUX checkpoint resident after a run (~11 GiB).
-        # Release it after five minutes without queued/running work so the
-        # llama.cpp router can load a model; the next prompt reloads it.
-        - name: vram-idle
-          image: curlimages/curl:8.23.0@sha256:3fb7e13e5d179a845c97d78204f3f1064d1907037f26a3ebf91710571151fd93
-          imagePullPolicy: IfNotPresent
-          command:
-            - sh
-            - -c
-          args:
-            - |
-              set -u
-              idle=0
-              while true; do
-                q="$(curl -fsS --max-time 5 http://127.0.0.1:8188/queue 2>/dev/null || true)"
-                if printf '%s' "$q" | grep -Eq '"queue_(running|pending)"[[:space:]]*:[[:space:]]*\[\]'; then
-                  idle=$((idle + 60))
-                else
-                  idle=0
-                fi
-                if [ "$idle" -ge 300 ]; then
-                  stats="$(curl -fsS --max-time 5 http://127.0.0.1:8188/system_stats 2>/dev/null || true)"
-                  free="$(printf '%s' "$stats" | sed -n 's/.*"vram_free"[[:space:]]*:[[:space:]]*\([0-9][0-9]*\).*/\1/p' | head -1)"
-                  total="$(printf '%s' "$stats" | sed -n 's/.*"vram_total"[[:space:]]*:[[:space:]]*\([0-9][0-9]*\).*/\1/p' | head -1)"
-                  used=0
-                  if [ -n "$free" ] && [ -n "$total" ]; then used=$((total - free)); fi
-                  if [ "$used" -gt 2147483648 ]; then
-                    echo "comfyui idle: restarting the server to release $used bytes of VRAM"
-                    pids="$(ps -ef | grep '[p]ython main.py' | awk '{print $1}')"
-                    if [ -n "$pids" ]; then
-                      kill -TERM $pids 2>/dev/null || true
-                    fi
-                  fi
-                  idle=0
-                fi
-                sleep 60
-              done
-          resources:
-            requests:
-              cpu: 10m
-              memory: 16Mi
-            limits:
-              cpu: 100m
-              memory: 64Mi
-          securityContext:
-            {{- include "dscpln.containerSecurityContext" (dict "uid" .Values.MY_UID) | nindent 12 }}
       volumes:
         - name: data
           persistentVolumeClaim:
