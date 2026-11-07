@@ -30,7 +30,6 @@ srv0:
   tools:
     - open-webui
     - llama-cpp
-    - comfyui
     - opencode
     - headlamp
     - logtfy

@@ -11,4 +11,4 @@ The cluster is provisioned only through `scripts/k3s-server.sh` and `scripts/k3s
 
 Hardware is requested as a resource, not selected by a node label. The generic device plugin scans sysfs and `/dev` and advertises `infra.local/intel-gpu`, `amd-igpu`, `amd-dgpu`, `vaapi`, and `conbee`. That is why a workload can move to a different node without changing its manifest.
 
-`bigpc` is an optional worker. It is not documented as a peer machine; it exists here because it can supply a discrete AMD GPU to Immich ML, llama.cpp, or ComfyUI.
+`bigpc` is an optional worker. It is not documented as a peer machine; it exists here because it can supply a discrete AMD GPU to Immich ML or llama.cpp.

@@ -6,4 +6,4 @@ tags: [cluster, gpu]
 ---
 The plugin scans each node at startup and advertises hardware as resources, not node labels: `infra.local/intel-gpu`, `amd-igpu`, `amd-dgpu`, `vaapi`, and `conbee`. It normalizes device names to `renderD128`/`card0`/`ttyACM0`, so a workload never depends on enumeration order.
 
-This is why Immich, Frigate, Jellyfin, llama.cpp, ComfyUI, and Home Assistant can request exactly the capability they need without `privileged: true`. `GPU_PROFILE` chooses the media/ML backend; per-app overrides handle mixed hardware.
+This is why Immich, Frigate, Jellyfin, llama.cpp, and Home Assistant can request exactly the capability they need without `privileged: true`. `GPU_PROFILE` chooses the media/ML backend; per-app overrides handle mixed hardware.

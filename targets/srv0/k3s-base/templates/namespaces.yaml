@@ -45,7 +45,7 @@ spec:
 
 #
 # === apps ===
-# User-facing applications: jellyfin, immich, nextcloud, llama.cpp, comfyui, etc.
+# User-facing applications: jellyfin, immich, nextcloud, llama.cpp, etc.
 #
 ---
 apiVersion: networking.k8s.io/v1

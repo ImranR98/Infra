@@ -41,7 +41,6 @@ PUBLIC_HOSTS:
   - music
   - nextcloud
   - gpt
-  - vis
   - models
   - opencode
   - opodsync
@@ -100,7 +99,7 @@ LAN_CIDR: "<lan-cidr>"
 # Deployment-wide media/ML backend: intel | amd | none.
 #   intel: Frigate/Immich ML OpenVINO on an Intel iGPU; VAAPI for Jellyfin/Immich.
 #   amd:   Frigate ROCm on srv0's iGPU; Immich ML ROCm on bigpc's dGPU;
-#          VAAPI for Jellyfin/Immich; llama.cpp and ComfyUI on bigpc's dGPU.
+#          VAAPI for Jellyfin/Immich; llama.cpp on bigpc's dGPU.
 #   none:  CPU/no-GPU fallbacks.
 # Per-app overrides below are optional; empty derives from GPU_PROFILE.
 GPU_PROFILE: "intel"

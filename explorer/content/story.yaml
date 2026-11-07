@@ -1065,7 +1065,7 @@ steps:
 - id: other-machines
   stage: App
   title: The other machines
-  body: '`bigpc` is an optional K3s agent and desktop. It advertises `amd-dgpu` on the RX 9070 and runs llama.cpp and ComfyUI; Compose also runs syncthing. `rpi` is a Pi 400 that turns a webcam into an authenticated RTSP stream with go2rtc, consumed by Frigate on `srv0`.
+  body: '`bigpc` is an optional K3s agent and desktop. It advertises `amd-dgpu` on the RX 9070 and runs llama.cpp; Compose also runs syncthing. `rpi` is a Pi 400 that turns a webcam into an authenticated RTSP stream with go2rtc, consumed by Frigate on `srv0`.
 
 
     `pc` is Compose-only: a socket proxy, watchtower, and syncthing. None of the three is on the `srv0`/`vps0` request path.'

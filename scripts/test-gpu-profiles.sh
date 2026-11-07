@@ -31,9 +31,8 @@ render intel "$tmp/intel.yaml"
 assert_has "$tmp/intel.yaml" "infra.local/intel-gpu"
 assert_has "$tmp/intel.yaml" "tag: v3.3.5-openvino"
 assert_has "$tmp/intel.yaml" "infra.local/vaapi"
-assert_has "$tmp/intel.yaml" "infra.local/amd-dgpu"   # llama.cpp/ComfyUI on bigpc
+assert_has "$tmp/intel.yaml" "infra.local/amd-dgpu"   # llama.cpp on bigpc
 assert_has "$tmp/intel.yaml" "image: ghcr.io/ggml-org/llama.cpp:server-rocm"
-assert_has "$tmp/intel.yaml" "zuzupebbles/comfyui-rocm-agamemnon"
 assert_has "$tmp/intel.yaml" "models.home.example.org"
 assert_has "$tmp/intel.yaml" "LLAMA_CACHE"
 assert_has "$tmp/intel.yaml" '"--fit"'
@@ -49,7 +48,6 @@ assert_has "$tmp/amd.yaml" "tag: v3.3.5-rocm"
 assert_has "$tmp/amd.yaml" "infra.local/amd-igpu"
 assert_has "$tmp/amd.yaml" "infra.local/amd-dgpu"
 assert_has "$tmp/amd.yaml" "image: ghcr.io/ggml-org/llama.cpp:server-rocm"
-assert_has "$tmp/amd.yaml" "zuzupebbles/comfyui-rocm-agamemnon"
 assert_has "$tmp/amd.yaml" "models.home.example.org"
 assert_has "$tmp/amd.yaml" "LLAMA_CACHE"
 assert_has "$tmp/amd.yaml" '"--fit"'
@@ -67,11 +65,9 @@ assert_has "$tmp/amd.yaml" "yolov9-t-320.onnx"
 
 render none "$tmp/none.yaml"
 assert_has "$tmp/none.yaml" "ghcr.io/blakeblackshear/frigate:0.18.2"
-# llama.cpp has a CPU image for the no-GPU profile; ComfyUI is gated off
-# because its image is ROCm-only.
+# llama.cpp has a CPU image for the no-GPU profile.
 assert_has "$tmp/none.yaml" "image: ghcr.io/ggml-org/llama.cpp:server@"
 assert_not "$tmp/none.yaml" "server-rocm"
-assert_not "$tmp/none.yaml" "zuzupebbles/comfyui"
 assert_has "$tmp/none.yaml" "models.home.example.org"
 assert_has "$tmp/none.yaml" "LLAMA_CACHE"
 assert_not "$tmp/none.yaml" '"--models-preset"'
