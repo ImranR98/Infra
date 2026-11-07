@@ -244,12 +244,13 @@
       "enabled": false
     },
     {
-      "description": "Compose-side syncthing on pc/bigpc is watchtower-owned",
+      "description": "Compose-side pc/bigpc images are watchtower-owned",
       "matchManagers": [
         "docker-compose"
       ],
       "matchPackageNames": [
-        "syncthing/syncthing"
+        "syncthing/syncthing",
+        "ghcr.io/reliq-hq/comfyui"
       ],
       "enabled": false
     },

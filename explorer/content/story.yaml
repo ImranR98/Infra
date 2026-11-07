@@ -1068,11 +1068,11 @@ steps:
   body: '`bigpc` is an optional K3s agent and desktop. It advertises `amd-dgpu` on the RX 9070 and runs llama.cpp; Compose also runs syncthing. `rpi` is a Pi 400 that turns a webcam into an authenticated RTSP stream with go2rtc, consumed by Frigate on `srv0`.
 
 
-    `pc` is Compose-only: a socket proxy, watchtower, and syncthing. None of the three is on the `srv0`/`vps0` request path.'
+    `pc` is Compose-only: a socket proxy, watchtower, syncthing, and ComfyUI on its Intel Arc iGPU. None of the four is on the `srv0`/`vps0` request path.'
   deepDive: '`bigpc` is tainted `scheduling-discouraged` (PreferNoSchedule) and runs the FL0W archive agent on local PV/PVCs. `rpi`''s go2rtc password is generated on first start under `current_target/compose_live_state/go2rtc/`; the WebUI is loopback-only.
 
 
-    `pc` and `bigpc` run watchtower only for syncthing; `srv0`, `vps0`, and `rpi` rely on Renovate.'
+    `pc`''s watchtower owns syncthing and ComfyUI, and `bigpc`''s owns syncthing; `srv0`, `vps0`, and `rpi` rely on Renovate.'
   reveal:
   - target/bigpc
   - target/rpi
