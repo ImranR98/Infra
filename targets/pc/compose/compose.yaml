@@ -85,13 +85,15 @@ services:
 
     # llama.cpp router server on the Intel iGPU (SYCL). Launching without -m
     # puts it in router mode: every model directory under ~/models is listed
-    # by /v1/models and loaded on demand. Watchtower owns image updates.
+    # by /v1/models and loaded on demand. Per-model options come from
+    # llama-models.ini. Watchtower owns image updates.
     llama-sycl:
         image: ghcr.io/ggml-org/llama.cpp:server-intel
         container_name: llama-sycl
         restart: unless-stopped
-        # Both models plus their KV caches fit comfortably; raise if a third
-        # large model is added and both are pinned in memory at once.
+        # One model is resident at a time (--models-max 1). At 128K the Qwen
+        # models need ~34G; Gemma at 32K needs ~29G. Raise only if models-max
+        # increases or a larger model is added.
         mem_limit: 40G
         # card0 + renderD128; Level Zero uses the render node.
         devices:
@@ -102,6 +104,8 @@ services:
         volumes:
             # Model root is scanned by the router; keep it read-only.
             - /home/$MY_USERNAME/models:/models:ro
+            # Per-model context overrides; see llama-models.ini.
+            - ./llama-models.ini:/etc/llama.cpp/models.ini:ro
         ports:
             # Loopback-only on the host. The container port stays 8080.
             - "127.0.0.1:18080:8080"
@@ -110,6 +114,10 @@ services:
             # fall back to single-model mode.
             - "--models-dir"
             - "/models"
+            # Per-model options (context size) live here. Router CLI args
+            # override presets, so ctx-size is deliberately not set below.
+            - "--models-preset"
+            - "/etc/llama.cpp/models.ini"
             # Listen on all interfaces inside the container so Docker's
             # published port can reach it; host exposure is loopback-only.
             - "--host"
@@ -121,9 +129,8 @@ services:
             # "auto" if a model does not support Flash Attention.
             - "--flash-attn"
             - "on"
-            # Context is per slot; 8K is plenty for chat and keeps KV small.
-            - "--ctx-size"
-            - "8192"
+            # Context is per slot and set in llama-models.ini: 32K by
+            # default, 128K for the Qwen-based models.
             # Logical prompt batch and physical micro-batch. 1024 ubatch
             # usually improves prompt processing on the iGPU; drop to 512 if
             # memory gets tight.
@@ -131,8 +138,8 @@ services:
             - "2048"
             - "--ubatch-size"
             - "1024"
-            # One slot: a single request owns the full 8K context instead of
-            # splitting it across idle parallel slots.
+            # One slot: a single request owns the full per-model context
+            # instead of splitting it across idle parallel slots.
             - "--parallel"
             - "1"
         logging: *logging
