@@ -704,7 +704,7 @@ groups:
           severity: critical
 
       - uid: task-runner-state-backups-stale
-        title: State Backups has not run for 8 days
+        title: State Backups has not run for 2 days
         condition: C
         data:
           - refId: A
@@ -732,7 +732,7 @@ groups:
             datasourceUid: __expr__
             model:
               conditions:
-                - evaluator: {params: [691200], type: gt}
+                - evaluator: {params: [172800], type: gt}
                   operator: {type: and}
                   query: {params: [C]}
                   reducer: {type: last}
@@ -747,7 +747,7 @@ groups:
         execErrState: Alerting
         for: 15m
         annotations:
-          summary: The weekly State Backups task has not completed successfully in over 8 days.
+          summary: The nightly State Backups task has not completed successfully in over 2 days.
         labels:
           severity: warning
 
