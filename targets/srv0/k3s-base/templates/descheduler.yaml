@@ -30,7 +30,7 @@ spec:
     # evaluated only at scheduling time:
     #   - RemovePodsViolatingNodeTaints: evicts pods on bigpc that do NOT
     #     tolerate its scheduling-discouraged taint (only if they fit
-    #     elsewhere, i.e. srv0). Ollama tolerates it -> never touched.
+    #     elsewhere, i.e. srv0). llama.cpp/ComfyUI tolerate it -> never touched.
     deschedulerPolicy:
       maxNoOfPodsToEvictPerNode: 2
       maxNoOfPodsToEvictPerNamespace: 3

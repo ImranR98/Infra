@@ -96,8 +96,16 @@ spec:
       checksum/openwebui-oidc: {{ .Values.AUTHELIA_OPENWEBUI_CLIENT_SECRET_HASHABLE | sha256sum }}
     ollama:
       enabled: false
-    ollamaUrls:
-      - http://ollama.apps.svc.cluster.local:11434
+    # The OpenAI connection is the in-cluster llama.cpp router. Pipelines are
+    # enabled, so the chart prepends its endpoint and expects one extra key:
+    # the first belongs to Pipelines, the second to llama.cpp (no auth).
+    # These values seed a fresh install; the existing database keeps its own
+    # config, so the migration updates it once (see the deployment notes).
+    openaiBaseApiUrls:
+      - http://llama-cpp.apps.svc.cluster.local:8080/v1
+    openaiApiKeys:
+      - ""
+      - "none"
     websocket:
       redis:
         resources:

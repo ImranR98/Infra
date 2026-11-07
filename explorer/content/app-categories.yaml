@@ -29,7 +29,8 @@ srv0:
     - fmd
   tools:
     - open-webui
-    - ollama
+    - llama-cpp
+    - comfyui
     - opencode
     - headlamp
     - logtfy

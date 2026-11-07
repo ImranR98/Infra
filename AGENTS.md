@@ -8,7 +8,7 @@ Infra is the infrastructure-as-code repo for a multi-machine homelab. Everything
 |---|---|---|
 | `srv0` | K3s control-plane + public-exposure client Compose sidecar | Main home server, LUKS-encrypted root; most workloads |
 | `vps0` | Compose | Public VPS: Traefik edge, public-exposure WireGuard hub, web apps |
-| `bigpc` | Compose + K3s agent | Desktop: Ollama on AMD RX 9070 (ROCm); syncthing |
+| `bigpc` | Compose + K3s agent | Desktop: llama.cpp router + ComfyUI on AMD RX 9070 (ROCm); syncthing |
 | `pc` | Compose | Desktop: socket-proxy, watchtower, syncthing |
 | `rpi` | Compose | Pi 400 webcam → authenticated RTSP (go2rtc), consumed by Frigate on srv0 |
 
@@ -63,7 +63,7 @@ bash scripts/preboot.sh public-exposure|crypt-ssh
 bash scripts/wireguard.sh <path/to/wg0.conf>
 bash scripts/k3s-server.sh
 bash scripts/k3s-join.sh <node_ip> <node_user> \
-  [--role agent|server] [--scheduling-discouraged] [--hostpath-main]
+  [--role agent|server] [--scheduling-discouraged] [--hostpath-main] [--amd-dgpu]
 
 # Dev-only lint:
 shellcheck $(find scripts targets -name '*.sh')
@@ -95,10 +95,11 @@ Open <http://localhost:4173/>. The tours cover the request path, public edge, Wi
 - Give new components NetworkPolicies, and set requests/limits from observed usage.
 - `nfs-apps` is the default StorageClass; do not add new Longhorn PVs. The old Longhorn system is removed.
 - The six user-facing apps (Home Assistant, Immich, Jellyfin, Linkwarden, Navidrome, Opodsync) have no Authelia forward-auth filter; use `BOOTSTRAP_PRIVATE_APPS` for first-boot LAN/VPN containment.
-- Node labels are static: `k3s-server.sh` sets both; `k3s-join.sh --hostpath-main` for a replacement Main-data node (only one node may carry it). Do not reintroduce NFD/node-facts.
-- **HostPath data is exposed through a local PV/PVC** — app data that lives on a host path must be mounted via a statically bound `hostpath` PV/PVC whose `nodeAffinity` names the node that owns the path (`infra.local/hostpath-main` for the Main tree; `kubernetes.io/hostname` for a node-local path such as the FL0W archive agent) so the claim pins the pod. Never add a pod `nodeSelector` to compensate for a raw `hostPath`; device/system paths (`/dev`, `/run/dbus`, `/var/lib/kubelet`) are exempt. `hostpath-main` is a singleton: exactly one node owns the Main tree; `k3s-join.sh --hostpath-main` replaces that owner, it does not add a second.
-- **Hardware is requested through the generic device plugin** — use `infra.local/intel-gpu`, `infra.local/amd-igpu`, `infra.local/amd-dgpu`, `infra.local/vaapi`, or `infra.local/conbee` rather than a node label as a hardware proxy. The plugin generates resources from sysfs and `/dev` at startup; device paths are normalized to `renderD128`/`ttyACM0`.
-- **Accelerator selection is config, not chart edits** — `GPU_PROFILE` (`intel|amd|none`) chooses the media/ML backends; per-app overrides (`FRIGATE_DETECTOR`, `IMMICH_ML_BACKEND`, `JELLYFIN_HWACCEL`, `IMMICH_SERVER_HWACCEL`, `OLLAMA_GPU`) exist for mixed/fallback cases. `HA_CONBEE`/`HA_BLUETOOTH` gate the HA hardware mounts.
+- Node labels are static: `k3s-server.sh` sets both; `k3s-join.sh --hostpath-main` for a replacement Main-data node and `--amd-dgpu` for the AI-data node (only one node may carry each). Do not reintroduce NFD/node-facts.
+- **HostPath data is exposed through a local PV/PVC** — app data that lives on a host path must be mounted via a statically bound `hostpath` PV/PVC whose `nodeAffinity` names the node that owns the path (`infra.local/hostpath-main` for the Main tree; `infra.local/amd-dgpu=true` for the llama.cpp/ComfyUI data on the dGPU node; the FL0W agent's per-node config path still uses `kubernetes.io/hostname` because it is not GPU-coupled) so the claim pins the pod. Never add a pod `nodeSelector` to compensate for a raw `hostPath`; device/system paths (`/dev`, `/run/dbus`, `/var/lib/kubelet`) are exempt. `hostpath-main` and `amd-dgpu` are singletons: exactly one node owns the Main tree and one owns the AI data; `k3s-join.sh --hostpath-main` / `--amd-dgpu` replace those owners, they do not add a second.
+- **Hardware is requested through the generic device plugin** — use `infra.local/intel-gpu`, `infra.local/amd-igpu`, `infra.local/amd-dgpu`, `infra.local/vaapi`, or `infra.local/conbee` rather than a node label as a hardware proxy. The plugin generates resources from sysfs and `/dev` at startup; device paths are normalized to `renderD128`/`ttyACM0`. The `infra.local/amd-dgpu=true` node label is not a workload selector; it is the singleton AI-data marker used only by the local PV `nodeAffinity`.
+- **Accelerator selection is config, not chart edits** — `GPU_PROFILE` (`intel|amd|none`) chooses the media/ML backends; per-app overrides (`FRIGATE_DETECTOR`, `IMMICH_ML_BACKEND`, `JELLYFIN_HWACCEL`, `IMMICH_SERVER_HWACCEL`, `LLAMA_CPP_GPU`) exist for mixed/fallback cases. `HA_CONBEE`/`HA_BLUETOOTH` gate the HA hardware mounts.
+- **LLM models are cache-managed** — the llama.cpp router uses `LLAMA_CACHE` on the `llama-models-pvc`; download/delete through the built-in Models UI at `models.<SERVICES_DOMAIN>`. Do not add `--models-preset` or manual GGUF paths: the router can only delete cache models, and the UIs start empty for per-user downloads. New cache models inherit the global Q8 KV, Flash Attention, and CPU-projector settings and auto-fit their context with `--fit`.
 - Geoblock uses `get.geojs.io`; do not reintroduce the self-hosted GeoIP service/`geoip-src`.
 - **Renovate splits app and Infra** — app repos extend `renovate-preset.json`; Renovate auto-merges non-major app updates after the `test` check, while majors wait on the Dependency Dashboard. Infra Renovate PRs are never auto-merged: the `renovate-pr-ops` skill merges app exceptions, waits for the app `publish` job, triggers the on-demand `renovate-infra` Job, and presents Infra PRs for approval. No app checkout is assumed; use the GitHub API or a temporary clone.
 - **Helm charts** — only project-maintained charts; `validate.sh` enforces the allowlist. Home Assistant is the single approved third-party exception. Pin `image.repository`/`image.tag` on app-version-sensitive charts so Renovate tracks the app, not just the chart.

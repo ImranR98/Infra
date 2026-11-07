@@ -1,0 +1,305 @@
+{{- $llamaGpu := include "gpu.llamaCppGpu" . | trim -}}
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: llama-models-pv
+spec:
+  capacity:
+    storage: 100Gi
+  volumeMode: Filesystem
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: hostpath
+  local:
+    path: {{ include "path.home" . }}/ai/llama
+  # The path lives on the node carrying the AI-data label. The workload still
+  # selects hardware through the infra.local/amd-dgpu extended resource; this
+  # affinity only keeps the local volume with the GPU node. The label is a
+  # singleton (one AI-data node), like infra.local/hostpath-main.
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - key: infra.local/amd-dgpu
+              operator: In
+              values:
+                - "true"
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: llama-models-pvc
+  namespace: apps
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: hostpath
+  resources:
+    requests:
+      storage: 100Gi
+  volumeName: llama-models-pv
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: llama-cpp
+  namespace: apps
+  labels:
+    app.kubernetes.io/name: llama-cpp
+    app.kubernetes.io/instance: llama-cpp
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: llama-cpp
+      app.kubernetes.io/instance: llama-cpp
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: llama-cpp
+        app.kubernetes.io/instance: llama-cpp
+    spec:
+      automountServiceAccountToken: false
+      terminationGracePeriodSeconds: 60
+      securityContext:
+        {{- include "dscpln.podSecurityContext" (dict "uid" .Values.MY_UID "seType" "spc_t" "seLevel" "s0") | nindent 8 }}
+      initContainers:
+        # The local PV is a bind mount of the host tree; fix ownership and the
+        # SELinux label once so the router can write its model cache. The main
+        # container needs read-write /models because llama.cpp downloads and
+        # deletes cache models through its API/UI.
+        - name: prepare-models
+          image: fedora:44
+          command:
+            - sh
+            - -c
+            - |
+              set -eu
+              if [ ! -e /models/.owner-{{ .Values.MY_UID }} ]; then
+                chown -R {{ .Values.MY_UID }}:{{ .Values.MY_UID }} /models
+                chcon -R -t container_file_t /models
+                touch /models/.owner-{{ .Values.MY_UID }}
+                chown {{ .Values.MY_UID }}:{{ .Values.MY_UID }} /models/.owner-{{ .Values.MY_UID }}
+              fi
+          securityContext:
+            runAsUser: 0
+            runAsGroup: 0
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+              add:
+                - CHOWN
+                - DAC_OVERRIDE
+                - FOWNER
+                - FSETID
+            seccompProfile:
+              type: RuntimeDefault
+          volumeMounts:
+            - name: models
+              mountPath: /models
+      containers:
+        - name: llama-cpp
+          securityContext:
+            {{- include "dscpln.containerSecurityContext" (dict "uid" .Values.MY_UID) | nindent 12 }}
+          {{- if eq $llamaGpu "none" }}
+          image: ghcr.io/ggml-org/llama.cpp:server@sha256:41988e510b6fe0a0b5b9be00a9dbf91d9f0fa691da173d7b06d97d370329fe84
+          {{- else }}
+          image: ghcr.io/ggml-org/llama.cpp:server-rocm@sha256:949e8fe1f625587998e6ac38f972867fcf4bc443fc0ae6656f4feedcd9d0e192
+          {{- end }}
+          imagePullPolicy: IfNotPresent
+          args:
+            - "--host"
+            - "0.0.0.0"
+            - "--port"
+            - "8080"
+            # Cache mode: models downloaded through the built-in UI/API live
+            # under LLAMA_CACHE and are the only models the server can delete.
+            - "--models-max"
+            - "1"
+            - "--models-memory-margin"
+            - "1024"
+            - "--n-gpu-layers"
+            - "99"
+            - "--flash-attn"
+            - "on"
+            - "--cache-type-k"
+            - "q8_0"
+            - "--cache-type-v"
+            - "q8_0"
+            - "--no-mmproj-offload"
+            - "--jinja"
+            - "--parallel"
+            - "1"
+            # Let each model take the largest context that leaves ~1 GiB free
+            # for the desktop; models with a smaller native window cap there.
+            - "--fit"
+            - "on"
+            - "--fit-target"
+            - "1792"
+            - "--cache-ram"
+            - "2048"
+            - "--sleep-idle-seconds"
+            - "300"
+            - "--batch-size"
+            - "2048"
+            - "--ubatch-size"
+            - "512"
+            # Enable the built-in Discover/download UI. It is off by default.
+            - "--ui-config"
+            - '{"enableDiscoverModels": true, "useHuggingFaceHub": true}'
+            # The built-in UI is exposed at models.<SERVICES_DOMAIN> behind
+            # Authelia; restrict browser CORS to that origin.
+            - "--cors-origins"
+            - "https://models.{{ .Values.SERVICES_DOMAIN }}"
+          env:
+            - name: HOME
+              value: /tmp
+            - name: LLAMA_CACHE
+              value: /models
+            - name: TZ
+              value: "{{ .Values.TZ }}"
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          resources:
+            limits:
+              memory: 14Gi
+{{- if ne $llamaGpu "none" }}
+              infra.local/{{ $llamaGpu }}: "1"
+{{- end }}
+            requests:
+              memory: 4Gi
+              cpu: 100m
+{{- if ne $llamaGpu "none" }}
+              infra.local/{{ $llamaGpu }}: "1"
+{{- end }}
+          volumeMounts:
+            - name: models
+              mountPath: /models
+            - name: tmp
+              mountPath: /tmp
+          startupProbe:
+            httpGet:
+              path: /v1/models
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 30
+          readinessProbe:
+            httpGet:
+              path: /v1/models
+              port: http
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /v1/models
+              port: http
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 5
+      volumes:
+        - name: models
+          persistentVolumeClaim:
+            claimName: llama-models-pvc
+        - name: tmp
+          emptyDir: {}
+      tolerations:
+        - effect: PreferNoSchedule
+          key: scheduling-discouraged
+          operator: Equal
+          value: "true"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: llama-cpp
+  namespace: apps
+  labels:
+    app.kubernetes.io/name: llama-cpp
+    app.kubernetes.io/instance: llama-cpp
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http
+      protocol: TCP
+  selector:
+    app.kubernetes.io/name: llama-cpp
+    app.kubernetes.io/instance: llama-cpp
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: llama-cpp-ingress
+  namespace: base
+spec:
+  parentRefs:
+    - name: srv0
+      sectionName: websecure
+    - name: srv0
+      sectionName: websecure-proxy
+  hostnames:
+    - models.{{ .Values.SERVICES_DOMAIN }}
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      filters:
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: geoblock
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: crowdsec-bouncer
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: forwardauth-authelia
+      backendRefs:
+        - name: llama-cpp
+          namespace: apps
+          port: 8080
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-llama-cpp-ingress
+  namespace: apps
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/instance: llama-cpp
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/instance: open-webui
+        - podSelector:
+            matchLabels:
+              app: opencode
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: traefik
+      ports:
+        - port: 8080
+  policyTypes:
+    - Ingress

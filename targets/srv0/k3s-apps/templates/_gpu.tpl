@@ -72,9 +72,9 @@ vaapi
 {{- end -}}
 {{- end -}}
 
-{{- define "gpu.ollamaGpu" -}}
-{{- if .Values.OLLAMA_GPU -}}
-{{- .Values.OLLAMA_GPU -}}
+{{- define "gpu.llamaCppGpu" -}}
+{{- if .Values.LLAMA_CPP_GPU -}}
+{{- .Values.LLAMA_CPP_GPU -}}
 {{- else if eq (include "gpu.profile" .) "none" -}}
 none
 {{- else -}}

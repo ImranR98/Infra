@@ -22,6 +22,7 @@ Usage: $(basename "$0") <node_ip> <node_user> [options]
   --role agent|server          joining role (default: agent)
   --scheduling-discouraged     add the PreferNoSchedule taint
   --hostpath-main              label the node infra.local/hostpath-main=true
+  --amd-dgpu                   label the node infra.local/amd-dgpu=true
 
 Run ON the control plane. The first SSH to the node prompts to accept the host
 key — the same trust model as plain ssh.
@@ -37,11 +38,13 @@ shift 2
 k3s_role=agent
 scheduling_discouraged=false
 hostpath_main=false
+amd_dgpu=false
 while [ $# -gt 0 ]; do
     case "$1" in
         --role) k3s_role="${2:?--role needs agent|server}"; shift 2 ;;
         --scheduling-discouraged) scheduling_discouraged=true; shift ;;
         --hostpath-main) hostpath_main=true; shift ;;
+        --amd-dgpu) amd_dgpu=true; shift ;;
         -h | --help) usage ;;
         *) echo "Error: unknown option '$1'" >&2; usage ;;
     esac
@@ -119,6 +122,10 @@ echo "Node '$node_name' is Ready."
 
 if [ "$hostpath_main" = true ]; then
     $SU "$kubectl_bin" label node "$node_name" infra.local/hostpath-main=true --overwrite
+fi
+
+if [ "$amd_dgpu" = true ]; then
+    $SU "$kubectl_bin" label node "$node_name" infra.local/amd-dgpu=true --overwrite
 fi
 
 if [ "$scheduling_discouraged" = true ]; then
