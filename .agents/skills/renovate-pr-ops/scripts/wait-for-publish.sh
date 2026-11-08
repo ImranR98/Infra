@@ -4,7 +4,8 @@
 # pushes :sha-<commit>, verifies it, and promotes :latest. This helper uses the
 # GitHub API only; it never assumes an app checkout.
 # Usage: wait-for-publish.sh --repo <owner/repo> --sha <merge-sha> [--timeout 2400] [--poll 20] [--grace 90]
-# Exit: 0 published or skipped, 1 failed/cancelled, 2 no run found, 3 timeout.
+# Exit: 0 published or skipped, 1 failed/cancelled, 2 no publish job/no run
+#       found, 3 timeout.
 set -euo pipefail
 
 repo=""
@@ -49,11 +50,14 @@ fi
 export GITHUB_TOKEN
 
 exec python3 - "$repo" "$sha" "$timeout" "$poll" "$grace" <<'PY'
+import base64
 import json
 import os
+import re
 import sys
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 from datetime import datetime, timezone
 
@@ -92,8 +96,42 @@ def publish_job(run_id):
     return next((job for job in data.get("jobs", []) if job.get("name") == "publish"), None)
 
 
+def has_publish_job(branch):
+    try:
+        items = get(
+            f"/repos/{repo}/contents/.github/workflows?ref={urllib.parse.quote(branch)}"
+        )
+    except Exception:
+        # If the workflow cannot be inspected, fall through to the run-based check.
+        return True
+    for item in items:
+        name = item.get("name", "")
+        if item.get("type") != "file" or not name.endswith((".yml", ".yaml")):
+            continue
+        try:
+            data = get(
+                f"/repos/{repo}/contents/{urllib.parse.quote(item['path'], safe='/')}"
+                f"?ref={urllib.parse.quote(branch)}"
+            )
+            text = base64.b64decode(data.get("content", "")).decode("utf-8", "replace")
+        except Exception:
+            continue
+        if re.search(r"(?m)^\s{0,4}publish:\s*(?:#.*)?$", text) or re.search(
+            r"(?mi)^\s+name:\s*['\"]?publish['\"]?\s*(?:#.*)?$", text
+        ):
+            return True
+    return False
+
+
 meta = get(f"/repos/{repo}")
 branch = meta["default_branch"]
+if not has_publish_job(branch):
+    print(
+        f"NO_PUBLISH_JOB {repo} default={branch} "
+        "(no workflow job named publish; no image is built)",
+        flush=True,
+    )
+    sys.exit(2)
 started = time.time()
 last_note = 0
 while True:

@@ -9,9 +9,10 @@ set -euo pipefail
 usage() {
     echo "Usage: $(basename "$0") [--recent [HOURS]]"
     echo
-    echo "Lists open Renovate PRs across INFRA_REPO and APP_REPOS, plus recent"
-    echo "merged Renovate PRs and failed default-branch CI runs. Default recent"
-    echo "window: 24 hours. Requires curl + python3 and a GitHub token."
+    echo "Lists open Renovate PRs across INFRA_REPO and APP_REPOS with their"
+    echo "checks, status, stability-days hold, and major flag, plus recent merged"
+    echo "Renovate PRs and failed default-branch CI runs. Default recent window:"
+    echo "24 hours. Requires curl + python3 and a GitHub token."
     exit 1
 }
 
@@ -125,6 +126,24 @@ def is_renovate(pr):
     return branch.startswith("renovate/") or "deps" in labels
 
 
+def commit_status(repo, sha):
+    try:
+        data = get(f"{api}/repos/{repo}/commits/{sha}/status")
+    except Exception:
+        return "unavailable", "unavailable"
+    statuses = data.get("statuses") or []
+    status = data.get("state", "unknown") if statuses else "none"
+    stability = next(
+        (
+            item.get("state", "unknown")
+            for item in statuses
+            if item.get("context") == "renovate/stability-days"
+        ),
+        "missing",
+    )
+    return status, stability
+
+
 def check_summary(repo, pr):
     try:
         checks = get(f"{api}/repos/{repo}/commits/{pr['head']['sha']}/check-runs?per_page=100").get(
@@ -134,9 +153,21 @@ def check_summary(repo, pr):
         return f"checks: unavailable ({exc})"
     failed = [check for check in checks if check.get("conclusion") in failed_conclusions]
     pending = [check for check in checks if check.get("status") != "completed"]
-    if not checks:
-        return "checks: none"
-    lines = [f"checks: {len(failed)} failed, {len(pending)} pending"]
+    test = next((check for check in checks if check.get("name") == "test"), None)
+    test_state = (
+        test.get("conclusion") or test.get("status") if test else "missing"
+    )
+    other_checks = [
+        f"{check.get('name')}={check.get('conclusion') or check.get('status')}"
+        for check in checks
+        if check.get("name") != "test"
+    ]
+    status, stability = commit_status(repo, pr["head"]["sha"])
+    detail = "; ".join([f"test={test_state}", *other_checks[:4]])
+    lines = [
+        f"checks: {len(failed)} failed, {len(pending)} pending; "
+        f"{detail}; status={status}; stability={stability}"
+    ]
     for check in failed[:5]:
         lines.append(f"    - {check.get('name')}: {check.get('conclusion')} {check.get('html_url') or ''}".rstrip())
     for check in pending[:5]:
@@ -206,11 +237,16 @@ for repo in repos:
             detail = get(f"{api}/repos/{repo}/pulls/{pr['number']}")
             labels = ",".join(label["name"] for label in detail.get("labels") or []) or "-"
             mergeable = detail.get("mergeable_state") or ("mergeable" if detail.get("mergeable") else "unknown")
+            title = detail.get("title", "")
+            major = "yes" if "(major)" in title.lower() or "major" in [
+                label.get("name", "").lower() for label in detail.get("labels") or []
+            ] else "no"
             print(
-                f"  #{detail['number']} {detail['head']['ref']} updated={detail['updated_at'][:10]} "
-                f"mergeable={mergeable} labels={labels}"
+                f"  #{detail['number']} {detail['head']['ref']} "
+                f"created={detail['created_at'][:10]} updated={detail['updated_at'][:10]} "
+                f"mergeable={mergeable} major={major} labels={labels}"
             )
-            print(f"    {detail.get('title', '')[:120]}")
+            print(f"    {title[:120]}")
             print(f"    head={detail['head']['sha']}")
             print("    " + check_summary(repo, detail).replace("\n", "\n    "))
         print(recent_merges(repo, datetime.now(timezone.utc) - timedelta(hours=hours)))

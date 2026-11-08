@@ -1,7 +1,8 @@
 #!/bin/bash
 # DESC: Run the suspended renovate-infra CronJob as a one-off Job, wait for it,
-# then wait for the new/updated Infra Renovate PR. Used after app image
-# publishes so a fresh digest PR appears without waiting for the scheduled run.
+# then wait for the new/updated Infra Renovate PR. Optional path for non-app
+# updates or a missed app digest; the renovate-pr-ops skill normally pins
+# published app digests directly with pin-app-image.sh.
 # Requires kubectl access (the kubeconfig unlock session) and a GitHub token.
 # Usage: refresh-infra.sh [--dry-run] [--timeout 1800] [--active-timeout 1800] [--poll 20]
 # Exit: 0 Infra PR ready, 1 Renovate Job failed, 2 no new PR, 3 timeout,

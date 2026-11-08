@@ -138,8 +138,9 @@ spec:
                 name: renovate-scripts
 ---
 # Suspended template for on-demand Infra-only runs. The renovate-pr-ops skill
-# creates a Job from this CronJob after app images publish so the new digest PR
-# appears immediately instead of waiting for the next six-hourly run.
+# normally pins published app digests directly in Infra; it creates a Job from
+# this CronJob for non-app or missed updates so a fresh digest PR can appear
+# without waiting for the next six-hourly run.
 apiVersion: batch/v1
 kind: CronJob
 metadata:

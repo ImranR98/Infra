@@ -30,8 +30,9 @@ logtfy, opodsync, syncthing, watchtower, socket proxies, tech-sale/home-sale, st
 **App repos** — the first-party apps in `APP_REPOS` (PixelNtfy, ISBN-Lookup,
 our-times, order-manager, moving-sale-2027, Logtfy, opencode-sandbox, DSCPLN,
 dscpln-config). Treat user-facing apps with data/auth as elevated; small tools as
-standard. Their image publish is part of the change, so a green `test` is the
-merge gate and a successful `publish` is the rollout gate.
+standard. Their image publish is part of the change, so a green required check
+(usually `test`) plus a non-pending `renovate/stability-days` is the merge gate,
+and a successful `publish` is the pin/rollout gate.
 
 ## Tier rules
 
@@ -72,10 +73,15 @@ merge gate and a successful `publish` is the rollout gate.
   (low risk) or manual/destructive (Tier C). Example: opodsync 0.6.0 auto-migrates
   with index-only SQL — safe.
 - App PRs merge with squash; after the merge, wait for the default-branch
-  `publish` job (`wait-for-publish.sh`) before refreshing Infra. A green `test`
+  `publish` job (`wait-for-publish.sh`) before pinning Infra. A green `test`
   only built a local image; it did not push `:latest`.
+- Pin the promoted digest directly with `pin-app-image.sh` (it updates every
+  matching Infra reference). Do not hand-copy a digest from the PR or an old
+  pin; the helper requires `:latest` to match `:sha-<merge-commit>`.
 - If the app merge only touched docs/workflow/Renovate config, the publish is
-  skipped; do not refresh Infra or expect a digest change.
+  skipped; do not pin Infra or expect a digest change.
+- `renovate/stability-days: pending` is a minimum-release-age hold. Leave the
+  PR for Renovate; do not merge early.
 
 ### Digest refreshes under a floating tag
 
@@ -115,8 +121,11 @@ then run `validate.sh srv0` (renders both charts and rejects `<no value>`).
   Dependency Dashboard approvals. If a major is approved and merged, it still
   goes through the app's own tests and image publish.
 - App PR → image publish → Infra digest pin is a chain. Merge the app PR, wait for
-  the `publish` job, then run the Infra refresh; never merge a digest pin for an
-  app whose publish failed. The Infra digest PR is the manual rollout gate.
+  the `publish` job, then pin the promoted digest in Infra with
+  `pin-app-image.sh`; never pin an app whose publish failed. The manual pin (or
+  an equivalent Infra digest PR) is the rollout gate, and both need approval.
+  Open app PRs held by `renovate/stability-days` are intentionally waiting, not
+  stuck.
 - Compose syncthing is watchtower-owned (Renovate disabled for it); srv0's K3s
   syncthing is Renovate-managed.
 - Home Assistant's Frigate integration and Advanced Camera Card pins are

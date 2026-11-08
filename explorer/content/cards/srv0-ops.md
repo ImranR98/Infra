@@ -6,7 +6,7 @@ tags: [updates, storage, auth]
 ---
 Operations are first-class parts of the architecture, not an appendix. The map connects them to the things they touch:
 
-- **Renovate** is split: a pure six-hourly CronJob runs Renovate, which opens/updates PRs and auto-merges non-major app PRs after test; all Infra PRs remain the manual gate handled by the `renovate-pr-ops` skill. A deploy is still required.
+- **Renovate** is split: a pure six-hourly CronJob runs Renovate, which opens/updates PRs and auto-merges non-major app PRs after test; open app PRs and all Infra changes (manual image pins or PRs) remain the manual gate handled by the `renovate-pr-ops` skill. A deploy is still required.
 - **State backups** run through FL0W into one restic repository; restore is a standalone script.
 - **CI** validates the repo and publishes the NFS server image.
 - **Remote access** covers the public-exposure client, AmneziaWG, and initramfs LUKS unlock.

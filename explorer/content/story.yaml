@@ -475,7 +475,7 @@ steps:
   deepDive: 'The runner gets `RENOVATE_TOKEN`, the repo list, Docker Hub host rules, and the git author from the `renovate-secrets` Secret. It mounts no repo or scripts and runs as the image''s non-root user.
 
 
-    A suspended `renovate-infra` CronJob is the on-demand template. After an app PR merges and its image `publish` job completes, the `renovate-pr-ops` skill creates a Job from it, so the new Infra digest PR appears immediately instead of waiting for the next six-hourly run. The skill also handles app exceptions (blocked PRs, approved majors) and presents the Infra batch for approval. `infra-digest-pin` marks image pins that need a deploy; merging is inert until `scripts/deploy.sh <target>`. The manual on-demand runner remains `scripts/renovate.sh`.'
+    A suspended `renovate-infra` CronJob is an optional on-demand template. After an app PR merges and its image `publish` job completes, the `renovate-pr-ops` skill normally pins the promoted digest directly in Infra and presents the change for approval, so it does not wait for the next six-hourly run. The template remains for non-app or missed updates. The skill also merges ready open app PRs (including ones Renovate left open, but not `renovate/stability-days` holds) and handles approved majors. `infra-digest-pin` marks Renovate image pins that need a deploy; merging or pinning is inert until `scripts/deploy.sh <target>`. The manual on-demand runner remains `scripts/renovate.sh`.'
   reveal:
   - srv0/base/renovate/cronjob/renovate-daily
   - srv0/base/renovate/cronjob/renovate-infra
@@ -507,7 +507,7 @@ steps:
   - from: concept/renovate-pr-ops
     to: srv0/base/renovate/cronjob/renovate-infra
     type: creates-job
-    label: on demand
+    label: optional refresh
   flow:
   - - srv0/ops/renovate
     - srv0/base/renovate
@@ -1268,7 +1268,7 @@ steps:
 - id: schedules
   stage: Operations
   title: Schedules
-  body: 'The six-hourly Renovate CronJob (`0 */6 * * *`, America/Toronto) is a pure PR run with overlap forbidden. The suspended `renovate-infra` template is not on a schedule; the skill creates a Job from it after app images publish.
+  body: 'The six-hourly Renovate CronJob (`0 */6 * * *`, America/Toronto) is a pure PR run with overlap forbidden. The suspended `renovate-infra` template is not on a schedule; it is an optional on-demand path for non-app or missed updates, while the skill normally pins published app digests directly in Infra.
 
 
     The `vps0` image-prune timer runs monthly. The State Backups task defaults to Sundays 04:00. FL0W owns the backup schedule; the CronJob owns update discovery. Neither is a watchtower-style continuous updater.'

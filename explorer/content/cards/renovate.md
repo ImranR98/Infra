@@ -13,4 +13,4 @@ The scheduled CronJob runs Renovate every six hours and does one thing: a Renova
 
 App repos extend `renovate-preset.json`; majors wait on the Dependency Dashboard. Infra PRs are never auto-merged — they are the manual rollout gate.
 
-After an app PR merges and its image `publish` job completes, the `renovate-pr-ops` skill creates a Job from the suspended `renovate-infra` CronJob. The new Infra digest PR appears immediately instead of waiting for the next six-hourly run.
+After an app PR merges and its image `publish` job completes, the `renovate-pr-ops` skill pins the promoted digest directly in the Infra repo and presents the change for approval. This does not wait for the next six-hourly run. The suspended `renovate-infra` CronJob remains an optional path for non-app or missed updates.

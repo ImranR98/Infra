@@ -12,23 +12,29 @@
   uncommitted changes would deploy too.
 - Remote machines deploy from their own checkout; they must `git pull` first.
 
-## App image → Infra PR ordering
+## App image → Infra pin ordering
 
-An Infra digest PR is only meaningful after the app image publish succeeded:
+An Infra image pin is only meaningful after the app image publish succeeded:
 
 1. Merge/confirm the app PR with a squash via the GitHub API (or let Renovate
-   auto-merge it). Record the merge commit SHA.
+   auto-merge it). Record the merge commit SHA. Do not merge while
+   `renovate/stability-days` is pending.
 2. Wait for the app's default-branch `publish` job:
    `wait-for-publish.sh --repo <repo> --sha <sha>`.
    - `PUBLISHED`: the image and digest exist.
-   - `SKIPPED`/`NO_RUN`: no runtime image changed; no Infra refresh needed.
+   - `NO_PUBLISH_JOB`/`SKIPPED`/`NO_RUN`: no runtime image changed.
    - `FAILED`/`TIMEOUT`: do not treat the new digest as available.
-3. Run `refresh-infra.sh` once after all app publishes settle. It creates an
-   Infra-only Renovate Job and waits for the new/updated Infra PR.
-4. Triage/merge the resulting Infra PR (human gate), then deploy.
+3. Pin the promoted digest directly in Infra:
+   `pin-app-image.sh --repo <repo> --sha <sha> --validate`.
+   It updates every matching reference, validates the touched targets, and
+   prints old/new digests. If an open Infra digest PR already contains the same
+   digest, use that PR instead.
+4. Present the diff and validation result, get approval, commit/push `master`
+   (or merge the Infra PR), then deploy.
 
-Do not run the Infra refresh while an app publish is in flight; the digest would
-be stale.
+Do not pin while an app publish is in flight; the digest would be stale.
+`refresh-infra.sh` remains an optional path for non-app or missed updates, not
+the primary app route.
 
 ## srv0 (K3s) — apply base, then apps
 
@@ -139,4 +145,4 @@ The machine-fact `.env` is supplied by the wrapper; no extra `--env-file`.
 - Orphaned `Unknown`/`Error` pods are safe to delete once their owning job is
   Complete/Failed; leave Completed job pods as history.
 - A failed app publish is not fixed by deploying Infra. Fix the app CI first, wait
-  for the new publish, then refresh Infra.
+  for the new publish, then pin/refresh Infra.
