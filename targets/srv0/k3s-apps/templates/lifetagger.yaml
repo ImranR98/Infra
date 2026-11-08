@@ -85,7 +85,7 @@ spec:
               mountPath: /data
       containers:
         - name: lifetagger
-          image: ghcr.io/imranr98/lifetagger:latest@sha256:45f6c7ad9cd5ddec4afe3b0bf1e77feaba6cab69fe6b2effd25d4c39b5e79050
+          image: ghcr.io/imranr98/lifetagger:latest@sha256:6053962e49a9d877d4f8993babd2abfb8123bd767de608d78ebec658a9f8b32b
           imagePullPolicy: IfNotPresent
           securityContext:
             {{- include "dscpln.containerSecurityContext" (dict "uid" .Values.MY_UID "readOnlyRootFilesystem" true) | nindent 12 }}
@@ -182,7 +182,7 @@ metadata:
   labels:
     auto-backup: "true"
   annotations:
-    backup.infra/exclude: "thumbs,previews,models"
+    backup.infra/exclude: "thumbs,previews,face-thumbs,models"
 spec:
   accessModes:
     - ReadWriteMany
