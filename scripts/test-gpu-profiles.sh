@@ -29,7 +29,7 @@ assert_not() { ! grep -q -- "$2" "$1" || { echo "FAIL: $1 has unexpected '$2'" >
 
 render intel "$tmp/intel.yaml"
 assert_has "$tmp/intel.yaml" "infra.local/intel-gpu"
-assert_has "$tmp/intel.yaml" "tag: v3.3.5-openvino"
+assert_has "$tmp/intel.yaml" "tag: v3.3.6-openvino"
 assert_has "$tmp/intel.yaml" "infra.local/vaapi"
 assert_has "$tmp/intel.yaml" "infra.local/amd-dgpu"   # llama.cpp on bigpc
 assert_has "$tmp/intel.yaml" "image: ghcr.io/ggml-org/llama.cpp:server-rocm"
@@ -39,7 +39,7 @@ assert_has "$tmp/intel.yaml" '"--fit"'
 assert_not "$tmp/intel.yaml" '"--models-preset"'
 assert_not "$tmp/intel.yaml" "hf-file"
 assert_not "$tmp/intel.yaml" "frigate:0.18.2-rocm"
-assert_not "$tmp/intel.yaml" "tag: v3.3.5-rocm"
+assert_not "$tmp/intel.yaml" "tag: v3.3.6-rocm"
 assert_not "$tmp/intel.yaml" "name: ensure-model"
 assert_has "$tmp/intel.yaml" "yanwk/comfyui-boot:rocm"
 assert_has "$tmp/intel.yaml" "name: comfyui"
@@ -48,7 +48,7 @@ assert_not "$tmp/intel.yaml" "scheduling-discouraged"
 
 render amd "$tmp/amd.yaml"
 assert_has "$tmp/amd.yaml" "ghcr.io/blakeblackshear/frigate:0.18.2-rocm"
-assert_has "$tmp/amd.yaml" "tag: v3.3.5-rocm"
+assert_has "$tmp/amd.yaml" "tag: v3.3.6-rocm"
 assert_has "$tmp/amd.yaml" "infra.local/amd-igpu"
 assert_has "$tmp/amd.yaml" "infra.local/amd-dgpu"
 assert_has "$tmp/amd.yaml" "image: ghcr.io/ggml-org/llama.cpp:server-rocm"
