@@ -59,6 +59,9 @@ spec:
         on_success: break
 
     agent:
+      # Node sensor: run on every node, including opt-in-only bigpc.
+      tolerations:
+        - operator: Exists
       # Whitelists and the notification config are volume-mounted from a
       # Secret; the pods only read them at startup (no SIGHUP is sent).
       podAnnotations:

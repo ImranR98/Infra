@@ -26,17 +26,17 @@ spec:
     # supersedes any failure — keep only the most recent failed job (its
     # pods' logs) for debugging.
     failedJobsHistoryLimit: 1
-    # Rebalances pods that drifted due to the PreferNoSchedule taint being
-    # evaluated only at scheduling time:
+    # Cleanup safety net for the opt-in-only bigpc node:
     #   - RemovePodsViolatingNodeTaints: evicts pods on bigpc that do NOT
-    #     tolerate its scheduling-discouraged taint (only if they fit
-    #     elsewhere, i.e. srv0). llama.cpp tolerates it -> never touched.
+    #     tolerate infra.local/noschedule (only if they fit elsewhere, i.e.
+    #     srv0). llama.cpp/ComfyUI/Immich ML/FL0W and node agents tolerate it
+    #     -> never touched. A stray platform or app pod is removed.
     deschedulerPolicy:
       maxNoOfPodsToEvictPerNode: 2
       maxNoOfPodsToEvictPerNamespace: 3
       maxNoOfPodsToEvictTotal: 5
       profiles:
-        - name: "k3s-rebalance"
+        - name: "bigpc-cleanup"
           pluginConfig:
             - name: "DefaultEvictor"
               args:
@@ -47,9 +47,8 @@ spec:
                     - PodsWithLocalStorage
             - name: "RemovePodsViolatingNodeTaints"
               args:
-                includePreferNoSchedule: true
                 includedTaints:
-                  - scheduling-discouraged
+                  - infra.local/noschedule
           plugins:
             deschedule:
               enabled:

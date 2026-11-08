@@ -1,0 +1,240 @@
+# ComfyUI on bigpc's AMD dGPU. The data lives on the hostname-pinned
+# ai-data-pv under subPath comfyui; llama.cpp uses subPath llama from the same
+# PVC. The container runs as root (ComfyUI-Manager installs into the image),
+# but the data is group-owned by MY_UID and group-writable so the host user can
+# edit it directly.
+#
+# The ComfyUI code tree is persisted under <HOME_DIR>/ai/comfyui/ComfyUI. A
+# new image does not overwrite it; update through ComfyUI-Manager or remove
+# that tree and restart to reseed it from the image.
+{{- $comfyuiImage := "yanwk/comfyui-boot:rocm@sha256:a7dcae35a3c6f0fe78b4e0a0bcbda8af192771da137842d5da35bc2e35442621" -}}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: comfyui
+  namespace: apps
+  labels:
+    app.kubernetes.io/name: comfyui
+    app.kubernetes.io/instance: comfyui
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: comfyui
+      app.kubernetes.io/instance: comfyui
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: comfyui
+        app.kubernetes.io/instance: comfyui
+      annotations:
+        checksum/config: {{ printf "%s|%s|%s" .Values.COMFYUI_HSA_OVERRIDE_GFX_VERSION .Values.COMFYUI_CLI_ARGS .Values.COMFYUI_MEMORY_LIMIT | sha256sum }}
+    spec:
+      automountServiceAccountToken: false
+      terminationGracePeriodSeconds: 30
+      securityContext:
+        fsGroup: {{ .Values.MY_UID }}
+        fsGroupChangePolicy: OnRootMismatch
+        seLinuxOptions:
+          type: spc_t
+          level: s0
+      initContainers:
+        # Seed the persistent ComfyUI tree, fix ownership/SELinux labels, and
+        # make the host user (MY_UID) the group owner. The image's entrypoint
+        # copies missing bundle files later; this only seeds the bundled
+        # custom nodes and user defaults on first run.
+        - name: prepare-ai
+          image: {{ $comfyuiImage }}
+          imagePullPolicy: IfNotPresent
+          command: ["/bin/bash", "-c"]
+          args:
+            - |
+              set -eu
+              shopt -s globstar nullglob
+              root=/ai
+              # Seed the bundled ComfyUI tree once. The image entrypoint mounts
+              # this at /root and skips its own copy when main.py exists.
+              if [ ! -f "$root/ComfyUI/main.py" ]; then
+                cp -a /default-comfyui-bundle/ComfyUI "$root/"
+              fi
+              mkdir -p "$root"/.local "$root"/.cache
+              if [ ! -e "$root/.owner-1000" ]; then
+                chown -R 0:{{ .Values.MY_UID }} "$root"
+                chmod -R g+rwX "$root"
+                for d in "$root"/**/; do chmod g+s "$d"; done
+                chcon -R -t container_file_t "$root" 2>/dev/null || true
+                touch "$root/.owner-1000"
+                chown 0:{{ .Values.MY_UID }} "$root/.owner-1000"
+              else
+                # The persistent code tree is not recopied; new user data is
+                # already group-writable, but fix the small config trees.
+                chown -R 0:{{ .Values.MY_UID }} "$root/ComfyUI/custom_nodes" "$root/ComfyUI/user"
+                chmod -R g+rwX "$root/ComfyUI/custom_nodes" "$root/ComfyUI/user"
+                for d in "$root/ComfyUI/custom_nodes"/**/ "$root/ComfyUI/user"/**/; do chmod g+s "$d"; done
+                chcon -R -t container_file_t "$root/ComfyUI/custom_nodes" "$root/ComfyUI/user" 2>/dev/null || true
+              fi
+          securityContext:
+            runAsUser: 0
+            runAsGroup: {{ .Values.MY_UID }}
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+              add: [CHOWN, DAC_OVERRIDE, FOWNER, FSETID]
+            seccompProfile:
+              type: RuntimeDefault
+          resources:
+            limits:
+              memory: 512Mi
+            requests:
+              memory: 128Mi
+          volumeMounts:
+            - name: ai-data
+              mountPath: /ai
+              subPath: comfyui
+            - name: tmp
+              mountPath: /tmp
+      containers:
+        - name: comfyui
+          image: {{ $comfyuiImage }}
+          imagePullPolicy: IfNotPresent
+          # The upstream entrypoint reads CLI_ARGS and starts ComfyUI on 8188.
+          # umask 002 keeps new files group-writable for the host user.
+          command: ["/bin/bash", "-c"]
+          args:
+            - umask 002; exec /bin/bash /runner-scripts/entrypoint.sh
+          env:
+            - name: HSA_OVERRIDE_GFX_VERSION
+              value: {{ .Values.COMFYUI_HSA_OVERRIDE_GFX_VERSION | quote }}
+            - name: CLI_ARGS
+              value: {{ .Values.COMFYUI_CLI_ARGS | quote }}
+            - name: TZ
+              value: {{ .Values.TZ | quote }}
+          securityContext:
+            runAsUser: 0
+            runAsGroup: {{ .Values.MY_UID }}
+            allowPrivilegeEscalation: false
+            # ComfyUI-Manager writes into the image venv and /root; the
+            # persistent data is on the PVC. Do not make the root FS read-only.
+            # CHOWN is required by the image entrypoint's `cp --archive` of
+            # the bundled ComfyUI tree.
+            readOnlyRootFilesystem: false
+            capabilities:
+              drop: [ALL]
+              add: [CHOWN, DAC_OVERRIDE, FOWNER]
+            seccompProfile:
+              type: RuntimeDefault
+          ports:
+            - name: http
+              containerPort: 8188
+              protocol: TCP
+          resources:
+            limits:
+              memory: {{ .Values.COMFYUI_MEMORY_LIMIT | quote }}
+              cpu: "8"
+              infra.local/amd-dgpu: "1"
+            requests:
+              memory: 4Gi
+              cpu: 200m
+              infra.local/amd-dgpu: "1"
+          startupProbe:
+            httpGet:
+              path: /
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 60
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+          volumeMounts:
+            # The image is designed around a persistent /root: ComfyUI code,
+            # models, custom nodes, user data, output, .local and .cache all
+            # live under /home/imranr/ai/comfyui on bigpc.
+            - name: ai-data
+              mountPath: /root
+              subPath: comfyui
+            - name: shm
+              mountPath: /dev/shm
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: ai-data
+          persistentVolumeClaim:
+            claimName: ai-data-pvc
+        - name: shm
+          emptyDir:
+            medium: Memory
+            sizeLimit: 4Gi
+        - name: tmp
+          emptyDir:
+            sizeLimit: 2Gi
+      tolerations:
+        - key: infra.local/noschedule
+          operator: Exists
+          effect: NoSchedule
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: comfyui
+  namespace: apps
+  labels:
+    app.kubernetes.io/name: comfyui
+    app.kubernetes.io/instance: comfyui
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: comfyui
+    app.kubernetes.io/instance: comfyui
+  ports:
+    - name: http
+      port: 8188
+      targetPort: http
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: comfyui-ingress
+  namespace: base
+spec:
+  parentRefs:
+    - name: srv0
+      sectionName: websecure
+    - name: srv0
+      sectionName: websecure-proxy
+  hostnames:
+    - comfyui.{{ .Values.SERVICES_DOMAIN }}
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      filters:
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: geoblock
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: crowdsec-bouncer
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: forwardauth-authelia
+      backendRefs:
+        - name: comfyui
+          namespace: apps
+          port: 8188

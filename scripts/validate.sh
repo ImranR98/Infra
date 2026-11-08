@@ -293,7 +293,6 @@ check_rendered_paths() {
             ok=0
         fi
     done <<'EOF'
-hostpath-main-node-infra-pv|INFRA_ROOT
 hostpath-main-node-media-pv|MEDIA_DIR_PATH
 dscpln-app-config-pv|DSCPLN_CONFIG_PATH
 watxt-app-config-pv|WATXT_CONFIG_PATH
@@ -417,7 +416,8 @@ check_cluster_hardware() {
     case "$profile" in
         intel) checks=("srv0 intel-gpu" "srv0 vaapi" "bigpc amd-dgpu") ;;
         amd) checks=("srv0 amd-igpu" "srv0 vaapi" "bigpc amd-dgpu") ;;
-        none) checks=() ;;
+        # ComfyUI is independent of GPU_PROFILE and always needs the bigpc dGPU.
+        none) checks=("bigpc amd-dgpu") ;;
         *)
             _err "WARNING: unknown GPU_PROFILE '$profile'"
             return 0
@@ -433,6 +433,71 @@ check_cluster_hardware() {
             _err "WARNING: GPU_PROFILE=$profile expects infra.local/$res on $node, but it is not advertised"
         fi
     done
+}
+
+# check_node_placement — enforce the bigpc opt-in model and catch drift.
+check_node_placement() {
+    command -v kubectl >/dev/null 2>&1 || return 0
+    kubectl get node srv0 >/dev/null 2>&1 || return 0
+
+    if kubectl get node srv0 -o json 2>/dev/null | jq -e '(.spec.taints // []) | any(.key == "infra.local/noschedule")' >/dev/null 2>&1; then
+        _err "WARNING: srv0 carries infra.local/noschedule; the primary node must be schedulable"
+    fi
+    if kubectl get node bigpc >/dev/null 2>&1; then
+        if ! kubectl get node bigpc -o json 2>/dev/null | jq -e '(.spec.taints // []) | any(.key == "infra.local/noschedule" and .effect == "NoSchedule")' >/dev/null 2>&1; then
+            _err "WARNING: bigpc is missing infra.local/noschedule=true:NoSchedule"
+        fi
+    fi
+
+    if kubectl get nodes -l infra.local/amd-dgpu=true --no-headers 2>/dev/null | grep -q .; then
+        _err "WARNING: a node still carries infra.local/amd-dgpu=true; the AI data PV uses kubernetes.io/hostname"
+    fi
+    if kubectl get nodes -o json 2>/dev/null | jq -e '[.items[] | (.spec.taints // [])[] | select(.key == "scheduling-discouraged")] | length > 0' >/dev/null 2>&1; then
+        _err "WARNING: a node still carries the legacy scheduling-discouraged taint"
+    fi
+
+    if kubectl get node bigpc >/dev/null 2>&1; then
+        local bad
+        bad=$(kubectl get pods -n base -o json 2>/dev/null | jq -r --arg n bigpc '
+            .items[] | select(.spec.nodeName == $n) |
+            select((.metadata.ownerReferences[0].kind // "") != "DaemonSet") |
+            .metadata.name')
+        [ -z "$bad" ] || _err "WARNING: base-namespace non-DaemonSet pods on bigpc: $bad"
+        bad=$(kubectl get pods -n kube-system -o json 2>/dev/null | jq -r --arg n bigpc '
+            .items[] | select(.spec.nodeName == $n) |
+            select((.metadata.ownerReferences[0].kind // "") != "DaemonSet") |
+            .metadata.name')
+        [ -z "$bad" ] || _err "WARNING: kube-system non-DaemonSet pods on bigpc: $bad"
+        bad=$(kubectl get pods -n apps -o json 2>/dev/null | jq -r --arg n bigpc '
+            .items[] | select(.spec.nodeName == $n) |
+            select([(.spec.tolerations // [])[] | select(.key == "infra.local/noschedule" or (.key == null and .operator == "Exists"))] | length == 0) |
+            .metadata.name')
+        [ -z "$bad" ] || _err "WARNING: app pods on bigpc without the infra.local/noschedule toleration: $bad"
+    fi
+
+    local ai_node
+    ai_node=$(kubectl get pv ai-data-pv -o jsonpath='{.spec.nodeAffinity.required.nodeSelectorTerms[0].matchExpressions[0].values[0]}' 2>/dev/null || true)
+    if [ -n "$ai_node" ] && [ "$ai_node" != "bigpc" ]; then
+        _err "WARNING: ai-data-pv is pinned to '$ai_node', not bigpc"
+    fi
+    if kubectl get pv ai-data-pv >/dev/null 2>&1; then
+        [ "$(kubectl get pv ai-data-pv -o jsonpath='{.status.phase}')" = "Bound" ] || _err "WARNING: ai-data-pv is not Bound"
+    fi
+
+    if kubectl get configmap -n kube-system descheduler >/dev/null 2>&1; then
+        local policy
+        policy=$(kubectl get configmap -n kube-system descheduler -o jsonpath='{.data.policy\.yaml}' 2>/dev/null || true)
+        if ! grep -q "infra.local/noschedule" <<<"$policy"; then
+            _err "WARNING: descheduler policy does not reference infra.local/noschedule"
+        fi
+        if grep -q "scheduling-discouraged" <<<"$policy"; then
+            _err "WARNING: descheduler policy still references scheduling-discouraged"
+        fi
+    fi
+
+    local released
+    released=$(kubectl get pv -o json 2>/dev/null | jq -r '.items[] | select(.spec.storageClassName == "nfs-apps" and .status.phase == "Released") | .metadata.name')
+    [ -z "$released" ] || _err "WARNING: Released nfs-apps PVs remain: $released"
 }
 
 check_helm() {
@@ -583,6 +648,7 @@ if command -v kubectl >/dev/null 2>&1 && kubectl get node "$TARGET" >/dev/null 2
         echo "WARNING: $main_count nodes carry infra.local/hostpath-main=true; the static Main PVs and nfs-server expect exactly one data node." >&2
     fi
 
+    check_node_placement
     [ -f "$config_values" ] && check_cluster_hardware "$config_values"
 fi
 

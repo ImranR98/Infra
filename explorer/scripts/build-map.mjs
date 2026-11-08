@@ -1491,21 +1491,22 @@ function buildCompose() {
     subtitle: "optional K3s worker · RX 9070",
     parent: "srv0/cluster",
     summary:
-      "Optional K3s worker; advertises the RX 9070 and runs the llama.cpp router. Its Compose stack also runs syncthing.",
+      "Optional, opt-in-only K3s worker; advertises the RX 9070 and runs llama.cpp and ComfyUI. Its Compose stack also runs syncthing.",
     tags: ["cluster", "gpu", "context"],
     badges: ["optional", "gpu"],
     context: true,
     facts: [
-      { label: "Role", value: "optional K3s worker" },
+      { label: "Role", value: "optional, opt-in-only K3s worker" },
       { label: "Accelerator", value: "AMD RX 9070 → infra.local/amd-dgpu" },
-      { label: "Scheduling", value: "scheduling-discouraged taint" },
-      { label: "Relevant to", value: "Immich ML · llama.cpp · Frigate fallback" },
+      { label: "Scheduling", value: "infra.local/noschedule taint" },
+      { label: "AI data", value: "ai-data-pv (hostname-pinned hostPath)" },
+      { label: "Relevant to", value: "llama.cpp · ComfyUI · Immich ML" },
     ],
     lane: "external",
   });
   addEdge("srv0/cluster", "target/bigpc", "may-run-on", "optional worker");
-  addEdge("target/bigpc", "srv0/apps/media/frigate", "can-run", "ROCm fallback");
   addEdge("target/bigpc", "srv0/apps/tools/llama-cpp", "runs", "GPU");
+  addEdge("target/bigpc", "srv0/apps/tools/comfyui", "runs", "GPU");
 
   addNode({
     id: "target/rpi",

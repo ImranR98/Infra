@@ -56,6 +56,10 @@ spec:
       alloy-metrics:
         enabled: true
         presets: [clustered]
+        controller:
+          # Node collector: run on every node, including opt-in-only bigpc.
+          tolerations:
+            - operator: Exists
         alloy:
           resources:
             requests:
@@ -65,6 +69,10 @@ spec:
       alloy-logs:
         enabled: true
         presets: [clustered]
+        controller:
+          # Node collector: run on every node, including opt-in-only bigpc.
+          tolerations:
+            - operator: Exists
         alloy:
           # Tail from the node's /var/log; SELinux denies container_t (even as
           # root) reads of host container_log_t files, so the collector runs

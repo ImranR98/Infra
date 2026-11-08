@@ -1,36 +1,35 @@
 {{- $llamaGpu := include "gpu.llamaCppGpu" . | trim -}}
 ---
+# Generic AI data root on the bigpc host. The PV is hostname-pinned because
+# this is local desktop data, not a GPU selector. Consumers mount subPaths:
+# llama.cpp uses "llama"; future AI tools use their own subdirectory.
 apiVersion: v1
 kind: PersistentVolume
 metadata:
-  name: llama-models-pv
+  name: ai-data-pv
 spec:
   capacity:
-    storage: 100Gi
+    storage: 500Gi
   volumeMode: Filesystem
   accessModes:
     - ReadWriteOnce
   persistentVolumeReclaimPolicy: Retain
   storageClassName: hostpath
   local:
-    path: {{ include "path.home" . }}/ai/llama
-  # The path lives on the node carrying the AI-data label. The workload still
-  # selects hardware through the infra.local/amd-dgpu extended resource; this
-  # affinity only keeps the local volume with the GPU node. The label is a
-  # singleton (one AI-data node), like infra.local/hostpath-main.
+    path: {{ include "path.home" . }}/ai
   nodeAffinity:
     required:
       nodeSelectorTerms:
         - matchExpressions:
-            - key: infra.local/amd-dgpu
+            - key: kubernetes.io/hostname
               operator: In
               values:
-                - "true"
+                - bigpc
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: llama-models-pvc
+  name: ai-data-pvc
   namespace: apps
 spec:
   accessModes:
@@ -38,8 +37,8 @@ spec:
   storageClassName: hostpath
   resources:
     requests:
-      storage: 100Gi
-  volumeName: llama-models-pv
+      storage: 500Gi
+  volumeName: ai-data-pv
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -103,6 +102,7 @@ spec:
           volumeMounts:
             - name: models
               mountPath: /models
+              subPath: llama
       containers:
         - name: llama-cpp
           securityContext:
@@ -183,6 +183,7 @@ spec:
           volumeMounts:
             - name: models
               mountPath: /models
+              subPath: llama
             - name: tmp
               mountPath: /tmp
           startupProbe:
@@ -209,14 +210,13 @@ spec:
       volumes:
         - name: models
           persistentVolumeClaim:
-            claimName: llama-models-pvc
+            claimName: ai-data-pvc
         - name: tmp
           emptyDir: {}
       tolerations:
-        - effect: PreferNoSchedule
-          key: scheduling-discouraged
-          operator: Equal
-          value: "true"
+        - key: infra.local/noschedule
+          operator: Exists
+          effect: NoSchedule
 ---
 apiVersion: v1
 kind: Service

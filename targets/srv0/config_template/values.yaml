@@ -52,6 +52,7 @@ PUBLIC_HOSTS:
   - seerr
   - sonarr
   - auth
+  - comfyui
   - crowdsec
   - grafana
   - ntfy
@@ -104,7 +105,6 @@ LAN_CIDR: "<lan-cidr>"
 # Per-app overrides below are optional; empty derives from GPU_PROFILE.
 GPU_PROFILE: "intel"
 FRIGATE_DETECTOR: ""         # openvino | rocm | cpu
-FRIGATE_GPU_RESOURCE: ""     # intel-gpu | amd-igpu | amd-dgpu
 IMMICH_ML_BACKEND: ""        # openvino | rocm | cpu
 IMMICH_ML_GPU_RESOURCE: ""   # intel-gpu | amd-dgpu
 # Optional ROCm selection when bigpc has more than one KFD-visible GPU.

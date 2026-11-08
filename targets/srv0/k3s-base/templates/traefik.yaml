@@ -130,6 +130,10 @@ spec:
     # edge is the srv0 Gateway in templates/gateway.yaml.
     gateway:
       enabled: false
+    # The edge runs only on the externally exposed node (srv0). bigpc is
+    # opt-in-only and does not tolerate infra.local/noschedule.
+    nodeSelector:
+      infra.local/external-exposed: "true"
     # Pod-network DaemonSet with hostPorts and NO Service: no ServiceLB, no
     # NodePorts, no kube-proxy LB VIPs. The CNI hostPort DNAT is the only way
     # in, and it preserves real client sources (only pod/loopback hairpin

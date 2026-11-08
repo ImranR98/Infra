@@ -137,8 +137,13 @@ spec:
         securityContext:
           seLinuxOptions:
             level: s0
-        # No nodeSelector: the accelerator resource chooses the GPU node.
-        # bigpc's scheduling-discouraged taint still discourages drift.
+{{- if eq $immichMlResource "amd-dgpu" }}
+        # Only the AMD dGPU branch is allowed on opt-in-only bigpc.
+        tolerations:
+          - key: infra.local/noschedule
+            operator: Exists
+            effect: NoSchedule
+{{- end }}
 
     immich:
       persistence:

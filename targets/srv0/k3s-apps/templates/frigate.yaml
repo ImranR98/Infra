@@ -133,19 +133,8 @@ spec:
       annotations:
         checksum/config: {{ printf "%s-%s-%s" (.Values.FRIGATE_ADDITIONAL_CONFIG | sha256sum) $frigateDetector $frigateResource | sha256sum }}
     spec:
-      # Keep the NVR on the main media node when possible. The accelerator
-      # resource is the hard requirement; FRIGATE_GPU_RESOURCE=amd-dgpu can
-      # still move it to bigpc when that fallback is selected.
-      affinity:
-        nodeAffinity:
-          preferredDuringSchedulingIgnoredDuringExecution:
-            - weight: 100
-              preference:
-                matchExpressions:
-                  - key: infra.local/hostpath-main
-                    operator: In
-                    values:
-                      - "true"
+      # Frigate always runs on srv0's media GPU. It never tolerates the
+      # bigpc no-schedule taint, so it can never move to bigpc.
       initContainers:
         - name: copyconfig
 {{- if eq $frigateDetector "rocm" }}

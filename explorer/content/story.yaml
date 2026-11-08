@@ -1020,7 +1020,7 @@ steps:
   body: 'The generic device plugin scans each node''s sysfs and `/dev` and advertises hardware as resources: `infra.local/intel-gpu`, `amd-igpu`, `amd-dgpu`, `vaapi`, and `conbee`.
 
 
-    Workloads request the resource they need. On the current Intel `srv0`, that is `intel-gpu` + `vaapi`; after the board swap it is `amd-igpu` + `vaapi`. Immich ML uses `intel-gpu` (OpenVINO) or `bigpc`''s `amd-dgpu` (ROCm). `GPU_PROFILE` (`intel|amd|none`) selects the media/ML backends. A node without the device advertises zero.'
+    Workloads request the resource they need. On the current Intel `srv0`, that is `intel-gpu` + `vaapi`; after the board swap it is `amd-igpu` + `vaapi`. Immich ML uses `intel-gpu` (OpenVINO) or `bigpc`''s `amd-dgpu` (ROCm). Frigate always uses `amd-igpu` on srv0. ComfyUI is independent of `GPU_PROFILE` and always uses `bigpc`''s `amd-dgpu`. `GPU_PROFILE` (`intel|amd|none`) selects the media/ML backends. A node without the device advertises zero.'
   deepDive: 'The plugin normalizes device names to `renderD128`/`card0`/`ttyACM0`, so a workload does not depend on enumeration order or a node label.
 
 
@@ -1065,11 +1065,11 @@ steps:
 - id: other-machines
   stage: App
   title: The other machines
-  body: '`bigpc` is an optional K3s agent and desktop. It advertises `amd-dgpu` on the RX 9070 and runs llama.cpp; Compose also runs syncthing. `rpi` is a Pi 400 that turns a webcam into an authenticated RTSP stream with go2rtc, consumed by Frigate on `srv0`.
+  body: '`bigpc` is an optional, opt-in-only K3s agent and desktop. It advertises `amd-dgpu` on the RX 9070 and runs llama.cpp and ComfyUI; Compose also runs syncthing. `rpi` is a Pi 400 that turns a webcam into an authenticated RTSP stream with go2rtc, consumed by Frigate on `srv0`.
 
 
     `pc` is Compose-only: a socket proxy, watchtower, syncthing, and ComfyUI on its Intel Arc iGPU. None of the four is on the `srv0`/`vps0` request path.'
-  deepDive: '`bigpc` is tainted `scheduling-discouraged` (PreferNoSchedule) and runs the FL0W archive agent on local PV/PVCs. `rpi`''s go2rtc password is generated on first start under `current_target/compose_live_state/go2rtc/`; the WebUI is loopback-only.
+  deepDive: '`bigpc` is tainted `infra.local/noschedule=true:NoSchedule`; only node agents, llama.cpp, ComfyUI, Immich ML (AMD dGPU branch), and the FL0W agent tolerate it. The AI tools share the hostname-pinned `ai-data-pv` via the `llama` and `comfyui` subPaths. `rpi`''s go2rtc password is generated on first start under `current_target/compose_live_state/go2rtc/`; the WebUI is loopback-only.
 
 
     `pc`''s watchtower owns syncthing and ComfyUI, and `bigpc`''s owns syncthing; `srv0`, `vps0`, and `rpi` rely on Renovate.'
@@ -1598,7 +1598,7 @@ steps:
 - id: boot-nodes
   stage: Bootstrap
   title: Optional nodes
-  body: 'Add bigpc with `scripts/k3s-join.sh` only if you want a GPU worker. It joins as an agent by default; `--hostpath-main` is a singleton replacement for the Main-data owner, not a second owner.
+  body: 'Add bigpc with `scripts/k3s-join.sh` only if you want a GPU worker. It joins as an agent by default; `--noschedule` marks it opt-in-only, and `--hostpath-main` is a singleton replacement for the Main-data owner, not a second owner.
 
 
     `pc` and `rpi` are separate Compose targets; they are not part of the srv0/vps0 request path.
@@ -1607,7 +1607,7 @@ steps:
   deepDive: '`k3s-join.sh` streams node prep and the installer over SSH with the token on stdin, never argv. It waits for Ready, then applies the taint and optional labels.
 
 
-    `--scheduling-discouraged` adds a PreferNoSchedule taint for a desktop worker.'
+    `--noschedule` adds `infra.local/noschedule=true:NoSchedule` for a desktop worker. All other nodes are schedulable by default.'
   reveal:
   - target/bigpc
   - script/k3s-join
@@ -1749,7 +1749,8 @@ steps:
   deepDive: 'Before disassembly, take a restic backup and an etcd snapshot, record `helm get values` for both releases, and verify the initramfs has the USB NIC/storage modules.
 
 
-    Frigate''s ROCm detector needs `yolov9-t-320.onnx` in the config PVC before switching `FRIGATE_DETECTOR=rocm`. Fallbacks are `FRIGATE_GPU_RESOURCE=amd-dgpu`, `FRIGATE_DETECTOR=cpu`, `IMMICH_ML_BACKEND=cpu`, `JELLYFIN_HWACCEL=none`, `IMMICH_SERVER_HWACCEL=none`, and `GPU_PROFILE=none`.'
+    Frigate''s ROCm detector needs `yolov9-t-320.onnx` in the config PVC before switching `FRIGATE_DETECTOR=rocm`. Frigate is srv0-only (`amd-igpu`). Fallbacks are `FRIGATE_DETECTOR=cpu`, `IMMICH_ML_BACKEND=cpu`, `JELLYFIN_HWACCEL=none`, `IMMICH_SERVER_HWACCEL=none`, and `GPU_PROFILE=none`. ComfyUI is independent of `GPU_PROFILE` and always uses bigpc''s `amd-dgpu`.'
+
   reveal:
   - srv0/cluster
   - srv0/base/generic-device-plugin

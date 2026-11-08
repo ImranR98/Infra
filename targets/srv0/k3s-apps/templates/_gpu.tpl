@@ -21,9 +21,7 @@ openvino
 {{- end -}}
 
 {{- define "gpu.frigateResource" -}}
-{{- if .Values.FRIGATE_GPU_RESOURCE -}}
-{{- .Values.FRIGATE_GPU_RESOURCE -}}
-{{- else if eq (include "gpu.frigateDetector" .) "rocm" -}}
+{{- if eq (include "gpu.frigateDetector" .) "rocm" -}}
 amd-igpu
 {{- else if eq (include "gpu.frigateDetector" .) "openvino" -}}
 intel-gpu

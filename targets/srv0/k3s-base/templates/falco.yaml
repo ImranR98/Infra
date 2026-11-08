@@ -35,16 +35,9 @@ spec:
     # and ships it to Loki for browsing/forensics.
     tty: true
 
+    # Node sensor: run on every node, including opt-in-only bigpc.
     tolerations:
-      - key: node-role.kubernetes.io/control-plane
-        effect: NoSchedule
-      - key: node-role.kubernetes.io/master
-        effect: NoSchedule
-      # bigpc is tainted PreferNoSchedule by k3s-join.sh; tolerate it so the
-      # sensor still lands there.
-      - key: scheduling-discouraged
-        operator: Exists
-        effect: PreferNoSchedule
+      - operator: Exists
 
     podSecurityContext:
       seLinuxOptions:

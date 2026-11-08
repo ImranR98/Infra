@@ -41,6 +41,10 @@ assert_not "$tmp/intel.yaml" "hf-file"
 assert_not "$tmp/intel.yaml" "frigate:0.18.2-rocm"
 assert_not "$tmp/intel.yaml" "tag: v3.3.5-rocm"
 assert_not "$tmp/intel.yaml" "name: ensure-model"
+assert_has "$tmp/intel.yaml" "yanwk/comfyui-boot:rocm"
+assert_has "$tmp/intel.yaml" "name: comfyui"
+assert_has "$tmp/intel.yaml" "infra.local/noschedule"
+assert_not "$tmp/intel.yaml" "scheduling-discouraged"
 
 render amd "$tmp/amd.yaml"
 assert_has "$tmp/amd.yaml" "ghcr.io/blakeblackshear/frigate:0.18.2-rocm"
@@ -62,6 +66,10 @@ assert_has "$tmp/amd.yaml" "input_tensor: nchw"
 assert_has "$tmp/amd.yaml" "input_dtype: float"
 assert_has "$tmp/amd.yaml" "name: ensure-model"
 assert_has "$tmp/amd.yaml" "yolov9-t-320.onnx"
+assert_has "$tmp/amd.yaml" "yanwk/comfyui-boot:rocm"
+assert_has "$tmp/amd.yaml" "name: comfyui"
+assert_has "$tmp/amd.yaml" "infra.local/noschedule"
+assert_not "$tmp/amd.yaml" "scheduling-discouraged"
 
 render none "$tmp/none.yaml"
 assert_has "$tmp/none.yaml" "ghcr.io/blakeblackshear/frigate:0.18.2"
@@ -74,7 +82,12 @@ assert_not "$tmp/none.yaml" '"--models-preset"'
 assert_not "$tmp/none.yaml" "hf-file"
 assert_not "$tmp/none.yaml" "infra.local/vaapi"
 assert_not "$tmp/none.yaml" "infra.local/intel-gpu"
-assert_not "$tmp/none.yaml" 'infra.local/amd-dgpu: "1"'
+# ComfyUI is independent of GPU_PROFILE and always requests the bigpc dGPU.
+assert_has "$tmp/none.yaml" "yanwk/comfyui-boot:rocm"
+assert_has "$tmp/none.yaml" "name: comfyui"
+assert_has "$tmp/none.yaml" 'infra.local/amd-dgpu: "1"'
+assert_has "$tmp/none.yaml" "infra.local/noschedule"
+assert_not "$tmp/none.yaml" "scheduling-discouraged"
 assert_not "$tmp/none.yaml" "name: ensure-model"
 
 render intel "$tmp/no-hw.yaml" --set HA_CONBEE=false --set HA_BLUETOOTH=false

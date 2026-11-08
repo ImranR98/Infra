@@ -66,5 +66,9 @@ echo "==> Static node labels"
 $SU "$kubectl_bin" label node "$(hostname)" \
     infra.local/hostpath-main=true \
     infra.local/external-exposed=true --overwrite
+# The server is always schedulable; remove the legacy markers.
+$SU "$kubectl_bin" label node "$(hostname)" infra.local/amd-dgpu- 2>/dev/null || true
+$SU "$kubectl_bin" taint node "$(hostname)" infra.local/noschedule- 2>/dev/null || true
+$SU "$kubectl_bin" taint node "$(hostname)" scheduling-discouraged- 2>/dev/null || true
 
 echo "k3s-server: control plane ready."

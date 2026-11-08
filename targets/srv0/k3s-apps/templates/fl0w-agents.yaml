@@ -131,10 +131,9 @@ spec:
     spec:
       automountServiceAccountToken: false
       tolerations:
-        - key: scheduling-discouraged
-          operator: Equal
-          value: "true"
-          effect: PreferNoSchedule
+        - key: infra.local/noschedule
+          operator: Exists
+          effect: NoSchedule
       securityContext:
         runAsUser: {{ $root.Values.MY_UID }}
         runAsGroup: {{ $root.Values.MY_UID }}

@@ -20,9 +20,8 @@ usage() {
 Usage: $(basename "$0") <node_ip> <node_user> [options]
 
   --role agent|server          joining role (default: agent)
-  --scheduling-discouraged     add the PreferNoSchedule taint
+  --noschedule                 taint the node infra.local/noschedule=true:NoSchedule
   --hostpath-main              label the node infra.local/hostpath-main=true
-  --amd-dgpu                   label the node infra.local/amd-dgpu=true
 
 Run ON the control plane. The first SSH to the node prompts to accept the host
 key — the same trust model as plain ssh.
@@ -36,15 +35,13 @@ node_user="$2"
 shift 2
 
 k3s_role=agent
-scheduling_discouraged=false
+noschedule=false
 hostpath_main=false
-amd_dgpu=false
 while [ $# -gt 0 ]; do
     case "$1" in
         --role) k3s_role="${2:?--role needs agent|server}"; shift 2 ;;
-        --scheduling-discouraged) scheduling_discouraged=true; shift ;;
+        --noschedule) noschedule=true; shift ;;
         --hostpath-main) hostpath_main=true; shift ;;
-        --amd-dgpu) amd_dgpu=true; shift ;;
         -h | --help) usage ;;
         *) echo "Error: unknown option '$1'" >&2; usage ;;
     esac
@@ -124,15 +121,15 @@ if [ "$hostpath_main" = true ]; then
     $SU "$kubectl_bin" label node "$node_name" infra.local/hostpath-main=true --overwrite
 fi
 
-if [ "$amd_dgpu" = true ]; then
-    $SU "$kubectl_bin" label node "$node_name" infra.local/amd-dgpu=true --overwrite
-fi
+# Legacy cleanup: the old soft taint and the AI-data node label are gone.
+$SU "$kubectl_bin" taint node "$node_name" scheduling-discouraged- 2>/dev/null || true
+$SU "$kubectl_bin" label node "$node_name" infra.local/amd-dgpu- 2>/dev/null || true
 
-if [ "$scheduling_discouraged" = true ]; then
-    taints=$($SU "$kubectl_bin" get node "$node_name" -o json | jq -r '(.spec.taints // []) | map(.key) | join(" ")')
-    if [[ "$taints" != *scheduling-discouraged* ]]; then
-        $SU "$kubectl_bin" taint node "$node_name" scheduling-discouraged=true:PreferNoSchedule --overwrite
-    fi
+if [ "$noschedule" = true ]; then
+    $SU "$kubectl_bin" taint node "$node_name" infra.local/noschedule=true:NoSchedule --overwrite
+else
+    # All nodes are schedulable unless explicitly marked otherwise.
+    $SU "$kubectl_bin" taint node "$node_name" infra.local/noschedule- 2>/dev/null || true
 fi
 
 echo "k3s-join: node '$node_name' joined."
