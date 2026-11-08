@@ -56,6 +56,7 @@ PUBLIC_HOSTS:
   - crowdsec
   - grafana
   - ntfy
+  - lifetagger
 PRIVATE_HOSTS:
   - files
   - traefik
@@ -472,6 +473,15 @@ GRAFANA_ADMIN_PASSWORD: "change_me" # openssl rand -base64 32
 # into Authelia via authelia.yaml).
 AUTHELIA_GRAFANA_CLIENT_SECRET_HASHABLE: "change_me" # docker run authelia/authelia:latest authelia crypto hash generate pbkdf2 --variant sha512 --random --random.length 72 --random.charset rfc3986
 AUTHELIA_GRAFANA_CLIENT_SECRET_HASHED: "change_me"
+
+# ====== LifeTagger ======
+# Generate once with: npx web-push generate-vapid-keys
+LIFETAGGER_VAPID_PUBLIC_KEY: "change_me"
+LIFETAGGER_VAPID_PRIVATE_KEY: "change_me"
+LIFETAGGER_VAPID_SUBJECT: "mailto:you@example.com"
+# Optional extra formats for unusual libraries (comma-separated).
+LIFETAGGER_EXTRA_IMAGE_EXT: ""
+LIFETAGGER_EXTRA_VIDEO_EXT: ""
 
 # ====== Infra paths (k3s-chart-only, machine/env layout) ======
 # Repo path. Defaults to <MAIN_PARENT_DIR>/Main/Infra. Drives the infra
