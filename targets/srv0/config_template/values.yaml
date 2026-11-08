@@ -482,6 +482,8 @@ LIFETAGGER_VAPID_SUBJECT: "mailto:you@example.com"
 # Optional extra formats for unusual libraries (comma-separated).
 LIFETAGGER_EXTRA_IMAGE_EXT: ""
 LIFETAGGER_EXTRA_VIDEO_EXT: ""
+# Optional: extensions omitted from indexing.
+LIFETAGGER_EXCLUDE_EXT: "txt,pp3,json,xmp,aae,db,ini,log"
 
 # ====== Infra paths (k3s-chart-only, machine/env layout) ======
 # Repo path. Defaults to <MAIN_PARENT_DIR>/Main/Infra. Drives the infra
