@@ -85,7 +85,7 @@ spec:
               mountPath: /data
       containers:
         - name: lifetagger
-          image: ghcr.io/imranr98/lifetagger:latest@sha256:6053962e49a9d877d4f8993babd2abfb8123bd767de608d78ebec658a9f8b32b
+          image: ghcr.io/imranr98/lifetagger:latest@sha256:85adc844c09c74c8569304409aeaa6f7a94c255bc53e45f8608ed4edda588e8f
           imagePullPolicy: IfNotPresent
           securityContext:
             {{- include "dscpln.containerSecurityContext" (dict "uid" .Values.MY_UID "readOnlyRootFilesystem" true) | nindent 12 }}
