@@ -537,7 +537,7 @@ services:
     # non-MY_UID user (ClickHouse 101, Plausible 999) — self-heals ownership
     # drift (e.g. a host-side chown). Re-runs on every up after a down.
     state-fixperms:
-        image: alpine:latest@sha256:3f4d6b32e26703c6082839234f43769d5046b3ac7c910033911d1e71d8cd630a
+        image: alpine:latest@sha256:f59abe656b692d901e184be3445e084786602108599d2a51d229c0f5a48c71bf
         container_name: state-fixperms
         restart: no
         cap_drop:
