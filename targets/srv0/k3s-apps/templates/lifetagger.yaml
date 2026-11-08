@@ -85,7 +85,7 @@ spec:
               mountPath: /data
       containers:
         - name: lifetagger
-          image: ghcr.io/imranr98/lifetagger:latest@sha256:1c67b6a5eceabfa7e2d532ada2b92df3377f7ac6166e866c66cd7cd0eb6bfd8f
+          image: ghcr.io/imranr98/lifetagger:latest@sha256:ae32675638b758ea65b590786408389c56bf7ff57a0ce1802d6d68e131bdd778
           imagePullPolicy: IfNotPresent
           securityContext:
             {{- include "dscpln.containerSecurityContext" (dict "uid" .Values.MY_UID "readOnlyRootFilesystem" true) | nindent 12 }}
@@ -111,6 +111,8 @@ spec:
               value: "true"
             - name: FACE_SCAN_MODE
               value: "on-demand"
+            - name: INDEX_CONCURRENCY
+              value: "2"
             - name: EXTRA_IMAGE_EXT
               value: '{{ .Values.LIFETAGGER_EXTRA_IMAGE_EXT | default "" }}'
             - name: EXTRA_VIDEO_EXT
