@@ -272,7 +272,7 @@ spec:
             - name: config
               mountPath: /config
         - name: browser
-          image: selenium/standalone-chromium:4.51.0@sha256:c7c17cd79c62819a8329df00e610dbc4073c279da034a6f37135d454eb0d8870
+          image: selenium/standalone-chromium:4.52.0@sha256:b211549a4c35f11826bc1a7559b9f23ff055198517f8cb7d49ef74df01c5e38d
           securityContext:
             runAsUser: 1200
             runAsGroup: {{ .Values.MY_UID }}
