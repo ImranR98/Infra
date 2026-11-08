@@ -112,7 +112,6 @@ services:
             - /home/$MY_USERNAME/comfyui/input:/app/input
         logging: *logging
 
-    llama.cpp disabled 2026-11-07 — uncomment to re-enable.
     # llama.cpp router server on the Intel iGPU (SYCL). Launching without -m
     # puts it in router mode: every model directory under ~/models is listed
     # by /v1/models and loaded on demand. Per-model options come from
