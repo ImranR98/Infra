@@ -126,6 +126,13 @@ spec:
             - "1024"
             - "--n-gpu-layers"
             - "99"
+            # MoE expert tensors dominate the 35B model's file size. Keep the
+            # first 24 of 40 layers' experts in system RAM so --fit has room
+            # for a large KV cache while attention/dense weights stay on GPU.
+            # Dense models ignore this; the Qwen3.6 A3B only activates ~3B
+            # params per token, so CPU experts remain practical.
+            - "--n-cpu-moe"
+            - "24"
             - "--flash-attn"
             - "on"
             - "--cache-type-k"
@@ -142,6 +149,10 @@ spec:
             - "on"
             - "--fit-target"
             - "1792"
+            # Never let --fit fall back to its 4k default; 32k is the
+            # practical floor for tool-heavy agent sessions.
+            - "--fit-ctx"
+            - "32768"
             - "--cache-ram"
             - "2048"
             - "--sleep-idle-seconds"
