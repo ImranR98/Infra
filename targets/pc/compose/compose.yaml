@@ -83,34 +83,34 @@ services:
         network_mode: host
         logging: *logging
 
-    # ComfyUI on the Intel Arc iGPU (XPU). The image bundles ComfyUI,
-    # ComfyUI-Manager and ComfyUI-GGUF; persistent state lives under
-    # ~/comfyui. Runs as root by design (Manager installs node deps into
-    # /app/venv). Watchtower owns image updates (rolling xpu-master).
-    comfyui:
-        image: ghcr.io/reliq-hq/comfyui:xpu-master
-        container_name: comfyui
-        restart: unless-stopped
-        # 54G leaves ~8 GiB of the 62 GiB total for GNOME and host services.
-        # Realistic ComfyUI peaks for current models are ~30G, so this is
-        # headroom, not a target. Don't raise further: swap is zram-only.
-        mem_limit: 54G
-        # Prevent the container from touching the host's zram swap; it stays
-        # reserved for the desktop. (memory + swap == memory means no swap.)
-        memswap_limit: 54G
-        devices:
-            # card0 + renderD128; PyTorch XPU renders through renderD128.
-            - /dev/dri:/dev/dri
-        ports:
-            # Loopback-only; browser on this machine or an SSH tunnel.
-            - "127.0.0.1:8188:8188"
-        volumes:
-            - /home/$MY_USERNAME/comfyui/models:/app/models
-            - /home/$MY_USERNAME/comfyui/user:/app/user
-            - /home/$MY_USERNAME/comfyui/custom_nodes:/app/custom_nodes
-            - /home/$MY_USERNAME/comfyui/output:/app/output
-            - /home/$MY_USERNAME/comfyui/input:/app/input
-        logging: *logging
+    # # ComfyUI on the Intel Arc iGPU (XPU). The image bundles ComfyUI,
+    # # ComfyUI-Manager and ComfyUI-GGUF; persistent state lives under
+    # # ~/comfyui. Runs as root by design (Manager installs node deps into
+    # # /app/venv). Watchtower owns image updates (rolling xpu-master).
+    # comfyui:
+    #     image: ghcr.io/reliq-hq/comfyui:xpu-master
+    #     container_name: comfyui
+    #     restart: unless-stopped
+    #     # 54G leaves ~8 GiB of the 62 GiB total for GNOME and host services.
+    #     # Realistic ComfyUI peaks for current models are ~30G, so this is
+    #     # headroom, not a target. Don't raise further: swap is zram-only.
+    #     mem_limit: 54G
+    #     # Prevent the container from touching the host's zram swap; it stays
+    #     # reserved for the desktop. (memory + swap == memory means no swap.)
+    #     memswap_limit: 54G
+    #     devices:
+    #         # card0 + renderD128; PyTorch XPU renders through renderD128.
+    #         - /dev/dri:/dev/dri
+    #     ports:
+    #         # Loopback-only; browser on this machine or an SSH tunnel.
+    #         - "127.0.0.1:8188:8188"
+    #     volumes:
+    #         - /home/$MY_USERNAME/comfyui/models:/app/models
+    #         - /home/$MY_USERNAME/comfyui/user:/app/user
+    #         - /home/$MY_USERNAME/comfyui/custom_nodes:/app/custom_nodes
+    #         - /home/$MY_USERNAME/comfyui/output:/app/output
+    #         - /home/$MY_USERNAME/comfyui/input:/app/input
+    #     logging: *logging
 
     # llama.cpp disabled 2026-11-07 — uncomment to re-enable.
     # # llama.cpp router server on the Intel iGPU (SYCL). Launching without -m
