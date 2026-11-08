@@ -408,7 +408,7 @@ services:
 
     # Traefik logrotate - caps the host-mounted access log (CrowdSec's acquisition source)
     traefik-logrotate:
-        image: vitess/logrotate:latest@sha256:6b2b39cc5dac339fbc06acf8c1c5c7eb39de9b9254174aea4cea0315ebf2a0f2
+        image: vitess/logrotate:latest@sha256:9c0c0aa31331dc16cf942ab9d759f2d0efb747bc4ebe422f411dd3c5f2db5ab1
         container_name: traefik-logrotate
         restart: unless-stopped
         mem_limit: 64M
@@ -619,7 +619,7 @@ services:
     # ISBN Lookup
     isbn-lookup:
         container_name: isbn-lookup
-        image: ghcr.io/imranr98/isbn-lookup:latest@sha256:21995da61f8dd9befad7fbac4239591f0922701fa66526dc5ff7d54e6a221a4d
+        image: ghcr.io/imranr98/isbn-lookup:latest@sha256:c586aa7dbd6d345897612288bdbbe05f90eff841bb89e0ee8a74cfaebb18aaec
         restart: unless-stopped
         mem_limit: 128M
         cpus: 0.25
