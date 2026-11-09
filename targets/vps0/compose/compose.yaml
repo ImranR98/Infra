@@ -408,7 +408,7 @@ services:
 
     # Traefik logrotate - caps the host-mounted access log (CrowdSec's acquisition source)
     traefik-logrotate:
-        image: vitess/logrotate:latest@sha256:9c0c0aa31331dc16cf942ab9d759f2d0efb747bc4ebe422f411dd3c5f2db5ab1
+        image: vitess/logrotate:latest@sha256:7499d327f2d61a6069365828044efe6cd10bfea524bf9c8ad689c04c9d3e2fa5
         container_name: traefik-logrotate
         restart: unless-stopped
         mem_limit: 64M
@@ -1067,7 +1067,7 @@ services:
     fl0w-agent:
         profiles:
             - fl0w-agent
-        image: ghcr.io/imranr98/fl0w-agent@sha256:e060eb762b70054faf7c3a3fecdb09f0a3284da4985471ff4a67464660ba9407
+        image: ghcr.io/imranr98/fl0w-agent@sha256:2b8021cf38ca12208b4cea96e20722ce54b2a5df0ba51b5d205a99f8223a2c18
         container_name: fl0w-agent
         restart: unless-stopped
         network_mode: host
