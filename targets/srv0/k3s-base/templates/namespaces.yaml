@@ -188,6 +188,17 @@ spec:
           port: 80
         - protocol: TCP
           port: 443
+    # LAN clients (browsers, TVs) use the websecure/web entrypoints directly;
+    # they are not pods, so the LAN needs an ipBlock too. 8443 stays excluded:
+    # it is the public-exposure listener and expects PROXY protocol from vps0.
+    - from:
+        - ipBlock:
+            cidr: {{ required "LAN_CIDR must be set in config/srv0/values.yaml" .Values.LAN_CIDR }}
+      ports:
+        - protocol: TCP
+          port: 80
+        - protocol: TCP
+          port: 443
   policyTypes:
     - Ingress
 ---

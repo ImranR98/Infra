@@ -64,6 +64,14 @@ if command -v firewall-cmd >/dev/null 2>&1; then
     rule="rule priority=-10 family=ipv4 port port=9100 protocol=tcp drop"
     firewall-cmd --permanent --zone="$zone" --query-rich-rule="$rule" >/dev/null 2>&1 ||
         firewall-cmd --permanent --zone="$zone" --add-rich-rule="$rule" >/dev/null
+    # LAN clients reach Traefik's hostPorts through the forward path. The LAN
+    # interface's zone does not forward to the unzoned pod bridge, so allow
+    # LAN -> trusted (pod/overlay/VPN) explicitly. Pod NetworkPolicies still
+    # gate the pods; host input rules (e.g. the 9100 drop) are unchanged.
+    firewall-cmd --permanent --new-policy=lan-to-pods >/dev/null 2>&1 || true
+    firewall-cmd --permanent --policy=lan-to-pods --add-ingress-zone="$zone" >/dev/null
+    firewall-cmd --permanent --policy=lan-to-pods --add-egress-zone=trusted >/dev/null
+    firewall-cmd --permanent --policy=lan-to-pods --set-target=ACCEPT >/dev/null
     firewall-cmd --reload
 elif command -v ufw >/dev/null 2>&1; then
     ufw allow from 10.42.0.0/16
