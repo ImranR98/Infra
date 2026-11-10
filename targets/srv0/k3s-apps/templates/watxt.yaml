@@ -26,7 +26,7 @@ spec:
       automountServiceAccountToken: false
       containers:
         - name: watxt
-          image: ghcr.io/imranr98/watxt:latest@sha256:8a56a7253e86ec37126cf5f59d7abc3ea1647e6ca0db3f67cd13b5a60c797de8
+          image: ghcr.io/imranr98/watxt:latest@sha256:3494120e66851ae3a49ea1053c94219a4ffcff6cf7e5417ef3104f5560531062
           securityContext:
             {{- include "dscpln.containerSecurityContext" (dict "uid" .Values.MY_UID "readOnlyRootFilesystem" true) | nindent 12 }}
           ports:

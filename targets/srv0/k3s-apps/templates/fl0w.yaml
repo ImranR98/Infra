@@ -164,7 +164,7 @@ spec:
               mountPath: /config
       containers:
         - name: fl0w
-          image: ghcr.io/imranr98/fl0w:latest@sha256:60849c76ea562852352079cd0dd59e511616b7aae046ea323e24a3fa2bd08e14
+          image: ghcr.io/imranr98/fl0w:latest@sha256:a3ff5596d7f1f0781d63b2f2c288dd527ee34027040f6864a7480638a0949d5c
           imagePullPolicy: IfNotPresent
           securityContext:
             runAsUser: 0
