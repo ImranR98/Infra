@@ -746,7 +746,7 @@ services:
     # Our Times - long-term countdown timers (Authelia headers carry the identity)
     our-times:
         container_name: our-times
-        image: ghcr.io/imranr98/our-times:latest@sha256:995080d21d0afbd27cc8d26e2c36a923592dd1d05092c668f77235724bf156fe
+        image: ghcr.io/imranr98/our-times:latest@sha256:acaf061b6776276589b4c70ff4b94f02042fe18278b3b0c2642eba8026dab03c
         user: "$MY_UID:$MY_UID"
         depends_on:
             - traefik
