@@ -142,9 +142,12 @@ services:
         logging: *logging
 
     # llama.cpp router server on the Intel iGPU (SYCL). Launching without -m
-    # puts it in router mode: every model directory under ~/models is listed
-    # by /v1/models and loaded on demand. Per-model options come from
-    # llama-models.ini. Watchtower owns image updates.
+    # puts it in router mode: existing GGUFs are scanned from ~/models, and the
+    # built-in Discover UI can search Hugging Face and download into a separate
+    # cache. Per-model options come from llama-models.ini. The image runs as
+    # root, but the process group is the host user's (MY_UID) and umask 002
+    # keeps new files group-writable, so the mounted tree stays editable on the
+    # host. Watchtower owns image updates.
     llama-sycl:
         image: ghcr.io/ggml-org/llama.cpp:server-intel
         container_name: llama-sycl
@@ -153,29 +156,25 @@ services:
         # of the 62 GiB total for GNOME and host services. At 128K the Qwen
         # models need ~34G; Gemma at 32K needs ~29G.
         mem_limit: 54G
+        memswap_limit: 54G
         # card0 + renderD128; Level Zero uses the render node.
         devices:
             - /dev/dri:/dev/dri
-        environment:
-            # Use the Arc GPU rather than any CPU device SYCL exposes.
-            - ONEAPI_DEVICE_SELECTOR=level_zero:0
-        volumes:
-            # Model root is scanned by the router; keep it read-only.
-            - /home/$MY_USERNAME/models:/models:ro
-            # Per-model context overrides; see llama-models.ini.
-            - ./llama-models.ini:/etc/llama.cpp/models.ini:ro
-        ports:
-            # Loopback-only on the host. The container port stays 8080.
-            - "127.0.0.1:18080:8080"
+        user: "0:$MY_UID"
+        entrypoint: ["/bin/sh", "-c"]
         command:
-            # Router mode: scan the mounted model root. No -m, or it would
-            # fall back to single-model mode.
-            - "--models-dir"
-            - "/models"
-            # Per-model options (context size) live here. Router CLI args
-            # override presets, so ctx-size is deliberately not set below.
-            - "--models-preset"
-            - "/etc/llama.cpp/models.ini"
+            - |
+              set -eu
+              if [ ! -e /models/.owner-host ]; then
+                chown -R 0:"$MY_UID" /models
+                chmod -R g+rwX /models
+                touch /models/.owner-host
+                chown 0:"$MY_UID" /models/.owner-host
+              fi
+              find /models -type d -exec chmod g+s {} +
+              umask 002
+              exec /app/llama-server "$$@"
+            - "--"
             # Listen on all interfaces inside the container so Docker's
             # published port can reach it; host exposure is loopback-only.
             - "--host"
@@ -183,12 +182,31 @@ services:
             # Offload all layers to the GPU.
             - "--n-gpu-layers"
             - "99"
-            # Less KV memory and faster attention as context grows. Use
-            # "auto" if a model does not support Flash Attention.
+            # One resident model, with headroom left for the desktop.
+            - "--models-max"
+            - "1"
+            - "--models-memory-margin"
+            - "1024"
+            # Scan the existing model tree; UI downloads go to LLAMA_CACHE
+            # below so the two structures do not mix.
+            - "--models-dir"
+            - "/models"
+            # Per-model options (context size) live here. Router CLI args
+            # override presets, so ctx-size is deliberately not set below.
+            - "--models-preset"
+            - "/etc/llama.cpp/models.ini"
+            # Less KV memory and faster attention as context grows. Q8
+            # roughly halves the KV footprint versus f16.
             - "--flash-attn"
             - "on"
-            # Context is per slot and set in llama-models.ini: 32K by
-            # default, 128K for the Qwen-based models.
+            - "--cache-type-k"
+            - "q8_0"
+            - "--cache-type-v"
+            - "q8_0"
+            # Keep the multimodal projector on the CPU; the iGPU is the
+            # bottleneck for larger models.
+            - "--no-mmproj-offload"
+            - "--jinja"
             # Logical prompt batch and physical micro-batch. 1024 ubatch
             # usually improves prompt processing on the iGPU; drop to 512 if
             # memory gets tight.
@@ -200,6 +218,29 @@ services:
             # instead of splitting it across idle parallel slots.
             - "--parallel"
             - "1"
+            # Reuse prompt prefixes from RAM, and unload an idle model after
+            # five minutes on this desktop.
+            - "--cache-ram"
+            - "2048"
+            - "--sleep-idle-seconds"
+            - "300"
+            # Enable the built-in Discover/download UI. It is off by default.
+            - "--ui-config"
+            - '{"enableDiscoverModels": true, "useHuggingFaceHub": true}'
+        environment:
+            # Use the Arc GPU rather than any CPU device SYCL exposes.
+            - ONEAPI_DEVICE_SELECTOR=level_zero:0
+            # UI downloads land in the cache; only cache models are deletable
+            # through the UI. Existing --models-dir models stay protected.
+            - LLAMA_CACHE=/models/.cache
+        volumes:
+            # Model root and download cache; must be writable.
+            - /home/$MY_USERNAME/models:/models
+            # Per-model context overrides; see llama-models.ini.
+            - ./llama-models.ini:/etc/llama.cpp/models.ini:ro
+        ports:
+            # Loopback-only on the host. The container port stays 8080.
+            - "127.0.0.1:18080:8080"
         logging: *logging
 
 volumes:
