@@ -118,6 +118,10 @@ if [ -n "${DOCKERHUB_USER:-}" ] && [ -n "${DOCKERHUB_TOKEN:-}" ]; then
     export RENOVATE_HOST_RULES
 fi
 export RENOVATE_REPOSITORIES="$repos"
+# Match the CronJob: never open onboarding PRs, and only process repos that
+# already carry a Renovate config.
+export RENOVATE_ONBOARDING=false
+export RENOVATE_REQUIRE_CONFIG=required
 
 # Renovate's Docker datasource keeps the Docker Hub tag list for a hardcoded
 # 90 days in the package cache. A mutable `latest` tag can then resolve to an
