@@ -84,9 +84,9 @@ services:
         logging: *logging
 
     # ComfyUI on the Intel Arc iGPU (XPU). The image bundles ComfyUI,
-    # ComfyUI-Manager and ComfyUI-GGUF; persistent state lives under
-    # ~/comfyui. The image runs as root (Manager installs node deps into
-    # /app/venv), but the process group is the host user's (MY_UID) and
+    # ComfyUI-Manager and ComfyUI-GGUF; persistent state lives under the shared
+    # AI root at ~/ai/comfyui. The image runs as root (Manager installs node
+    # deps into /app/venv), but the process group is the host user's (MY_UID) and
     # umask 002 keeps new files group-writable, so the mounted tree is
     # editable on the host without sudo. Watchtower owns image updates
     # (rolling xpu-master).
@@ -134,20 +134,20 @@ services:
             # Loopback-only; browser on this machine or an SSH tunnel.
             - "127.0.0.1:8188:8188"
         volumes:
-            - /home/$MY_USERNAME/comfyui/models:/app/models
-            - /home/$MY_USERNAME/comfyui/user:/app/user
-            - /home/$MY_USERNAME/comfyui/custom_nodes:/app/custom_nodes
-            - /home/$MY_USERNAME/comfyui/output:/app/output
-            - /home/$MY_USERNAME/comfyui/input:/app/input
+            - /home/$MY_USERNAME/ai/comfyui/models:/app/models
+            - /home/$MY_USERNAME/ai/comfyui/user:/app/user
+            - /home/$MY_USERNAME/ai/comfyui/custom_nodes:/app/custom_nodes
+            - /home/$MY_USERNAME/ai/comfyui/output:/app/output
+            - /home/$MY_USERNAME/ai/comfyui/input:/app/input
         logging: *logging
 
     # llama.cpp router server on the Intel iGPU (SYCL). Launching without -m
-    # puts it in router mode: existing GGUFs are scanned from ~/models, and the
-    # built-in Discover UI can search Hugging Face and download into a separate
-    # cache. Context is auto-fit to the device memory. The image runs as
-    # root, but the process group is the host user's (MY_UID) and umask 002
-    # keeps new files group-writable, so the mounted tree stays editable on the
-    # host. Watchtower owns image updates.
+    # puts it in router mode: existing GGUFs are scanned from the shared AI root
+    # at ~/ai/llama, and the built-in Discover UI can search Hugging Face and
+    # download into a separate cache there. Context is auto-fit to the device
+    # memory. The image runs as root, but the process group is the host user's
+    # (MY_UID) and umask 002 keeps new files group-writable, so the mounted
+    # tree stays editable on the host. Watchtower owns image updates.
     llama-sycl:
         image: ghcr.io/ggml-org/llama.cpp:server-intel
         container_name: llama-sycl
@@ -239,8 +239,8 @@ services:
             # through the UI. Existing --models-dir models stay protected.
             - LLAMA_CACHE=/models/.cache
         volumes:
-            # Model root and download cache; must be writable.
-            - /home/$MY_USERNAME/models:/models
+            # Shared AI root; model files and the UI download cache live here.
+            - /home/$MY_USERNAME/ai/llama:/models
         ports:
             # Loopback-only on the host. The container port stays 8080.
             - "127.0.0.1:18080:8080"
