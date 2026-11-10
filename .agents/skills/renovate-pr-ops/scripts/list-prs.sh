@@ -68,6 +68,7 @@ export INFRA_REPO APP_REPOS="${APP_REPOS:-}"
 exec python3 - "$recent_hours" <<'PY'
 import json
 import os
+import re
 import sys
 import urllib.error
 import urllib.parse
@@ -230,9 +231,17 @@ for repo in repos:
             labels = ",".join(label["name"] for label in detail.get("labels") or []) or "-"
             mergeable = detail.get("mergeable_state") or ("mergeable" if detail.get("mergeable") else "unknown")
             title = detail.get("title", "")
-            major = "yes" if "(major)" in title.lower() or "major" in [
-                label.get("name", "").lower() for label in detail.get("labels") or []
-            ] else "no"
+            body = detail.get("body") or ""
+            # Renovate's PR table carries the authoritative update type; labels
+            # are not consistently added, so a title/label check alone misses
+            # majors (for example a Node 24 -> 26 Dockerfile bump).
+            major = "yes" if (
+                "(major)" in title.lower()
+                or "major" in [
+                    label.get("name", "").lower() for label in detail.get("labels") or []
+                ]
+                or re.search(r"\|\s*major\s*\|", body, re.IGNORECASE)
+            ) else "no"
             print(
                 f"  #{detail['number']} {detail['head']['ref']} "
                 f"created={detail['created_at'][:10]} updated={detail['updated_at'][:10]} "
