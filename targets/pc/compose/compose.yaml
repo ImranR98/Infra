@@ -144,7 +144,7 @@ services:
     # llama.cpp router server on the Intel iGPU (SYCL). Launching without -m
     # puts it in router mode: existing GGUFs are scanned from ~/models, and the
     # built-in Discover UI can search Hugging Face and download into a separate
-    # cache. Per-model options come from llama-models.ini. The image runs as
+    # cache. Context is auto-fit to the device memory. The image runs as
     # root, but the process group is the host user's (MY_UID) and umask 002
     # keeps new files group-writable, so the mounted tree stays editable on the
     # host. Watchtower owns image updates.
@@ -191,10 +191,15 @@ services:
             # below so the two structures do not mix.
             - "--models-dir"
             - "/models"
-            # Per-model options (context size) live here. Router CLI args
-            # override presets, so ctx-size is deliberately not set below.
-            - "--models-preset"
-            - "/etc/llama.cpp/models.ini"
+            # Auto-size each model's context to the device memory. Without a
+            # preset, this also keeps downloaded cache models in one place
+            # instead of listing preset entries whose files may be gone.
+            - "--fit"
+            - "on"
+            - "--fit-target"
+            - "2048"
+            - "--fit-ctx"
+            - "32768"
             # Less KV memory and faster attention as context grows. Q8
             # roughly halves the KV footprint versus f16.
             - "--flash-attn"
@@ -236,8 +241,6 @@ services:
         volumes:
             # Model root and download cache; must be writable.
             - /home/$MY_USERNAME/models:/models
-            # Per-model context overrides; see llama-models.ini.
-            - ./llama-models.ini:/etc/llama.cpp/models.ini:ro
         ports:
             # Loopback-only on the host. The container port stays 8080.
             - "127.0.0.1:18080:8080"
