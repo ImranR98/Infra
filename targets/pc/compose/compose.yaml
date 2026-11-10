@@ -85,12 +85,41 @@ services:
 
     # ComfyUI on the Intel Arc iGPU (XPU). The image bundles ComfyUI,
     # ComfyUI-Manager and ComfyUI-GGUF; persistent state lives under
-    # ~/comfyui. Runs as root by design (Manager installs node deps into
-    # /app/venv). Watchtower owns image updates (rolling xpu-master).
+    # ~/comfyui. The image runs as root (Manager installs node deps into
+    # /app/venv), but the process group is the host user's (MY_UID) and
+    # umask 002 keeps new files group-writable, so the mounted tree is
+    # editable on the host without sudo. Watchtower owns image updates
+    # (rolling xpu-master).
     comfyui:
         image: ghcr.io/reliq-hq/comfyui:xpu-master
         container_name: comfyui
         restart: unless-stopped
+        user: "0:$MY_UID"
+        entrypoint: ["tini", "--"]
+        command:
+            - "/bin/sh"
+            - "-c"
+            - |
+              set -eu
+              dirs="/app/models /app/user /app/custom_nodes /app/output /app/input"
+              for d in $$dirs; do mkdir -p "$$d"; done
+              # Seed the bundled custom nodes on a fresh tree; start.sh only
+              # seeds them as root, which would undo the group ownership.
+              if [ -z "$$(ls -A /app/custom_nodes)" ]; then
+                tar -xzf /app/custom_nodes_backup.tar.gz -C /app/custom_nodes
+              fi
+              if [ ! -e /app/user/.owner-host ]; then
+                chown -R 0:"$MY_UID" $$dirs
+                chmod -R g+rwX $$dirs
+                touch /app/user/.owner-host
+                chown 0:"$MY_UID" /app/user/.owner-host
+              else
+                chown -R 0:"$MY_UID" /app/custom_nodes /app/user
+                chmod -R g+rwX /app/custom_nodes /app/user
+              fi
+              find $$dirs -type d -exec chmod g+s {} +
+              umask 002
+              exec /app/start.sh
         # 54G leaves ~8 GiB of the 62 GiB total for GNOME and host services.
         # Realistic ComfyUI peaks for current models are ~30G, so this is
         # headroom, not a target. Don't raise further: swap is zram-only.
