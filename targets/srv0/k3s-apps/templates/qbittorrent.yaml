@@ -145,7 +145,7 @@ spec:
     spec:
       initContainers:
         - name: seed-conf
-          image: busybox:1.38
+          image: busybox:1.38.0-uclibc@sha256:b2e35951f72501f6a99f1bf45bcfe6d4795be08c518c2f97d0ed2fe776958a3b
           command:
             - sh
             - -c

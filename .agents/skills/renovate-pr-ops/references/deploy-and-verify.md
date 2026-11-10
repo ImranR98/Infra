@@ -4,7 +4,9 @@
 
 - `master` pushed; `bash scripts/validate.sh <target>` clean for every target being deployed.
 - The Infra PR being deployed is approved and merged locally. The scheduled
-  Renovate runner does not merge Infra PRs.
+  Renovate runner does not merge Infra PRs. Non-allowlisted version updates are
+  only proposed after the 3-day `minimumReleaseAge`; a missing update younger
+  than that is expected, not a failed run.
 - srv0: an unlock session is active (`bash scripts/kubeconfig-unlock.sh` holds the ACL
   until Ctrl-C). The admin kubeconfig is root-only; without the unlock, `kubectl` and
   `helm` fail with permission denied.
@@ -22,10 +24,12 @@ The app image and its Infra pin are two automatic steps:
 2. The app's default-branch `publish` job pushes and verifies `:sha-<commit>`
    and promotes `:latest`. Workflow-only merges are path-ignored and change no
    image.
-3. The next scheduled Renovate run opens/refreshes the grouped Infra
-   `docker-digests` PR. If it has not appeared, the publish is still running,
-   failed, or the next run is pending; run `bash scripts/renovate.sh infra` to
-   refresh on demand. Never edit the digest by hand.
+3. The next scheduled Renovate run opens/refreshes the first-party Infra
+   `docker-digests` PR immediately (the `ghcr.io/imranr98/**` allowlist).
+   Third-party images wait 3 days. If a first-party pin has not appeared, the
+   publish is still running/failed or the next run is pending; run
+   `bash scripts/renovate.sh infra` to refresh on demand (it does not bypass the
+   3-day gate). Never edit the digest by hand.
 4. Validate the Infra PR, get approval, merge/push, then deploy.
 
 ## srv0 (K3s) — apply base, then apps

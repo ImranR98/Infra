@@ -9,19 +9,16 @@
   "automerge": false,
   "dependencyDashboard": true,
   "minimumReleaseAge": "3 days",
+  "minimumReleaseAgeBehaviour": "timestamp-required",
+  "internalChecksFilter": "strict",
   "osvVulnerabilityAlerts": true,
   "labels": [
     "deps"
   ],
-  "kubernetes": {
-    "managerFilePatterns": [
-      "/^targets\\/srv0\\/k3s-(base|apps)\\/.*\\.ya?ml$/"
-    ]
-  },
   "customManagers": [
     {
       "customType": "regex",
-      "description": "Images inside the k3s charts (repository/tag pairs and single-line image refs). currentDigest is captured so digest-pinned images are recognized as pinned and refreshed; without it Renovate re-pins them and the branch update fails verification.",
+      "description": "Sole K3s image manager: repository/tag pairs and single-line image refs. currentDigest is captured so digest-pinned images are recognized as pinned and refreshed; without it Renovate re-pins them and the branch update fails verification. The built-in kubernetes manager is intentionally not scoped to these files: it also extracts Deployment/NetworkPolicy API versions and duplicate image deps.",
       "managerFilePatterns": [
         "/targets\\/srv0\\/k3s-(base|apps)\\/.+\\.ya?ml$/"
       ],
@@ -186,18 +183,24 @@
       "groupName": "vite toolchain"
     },
     {
-      "description": "Digest pins and refreshes are the manual rollout gate; bypass the release-age delay so new app images can be pinned immediately",
+      "description": "Channel-only images that are rebuilt faster than the 3-day age gate: first-party app :latest images, LinuxServer :latest, ComfyUI xpu-master, llama.cpp channel tags, and the Bitnami DB images (no usable version tags). These are digest-pinned and reviewed at the manual rollout gate. Every other image uses an immutable version tag and waits the full minimumReleaseAge.",
       "matchUpdateTypes": [
         "digest",
-        "pinDigest",
-        "pin"
+        "pinDigest"
       ],
-      "minimumReleaseAge": "0 days"
+      "matchPackageNames": [
+        "ghcr.io/imranr98/**",
+        "lscr.io/linuxserver/**",
+        "ghcr.io/reliq-hq/comfyui",
+        "ghcr.io/ggml-org/llama.cpp",
+        "bitnami/postgresql",
+        "bitnami/redis"
+      ],
+      "minimumReleaseAge": null
     },
     {
       "description": "One PR for all docker digest pins and refreshes (the noisy batch); version bumps stay separate",
       "matchUpdateTypes": [
-        "pin",
         "pinDigest",
         "digest"
       ],
@@ -240,17 +243,6 @@
       ],
       "matchUpdateTypes": [
         "major"
-      ],
-      "enabled": false
-    },
-    {
-      "description": "Compose-side pc/bigpc images are watchtower-owned",
-      "matchManagers": [
-        "docker-compose"
-      ],
-      "matchPackageNames": [
-        "syncthing/syncthing",
-        "ghcr.io/reliq-hq/comfyui"
       ],
       "enabled": false
     },
@@ -336,8 +328,7 @@
       "description": "Final image digest pins are the manual rollout gate; label them for the renovate-pr-ops skill",
       "matchUpdateTypes": [
         "digest",
-        "pinDigest",
-        "pin"
+        "pinDigest"
       ],
       "addLabels": [
         "infra-digest-pin"

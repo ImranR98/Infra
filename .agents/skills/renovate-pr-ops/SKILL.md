@@ -16,19 +16,29 @@ blocked, failed, or a major awaiting approval). Infra PRs are the human gate.
   beyond its best-effort ntfy summary.
 - App repos extend the shared preset (`github>ImranR98/Infra//renovate-preset`).
   Renovate auto-merges non-major updates (patch/minor/digest/pin/lockfile
-  maintenance) after the required `test` check. `internalChecksFilter: strict`
-  means a PR only appears once its minimum-release-age check passes; majors wait
-  on the Dependency Dashboard until approved.
+  maintenance) after the required `test` check **and** the 3-day
+  `minimumReleaseAge`. `internalChecksFilter: strict` and
+  `minimumReleaseAgeBehaviour: timestamp-required` mean a PR only appears once
+  the release is eligible; majors wait on the Dependency Dashboard until
+  approved.
+- Infra image refs use immutable version tags and the same 3-day gate. The
+  narrow allowlist in `renovate.json` covers first-party
+  `ghcr.io/imranr98/**` app images (`:latest@sha`), LinuxServer `latest`,
+  ComfyUI `xpu-master`, llama.cpp channel tags, and the temporary Bitnami DB
+  pins. Those channel-only digests are rebuilt faster than 3 days, so their
+  Infra PRs appear immediately.
 - Merging an app PR triggers the app's `ci.yml`: `test`, then `publish` to GHCR
   (`:sha-<commit>` verified, `:latest` promoted). Workflow-only merges are
   path-ignored and publish nothing.
-- The **next scheduled Renovate run** sees the promoted `:latest` digest and
-  opens/refreshes the grouped Infra `docker-digests` PR (plus separate PRs for
-  chart, k3s Plan, and other versioned dependencies). Infra is never
-  auto-merged; this skill researches, validates, and presents those PRs.
+- The **next scheduled Renovate run** sees a promoted first-party `:latest`
+  digest and opens/refreshes the grouped Infra `docker-digests` PR. Third-party
+  image, chart, k3s Plan, and other versioned updates appear only once the
+  release is 3 days old. Infra is never auto-merged; this skill researches,
+  validates, and presents those PRs.
 - If a fresh Infra PR is needed without waiting for the schedule, run
   `bash scripts/renovate.sh infra` locally (same pinned Renovate version as the
-  CronJob), then re-run `list-prs.sh`.
+  CronJob), then re-run `list-prs.sh`. This refreshes the lookup but does **not**
+  bypass the 3-day gate.
 - App repos are remote objects. The only local checkout this skill assumes is the
   Infra repo it runs in.
 
@@ -44,8 +54,10 @@ blocked, failed, or a major awaiting approval). Infra PRs are the human gate.
   is available). Never merge an app PR by checking out and pushing an app branch.
 - **Never pin an app image by hand.** The Infra digest PR is Renovate's job; it
   only sees a new digest after the app's `publish` job has promoted `:latest`.
-  If the PR is absent, the publish has not finished (or failed); report it and
-  let the next run pick it up.
+  For first-party `ghcr.io/imranr98/**` images the allowlist means the next run
+  should open it; for a third-party image, absence for less than 3 days is the
+  age gate, not a failure. Report a genuinely missing pin and let Renovate pick
+  it up.
 - **Infra changes are the human gate.** Show the PR diff and `validate` result,
   wait for explicit approval, then merge and push (unless the user
   pre-authorized the named batch). Never auto-merge Infra.
@@ -114,7 +126,15 @@ default-branch CI runs from the last 48h. Each PR line shows the check names
 - app PRs that are red, conflicted, or have no `test` run,
 - app PRs unexpectedly stuck at `stability=pending` (strict filtering should
   prevent new ones; treat an old branch as a leftover and report it),
-- recent app merges whose Infra pin has not appeared yet,
+- recent app merges whose Infra pin has not appeared yet (first-party
+  `ghcr.io/imranr98/**` should appear on the next run; third-party images are
+  expected to wait 3 days),
+- **images stuck for more than 3 days because the tag is rebuilt faster than
+  the age gate** — inspect the Dependency Dashboard/`renovate/stability-days`
+  and the registry's tag timestamps. Fix by pinning an immutable version tag;
+  only for a genuinely channel-only image add a justified entry to the narrow
+  allowlist in `renovate.json` (and `scripts/check-images.sh`). Do not widen the
+  exception without evidence.
 - open Infra PRs,
 - broken default-branch CI.
 
@@ -161,18 +181,23 @@ phase exists only for the leftovers:
 2. **Merge an approved major/Tier C** only after explicit consent and the same
    green checks.
 3. **Do not merge anything `stability=pending`.** Report it; Renovate owns it.
-4. **Do not wait for publish jobs.** The scheduled Infra run picks up the new
-   digest. Record the merge commit SHA and note the app as "Infra pin pending";
-   the next skill run (or `renovate.sh infra`) will surface the PR.
+4. **Do not wait for publish jobs.** First-party app images are allowlisted, so
+   the next scheduled Infra run opens the digest PR; third-party images wait for
+   the 3-day age gate. Record the merge commit SHA and note the app as "Infra
+   pin pending" until it appears.
 5. Config-only repos (`dscpln-config`, `*-config`) have no image; nothing to pin.
 
 ## Phase 5 — Infra PRs (human gate)
 
 1. Triage all open Infra Renovate PRs, not only digest pins. Research charts,
    app versions, k3s Plans, and digest batches with the risk reference.
-2. If an app image is known to have published but no digest PR exists yet, run
-   `bash scripts/renovate.sh infra` (needs the token; no cluster access) and
-   re-run `list-prs.sh`. Do not edit digests by hand.
+2. If an app image is known to have published but no digest PR exists yet: for
+   first-party `ghcr.io/imranr98/**` images run `bash scripts/renovate.sh infra`
+   (needs the token; no cluster access) and re-run `list-prs.sh`. For a
+   third-party image, check the Dependency Dashboard/`stability` first — a pin
+   younger than 3 days is expected to be absent. If it is older than 3 days and
+   still absent or permanently pending, follow the stuck-image check above. Do
+   not edit digests by hand.
 3. For each approved batch, run `bash scripts/validate.sh <target>` on the PR
    ref and present the risk, evidence, and recommendation.
 4. Wait for explicit approval, then merge locally and push:
@@ -228,8 +253,9 @@ Report format:
 - **App PRs** — merged vs held, repo/number/title, and whether Renovate
   auto-merged or the skill merged it. Call out majors awaiting approval and any
   unexpected `stability=pending`.
-- **Published** — app merges that changed an image; note when the Infra pin is
-  still pending (with the merge SHA).
+- **Published** — app merges that changed an image; note whether the Infra pin
+  is first-party (expected on the next run) or age-gated (up to 3 days), with the
+  merge SHA.
 - **Infra merged** — PR number, title, targets, old → new digest(s), and user
   approval.
 - **Deployed** — target, what changed, verification result.

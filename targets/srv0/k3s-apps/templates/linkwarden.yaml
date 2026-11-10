@@ -57,7 +57,7 @@ spec:
     spec:
       containers:
         - name: linkwarden
-          image: ghcr.io/linkwarden/linkwarden:v2.16.3
+          image: ghcr.io/linkwarden/linkwarden:v2.16.3@sha256:0664c28a039bda8ffa6663389e8536b2fc717219e329f85b83faca7efed3b144
           securityContext:
             allowPrivilegeEscalation: false
           ports:
@@ -168,7 +168,7 @@ spec:
         fsGroup: 999
       initContainers:
         - name: volume-permissions
-          image: postgres:16.15-alpine
+          image: postgres:16.15-alpine@sha256:aa6cb33cf4c19c765cefcf48d96176258800870a9a1e930ad126200f9d825139
           command:
             - sh
             - -c
@@ -187,7 +187,7 @@ spec:
               mountPath: /var/lib/postgresql/data
       containers:
         - name: postgresql
-          image: postgres:16.15-alpine
+          image: postgres:16.15-alpine@sha256:aa6cb33cf4c19c765cefcf48d96176258800870a9a1e930ad126200f9d825139
           securityContext:
             runAsUser: 999
             runAsGroup: 999
@@ -263,7 +263,7 @@ spec:
     spec:
       containers:
         - name: meilisearch
-          image: getmeili/meilisearch:v1.56.0
+          image: getmeili/meilisearch:v1.56.0@sha256:1f578fa865f8251894b3bf38d6668d6209a3f451f8f65ab953e129d4c1db5ef4
           securityContext:
             allowPrivilegeEscalation: false
           ports:

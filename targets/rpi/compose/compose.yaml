@@ -11,7 +11,7 @@ services:
     # untouched and reads the password via its native ${GO2RTC_PASSWORD}
     # config substitution.
     go2rtc-init:
-        image: alpine:3.24
+        image: alpine:3.24.4@sha256:f59abe656b692d901e184be3445e084786602108599d2a51d229c0f5a48c71bf
         container_name: go2rtc-init
         restart: "no"
         volumes:
@@ -41,7 +41,7 @@ services:
     # h264_v4l2m2m wedges at the driver level (see go2rtc.yaml comment), so
     # encoding is software x264.
     go2rtc:
-        image: alexxit/go2rtc:1.9.15
+        image: alexxit/go2rtc:1.9.15@sha256:e098de5c2f8040dc3d4784ed2d5cfdac3b0979f9349afe587ef6a670a14b9f4d
         container_name: go2rtc
         restart: unless-stopped
         depends_on:

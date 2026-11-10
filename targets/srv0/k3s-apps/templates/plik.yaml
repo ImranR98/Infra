@@ -87,7 +87,7 @@ spec:
         fsGroup: {{ .Values.MY_UID }}
       initContainers:
         - name: fix-perms
-          image: busybox:1.38
+          image: busybox:1.38.0-uclibc@sha256:b2e35951f72501f6a99f1bf45bcfe6d4795be08c518c2f97d0ed2fe776958a3b
           command: ["sh", "-c", "chown -R {{ .Values.MY_UID }}:{{ .Values.MY_UID }} /data"]
           securityContext:
             runAsUser: 0
@@ -98,7 +98,7 @@ spec:
               mountPath: /data/state
       containers:
         - name: plik
-          image: rootgg/plik:1.4.3
+          image: rootgg/plik:1.4.3@sha256:7b450ff320b3a3f6444ca6fa94c8fde2f5e6eb82d6b9d50bf813ad93e7858f01
           ports:
             - containerPort: 8080
           securityContext:

@@ -6,7 +6,7 @@ x-logging: &logging
         max-file: 5
 
 x-socket-proxy: &socket-proxy
-    image: wollomatic/socket-proxy:1@sha256:ff95d6ff6c27853005ef85eb8f4ab5923dc3d2f1e055f98fb6aeeaceec3fe848
+    image: wollomatic/socket-proxy:1.13.2@sha256:ff95d6ff6c27853005ef85eb8f4ab5923dc3d2f1e055f98fb6aeeaceec3fe848
     restart: unless-stopped
     read_only: true
     mem_limit: 128M
@@ -279,7 +279,7 @@ services:
 
     # Authelia - 2FA Authentication
     authelia:
-        image: authelia/authelia:latest@sha256:bd97cff4fcbf715b5ff1f9ae286afbe6033afce385302520b0368122d43a6f54
+        image: authelia/authelia:4.39.28@sha256:bd97cff4fcbf715b5ff1f9ae286afbe6033afce385302520b0368122d43a6f54
         container_name: authelia
         user: "$MY_UID:$MY_UID"
         depends_on:
@@ -311,7 +311,7 @@ services:
         logging: *logging
 
     authelia-db:
-        image: redis:alpine@sha256:71885d8cc6e42f2bc0aa2eb853bfc4be200b5108a46ac50e117ae1df0531fb80
+        image: redis:7.4.12-alpine@sha256:7b1753b4c5ad8458906c272a8132b8c15f5557b000379eb115fb239706a384b7
         container_name: authelia-db
         user: "$MY_UID:$MY_UID"
         environment:
@@ -420,7 +420,7 @@ services:
 
     # CrowdSec - Intrusion Prevention (LAPI + agent + AppSec in one container)
     crowdsec:
-        image: crowdsecurity/crowdsec:latest@sha256:65b74942f7e7ed5c60fde4ac15fc4ba715904c398c8b16dd451f4907d90347d4
+        image: crowdsecurity/crowdsec:v1.8.2@sha256:65b74942f7e7ed5c60fde4ac15fc4ba715904c398c8b16dd451f4907d90347d4
         container_name: crowdsec
         restart: unless-stopped
         mem_limit: 512M
@@ -456,7 +456,7 @@ services:
 
     # CrowdSec Web UI - dashboard for the local LAPI (machine password auth)
     crowdsec_web_ui:
-        image: ghcr.io/theduffman85/crowdsec-web-ui:2026.10.13
+        image: ghcr.io/theduffman85/crowdsec-web-ui:2026.10.13@sha256:3b7d608ea3fb1d8ecf12079c188f9a8c705c89cf03685db4a1b89303d8e17477
         container_name: crowdsec_web_ui
         restart: unless-stopped
         mem_limit: 512M
@@ -487,7 +487,7 @@ services:
 
     # Plausible - Web Analytics
     plausible_db:
-        image: postgres:16-alpine
+        image: postgres:16.15-alpine@sha256:aa6cb33cf4c19c765cefcf48d96176258800870a9a1e930ad126200f9d825139
         container_name: plausible_db
         user: "$MY_UID:$MY_UID"
         restart: unless-stopped
@@ -504,7 +504,7 @@ services:
             - traefik
         logging: *logging
     plausible_events_db:
-        image: clickhouse/clickhouse-server:24.12-alpine
+        image: clickhouse/clickhouse-server:24.12.6.70-alpine@sha256:cd450891db46cc6ffe313ca2b0fb7dbfb897a6873ca74a724cbe050a2cf62621
         restart: unless-stopped
         mem_limit: 4G
         cpus: 2.0
@@ -537,7 +537,7 @@ services:
     # non-MY_UID user (ClickHouse 101, Plausible 999) — self-heals ownership
     # drift (e.g. a host-side chown). Re-runs on every up after a down.
     state-fixperms:
-        image: alpine:latest@sha256:f59abe656b692d901e184be3445e084786602108599d2a51d229c0f5a48c71bf
+        image: alpine:3.24.4@sha256:f59abe656b692d901e184be3445e084786602108599d2a51d229c0f5a48c71bf
         container_name: state-fixperms
         restart: no
         cap_drop:
@@ -554,7 +554,7 @@ services:
             - ../../../current_target/compose_live_state/plausible/data:/var/lib/plausible
         command: chown -R 101:101 /var/lib/clickhouse /var/log/clickhouse-server && chown -R 999:999 /var/lib/plausible
     plausible:
-        image: ghcr.io/plausible/community-edition:v3@sha256:33e60bfb40f2df5da00f8753b76fad04f67dba3abe6d73eb516e440e3fb62985
+        image: ghcr.io/plausible/community-edition:v3.2.1@sha256:33e60bfb40f2df5da00f8753b76fad04f67dba3abe6d73eb516e440e3fb62985
         restart: unless-stopped
         mem_limit: 768M
         cpus: 1.0
@@ -642,7 +642,7 @@ services:
 
     # MeTube - YouTube Downloader
     metube:
-        image: ghcr.io/alexta69/metube:latest@sha256:96dfbf0d5b2944e4ee38f6ce1b34bb0e75a1a3c74eaefd93424ed11284cb72b2
+        image: ghcr.io/alexta69/metube:2026.11.06@sha256:96dfbf0d5b2944e4ee38f6ce1b34bb0e75a1a3c74eaefd93424ed11284cb72b2
         container_name: metube
         volumes:
             - ../../../current_target/compose_live_state/metube:/downloads
@@ -845,7 +845,7 @@ services:
 
     # Owncast Auth - Token-based access control for Owncast viewer
     owncast-auth:
-        image: python:3-alpine@sha256:a0f2e268f2ce8f3709611a90054ec6a8ae31f6251f5896b8648b9bb99835e30a
+        image: python:3.13.18-alpine3.24@sha256:1e1f6334529d1fb26a2ef619d7cffb30a7c7d7cc1cc7338ebee283a58d1aeaca
         container_name: owncast-auth
         restart: unless-stopped
         mem_limit: 64M
@@ -861,7 +861,7 @@ services:
 
     # Owncast - Live streaming server
     owncast:
-        image: owncast/owncast:0.3.0
+        image: owncast/owncast:0.3.0@sha256:0f35b568b1098d2badbde2dbf3c73a902009c95eb687c647edea04d6da079a78
         container_name: owncast
         restart: unless-stopped
         mem_limit: 512M
@@ -912,7 +912,7 @@ services:
 
     # strelaysrv - Syncthing Relay Server
     strelaysrv:
-        image: syncthing/relaysrv:latest@sha256:300b85361ff06f46940e24912c67d6230af3e74d84c6edc38a640d847ac76828
+        image: syncthing/relaysrv:2.1.7@sha256:300b85361ff06f46940e24912c67d6230af3e74d84c6edc38a640d847ac76828
         container_name: strelaysrv
         restart: unless-stopped
         mem_limit: 128M
@@ -929,7 +929,7 @@ services:
 
     # Shlink - URL Shortener (temporarily disabled)
     shlink:
-        image: shlinkio/shlink:stable@sha256:68a722f7677008a50ccf3a9e570966bc37d7627fe6a870b86be28c5dcf9085ee
+        image: shlinkio/shlink:5.1.8@sha256:68a722f7677008a50ccf3a9e570966bc37d7627fe6a870b86be28c5dcf9085ee
         container_name: shlink
         environment:
             - SHORT_DOMAIN_HOST=ln.$BASE_SERVICES_DOMAIN
@@ -958,7 +958,7 @@ services:
             - "traefik.http.services.shlink.loadbalancer.server.port=8080"
         logging: *logging
     shlink_db:
-        image: postgres:17-alpine
+        image: postgres:17.11-alpine@sha256:3540c0362c809df084ffac0ae69fe794515f9de92692f02178bcdce0ef0302ac
         container_name: shlink_db
         restart: unless-stopped
         user: "$MY_UID:$MY_UID"
@@ -975,7 +975,7 @@ services:
             - traefik
         logging: *logging
     shlink_web_client:
-        image: shlinkio/shlink-web-client:stable@sha256:9ea53f612d361de240555036065e2b8ea0cd0411b0125afaf2f7d39f2a928f18
+        image: shlinkio/shlink-web-client:4.9.0@sha256:9ea53f612d361de240555036065e2b8ea0cd0411b0125afaf2f7d39f2a928f18
         container_name: shlink_web_client
         environment:
             - SHLINK_SERVER_URL=https://ln.$BASE_SERVICES_DOMAIN
@@ -1003,7 +1003,7 @@ services:
     # compose stack). Read-only: talks to the existing dockerproxy socket proxy
     # (GET rules only), so no write access to the docker socket is exposed.
     dozzle:
-        image: amir20/dozzle:v11.4.0
+        image: amir20/dozzle:v11.4.0@sha256:d23d23ce02c8cc96416dfbad4a7de225d01fdc03ad310203d64d580034dd120d
         container_name: dozzle
         restart: unless-stopped
         mem_limit: 128M
@@ -1030,7 +1030,7 @@ services:
 
     # Uptime Kuma - Service Uptime Monitoring
     uptime:
-        image: louislam/uptime-kuma:2@sha256:e88415a90dd2f7efecdbc18de0490aff292764a3ac471531bf1d0481725591bd
+        image: louislam/uptime-kuma:2.5.9@sha256:e88415a90dd2f7efecdbc18de0490aff292764a3ac471531bf1d0481725591bd
         container_name: uptime
         restart: unless-stopped
         mem_limit: 512M
@@ -1067,7 +1067,7 @@ services:
     fl0w-agent:
         profiles:
             - fl0w-agent
-        image: ghcr.io/imranr98/fl0w-agent@sha256:1ac43219cae0f019a52c9418434aea35d462a0b02fea6423b5f6d56507f6bee0
+        image: ghcr.io/imranr98/fl0w-agent:latest@sha256:1ac43219cae0f019a52c9418434aea35d462a0b02fea6423b5f6d56507f6bee0
         container_name: fl0w-agent
         restart: unless-stopped
         network_mode: host

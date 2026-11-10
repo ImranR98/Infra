@@ -157,7 +157,7 @@ spec:
         # it is documented in targets/srv0/assets/README.md. A missing or
         # corrupt file is re-fetched on the next pod start.
         - name: ensure-model
-          image: curlimages/curl:8.23.0
+          image: curlimages/curl:8.23.0@sha256:3fb7e13e5d179a845c97d78204f3f1064d1907037f26a3ebf91710571151fd93
           imagePullPolicy: IfNotPresent
           securityContext:
             # The curl image defaults to a non-root user; the NFS PVC root is
@@ -197,7 +197,7 @@ spec:
         # non-fatal error. Clear it before the app starts; previews simply
         # restart instead of restoring stale frames.
         - name: clear-preview-cache
-          image: busybox:1.38
+          image: busybox:1.38.0-uclibc@sha256:b2e35951f72501f6a99f1bf45bcfe6d4795be08c518c2f97d0ed2fe776958a3b
           command: ["sh", "-c", "rm -rf /media/frigate/clips/preview_restart_cache"]
           volumeMounts:
             - name: frigate-media

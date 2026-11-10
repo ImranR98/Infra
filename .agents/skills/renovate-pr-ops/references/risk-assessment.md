@@ -25,7 +25,7 @@ headlamp, navidrome, linkwarden, freshrss, opencanary.
 
 **Standard** — self-contained tools with small blast radius:
 dozzle, metube, uptime-kuma, plausible, shlink, owncast, isbn-lookup, pixelntfy,
-logtfy, opodsync, syncthing, watchtower, socket proxies, tech-sale/home-sale, strelaysrv.
+logtfy, opodsync, syncthing, socket proxies, tech-sale/home-sale, strelaysrv.
 
 **App repos** — the first-party apps in `APP_REPOS` (PixelNtfy, ISBN-Lookup,
 our-times, order-manager, moving-sale-2027, Logtfy, opencode-sandbox, DSCPLN,
@@ -75,13 +75,15 @@ and a successful `publish` is the pin/rollout gate.
 - App PRs merge with squash; the default-branch `publish` job then pushes and
   verifies `:sha-<commit>` and promotes `:latest`. A green `test` only built a
   local image.
-- The next scheduled Renovate run opens the Infra digest PR. Do not hand-edit a
-  digest; if the PR is missing after a successful publish, run
-  `bash scripts/renovate.sh infra` and recheck.
+- The next scheduled Renovate run opens the first-party Infra digest PR
+  immediately (the `ghcr.io/imranr98/**` allowlist). Third-party images wait
+  3 days. Do not hand-edit a digest; if a first-party PR is missing after a
+  successful publish, run `bash scripts/renovate.sh infra` and recheck.
 - If the app merge only touched docs/workflow/Renovate config, the publish is
   skipped; no digest PR will appear.
-- `renovate/stability-days: pending` is a minimum-release-age hold. Leave the
-  PR for Renovate; do not merge early.
+- `renovate/stability-days: pending` is the age gate. Leave the PR for
+  Renovate; first-party app pins should not be pending, so investigate one that
+  is.
 
 ### Digest refreshes under a floating tag
 
@@ -97,6 +99,20 @@ Verify the digest exists and identify the real version behind it:
   `org.opencontainers.image.version` or infer from upstream release timing.
 - A pinned digest may lag the current `latest` (the PR opened earlier) — still valid;
   Renovate refreshes later.
+
+### 3-day age gate and channel-only images
+
+- `minimumReleaseAge` is 3 days for every update type. Renovate compares the
+  candidate's release timestamp; a mutable tag rebuilt more often than every
+  3 days is always "too new" and never becomes eligible.
+- The narrow `renovate.json` allowlist covers only first-party app images
+  (`ghcr.io/imranr98/**`), LinuxServer `latest`, ComfyUI `xpu-master`, llama.cpp
+  channel tags, and the temporary Bitnami DB pins. Their digest PRs appear
+  immediately.
+- Everything else must use an immutable version tag (semver, CalVer/build,
+  exact patch + distro). If a non-allowlisted image has been pending for more
+  than 3 days, verify the registry tag timestamps: pin a more specific tag, or
+  add a justified allowlist entry. Never reintroduce a broad 0-day digest rule.
 
 ### Helm charts
 
@@ -121,13 +137,16 @@ then run `validate.sh srv0` (renders both charts and rejects `<no value>`).
   Dependency Dashboard approvals. If a major is approved and merged, it still
   goes through the app's own tests and image publish.
 - App PR → image publish → Infra digest PR is a chain. Merge the app PR, let the
-  `publish` job promote `:latest`, and let the next Renovate run open the Infra
-  digest PR; never pin an app whose publish failed. The Infra PR is the rollout
-  gate and needs approval. App updates without a resolvable release timestamp
-  are raised by `minimumReleaseAgeBehaviour: timestamp-optional`; timestamped
-  ones are held internally by `internalChecksFilter: strict` until eligible.
-- Compose syncthing is watchtower-owned (Renovate disabled for it); srv0's K3s
-  syncthing is Renovate-managed.
+  `publish` job promote `:latest`, and let the next Renovate run open the
+  first-party Infra digest PR; never pin an app whose publish failed. The Infra
+  PR is the rollout gate and needs approval. `minimumReleaseAgeBehaviour:
+  timestamp-required` plus `internalChecksFilter: strict` holds every
+  non-allowlisted update until it is 3 days old.
+- Compose syncthing/comfyui/llama are Renovate-managed now that watchtower is
+  removed; srv0's K3s syncthing is Renovate-managed too.
+- `scripts/check-images.sh` enforces exact tags + digests for raw image refs;
+  the narrow channel-only allowlist is shared with `renovate.json`. Keep them
+  in sync.
 - Home Assistant's Frigate integration and Advanced Camera Card pins are
   `github-releases`-managed feature updates — check release notes for breaking config.
 - k3s plan bumps: after merging, deployment is not done until both Plans report

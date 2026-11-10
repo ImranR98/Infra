@@ -36,6 +36,9 @@ jobs:
           go install github.com/rhysd/actionlint/cmd/actionlint@v1.7.12
           echo "$HOME/go/bin" >> "$GITHUB_PATH"
 
+      - name: Image policy
+        run: bash scripts/check-images.sh
+
       - name: Shellcheck
         run: find scripts targets -name '*.sh' -print0 | xargs -0 shellcheck
 

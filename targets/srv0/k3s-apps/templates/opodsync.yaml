@@ -59,7 +59,7 @@ spec:
         kubernetes.io/arch: amd64
       containers:
         - name: opodsync
-          image: ganeshlab/opodsync:0.6.0.1-amd64
+          image: ganeshlab/opodsync:0.6.0.1-amd64@sha256:cfff2f4811222840efd14975c5a475030065558b7c93f38c7454862ecc2bc0ec
           securityContext:
             runAsUser: {{ .Values.MY_UID }}
             runAsGroup: {{ .Values.MY_UID }}

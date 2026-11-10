@@ -10,7 +10,7 @@
   ],
   "rangeStrategy": "replace",
   "minimumReleaseAge": "3 days",
-  "minimumReleaseAgeBehaviour": "timestamp-optional",
+  "minimumReleaseAgeBehaviour": "timestamp-required",
   "internalChecksFilter": "strict",
   "osvVulnerabilityAlerts": true,
   "dependencyDashboard": true,

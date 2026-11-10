@@ -76,7 +76,7 @@ spec:
         {{- include "dscpln.podSecurityContext" (dict "uid" .Values.MY_UID "seType" "spc_t" "seLevel" "s0") | nindent 8 }}
       initContainers:
         - name: fix-data-perms
-          image: busybox:1.38
+          image: busybox:1.38.0-uclibc@sha256:b2e35951f72501f6a99f1bf45bcfe6d4795be08c518c2f97d0ed2fe776958a3b
           command: ["sh", "-c", "mkdir -p /data && chown {{ .Values.MY_UID }}:{{ .Values.MY_UID }} /data"]
           securityContext:
             runAsUser: 0

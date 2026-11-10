@@ -475,7 +475,7 @@ steps:
   deepDive: 'The runner gets `RENOVATE_TOKEN`, the repo list, Docker Hub host rules, and the git author from the `renovate-secrets` Secret. It mounts no repo; a small ConfigMap provides the run wrapper and ntfy notifier, and it runs as the image''s non-root user.
 
 
-    After an app PR merges and its image `publish` job promotes `:latest`, the next scheduled Renovate run opens the grouped Infra digest PR. There is no manual pin step; `scripts/renovate.sh infra` runs the same Renovate version on demand. The skill merges ready open app PRs (including ones Renovate left open, but not `renovate/stability-days` holds) and handles approved majors. `infra-digest-pin` marks Renovate image pins that need a deploy; merging is inert until `scripts/deploy.sh <target>`.'
+    After an app PR merges and its image `publish` job promotes `:latest`, the next scheduled Renovate run opens the first-party Infra digest PR immediately; third-party images and chart versions wait for the 3-day age gate. There is no manual pin step; `scripts/renovate.sh infra` runs the same Renovate version on demand, but it does not bypass the gate. The skill merges ready open app PRs (including ones Renovate left open, but not `renovate/stability-days` holds) and handles approved majors. `infra-digest-pin` marks Renovate image pins that need a deploy; merging is inert until `scripts/deploy.sh <target>`.'
   reveal:
   - srv0/base/renovate/cronjob/renovate-daily
   - concept/renovate-pr-ops
@@ -638,7 +638,7 @@ steps:
     Several routes are public by design: `gpt`, `fmd`, and `rss` are geoblock + CrowdSec only; `seerr` is geoblock only; `owncast`''s RTMP ingest is protected only by its stream key. Do not add SSO or geoblock without accepting the constraint.
 
 
-    `vps0` exposes the Docker socket only through read-only `socket-proxy` containers; watchtower on `pc`/`bigpc` uses the read-write proxy with `cap_drop: ALL`, a read-only root, and a 512M limit. qBittorrent''s default password is accepted because Authelia, geoblock, and CrowdSec gate the UI.
+    `vps0` exposes the Docker socket only through read-only `socket-proxy` containers. qBittorrent''s default password is accepted because Authelia, geoblock, and CrowdSec gate the UI.
 
     Charts that support secret references use them; where a chart only accepts plain YAML, the component uses `valuesSecrets` projected from a namespaced Secret.'
   reveal:
@@ -1060,11 +1060,11 @@ steps:
   body: '`bigpc` is an optional, opt-in-only K3s agent and desktop. It advertises `amd-dgpu` on the RX 9070 and runs llama.cpp; Compose also runs syncthing. `rpi` is a Pi 400 that turns a webcam into an authenticated RTSP stream with go2rtc, consumed by Frigate on `srv0`.
 
 
-    `pc` is Compose-only: a socket proxy, watchtower, syncthing, and ComfyUI on its Intel Arc iGPU. None of the four is on the `srv0`/`vps0` request path.'
+    `pc` is Compose-only: syncthing, ComfyUI, and a llama.cpp router on its Intel Arc iGPU. None of them is on the `srv0`/`vps0` request path.'
   deepDive: '`bigpc` is tainted `infra.local/noschedule=true:NoSchedule`; only node agents, llama.cpp, Immich ML (AMD dGPU branch), and the FL0W agent tolerate it. llama.cpp uses the hostname-pinned `ai-data-pv` via the `llama` subPath. `rpi`''s go2rtc password is generated on first start under `current_target/compose_live_state/go2rtc/`; the WebUI is loopback-only.
 
 
-    `pc`''s watchtower owns syncthing and ComfyUI, and `bigpc`''s owns syncthing; `srv0`, `vps0`, and `rpi` rely on Renovate.'
+    Renovate owns the Compose images on `pc`, `bigpc`, `vps0`, and `rpi`; there is no runtime watchtower updater.'
   reveal:
   - target/bigpc
   - target/rpi
@@ -1100,7 +1100,7 @@ steps:
     label: RTSP
   code:
   - path: targets/bigpc/compose/compose.yaml
-    summary: 'bigpc Compose services: socket proxy, watchtower, syncthing.'
+    summary: 'bigpc Compose services: syncthing.'
   - path: targets/rpi/compose/compose.yaml
     summary: go2rtc and the generated stream password.
   - path: targets/srv0/k3s-base/templates/generic-device-plugin.yaml

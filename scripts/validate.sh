@@ -34,6 +34,7 @@ usage() {
     echo "    shared edge Certificates) and cross-namespace refs are covered by a"
     echo "    ReferenceGrant"
     echo "  - compose mounts under ../../../config/ point at existing files"
+    echo "  - raw image refs are exact-tagged (or allowlisted) and digest-pinned"
     exit 1
 }
 
@@ -601,6 +602,9 @@ require_target "$1"
 target_dir="$INFRA_ROOT/targets/$TARGET"
 template_dir="$target_dir/config_template"
 ok=1
+
+# Global image-reference policy (raw image:/FROM refs, not chart values).
+bash "$INFRA_ROOT/scripts/check-images.sh" || ok=0
 
 if [ -d "$template_dir" ]; then
     check_config_files "$template_dir" "$INFRA_ROOT/config/$TARGET" || ok=0

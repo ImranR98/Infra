@@ -5,62 +5,9 @@ x-logging: &logging
         max-size: 10m
         max-file: 5
 
-x-socket-proxy-priv: &socket-proxy-priv
-    image: wollomatic/socket-proxy:1
-    restart: unless-stopped
-    read_only: true
-    mem_limit: 512M
-    cap_drop:
-        - ALL
-    security_opt:
-        - no-new-privileges
-    user: "65534:$DOCKER_GID"
-    healthcheck:
-        test: ["CMD", "./healthcheck"]
-        interval: 10s
-        timeout: 5s
-        retries: 2
-    logging: *logging
-
 services:
-    dockerproxy_priv:
-        <<: *socket-proxy-priv
-        container_name: dockerproxy_priv
-        command:
-            - "-loglevel=info"
-            - '-allowGET=/v1\..{1,2}/(containers/.*|images/.*)'
-            - '-allowPOST=/v1\..{1,2}/(containers/.*|images/.*|networks/.*)'
-            - '-allowDELETE=/v1\..{1,2}/(containers/.*|images/.*)'
-            - "-allowHEAD=/_ping"
-            - "-shutdowngracetime=5"
-            - "-watchdoginterval=600"
-            - "-stoponwatchdog"
-            - "-proxysocketendpoint=/socket/docker.sock"
-            - "-proxysocketendpointfilemode=0600"
-            - "-allowhealthcheck"
-        volumes:
-            - /var/run/docker.sock:/var/run/docker.sock:ro
-            - dockerproxy_priv:/socket/
-        labels:
-            - "com.centurylinklabs.watchtower.enable=false"
-
-    watchtower:
-        container_name: watchtower
-        restart: unless-stopped
-        mem_limit: 512M
-        image: nickfedor/watchtower:latest@sha256:e96976bcbeaf0a9adeddc9016a539c27a2245ef6bb7d3ca97ed106783350d387
-        volumes:
-            - dockerproxy_priv:/socket/:ro
-        depends_on:
-            - dockerproxy_priv
-        environment:
-            WATCHTOWER_CLEANUP: "true"
-            WATCHTOWER_POLL_INTERVAL: 7200
-            DOCKER_HOST: "unix:///socket/docker.sock"
-        logging: *logging
-
     syncthing:
-        image: syncthing/syncthing
+        image: syncthing/syncthing:2.1.7@sha256:2b71da7c0d0a91a6ae5285ad079226fecc0a365d08b27720e1f7037b018f7546
         container_name: syncthing
         restart: unless-stopped
         mem_limit: 2G
@@ -88,10 +35,9 @@ services:
     # AI root at ~/ai/comfyui. The image runs as root (Manager installs node
     # deps into /app/venv), but the process group is the host user's (MY_UID) and
     # umask 002 keeps new files group-writable, so the mounted tree is
-    # editable on the host without sudo. Watchtower owns image updates
-    # (rolling xpu-master).
+    # editable on the host without sudo. Renovate digest-pins xpu-master.
     comfyui:
-        image: ghcr.io/reliq-hq/comfyui:xpu-master
+        image: ghcr.io/reliq-hq/comfyui:xpu-master@sha256:86b38de832216781414f1234fb4dcc1c9033189cdbef4f2d73361a8afc0756b2
         container_name: comfyui
         restart: unless-stopped
         user: "0:$MY_UID"
@@ -147,9 +93,9 @@ services:
     # download into a separate cache there. Context is auto-fit to the device
     # memory. The image runs as root, but the process group is the host user's
     # (MY_UID) and umask 002 keeps new files group-writable, so the mounted
-    # tree stays editable on the host. Watchtower owns image updates.
+    # tree stays editable on the host. Renovate digest-pins server-intel.
     llama-sycl:
-        image: ghcr.io/ggml-org/llama.cpp:server-intel
+        image: ghcr.io/ggml-org/llama.cpp:server-intel@sha256:5f81d305afe5dbb4f2d4e9e96d2f3b81f449b2d3c83239c758da8628e1ead01c
         container_name: llama-sycl
         restart: unless-stopped
         # One model is resident at a time (--models-max 1). 54G leaves ~8 GiB
@@ -245,11 +191,3 @@ services:
             # Loopback-only on the host. The container port stays 8080.
             - "127.0.0.1:18080:8080"
         logging: *logging
-
-volumes:
-    dockerproxy_priv:
-        driver: local
-        driver_opts:
-            type: tmpfs
-            device: tmpfs
-            o: size=1k,uid=65534,gid=0,mode=0700,noexec

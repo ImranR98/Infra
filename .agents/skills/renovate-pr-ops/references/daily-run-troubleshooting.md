@@ -54,10 +54,13 @@ alert only fires for a finally-failed Job.
   repo's required check is green (usually `test=success`; `validate=success` on
   config-only repos), `stability=success`/`missing`, and the PR is mergeable,
   the skill may merge it now; do not wait for the next six-hourly Renovate run.
-- **`stability=pending`:** `renovate/stability-days` is holding the update for
-  the minimum release age. With `internalChecksFilter: strict` new branches
-  should not appear pending; treat an old one as a leftover and report it. Do
-  not merge early.
+- **`stability=pending`:** the 3-day age gate (`minimumReleaseAge` +
+  `internalChecksFilter: strict` + `timestamp-required`). Expected for
+  third-party image/chart updates; first-party `ghcr.io/imranr98/**` app pins
+  should not be pending. If a non-allowlisted image stays pending for more than
+  3 days, its tag is being rebuilt faster than the gate: inspect the registry
+  tags/`last_updated`, pin a more specific immutable tag, or add a justified
+  allowlist entry. Do not merge early and do not broaden the 0-day rule.
 - **Red app PR:** read the failed `test` check and the app CI job. Fix the app
   repo; Renovate will refresh/rebase the PR and retry. Do not merge a red PR.
 - **Renovate cannot auto-merge:** confirm the required check is `success`
@@ -71,10 +74,12 @@ alert only fires for a finally-failed Job.
   image. Do not claim the new version is pinned or deployed; fix the app CI.
 - **Publish skipped/no run:** the merge likely only touched `paths-ignore`
   files (docs, `.github/**`, `renovate.json`). No image changed; no Infra pin.
-- **Infra pin not appearing:** the digest PR is opened by the next scheduled
-  Renovate run (every six hours). If it is still missing after a successful
-  publish, run `bash scripts/renovate.sh infra` and re-run `list-prs.sh`. Never
-  edit the digest by hand.
+- **Infra pin not appearing:** first-party app images are allowlisted, so the
+  next scheduled run should open the digest PR. Third-party images wait 3 days.
+  If a first-party pin is still missing after a successful publish, run
+  `bash scripts/renovate.sh infra` and re-run `list-prs.sh`. If a
+  non-allowlisted update is older than 3 days and still absent or pending,
+  follow the stuck-image check above. Never edit the digest by hand.
 
 ## 4. Infra refresh failures
 
@@ -110,7 +115,9 @@ Autonomous:
   and the PR is approved (routine app PRs are usually already auto-merged by
   Renovate);
 - run `scripts/renovate.sh infra` and re-run `list-prs.sh` when a published
-  image has no Infra digest PR yet;
+  first-party image has no Infra digest PR yet;
+- diagnose a non-allowlisted image that is stuck pending for more than 3 days
+  (registry tag timestamps, immutable-tag alternative);
 - validate the Infra PR for the touched targets;
 - report failures that need app-code, secret, workflow, or chart changes.
 
@@ -119,6 +126,8 @@ Ask first:
 - merge an Infra PR or deploy;
 - rotate/change the token, Docker Hub credentials, or any secret;
 - edit the shared preset, app CI, the runner chart, or the skill;
+- add a package to the channel-only allowlist (or otherwise change the
+  age-gate policy);
 - suspend/delete Jobs, raise limits, force-push branches, or change branch
   protection.
 
@@ -155,9 +164,11 @@ runner is the CronJob image with env/Secret inputs only.
 
 - `daily-health.sh` exits 0 with `VERDICT: OK` (or `RECOVERED` with errors
   explained).
-- Each app merge that changed an image has an Infra digest PR within one
-  scheduled cycle (or after `scripts/renovate.sh infra`); skipped/no-publish
-  merges are explained.
+- Each first-party app merge that changed an image has an Infra digest PR
+  within one scheduled cycle (or after `scripts/renovate.sh infra`); third-party
+  updates appear after the 3-day gate; skipped/no-publish merges are explained.
+- No non-allowlisted image has been pending for more than 3 days; any stuck
+  mutable tag has an immutable-tag or allowlist proposal.
 - The Infra PR passes local `validate` and is approved before merge/commit.
 - The deploy verification checklist is clean.
 - The Grafana `renovate-daily-job-failed`/`cronjob-stale-renovate` alerts clear

@@ -103,7 +103,7 @@ spec:
           level: s0
       initContainers:
         - name: fix-perms
-          image: busybox:1.38
+          image: busybox:1.38.0-uclibc@sha256:b2e35951f72501f6a99f1bf45bcfe6d4795be08c518c2f97d0ed2fe776958a3b
           command: ["sh", "-c", "chown -R {{ .Values.MY_UID }}:{{ .Values.MY_UID }} /home/filebrowser/data"]
           securityContext:
             runAsUser: 0
@@ -112,7 +112,7 @@ spec:
               mountPath: /home/filebrowser/data
       containers:
         - name: filebrowser
-          image: gtstef/filebrowser:stable@sha256:de2b4c4d18485ea202ab2cdada5bd25d8f0b8ed071712c8216a67194c31285ae
+          image: gtstef/filebrowser:2.0.2-stable@sha256:de2b4c4d18485ea202ab2cdada5bd25d8f0b8ed071712c8216a67194c31285ae
           securityContext:
             allowPrivilegeEscalation: false
             capabilities:

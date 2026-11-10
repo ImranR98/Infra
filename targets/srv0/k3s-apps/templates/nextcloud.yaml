@@ -279,7 +279,7 @@ spec:
         fsGroup: 999
       initContainers:
         - name: volume-permissions
-          image: postgres:17.11-alpine
+          image: postgres:17.11-alpine@sha256:3540c0362c809df084ffac0ae69fe794515f9de92692f02178bcdce0ef0302ac
           command:
             - sh
             - -c
@@ -298,7 +298,7 @@ spec:
               mountPath: /var/lib/postgresql/data
       containers:
         - name: postgresql
-          image: postgres:17.11-alpine
+          image: postgres:17.11-alpine@sha256:3540c0362c809df084ffac0ae69fe794515f9de92692f02178bcdce0ef0302ac
           securityContext:
             runAsUser: 999
             runAsGroup: 999

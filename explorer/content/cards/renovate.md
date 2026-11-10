@@ -1,7 +1,7 @@
 ---
 id: srv0/base/renovate
 title: Renovate
-summary: "A pure six-hourly CronJob. App PRs auto-merge after test; the next run opens the Infra digest PR, and Infra PRs stay manual."
+summary: "A pure six-hourly CronJob. App PRs auto-merge after test and the 3-day age gate; Infra PRs stay manual."
 facts:
   - label: Schedule
     value: 0 */6 * * * (America/Toronto)
@@ -11,6 +11,6 @@ facts:
 ---
 The scheduled CronJob runs Renovate every six hours and does one thing: a Renovate pass. Renovate opens/updates PRs and auto-merges non-major app updates after `test`; a thin wrapper also posts a best-effort ntfy summary. Infra PRs are never auto-merged.
 
-App repos extend `renovate-preset.json`; majors wait on the Dependency Dashboard. `internalChecksFilter: strict` holds an update until it is eligible, and `minimumReleaseAgeBehaviour: timestamp-optional` lets digest updates without a release timestamp through. Infra PRs are the manual rollout gate handled by the `renovate-pr-ops` skill.
+App repos extend `renovate-preset.json`; majors wait on the Dependency Dashboard. `minimumReleaseAge` is **3 days for everything**, with `internalChecksFilter: strict` and `minimumReleaseAgeBehaviour: timestamp-required`; an update without a release timestamp is not eligible. Infra PRs are the manual rollout gate handled by the `renovate-pr-ops` skill.
 
-After an app PR merges and its image `publish` job promotes `:latest`, the **next scheduled Renovate run** opens the grouped Infra digest PR. There is no manual pin step; if a fresh PR is needed sooner, `scripts/renovate.sh infra` runs the same Renovate version on demand.
+First-party app images (`ghcr.io/imranr98/**`, `:latest@sha`) are the one deliberate age exception: the tag is rebuilt on every app merge, so it is allowlisted and the next Renovate run opens the digest PR immediately. The same allowlist covers genuinely channel-only images (LinuxServer `latest`, ComfyUI `xpu-master`, llama.cpp channel tags, temporary Bitnami DB pins). Everything else uses an immutable version tag and waits the 3 days. `scripts/check-images.sh` enforces tags and digests; watchtower was removed so pc/bigpc images are Renovate-managed too. If a non-allowlisted image stays pending for more than 3 days, its tag is being rebuilt faster than the gate — pin an immutable tag or add a justified allowlist entry.

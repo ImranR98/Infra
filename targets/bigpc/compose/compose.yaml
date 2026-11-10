@@ -5,62 +5,9 @@ x-logging: &logging
         max-size: 10m
         max-file: 5
 
-x-socket-proxy-priv: &socket-proxy-priv
-    image: wollomatic/socket-proxy:1
-    restart: unless-stopped
-    read_only: true
-    mem_limit: 512M
-    cap_drop:
-        - ALL
-    security_opt:
-        - no-new-privileges
-    user: "65534:$DOCKER_GID"
-    healthcheck:
-        test: ["CMD", "./healthcheck"]
-        interval: 10s
-        timeout: 5s
-        retries: 2
-    logging: *logging
-
 services:
-    dockerproxy_priv:
-        <<: *socket-proxy-priv
-        container_name: dockerproxy_priv
-        command:
-            - "-loglevel=info"
-            - '-allowGET=/v1\..{1,2}/(containers/.*|images/.*)'
-            - '-allowPOST=/v1\..{1,2}/(containers/.*|images/.*|networks/.*)'
-            - '-allowDELETE=/v1\..{1,2}/(containers/.*|images/.*)'
-            - "-allowHEAD=/_ping"
-            - "-shutdowngracetime=5"
-            - "-watchdoginterval=600"
-            - "-stoponwatchdog"
-            - "-proxysocketendpoint=/socket/docker.sock"
-            - "-proxysocketendpointfilemode=0600"
-            - "-allowhealthcheck"
-        volumes:
-            - /var/run/docker.sock:/var/run/docker.sock:ro
-            - dockerproxy_priv:/socket/
-        labels:
-            - "com.centurylinklabs.watchtower.enable=false"
-
-    watchtower:
-        container_name: watchtower
-        restart: unless-stopped
-        mem_limit: 512M
-        image: nickfedor/watchtower:latest@sha256:e96976bcbeaf0a9adeddc9016a539c27a2245ef6bb7d3ca97ed106783350d387
-        volumes:
-            - dockerproxy_priv:/socket/:ro
-        depends_on:
-            - dockerproxy_priv
-        environment:
-            WATCHTOWER_CLEANUP: "true"
-            WATCHTOWER_POLL_INTERVAL: 7200
-            DOCKER_HOST: "unix:///socket/docker.sock"
-        logging: *logging
-
     syncthing:
-        image: syncthing/syncthing
+        image: syncthing/syncthing:2.1.7@sha256:2b71da7c0d0a91a6ae5285ad079226fecc0a365d08b27720e1f7037b018f7546
         container_name: syncthing
         restart: unless-stopped
         mem_limit: 2G
@@ -79,11 +26,3 @@ services:
             - /mnt/ssd2:/mnt/ssd2
         network_mode: host
         logging: *logging
-
-volumes:
-    dockerproxy_priv:
-        driver: local
-        driver_opts:
-            type: tmpfs
-            device: tmpfs
-            o: size=1k,uid=65534,gid=0,mode=0700,noexec

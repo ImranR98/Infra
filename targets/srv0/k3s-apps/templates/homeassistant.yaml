@@ -189,7 +189,7 @@ spec:
       # version marker (/config/custom_components/frigate/.installed-version)
       # differs — no GitHub release API polling at pod start.
       - name: integration-update
-        image: busybox:1.38
+        image: busybox:1.38.0-uclibc@sha256:b2e35951f72501f6a99f1bf45bcfe6d4795be08c518c2f97d0ed2fe776958a3b
         command:
           - /bin/sh
           - -ec
