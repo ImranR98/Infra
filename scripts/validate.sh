@@ -416,8 +416,8 @@ check_cluster_hardware() {
     case "$profile" in
         intel) checks=("srv0 intel-gpu" "srv0 vaapi" "bigpc amd-dgpu") ;;
         amd) checks=("srv0 amd-igpu" "srv0 vaapi" "bigpc amd-dgpu") ;;
-        # ComfyUI is independent of GPU_PROFILE and always needs the bigpc dGPU.
-        none) checks=("bigpc amd-dgpu") ;;
+        # No bigpc dGPU consumer in the CPU-only profile (llama.cpp uses CPU).
+        none) checks=() ;;
         *)
             _err "WARNING: unknown GPU_PROFILE '$profile'"
             return 0

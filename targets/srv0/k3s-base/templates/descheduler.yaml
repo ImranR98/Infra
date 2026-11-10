@@ -29,7 +29,7 @@ spec:
     # Cleanup safety net for the opt-in-only bigpc node:
     #   - RemovePodsViolatingNodeTaints: evicts pods on bigpc that do NOT
     #     tolerate infra.local/noschedule (only if they fit elsewhere, i.e.
-    #     srv0). llama.cpp/ComfyUI/Immich ML/FL0W and node agents tolerate it
+    #     srv0). llama.cpp/Immich ML/FL0W and node agents tolerate it
     #     -> never touched. A stray platform or app pod is removed.
     deschedulerPolicy:
       maxNoOfPodsToEvictPerNode: 2

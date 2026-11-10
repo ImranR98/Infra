@@ -52,7 +52,6 @@ PUBLIC_HOSTS:
   - seerr
   - sonarr
   - auth
-  - comfyui
   - crowdsec
   - grafana
   - ntfy
