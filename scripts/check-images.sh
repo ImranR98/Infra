@@ -47,6 +47,7 @@ channel_only() {
             ghcr.io/ggml-org/llama.cpp | \
             bitnami/postgresql | \
             bitnami/redis | \
+            bitnami/kubectl | \
             imranrdev/attentiongame)
             return 0
             ;;

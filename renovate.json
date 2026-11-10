@@ -183,7 +183,7 @@
       "groupName": "vite toolchain"
     },
     {
-      "description": "Channel-only images that are rebuilt faster than the 3-day age gate: first-party app :latest images, LinuxServer :latest, ComfyUI xpu-master, llama.cpp channel tags, and the Bitnami DB images (no usable version tags). These are digest-pinned and reviewed at the manual rollout gate. Every other image uses an immutable version tag and waits the full minimumReleaseAge.",
+      "description": "Channel-only images that are rebuilt faster than the 3-day age gate: first-party app :latest images, LinuxServer :latest, ComfyUI xpu-master, llama.cpp channel tags, and the Bitnami DB/kubectl images (no usable version tags; kubectl is kept because the Helm hooks need bash/jq). These are digest-pinned and reviewed at the manual rollout gate. Every other image uses an immutable version tag and waits the full minimumReleaseAge.",
       "matchUpdateTypes": [
         "digest",
         "pinDigest"
@@ -194,7 +194,8 @@
         "ghcr.io/reliq-hq/comfyui",
         "ghcr.io/ggml-org/llama.cpp",
         "bitnami/postgresql",
-        "bitnami/redis"
+        "bitnami/redis",
+        "bitnami/kubectl"
       ],
       "minimumReleaseAge": null
     },

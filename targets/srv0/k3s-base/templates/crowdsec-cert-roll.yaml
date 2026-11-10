@@ -24,7 +24,7 @@ spec:
           restartPolicy: Never
           containers:
             - name: roll
-              image: registry.k8s.io/kubectl:v1.37.2@sha256:fe049faa65ae483ac200009a949a68fa4c9985daea12c9cb1195c9c7965301fc
+              image: bitnami/kubectl:latest@sha256:8f59408f9e896fc8992a0660a56687545bd06751f26531b4a26fca6d5dc7562d
               securityContext:
                 allowPrivilegeEscalation: false
               resources:

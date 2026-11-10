@@ -24,9 +24,9 @@ blocked, failed, or a major awaiting approval). Infra PRs are the human gate.
 - Infra image refs use immutable version tags and the same 3-day gate. The
   narrow allowlist in `renovate.json` covers first-party
   `ghcr.io/imranr98/**` app images (`:latest@sha`), LinuxServer `latest`,
-  ComfyUI `xpu-master`, llama.cpp channel tags, and the temporary Bitnami DB
-  pins. Those channel-only digests are rebuilt faster than 3 days, so their
-  Infra PRs appear immediately.
+  ComfyUI `xpu-master`, llama.cpp channel tags, and the temporary Bitnami
+  DB/kubectl pins. Those channel-only digests are rebuilt faster than 3 days, so
+  their Infra PRs appear immediately.
 - Merging an app PR triggers the app's `ci.yml`: `test`, then `publish` to GHCR
   (`:sha-<commit>` verified, `:latest` promoted). Workflow-only merges are
   path-ignored and publish nothing.

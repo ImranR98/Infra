@@ -107,7 +107,7 @@ Verify the digest exists and identify the real version behind it:
   3 days is always "too new" and never becomes eligible.
 - The narrow `renovate.json` allowlist covers only first-party app images
   (`ghcr.io/imranr98/**`), LinuxServer `latest`, ComfyUI `xpu-master`, llama.cpp
-  channel tags, and the temporary Bitnami DB pins. Their digest PRs appear
+  channel tags, and the temporary Bitnami DB/kubectl pins. Their digest PRs appear
   immediately.
 - Everything else must use an immutable version tag (semver, CalVer/build,
   exact patch + distro). If a non-allowlisted image has been pending for more
