@@ -56,9 +56,9 @@ PUBLIC_HOSTS:
   - grafana
   - ntfy
   - lifetagger
+  - traefik
 PRIVATE_HOSTS:
   - files
-  - traefik
 
 # ====== Ntfy ======
 NTFY_WRITE_ONLY_ACCOUNT_TOKEN: "change_me" # "tk_$(openssl rand -hex 16)"

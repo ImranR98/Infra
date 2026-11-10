@@ -207,9 +207,12 @@ metadata:
   namespace: base
 spec:
   parentRefs:
-    # LAN/VPN-only: not attached to websecure-proxy (the public-exposure listener).
+    # Public and LAN/VPN. The public listener is gated by geoblock + CrowdSec +
+    # Authelia (admin-only two-factor via the wildcard access-control rule).
     - name: srv0
       sectionName: websecure
+    - name: srv0
+      sectionName: websecure-proxy
   hostnames:
     - traefik.{{ .Values.SERVICES_DOMAIN }}
   rules:
@@ -218,6 +221,11 @@ spec:
             type: PathPrefix
             value: /
       filters:
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: geoblock
         - type: ExtensionRef
           extensionRef:
             group: traefik.io
