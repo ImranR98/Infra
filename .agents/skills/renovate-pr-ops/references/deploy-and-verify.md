@@ -12,29 +12,21 @@
   uncommitted changes would deploy too.
 - Remote machines deploy from their own checkout; they must `git pull` first.
 
-## App image → Infra pin ordering
+## App image → Infra PR ordering
 
-An Infra image pin is only meaningful after the app image publish succeeded:
+The app image and its Infra pin are two automatic steps:
 
-1. Merge/confirm the app PR with a squash via the GitHub API (or let Renovate
-   auto-merge it). Record the merge commit SHA. Do not merge while
-   `renovate/stability-days` is pending.
-2. Wait for the app's default-branch `publish` job:
-   `wait-for-publish.sh --repo <repo> --sha <sha>`.
-   - `PUBLISHED`: the image and digest exist.
-   - `NO_PUBLISH_JOB`/`SKIPPED`/`NO_RUN`: no runtime image changed.
-   - `FAILED`/`TIMEOUT`: do not treat the new digest as available.
-3. Pin the promoted digest directly in Infra:
-   `pin-app-image.sh --repo <repo> --sha <sha> --validate`.
-   It updates every matching reference, validates the touched targets, and
-   prints old/new digests. If an open Infra digest PR already contains the same
-   digest, use that PR instead.
-4. Present the diff and validation result, get approval, commit/push `master`
-   (or merge the Infra PR), then deploy.
-
-Do not pin while an app publish is in flight; the digest would be stale.
-`refresh-infra.sh` remains an optional path for non-app or missed updates, not
-the primary app route.
+1. Renovate auto-merges the app PR (or the skill merges a ready exception).
+   Record the merge commit SHA. Do not merge while `renovate/stability-days` is
+   pending.
+2. The app's default-branch `publish` job pushes and verifies `:sha-<commit>`
+   and promotes `:latest`. Workflow-only merges are path-ignored and change no
+   image.
+3. The next scheduled Renovate run opens/refreshes the grouped Infra
+   `docker-digests` PR. If it has not appeared, the publish is still running,
+   failed, or the next run is pending; run `bash scripts/renovate.sh infra` to
+   refresh on demand. Never edit the digest by hand.
+4. Validate the Infra PR, get approval, merge/push, then deploy.
 
 ## srv0 (K3s) — apply base, then apps
 

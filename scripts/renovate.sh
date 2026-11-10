@@ -17,7 +17,8 @@ usage() {
     cat <<'EOF'
 Usage: renovate.sh [apps|infra|all|clear-cache] [renovate options...]
 
-  apps         Run Renovate for the app/ops repos (see config/VARS.env).
+  apps         Run Renovate for the app/ops repos (see APP_REPOS in
+               config/srv0/values.yaml).
   infra        Run Renovate only for the Infra repo.
   all          Run both sets (default).
   clear-cache  Delete Renovate's persistent package/datasource cache.
@@ -75,6 +76,12 @@ if [ "$selection" = "clear-cache" ]; then
         echo "Renovate package cache already empty: $cache_target"
     fi
     exit 0
+fi
+
+if [ -z "$INFRA_REPO" ] || [ -z "$APP_REPOS" ]; then
+    echo "Error: set INFRA_REPO and APP_REPOS in config/srv0/values.yaml." >&2
+    echo "See targets/srv0/config_template/values.yaml." >&2
+    exit 1
 fi
 
 case "$selection" in
@@ -147,4 +154,8 @@ export HOME
 trap 'rm -rf "$HOME"' EXIT
 mkdir -p "$RENOVATE_CACHE_DIR"
 
-npx --yes -p renovate renovate "$@"
+# Run the same Renovate version as the scheduled CronJob so on-demand runs
+# cannot apply a newer config migration than the cluster job.
+renovate_version="$(sed -n 's|.*image: renovate/renovate:\([0-9][0-9.]*\).*|\1|p' \
+    "$INFRA_ROOT/targets/srv0/k3s-base/templates/renovate.yaml" | head -1)"
+npx --yes -p "renovate@${renovate_version:-44.198.3}" renovate "$@"

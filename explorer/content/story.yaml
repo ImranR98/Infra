@@ -468,17 +468,16 @@ steps:
 - id: updates
   stage: Operations
   title: How changes arrive
-  body: 'The scheduled Renovate runner is one pure K3s CronJob on `srv0` (`base`, `targets/srv0/k3s-base/templates/renovate.yaml`), `renovate-daily`, every six hours (`0 */6 * * *`). It runs Renovate only: Renovate opens or refreshes PRs and auto-merges non-major app updates after their required `test` check. It does not add a custom merge/wait/notify wrapper.
+  body: 'The scheduled Renovate runner is one pure K3s CronJob on `srv0` (`base`, `targets/srv0/k3s-base/templates/renovate.yaml`), `renovate-daily`, every six hours (`0 */6 * * *`). Renovate opens or refreshes PRs and auto-merges non-major app updates after their required `test` check; a thin wrapper also posts a best-effort ntfy summary.
 
 
     App repos extend `renovate-preset.json`; majors wait on the Dependency Dashboard. Infra Renovate PRs are never auto-merged. They are the manual rollout gate handled by the `renovate-pr-ops` skill.'
-  deepDive: 'The runner gets `RENOVATE_TOKEN`, the repo list, Docker Hub host rules, and the git author from the `renovate-secrets` Secret. It mounts no repo or scripts and runs as the image''s non-root user.
+  deepDive: 'The runner gets `RENOVATE_TOKEN`, the repo list, Docker Hub host rules, and the git author from the `renovate-secrets` Secret. It mounts no repo; a small ConfigMap provides the run wrapper and ntfy notifier, and it runs as the image''s non-root user.
 
 
-    A suspended `renovate-infra` CronJob is an optional on-demand template. After an app PR merges and its image `publish` job completes, the `renovate-pr-ops` skill normally pins the promoted digest directly in Infra and presents the change for approval, so it does not wait for the next six-hourly run. The template remains for non-app or missed updates. The skill also merges ready open app PRs (including ones Renovate left open, but not `renovate/stability-days` holds) and handles approved majors. `infra-digest-pin` marks Renovate image pins that need a deploy; merging or pinning is inert until `scripts/deploy.sh <target>`. The manual on-demand runner remains `scripts/renovate.sh`.'
+    After an app PR merges and its image `publish` job promotes `:latest`, the next scheduled Renovate run opens the grouped Infra digest PR. There is no manual pin step; `scripts/renovate.sh infra` runs the same Renovate version on demand. The skill merges ready open app PRs (including ones Renovate left open, but not `renovate/stability-days` holds) and handles approved majors. `infra-digest-pin` marks Renovate image pins that need a deploy; merging is inert until `scripts/deploy.sh <target>`.'
   reveal:
   - srv0/base/renovate/cronjob/renovate-daily
-  - srv0/base/renovate/cronjob/renovate-infra
   - concept/renovate-pr-ops
   focus:
   - srv0/ops/renovate
@@ -486,7 +485,6 @@ steps:
   - srv0/base/renovate/cronjob/renovate-daily
   - external/github
   - concept/renovate-pr-ops
-  - srv0/base/renovate/cronjob/renovate-infra
   edges:
   - from: srv0/ops/renovate
     to: srv0/base/renovate
@@ -504,17 +502,12 @@ steps:
     to: concept/renovate-pr-ops
     type: publish
     label: image publish
-  - from: concept/renovate-pr-ops
-    to: srv0/base/renovate/cronjob/renovate-infra
-    type: creates-job
-    label: optional refresh
   flow:
   - - srv0/ops/renovate
     - srv0/base/renovate
   - - srv0/base/renovate/cronjob/renovate-daily
     - external/github
     - concept/renovate-pr-ops
-  - - srv0/base/renovate/cronjob/renovate-infra
   zones:
   - id: renovate
     label: RENOVATE · SPLIT GATE
@@ -524,10 +517,9 @@ steps:
     - srv0/base/renovate/cronjob/renovate-daily
     - external/github
     - concept/renovate-pr-ops
-    - srv0/base/renovate/cronjob/renovate-infra
   code:
   - path: targets/srv0/k3s-base/templates/renovate.yaml
-    summary: The six-hourly CronJob and the suspended Infra-only template.
+    summary: The six-hourly CronJob, run wrapper, and notifier.
   - path: renovate.json
     summary: 'Infra policy: managers, package rules, and automerge disabled.'
   - path: renovate-preset.json
@@ -1268,7 +1260,7 @@ steps:
 - id: schedules
   stage: Operations
   title: Schedules
-  body: 'The six-hourly Renovate CronJob (`0 */6 * * *`, America/Toronto) is a pure PR run with overlap forbidden. The suspended `renovate-infra` template is not on a schedule; it is an optional on-demand path for non-app or missed updates, while the skill normally pins published app digests directly in Infra.
+  body: 'The six-hourly Renovate CronJob (`0 */6 * * *`, America/Toronto) is a pure PR run with overlap forbidden. `scripts/renovate.sh infra` is the on-demand refresh; it runs the same pinned Renovate version as the CronJob.
 
 
     The `vps0` image-prune timer runs monthly. The State Backups task defaults to Sundays 04:00. FL0W owns the backup schedule; the CronJob owns update discovery. Neither is a watchtower-style continuous updater.'

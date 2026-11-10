@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // DESC: Post-run Renovate notifier — publishes an ntfy message for the open
 // deps-labeled PRs that a Renovate run created or refreshed. Called by
-// renovate-run.sh inside the renovate-daily and renovate-infra CronJobs.
+// renovate-run.sh inside the renovate-daily CronJob.
 //
 // Usage: renovate-notify.js --since <ISO8601> [--dry-run]
 //        renovate-notify.js --test

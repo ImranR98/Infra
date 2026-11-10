@@ -164,7 +164,7 @@ repo that is the `renovate-pr-ops` skill and `AGENTS.md`/`validate.sh`.
 ## Verification
 
 - Infra `git grep` finds no unintended old registry refs for the app.
-- The app repo is in `APP_REPOS` in `scripts/repos.sh` (which feeds `RENOVATE_REPOSITORIES` and the notifier).
+- The app repo is in `APP_REPOS` in `config/srv0/values.yaml` (read by `scripts/repos.sh`), which feeds `RENOVATE_REPOSITORIES` and the notifier.
 - The dependency dashboard exists and lists the expected files.
 - A test dependency bump opens a PR, runs the app `test`, and auto-merges only
   when allowed.

@@ -494,6 +494,8 @@ TARGET: "srv0"
 
 # Renovate runner (targets/srv0/k3s-base/templates/renovate.yaml). Fill these in
 # config/<target>/values.yaml; the token and Docker Hub credentials are secrets.
+# INFRA_REPO/APP_REPOS are the single source for the repo list: the CronJob
+# secret and local runs (scripts/repos.sh) both read them from this file.
 RENOVATE_GITHUB_TOKEN: "change_me"
 DOCKERHUB_USER: "change_me"
 DOCKERHUB_TOKEN: "change_me"

@@ -55,50 +55,41 @@ alert only fires for a finally-failed Job.
   config-only repos), `stability=success`/`missing`, and the PR is mergeable,
   the skill may merge it now; do not wait for the next six-hourly Renovate run.
 - **`stability=pending`:** `renovate/stability-days` is holding the update for
-  the minimum release age. Leave it for Renovate and report it as held. Do not
-  merge early.
+  the minimum release age. With `internalChecksFilter: strict` new branches
+  should not appear pending; treat an old one as a leftover and report it. Do
+  not merge early.
 - **Red app PR:** read the failed `test` check and the app CI job. Fix the app
   repo; Renovate will refresh/rebase the PR and retry. Do not merge a red PR.
 - **Renovate cannot auto-merge:** confirm the required check is `success`
   (usually `test`; `validate` on config-only repos), the stability status is not
   pending, and the PR is mergeable. A 405/409 is a conflict/race; leave it open
   and report it. The skill can merge the PR via the API once it is ready.
-- **No publish job (`NO_PUBLISH_JOB`):** the repo is config-only or has no
-  publishable image. Merge it if its own checks pass, then skip the pin.
-- **Publish failed:** `wait-for-publish.sh` prints `FAILED` with the run URL;
-  read the `publish` job. A failed publish does not move `:latest`, so the Infra
-  pin still points at the last successful image. Do not claim the new version is
-  pinned or deployed.
+- **No publish job:** the repo is config-only or has no publishable image.
+  Merge it if its own checks pass; nothing to pin.
+- **Publish failed:** the default-branch `publish` job is red. A failed publish
+  does not move `:latest`, so the Infra pin still points at the last successful
+  image. Do not claim the new version is pinned or deployed; fix the app CI.
 - **Publish skipped/no run:** the merge likely only touched `paths-ignore`
-  files (docs, `.github/**`, `renovate.json`). No image changed; skip the pin for
-  that merge. If an earlier merge in the same repo published, pin that one.
-- **Publish timed out:** inspect the run; do not pin until the publish either
-  succeeds or is abandoned. If a later app publish succeeds, a separate pin can
-  proceed.
+  files (docs, `.github/**`, `renovate.json`). No image changed; no Infra pin.
+- **Infra pin not appearing:** the digest PR is opened by the next scheduled
+  Renovate run (every six hours). If it is still missing after a successful
+  publish, run `bash scripts/renovate.sh infra` and re-run `list-prs.sh`. Never
+  edit the digest by hand.
 
-## 4. App pin and Infra refresh failures
+## 4. Infra refresh failures
 
-`pin-app-image.sh` resolves the promoted GHCR digest and updates the Infra
-references. `refresh-infra.sh` remains the optional on-demand Infra-only
-Renovate path.
+The scheduled run is the primary path; `scripts/renovate.sh infra` is the
+on-demand fallback (same pinned Renovate version, local token/cache).
 
 | Result | Meaning | Action |
 |---|---|---|
-| `NO_IMAGE` | no image discovered or none pinned in Infra | pass `--image`, or confirm the repo is config-only |
-| `NO_MATCH` | image exists but not as `<tag>@sha256:` | check `--image`/`--tag`; add the manifest pin first if new |
-| `DIGEST_NOT_FOUND` | `:sha-<commit>` is not in GHCR | check the publish run/tag convention; do not guess |
-| `NOT_PROMOTED` | `:latest` does not match the merge SHA | wait/recheck; do not pin early |
-| `ALREADY_PINNED` | Infra already has the digest | no commit needed |
-| `VALIDATE_FAILED` | target preflight failed | fix the cause; do not commit |
-| `BUSY` | another Renovate Job is active | wait for it; retry `refresh-infra.sh` |
 | Job failed | Renovate error | read the Job log, fix the cause, rerun |
-| `NO_NEW_PR` | Renovate completed but no digest changed | check the publish result; the digest may already be pinned |
-| `DIGEST`/`INFRA` | a fresh PR is ready | triage it in Phase 6 |
+| `NO_NEW_PR` | no digest changed | check the publish result; the digest may already be pinned |
 | timeout | runner or API slow | inspect the Job; retry after it finishes |
 
-Do not pin or run an Infra refresh while an app publish is in flight; the digest
-would be stale. A manual pin is an Infra change: show the diff and validation,
-get approval, then commit/push.
+Do not run an Infra refresh while an app publish or another Renovate Job is in
+flight; the digest would be stale. Infra changes are PR-only; never commit a
+digest by hand.
 
 ## 5. Infra PR failures
 
@@ -118,14 +109,13 @@ Autonomous:
 - merge app PRs via the API when `test` is green, `stability` is not pending,
   and the PR is approved (routine app PRs are usually already auto-merged by
   Renovate);
-- wait for publishes;
-- prepare the Infra digest pin and run `validate` for the touched targets;
-- optionally create the on-demand Infra Job and wait for the PR;
+- run `scripts/renovate.sh infra` and re-run `list-prs.sh` when a published
+  image has no Infra digest PR yet;
+- validate the Infra PR for the touched targets;
 - report failures that need app-code, secret, workflow, or chart changes.
 
 Ask first:
 
-- approve and commit/push a manual app digest pin (unless pre-authorized);
 - merge an Infra PR or deploy;
 - rotate/change the token, Docker Hub credentials, or any secret;
 - edit the shared preset, app CI, the runner chart, or the skill;
@@ -135,24 +125,19 @@ Ask first:
 Never:
 
 - merge a red, stability-held, or unapproved Infra PR;
-- pin or refresh Infra after a failed publish and call the new digest pinned;
+- edit an Infra digest by hand or claim a version is pinned after a failed
+  publish;
 - bypass a check, required check, stability hold, or branch protection;
 - assume an app checkout exists;
 - print secrets or full logs.
 
 ## 7. Rerun recipes
 
-Pin an app image after its publish:
+On-demand Infra-only run (same pinned Renovate version as the scheduled runner;
+uses config/VARS.env for the token):
 
 ```bash
-bash .agents/skills/renovate-pr-ops/scripts/pin-app-image.sh \
-  --repo <owner/repo> --sha <merge-sha> --validate
-```
-
-Optional on-demand Infra-only run (same image/env as the scheduled runner):
-
-```bash
-bash .agents/skills/renovate-pr-ops/scripts/refresh-infra.sh
+bash scripts/renovate.sh infra
 ```
 
 Full Renovate rerun (all repos), only after the cause is fixed:
@@ -170,13 +155,10 @@ runner is the CronJob image with env/Secret inputs only.
 
 - `daily-health.sh` exits 0 with `VERDICT: OK` (or `RECOVERED` with errors
   explained).
-- `wait-for-publish.sh` returns `PUBLISHED` for each app merge that changed an
-  image; skipped/no-publish/no-run is explained.
-- `pin-app-image.sh` reports `UPDATED` or `ALREADY_PINNED` for each published
-  app image; `UPDATED` changes pass `validate`.
-- `refresh-infra.sh`, when used, returns a fresh Infra PR; `NO_NEW_PR` is
-  explained.
-- The Infra PR/pin passes local `validate` and is approved before merge/commit.
+- Each app merge that changed an image has an Infra digest PR within one
+  scheduled cycle (or after `scripts/renovate.sh infra`); skipped/no-publish
+  merges are explained.
+- The Infra PR passes local `validate` and is approved before merge/commit.
 - The deploy verification checklist is clean.
 - The Grafana `renovate-daily-job-failed`/`cronjob-stale-renovate` alerts clear
   after the next successful scheduled run; they are not proof on their own.

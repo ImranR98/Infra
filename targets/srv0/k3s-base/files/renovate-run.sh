@@ -1,7 +1,7 @@
 #!/bin/bash
 # DESC: Scheduled Renovate entrypoint — run the pass, then notify about the
-# deps PRs it opened or refreshed. Mounted into the renovate-daily and
-# renovate-infra CronJobs from the renovate-scripts ConfigMap.
+# deps PRs it opened or refreshed. Mounted into the renovate-daily CronJob
+# from the renovate-scripts ConfigMap.
 set -uo pipefail
 
 start="$(date -u +%Y-%m-%dT%H:%M:%SZ)"

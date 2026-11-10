@@ -31,12 +31,10 @@ esac
 script_dir="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
 repo_root="$(cd "$script_dir/../../../.." && pwd)"
 
-if [ -z "${INFRA_REPO:-}" ] && [ -f "$repo_root/config/VARS.env" ]; then
-    set -a
-    # shellcheck disable=SC1091
-    . "$repo_root/config/VARS.env"
-    set +a
-fi
+# Repository lists (and config/VARS.env) come from scripts/repos.sh, the same
+# source the scheduled runner uses.
+# shellcheck disable=SC1091
+. "$repo_root/scripts/repos.sh"
 
 origin="$(git -C "$repo_root" remote get-url origin 2>/dev/null || true)"
 if [ -z "${INFRA_REPO:-}" ] && [ -n "$origin" ]; then
@@ -48,21 +46,15 @@ print(f"{match.group(1)}/{match.group(2)}" if match else "")
 PY
 )"
 fi
-if [ -z "${INFRA_REPO:-}" ]; then
-    echo "Error: set INFRA_REPO in config/VARS.env (or use a GitHub origin remote)." >&2
+if [ -z "${INFRA_REPO:-}" ] || [ -z "${APP_REPOS:-}" ]; then
+    echo "Error: set INFRA_REPO and APP_REPOS in config/srv0/values.yaml." >&2
+    echo "See targets/srv0/config_template/values.yaml." >&2
     exit 1
 fi
 
-# Resolve the token without printing it.
+# Resolve the token without printing it. repos.sh already sourced VARS.env.
 if [ -z "${GITHUB_TOKEN:-}" ] && [ -n "${RENOVATE_GITHUB_TOKEN:-}" ]; then
     GITHUB_TOKEN="$RENOVATE_GITHUB_TOKEN"
-fi
-if [ -z "${GITHUB_TOKEN:-}" ] && [ -f "$repo_root/config/VARS.env" ]; then
-    set -a
-    # shellcheck disable=SC1091
-    . "$repo_root/config/VARS.env"
-    set +a
-    GITHUB_TOKEN="${RENOVATE_GITHUB_TOKEN:-}"
 fi
 if [ -n "${GITHUB_TOKEN:-}" ]; then
     export GITHUB_TOKEN

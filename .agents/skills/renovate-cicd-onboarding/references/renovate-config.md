@@ -37,11 +37,12 @@ GitHub platform auto-merge or branch protection.
 
 - Required: a `test` job that runs on every PR and fails on real errors.
 - Do not set app-local `automerge` rules; the shared preset owns them.
-- Add the repo to `APP_REPOS` in `config/VARS.env`; `scripts/repos.sh` reads it.
+- Add the repo to `APP_REPOS` in `config/srv0/values.yaml`; `scripts/repos.sh` reads it.
 - Majors/0.x breaking changes/DB migrations need user consent; use
   [the test gate](test-gate.md) and the app's changelog.
-- The `renovate-pr-ops` skill handles exceptions and the app → publish → Infra
-  digest ordering; it never assumes an app checkout.
+- The `renovate-pr-ops` skill handles app-PR exceptions and the Infra PR gate;
+  the app → publish → Infra digest PR is automatic. It never assumes an app
+  checkout.
 
 ## Grouping
 

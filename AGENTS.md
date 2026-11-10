@@ -56,9 +56,9 @@ sudo bash scripts/update-node-ip.sh [--ip X] [--force]
 bash scripts/prereqs.sh
 bash scripts/renovate.sh [apps|infra|all|clear-cache] [--dry-run]   # on-demand
 # The scheduled runner is the pure (six-hourly) renovate-daily CronJob:
-# app PRs auto-merge via Renovate after test; open app PRs, image publishes,
-# Infra PRs, and the manual digest pins are handled by the renovate-pr-ops
-# skill (the on-demand renovate-infra Job is optional for non-app updates).
+# app PRs auto-merge via Renovate after test; the following run opens the
+# Infra digest PR. Reviewing/merging Infra PRs and deploys are handled by the
+# renovate-pr-ops skill. `renovate.sh infra` is the on-demand refresh.
 bash scripts/preboot.sh public-exposure|crypt-ssh
 bash scripts/wireguard.sh <path/to/wg0.conf>
 bash scripts/k3s-server.sh
@@ -102,7 +102,7 @@ Open <http://localhost:4173/>. The tours cover the request path, public edge, Wi
 - **Bigpc workloads are opt-in** — only node agents and workloads that genuinely need bigpc hardware or local data tolerate `infra.local/noschedule=true:NoSchedule`. The current AI workloads are llama.cpp and ComfyUI, both mounting `ai-data-pvc` subPaths. Platform services and normal apps never tolerate it.
 - **LLM models are cache-managed** — the llama.cpp router uses `LLAMA_CACHE` on `ai-data-pvc` (subPath `llama`); download/delete through the built-in Models UI at `models.<SERVICES_DOMAIN>`. Do not add `--models-preset` or manual GGUF paths: the router can only delete cache models, and the UIs start empty for per-user downloads. New cache models inherit the global Q8 KV, Flash Attention, and CPU-projector settings and auto-fit their context with `--fit`.
 - Geoblock uses `get.geojs.io`; do not reintroduce the self-hosted GeoIP service/`geoip-src`.
-- **Renovate splits app and Infra** — app repos extend `renovate-preset.json`; Renovate auto-merges non-major app updates after the `test` check, while majors wait on the Dependency Dashboard. Open app Renovate PRs that are ready (`test` green, `renovate/stability-days` not pending) are also handled by the `renovate-pr-ops` skill. After the app `publish` job, the skill pins the promoted image digest directly in Infra (and presents it for approval) instead of waiting for a Renovate run; the on-demand `renovate-infra` Job remains for non-app or missed updates. Infra Renovate PRs are never auto-merged. No app checkout is assumed; use the GitHub API or a temporary clone.
+- **Renovate splits app and Infra** — app repos extend `renovate-preset.json`; Renovate auto-merges non-major app updates after the `test` check (`internalChecksFilter: strict` holds updates until eligible; `minimumReleaseAgeBehaviour: timestamp-optional` lets timestamp-less digest updates through), while majors wait on the Dependency Dashboard. After the app `publish` job promotes `:latest`, the **next scheduled Renovate run** opens the grouped Infra digest PR. Infra Renovate PRs are never auto-merged; the `renovate-pr-ops` skill researches, validates, and presents them for approval. Never hand-pin an app digest. The repo list (Infra + apps) lives in `config/srv0/values.yaml` and feeds both the CronJob and local runs. No app checkout is assumed; use the GitHub API or a temporary clone.
 - **Helm charts** — only project-maintained charts; `validate.sh` enforces the allowlist. Home Assistant is the single approved third-party exception. Pin `image.repository`/`image.tag` on app-version-sensitive charts so Renovate tracks the app, not just the chart.
 - TLS is `edge-public-tls` (exact SANs from `PUBLIC_HOSTS`) plus `edge-private-tls` (`PRIVATE_HOSTS`, `websecure` only). Adding a public app means adding its label to `PUBLIC_HOSTS` and its route, then re-issuing; no per-app certs or wildcards.
 - **Authelia access control is dual-source** — structural bypasses and the final admin catch-all stay in the charts; group/user/deployment-specific rules live in `config/` (`AUTHELIA_ACCESS_CONTROL_RULES` on srv0; `config/vps0/authelia/access_control.yml` rendered by `scripts/render-vps0-authelia.sh` on vps0). Don't add personal group names to the chart.
