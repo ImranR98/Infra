@@ -11,6 +11,7 @@
     "vps0-state": {
       "type": "archive",
       "root": "/data/state",
+      "exclude": ["fl0w-agent"],
       "ignoreReadErrors": true,
       "format": "tar.gz",
       "maxBytes": 6442450944,

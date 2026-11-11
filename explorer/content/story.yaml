@@ -408,7 +408,7 @@ steps:
 - id: data
   stage: Data
   title: Where the photo lives
-  body: 'The `nfs-server` pod in `base` exports host paths; `csi-driver-nfs` mounts them. The app-data export is `/exports/apps` → `{{ .Values.INFRA_ROOT }}/current_target/k3s_live_state/nfs-apps`, with `no_root_squash` (needed by CSI subdir creation and Postgres chowns).
+  body: 'The `nfs-server` pod in `base` exports host paths; `csi-driver-nfs` mounts them. The app-data export is `/exports/apps` → `{{ .Values.INFRA_STATE_DIR }}/k3s_live_state/nfs-apps`, with `no_root_squash` (needed by CSI subdir creation and Postgres chowns).
 
 
     The dynamic StorageClass **`nfs-apps`** is the default. It provisions `subDir: ${pvc.metadata.namespace}/${pvc.metadata.name}`, `mountPermissions: "0777"`, `reclaimPolicy: Retain`, `onDelete: retain`, `volumeBindingMode: Immediate`, and `allowVolumeExpansion: false` (sizes are advisory; NFS has no quota).
@@ -534,7 +534,7 @@ steps:
   body: 'The **State Backups** task in the FL0W is the active backup system. It runs on a schedule (default Sundays 04:00) and has a manual **Run now**.
 
 
-    One encrypted, deduplicated restic repository at `state_backups/restic` contains every PVC labelled `auto-backup=true` under `current_target/k3s_live_state/nfs-apps/<namespace>/<pvc>`, the srv0 Compose state, and the vps0 Compose state, fetched over SSH with the existing key.
+    One encrypted, deduplicated restic repository at `state_backups/restic` contains every PVC labelled `auto-backup=true` under `~/infra_state/k3s_live_state/nfs-apps/<namespace>/<pvc>`, the srv0 Compose state, and the vps0 Compose state, fetched over SSH with the existing key.
 
     '
   deepDive: 'The FL0W backup instance runs as root in the `apps` namespace so it can read the Postgres/Redis-owned PVC data; it mounts the Infra tree read-only and only `state_backups/` writable.
@@ -1061,7 +1061,7 @@ steps:
 
 
     `pc` is Compose-only: syncthing, ComfyUI, and a llama.cpp router on its Intel Arc iGPU. None of them is on the `srv0`/`vps0` request path.'
-  deepDive: '`bigpc` is tainted `infra.local/noschedule=true:NoSchedule`; only node agents, llama.cpp, Immich ML (AMD dGPU branch), and the FL0W agent tolerate it. llama.cpp uses the hostname-pinned `ai-data-pv` via the `llama` subPath. `rpi`''s go2rtc password is generated on first start under `current_target/compose_live_state/go2rtc/`; the WebUI is loopback-only.
+  deepDive: '`bigpc` is tainted `infra.local/noschedule=true:NoSchedule`; only node agents, llama.cpp, Immich ML (AMD dGPU branch), and the FL0W agent tolerate it. llama.cpp uses the hostname-pinned `ai-data-pv` via the `llama` subPath. `rpi`''s go2rtc password is generated on first start under `~/infra_state/compose_live_state/go2rtc/`; the WebUI is loopback-only. The bigpc K3s FL0W agent state lives under `~/infra_state/k3s_live_state/fl0w-agent/`.
 
 
     Renovate owns the Compose images on `pc`, `bigpc`, `vps0`, and `rpi`; there is no runtime watchtower updater.'
@@ -1157,7 +1157,7 @@ steps:
 
 
     Target-selecting scripts take `<target>` as their first argument. Machine-local scripts (`prereqs`, `renovate`, `preboot`, `wireguard`, `kubeconfig-unlock`, `k3s-server`, `k3s-join`, `restic-restore`) act on the machine they run on.'
-  deepDive: '`current_target/` is runtime state; leave it alone. `config/` mirrors each target''s `config_template/`. `compose.sh` supplies the config env, generated machine facts, private overlay, and profiles, and renders vps0 Authelia before `up`.
+  deepDive: '`~/infra_state/` is runtime state; leave it alone. `config/` mirrors each target''s `config_template/`. `compose.sh` supplies the config env, generated machine facts, private overlay, and profiles, and renders vps0 Authelia before `up`.
 
 
     Run `validate.sh <target>` before every `helm upgrade --install`; it is read-only. Hostnames must match the target directory; scripts warn or hard-fail.
@@ -1219,14 +1219,14 @@ steps:
 
 
     The committed templates under `targets/*/config_template/` document every key and generation command. `init-config.sh` copies them without overwriting; `validate.sh` rejects placeholders.'
-  deepDive: 'Only `MAIN_PARENT_DIR` and `SECONDARY_STORAGE_PATH` are required path roots; the rest derive. Machine facts are generated into `targets/<t>/compose/.env`, not config envs.
+  deepDive: 'Only `MAIN_PARENT_DIR` is a required path root; `INFRA_STATE_DIR` defaults to `<HOME_DIR>/infra_state`, and the rest derive. Machine facts and the resolved state paths are generated into `targets/<t>/compose/.env`, not config envs.
 
 
     Secrets never touch git. `config/` is gitignored; values sit there as plain text.
 
 
 
-    `COMPOSE_PROFILES=fl0w-agent` enables the optional vps0 archive agent. Generated files — `targets/<t>/compose/.env`, the public-exposure keys, `current_target/`, and the rendered Authelia config — are not hand-edited.
+    `COMPOSE_PROFILES=fl0w-agent` enables the optional vps0 archive agent. Generated files — `targets/<t>/compose/.env`, the public-exposure keys, `~/infra_state/`, and the rendered Authelia config — are not hand-edited.
 
 
     `config/VARS.env` is for manual `scripts/renovate.sh`; the scheduled CronJob reads its chart Secret (`renovate-secrets`) and does not mount the repo.'
@@ -1385,7 +1385,7 @@ steps:
     Run it on srv0 and vps0 before `init-config.sh`; `init-config` needs `yq` from prereqs.
 
     '
-  deepDive: '`prereqs.sh` is idempotent; re-run it after repo changes that add Compose bind dirs. On srv0, confirm `MAIN_PARENT_DIR` and `SECONDARY_STORAGE_PATH` exist and the LUKS/remote-unlock drivers are in the initramfs.'
+  deepDive: '`prereqs.sh` is idempotent; re-run it after repo changes that add Compose bind dirs. On srv0, confirm `MAIN_PARENT_DIR` and `INFRA_STATE_DIR` exist and the LUKS/remote-unlock drivers are in the initramfs.'
   reveal:
   - script/prereqs
   - script/init-config
@@ -1423,7 +1423,7 @@ steps:
   deepDive: 'The `--detect` pass sets `MY_UID`, `GPU_PROFILE`, `HA_CONBEE`, and `HA_BLUETOOTH` from the current hardware. It does not generate passwords, hashes, or GitHub tokens.
 
 
-    Only `MAIN_PARENT_DIR` and `SECONDARY_STORAGE_PATH` are required path roots; the rest derive.'
+    Only `MAIN_PARENT_DIR` is a required path root; `INFRA_STATE_DIR` defaults to `<HOME_DIR>/infra_state` and the rest derive.'
   reveal:
   - srv0/config/values
   - vps0/config/compose
@@ -1678,7 +1678,7 @@ steps:
 
 
     Do these once after `deploy.sh` reports healthy.'
-  deepDive: 'The arr API keys are pre-configured in `radarr-secret`/`sonarr-secret`; Prowlarr registers Radarr and Sonarr with them. Seerr logs in through Jellyfin. Frigate uses `mosquitto:1883` and writes recordings under `$SECONDARY_STORAGE_PATH/frigate`.
+  deepDive: 'The arr API keys are pre-configured in `radarr-secret`/`sonarr-secret`; Prowlarr registers Radarr and Sonarr with them. Seerr logs in through Jellyfin. Frigate uses `mosquitto:1883` and writes recordings to the `frigate-media-pvc` NFS claim.
 
 
     CrowdSec Web UI: register the LAPI machine with `CROWDSEC_WEBUI_LAPI_PASSWORD`, then create the first admin. On `srv0`: `kubectl -n base exec deploy/crowdsec-lapi -- cscli machines add crowdsec-web-ui --password ''<value>'' -f /dev/null`; on `vps0`: `docker exec crowdsec ...`. VPN profiles: `scripts/remote-access-client.sh <client>`.'
@@ -1783,7 +1783,7 @@ steps:
 
 
     Restores use `scripts/restic-restore.sh`; there is no tar-based PVC path.'
-  deepDive: 'The app-data export is `/exports/apps` → `current_target/k3s_live_state/nfs-apps` with `no_root_squash`. `IGNORE_DATABASE_FSTYPE=true` is required for Immich Postgres on NFS.
+  deepDive: 'The app-data export is `/exports/apps` → `~/infra_state/k3s_live_state/nfs-apps` with `no_root_squash`. `IGNORE_DATABASE_FSTYPE=true` is required for Immich Postgres on NFS.
 
 
     The tradeoff is measured: about 3× SQLite p95 and 2.6× Postgres latency under load compared with block storage.'

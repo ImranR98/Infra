@@ -54,11 +54,20 @@ MEDIA_DIR="$(config_yaml srv0 .MEDIA_DIR_PATH || true)"
 if [ -z "$MEDIA_DIR" ] || [ "$MEDIA_DIR" = "null" ]; then
     MEDIA_DIR="$MAIN_DIR/Media"
 fi
+STATE_DIR="$(config_yaml srv0 .INFRA_STATE_DIR || true)"
+if [ -z "$STATE_DIR" ] || [ "$STATE_DIR" = "null" ]; then
+    HOME_DIR="$(config_yaml srv0 .HOME_DIR || true)"
+    if [ -z "$HOME_DIR" ] || [ "$HOME_DIR" = "null" ]; then
+        HOME_DIR="$MAIN_PARENT_DIR"
+    fi
+    STATE_DIR="$HOME_DIR/infra_state"
+fi
 REQUIRED=(
     "$MAIN_DIR/Backups"
     "$MEDIA_DIR"
     "$MAIN_DIR/Documents"
     "$INFRA_ROOT/state_backups"
+    "$STATE_DIR"
 )
 
 fail=0

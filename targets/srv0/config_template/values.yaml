@@ -76,11 +76,9 @@ GEOBLOCK_CONFIG_SUBSET: |
     - CU
 
 # ====== Host Paths ======
-# MAIN_PARENT_DIR and SECONDARY_STORAGE_PATH are the required roots. Every
-# other path below defaults to its conventional location under MAIN_PARENT_DIR;
-# set a value only when your tree differs.
+# MAIN_PARENT_DIR is the required root. Every other path below defaults to its
+# conventional location; set a value only when your tree differs.
 MAIN_PARENT_DIR: "/path/to/data"
-SECONDARY_STORAGE_PATH: "/mnt/k3s_extra_storage"
 # UID/GID used by containers and hostPath ownership. Set to `id -u`; the
 # bootstrap script fills this from the current user.
 MY_UID: 1000
@@ -207,7 +205,7 @@ MOSQUITTO_CREDENTIALS: "change_me" # tmpfile=$(mktemp) && mosquitto_passwd -b "$
 
 # ====== Frigate (NVR) ======
 # Password of the rpi go2rtc stream: `docker logs go2rtc` on the Pi, or
-# current_target/compose_live_state/go2rtc/password. Update if the Pi password regenerates.
+# ~/infra_state/compose_live_state/go2rtc/password. Update if the Pi password regenerates.
 FRIGATE_RTSP_PASSWORD: "change_me"
 FRIGATE_MQTT_PASSWORD: "change_me" # openssl rand -hex 16 (also add `frigate` user to MOSQUITTO_CREDENTIALS)
 HA_MQTT_PASSWORD: "change_me" # openssl rand -hex 16 (also add `homeassistant` user to MOSQUITTO_CREDENTIALS)
@@ -379,7 +377,7 @@ DA5H_CONFIG_PATH: ""
 # FL0W_AGENTS:
 #   node1:
 #     node: node1
-#     stateSubdir: fl0w-agent
+#     stateSubdir: infra_state/k3s_live_state/fl0w-agent
 #     runtime: gtk
 #     artifacts:
 #       - name: tool
@@ -486,9 +484,13 @@ LIFETAGGER_EXCLUDE_EXT: "txt,pp3,json,xmp,aae,db,ini,log"
 
 # ====== Infra paths (k3s-chart-only, machine/env layout) ======
 # Repo path. Defaults to <MAIN_PARENT_DIR>/Main/Infra. Drives the infra
-# hostpath PV (Renovate + Task Runner) and the nfs-apps current_target; the PV
-# claim, not a nodeSelector, pins the pods.
+# hostpath PV (Renovate + Task Runner) and state_backups; the PV claim, not a
+# nodeSelector, pins the pods.
 INFRA_ROOT: ""
+# Runtime state root. Defaults to <HOME_DIR>/infra_state. Must be outside
+# INFRA_ROOT. Holds compose_live_state (Compose bind state) and
+# k3s_live_state (NFS app data and K3s agent state).
+INFRA_STATE_DIR: ""
 TARGET: "srv0"
 
 # Renovate runner (targets/srv0/k3s-base/templates/renovate.yaml). Fill these in

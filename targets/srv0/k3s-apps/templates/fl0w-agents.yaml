@@ -23,8 +23,8 @@ data:
   agent.json: |
 {{ $configJSON | indent 4 }}
 ---
-# Legacy name: this PV/PVC now holds the agent's /state tree (token + state),
-# not agent.json. Keeping the bound claim names avoids a state migration.
+# The claim names are retained from the old config layout. The PVC root is
+# the agent's /state tree (token + work) and is mounted directly at /state.
 apiVersion: v1
 kind: PersistentVolume
 metadata:
@@ -176,7 +176,6 @@ spec:
           volumeMounts:
             - name: state
               mountPath: /state
-              subPath: state
             - name: tmp
               mountPath: /tmp
           securityContext:
@@ -240,7 +239,6 @@ spec:
               readOnly: true
             - name: state
               mountPath: /state
-              subPath: state
             # Writable parent for HOME; the host data mounts sit below it.
             - name: home
               mountPath: /home/imranr

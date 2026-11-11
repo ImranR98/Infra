@@ -33,6 +33,7 @@ SSH_KEY_FILE="${SSH_KEY_FILE:-$INFRA_ROOT/config/state-backup-vps0/id_ed25519}"
 KNOWN_HOSTS="${KNOWN_HOSTS:-$HOME/.ssh/known_hosts}"
 VPS0_HOST="${VPS0_HOST:-vps0.example.org}"
 VPS0_USER="${VPS0_USER:-root}"
+VPS0_STATE_DIR="${VPS0_STATE_DIR:-/root/infra_state/compose_live_state}"
 
 # The repository password lives outside git in the private fl0w-config
 # checkout; the old public default was removed during the 2026-10 migration.
@@ -65,6 +66,16 @@ require_restic() {
 snapshot_arg() {
     local snap="${1:-latest}"
     printf '%s' "$snap"
+}
+
+# snapshot_path <snapshot> <suffix> — find the absolute path recorded in the
+# snapshot. This keeps restores working across the current_target -> infra_state
+# migration and the old /vps0 staging path.
+snapshot_path() {
+    local snapshot="$1" suffix="$2"
+    restic ls "$snapshot" 2>/dev/null | awk -v s="$suffix" '
+        length($0) >= length(s) && substr($0, length($0) - length(s) + 1) == s { print; exit }
+    '
 }
 
 restore_to_staging() {
@@ -129,15 +140,21 @@ confirm_live() {
 
 restore_pvc() {
     local pvc="$1" snapshot="$2" live="$3" yes="$4"
-    local ns dest staging restored scaled_file
+    local ns dest staging restored scaled_file snap source_path
     ns=$(kubectl get pvc -A -o json | jq -r --arg pvc "$pvc" \
         '.items[] | select(.metadata.name == $pvc) | .metadata.namespace' | head -n1)
     [ -n "$ns" ] || { echo "PVC not found: $pvc" >&2; exit 1; }
-    dest="$INFRA_ROOT/current_target/k3s_live_state/nfs-apps/$ns/$pvc"
+    dest="$K3S_STATE_DIR/nfs-apps/$ns/$pvc"
     [ -d "$dest" ] || { echo "Destination not found: $dest" >&2; exit 1; }
 
-    staging=$(restore_to_staging "$(snapshot_arg "$snapshot")" "$dest")
-    restored="$staging$dest"
+    snap="$(snapshot_arg "$snapshot")"
+    source_path="$(snapshot_path "$snap" "/nfs-apps/$ns/$pvc")"
+    [ -n "$source_path" ] || {
+        echo "PVC path not found in snapshot $snap: $ns/$pvc" >&2
+        exit 1
+    }
+    staging=$(restore_to_staging "$snap" "$source_path")
+    restored="$staging$source_path"
     [ -d "$restored" ] || { echo "Restored path not found: $restored" >&2; exit 1; }
     echo "Staged restore: $restored"
 
@@ -155,21 +172,26 @@ restore_pvc() {
 
 restore_compose() {
     local target="$1" snapshot="$2" live="$3" yes="$4"
-    local source_path dest staging restored
+    local source_path dest staging restored snap
+    snap="$(snapshot_arg "$snapshot")"
     case "$target" in
         srv0)
-            source_path="$INFRA_ROOT/current_target/compose_live_state"
-            dest="$source_path"
+            dest="$COMPOSE_STATE_DIR"
+            source_path="$(snapshot_path "$snap" "/compose_live_state")"
+            [ -n "$source_path" ] || { echo "No compose_live_state path found in snapshot $snap" >&2; exit 1; }
             ;;
         vps0)
-            # Current snapshots use the stable in-pod staging path. Older
-            # snapshots used a random staging directory; discover either.
+            # Current snapshots use the stable /staging/vps0-state path. Older
+            # snapshots used a random staging directory and a /vps0 leaf.
             source_path="${VPS0_SNAPSHOT_PATH:-}"
             if [ -z "$source_path" ]; then
-                source_path=$(restic ls "$(snapshot_arg "$snapshot")" 2>/dev/null | awk '/\/vps0$/ { print; exit }')
+                source_path="$(snapshot_path "$snap" "/staging/vps0-state")"
             fi
-            [ -n "$source_path" ] || { echo "No /vps0 path found in snapshot $snapshot" >&2; exit 1; }
-            dest="/root/Infra/current_target/compose_live_state"
+            if [ -z "$source_path" ]; then
+                source_path="$(snapshot_path "$snap" "/vps0")"
+            fi
+            [ -n "$source_path" ] || { echo "No vps0 state path found in snapshot $snap" >&2; exit 1; }
+            dest="$VPS0_STATE_DIR"
             ;;
         *)
             echo "compose target must be srv0 or vps0" >&2

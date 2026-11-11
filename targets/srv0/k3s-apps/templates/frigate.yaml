@@ -379,24 +379,8 @@ spec:
   policyTypes:
     - Ingress
 ---
-apiVersion: v1
-kind: PersistentVolume
-metadata:
-  name: frigate-media-pv
-spec:
-  capacity:
-    storage: 50Gi
-  accessModes:
-    - ReadWriteMany
-  persistentVolumeReclaimPolicy: Retain
-  storageClassName: nfs
-  csi:
-    driver: nfs.csi.k8s.io
-    volumeHandle: frigate-media
-    volumeAttributes:
-      server: nfs-server.base.svc.cluster.local
-      share: /frigate
----
+# Frigate recordings/clips. Deliberately NOT labelled auto-backup: they are
+# bulk, retention-managed media, not app state.
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -408,8 +392,7 @@ spec:
   resources:
     requests:
       storage: 50Gi
-  storageClassName: nfs
-  volumeName: frigate-media-pv
+  storageClassName: nfs-apps
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim

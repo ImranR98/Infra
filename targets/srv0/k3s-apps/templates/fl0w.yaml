@@ -262,8 +262,8 @@ spec:
               mountPath: {{ $homeDir }}/Main/Media
             - name: main-documents
               mountPath: {{ $homeDir }}/Main/Documents
-            - name: infra-current
-              mountPath: {{ $homeDir }}/Main/Infra/current_target
+            - name: infra-state
+              mountPath: {{ include "path.infraState" . }}
               readOnly: true
             - name: state-backups
               mountPath: {{ $homeDir }}/Main/Infra/state_backups
@@ -340,10 +340,10 @@ spec:
         - name: main-documents
           persistentVolumeClaim:
             claimName: hostpath-main-node-documents-pvc
-        - name: infra-current
+        - name: infra-state
           hostPath:
-            path: {{ include "path.infraRoot" . }}/current_target
-            type: Directory
+            path: {{ include "path.infraState" . }}
+            type: DirectoryOrCreate
         - name: state-backups
           hostPath:
             path: {{ include "path.infraRoot" . }}/state_backups

@@ -27,6 +27,8 @@ GUACAMOLE_DB_PASSWORD: ""
 # ====== Deployment paths / LAN ======
 # Required in config/srv0/values.yaml.
 HOME_DIR: ""
+# Runtime state root. Empty derives <HOME_DIR>/infra_state.
+INFRA_STATE_DIR: ""
 LAN_CIDR: ""
 
 # ====== Group names used by app-level auth ======

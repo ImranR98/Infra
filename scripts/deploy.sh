@@ -89,6 +89,20 @@ apps_args=(
 echo "==> Validate srv0"
 bash "$INFRA_ROOT/scripts/validate.sh" srv0
 
+state_dir="$(config_yaml srv0 .INFRA_STATE_DIR || true)"
+if [ -z "$state_dir" ] || [ "$state_dir" = "null" ]; then
+    home_dir="$(config_yaml srv0 .HOME_DIR || true)"
+    if [ -z "$home_dir" ] || [ "$home_dir" = "null" ]; then
+        home_dir="$(config_yaml srv0 .MAIN_PARENT_DIR || true)"
+    fi
+    state_dir="$home_dir/infra_state"
+fi
+if [ ! -d "$state_dir/k3s_live_state/nfs-apps" ]; then
+    echo "Error: runtime state tree not found at $state_dir/k3s_live_state/nfs-apps" >&2
+    echo "Run scripts/migrate-state-dir.sh on srv0 before deploying." >&2
+    exit 1
+fi
+
 if [ "$dry_run" = 1 ]; then
     printf 'helm'; printf ' %q' "${base_args[@]}"; printf '\n'
     printf 'helm'; printf ' %q' "${apps_args[@]}"; printf '\n'

@@ -17,7 +17,7 @@ usage() {
     echo
     echo "Renders targets/vps0/compose/files/authelia/configuration.base.yml +"
     echo "config/vps0/authelia/access_control.yml into"
-    echo "current_target/compose_live_state/authelia/config/configuration.yml."
+    echo "$HOME/infra_state/compose_live_state/authelia/config/configuration.yml."
     echo "Run on vps0 before docker compose up; --check does not write."
     exit 1
 }
@@ -34,7 +34,7 @@ require_target vps0
 base_file="$INFRA_ROOT/targets/vps0/compose/files/authelia/configuration.base.yml"
 rules_file="$INFRA_ROOT/config/vps0/authelia/access_control.yml"
 env_file="$INFRA_ROOT/config/vps0/compose.env"
-out_file="${COMPOSE_STATE_DIR:-$INFRA_ROOT/current_target/compose_live_state}/authelia/config/configuration.yml"
+out_file="${COMPOSE_STATE_DIR:-$INFRA_STATE_DIR/compose_live_state}/authelia/config/configuration.yml"
 
 [ -f "$base_file" ] || { echo "Error: missing $base_file" >&2; exit 1; }
 [ -f "$rules_file" ] || { echo "Error: missing $rules_file" >&2; exit 1; }

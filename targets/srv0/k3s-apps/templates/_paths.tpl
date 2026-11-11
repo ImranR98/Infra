@@ -1,6 +1,6 @@
 {{/*
-Derived host paths. MAIN_PARENT_DIR is the only required root; every other
-path defaults to the conventional location under it. Set the corresponding
+Derived host paths. MAIN_PARENT_DIR is the required root; runtime state lives
+outside the repo at INFRA_STATE_DIR (default <HOME_DIR>/infra_state). Set a
 value only when the tree differs. Kept in both charts because Helm helpers are
 chart-scoped.
 */}}
@@ -70,6 +70,10 @@ chart-scoped.
 
 {{- define "path.home" -}}
 {{- if .Values.HOME_DIR -}}{{ .Values.HOME_DIR }}{{- else -}}{{ .Values.MAIN_PARENT_DIR }}{{- end -}}
+{{- end -}}
+
+{{- define "path.infraState" -}}
+{{- if .Values.INFRA_STATE_DIR -}}{{ .Values.INFRA_STATE_DIR }}{{- else -}}{{ include "path.home" . }}/infra_state{{- end -}}
 {{- end -}}
 
 {{- define "path.journal" -}}

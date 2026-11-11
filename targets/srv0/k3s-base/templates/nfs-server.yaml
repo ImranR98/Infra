@@ -4,8 +4,6 @@
 /exports/music *(ro,fsid=1,no_subtree_check,insecure,root_squash)
 /exports/jellyfin-tv *(ro,fsid=2,no_subtree_check,insecure,root_squash)
 /exports/jellyfin-youtube *(ro,fsid=3,no_subtree_check,insecure,root_squash)
-/exports/arrstack-media *(rw,fsid=4,no_subtree_check,insecure,no_root_squash)
-/exports/frigate *(rw,fsid=6,no_subtree_check,insecure,no_root_squash)
 /exports/apps *(rw,fsid=8,crossmnt,no_subtree_check,insecure,no_root_squash)
 /exports/code-sandbox *(rw,fsid=7,no_subtree_check,insecure,root_squash)
 {{- end -}}
@@ -83,10 +81,6 @@ spec:
               name: tv-storage
             - mountPath: /exports/jellyfin-youtube
               name: youtube-storage
-            - mountPath: /exports/arrstack-media
-              name: arrstack-media-storage
-            - mountPath: /exports/frigate
-              name: frigate-storage
             - mountPath: /exports/apps
               name: apps-storage
             - mountPath: /exports/code-sandbox
@@ -119,17 +113,9 @@ spec:
           hostPath:
             path: {{ include "path.media" . }}/YouTube
             type: DirectoryOrCreate
-        - name: arrstack-media-storage
-          hostPath:
-            path: {{ .Values.SECONDARY_STORAGE_PATH }}/arrstack_media
-            type: DirectoryOrCreate
-        - name: frigate-storage
-          hostPath:
-            path: {{ .Values.SECONDARY_STORAGE_PATH }}/frigate
-            type: DirectoryOrCreate
         - name: apps-storage
           hostPath:
-            path: {{ include "path.infraRoot" . }}/current_target/k3s_live_state/nfs-apps
+            path: {{ include "path.infraState" . }}/k3s_live_state/nfs-apps
             type: DirectoryOrCreate
         - name: code-sandbox-storage
           hostPath:

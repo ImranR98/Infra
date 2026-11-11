@@ -13,7 +13,39 @@ if [ -z "${INFRA_ROOT:-}" ]; then
     INFRA_ROOT="$(cd "$_lib_dir/.." >/dev/null 2>&1 && pwd)"
 fi
 export INFRA_ROOT
-[ -n "${COMPOSE_STATE_DIR:-}" ] || export COMPOSE_STATE_DIR="$INFRA_ROOT/current_target/compose_live_state"
+
+# Runtime state lives outside the repo at ~/infra_state. Resolve the home of
+# the user who owns the checkout so root-run scripts (restic-restore --live)
+# agree with the deploy user instead of using root's HOME.
+if [ -z "${INFRA_STATE_DIR:-}" ]; then
+    _state_home=""
+    if [ -d "$INFRA_ROOT" ]; then
+        _state_uid="$(stat -c %u "$INFRA_ROOT" 2>/dev/null || true)"
+        if [ -n "$_state_uid" ]; then
+            _state_home="$(getent passwd "$_state_uid" 2>/dev/null | cut -d: -f6 || true)"
+        fi
+    fi
+    INFRA_STATE_DIR="${_state_home:-$HOME}/infra_state"
+    unset _state_home _state_uid
+fi
+export INFRA_STATE_DIR
+
+# Active state root during the migration: use the new tree as soon as either
+# live-state child exists, otherwise keep the legacy in-repo tree. Fresh
+# machines (neither tree exists) start on the new root.
+if [ -z "${STATE_ROOT:-}" ]; then
+    if [ -d "$INFRA_STATE_DIR/compose_live_state" ] || [ -d "$INFRA_STATE_DIR/k3s_live_state" ]; then
+        STATE_ROOT="$INFRA_STATE_DIR"
+    elif [ -d "$INFRA_ROOT/current_target/compose_live_state" ] || [ -d "$INFRA_ROOT/current_target/k3s_live_state" ]; then
+        STATE_ROOT="$INFRA_ROOT/current_target"
+    else
+        STATE_ROOT="$INFRA_STATE_DIR"
+    fi
+fi
+export STATE_ROOT
+
+[ -n "${COMPOSE_STATE_DIR:-}" ] || export COMPOSE_STATE_DIR="$STATE_ROOT/compose_live_state"
+[ -n "${K3S_STATE_DIR:-}" ] || export K3S_STATE_DIR="$STATE_ROOT/k3s_live_state"
 
 get_node_ip() {
     local iface
@@ -69,6 +101,10 @@ ensure_machine_env() {
         echo "MY_UID=$MY_UID"
         echo "DOCKER_GID=$docker_gid"
         echo "MY_USERNAME=$my_username"
+        echo "INFRA_STATE_DIR=$INFRA_STATE_DIR"
+        echo "STATE_ROOT=$STATE_ROOT"
+        echo "COMPOSE_STATE_DIR=$COMPOSE_STATE_DIR"
+        echo "K3S_STATE_DIR=$K3S_STATE_DIR"
     } >"$target_dir/compose/.env"
     chmod 600 "$target_dir/compose/.env"
 }

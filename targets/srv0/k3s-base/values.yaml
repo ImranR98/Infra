@@ -3,6 +3,9 @@
 # (passed as a later -f, so it wins on conflicts).
 MY_UID: 1000
 
+# Runtime state root. Empty derives <HOME_DIR>/infra_state.
+INFRA_STATE_DIR: ""
+
 # Deployment-specific Authelia access-control rules (block scalar; supports
 # Helm templating such as {{ .Values.SERVICES_DOMAIN }}). Inserted after the
 # chart's bypass rules and before the admin catch-all. Set in config.

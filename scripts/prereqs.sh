@@ -109,6 +109,10 @@ if [ -d "$target_dir/compose" ] && [ -f "$target_dir/compose/compose.yaml" ]; th
     env_args=()
     ensure_machine_env "$local_target"
     echo "==> Wrote machine-fact env: $target_dir/compose/.env"
+
+    echo "==> Ensuring runtime state dirs"
+    mkdir -p "$INFRA_STATE_DIR"
+    mkdir -p "$STATE_ROOT/compose_live_state" "$STATE_ROOT/k3s_live_state"
     # The private overlay can carry secrets; keep it owner-only.
     if [ -f "$target_dir/compose/compose.private.yaml" ]; then
         $SU chmod 600 "$target_dir/compose/compose.private.yaml"
@@ -136,7 +140,7 @@ if [ -d "$target_dir/compose" ] && [ -f "$target_dir/compose/compose.yaml" ]; th
         docker compose -p "$local_target" "${compose_files[@]}" "${env_args[@]}" "${profile_args[@]}" \
             config --format yaml 2>/dev/null |
             yq -r '.services[] | select(.volumes) | .volumes[] | (.source? // .) | split(":") | .[0]' |
-            grep -F "$COMPOSE_STATE_DIR/" || true
+            grep -F "$STATE_ROOT/" || true
     )
     sort -u <<<"$bind_dirs" | while read -r d; do
         [ -n "$d" ] || continue

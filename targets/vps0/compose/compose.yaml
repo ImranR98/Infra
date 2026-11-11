@@ -286,7 +286,7 @@ services:
             authelia-db:
                 condition: service_healthy
         volumes:
-            - ../../../current_target/compose_live_state/authelia/config:/config
+            - ${COMPOSE_STATE_DIR}/authelia/config:/config
             - ../../../config/vps0/authelia/users_database.yml:/config/users_database.yml:ro
         networks:
             - traefik
@@ -318,7 +318,7 @@ services:
             - AUTHELIA_REDIS_PASSWORD=$AUTHELIA_REDIS_PASSWORD
         command: sh -c 'exec redis-server --requirepass "$$AUTHELIA_REDIS_PASSWORD"'
         volumes:
-            - ../../../current_target/compose_live_state/authelia/db:/data
+            - ${COMPOSE_STATE_DIR}/authelia/db:/data
         networks:
             - traefik
         expose:
@@ -378,8 +378,8 @@ services:
             - "443:443"
             - "1935:1935"
         volumes:
-            - ../../../current_target/compose_live_state/traefik/acme:/acme
-            - ../../../current_target/compose_live_state/traefik/logs:/var/log/traefik/
+            - ${COMPOSE_STATE_DIR}/traefik/acme:/acme
+            - ${COMPOSE_STATE_DIR}/traefik/logs:/var/log/traefik/
             - dockerproxy:/socket/:ro
         configs:
           - source: traefik_dynamic
@@ -414,7 +414,7 @@ services:
         mem_limit: 64M
         cpus: 0.25
         volumes:
-            - ../../../current_target/compose_live_state/traefik/logs:/var/log/traefik
+            - ${COMPOSE_STATE_DIR}/traefik/logs:/var/log/traefik
             - ./files/logrotate/traefik-access.conf:/vt/logrotate.conf:ro
         logging: *logging
 
@@ -436,9 +436,9 @@ services:
             - CUSTOM_HOSTNAME=crowdsec
             - BOUNCER_KEY_TRAEFIK=$CROWDSEC_BOUNCER_KEY
         volumes:
-            - ../../../current_target/compose_live_state/crowdsec/config:/etc/crowdsec
-            - ../../../current_target/compose_live_state/crowdsec/data:/var/lib/crowdsec/data
-            - ../../../current_target/compose_live_state/traefik/logs:/var/log/traefik:ro
+            - ${COMPOSE_STATE_DIR}/crowdsec/config:/etc/crowdsec
+            - ${COMPOSE_STATE_DIR}/crowdsec/data:/var/lib/crowdsec/data
+            - ${COMPOSE_STATE_DIR}/traefik/logs:/var/log/traefik:ro
             - ./files/crowdsec/acquis.yaml:/etc/crowdsec/acquis.yaml:ro
             - ./files/crowdsec/profiles.yaml:/etc/crowdsec/profiles.yaml:ro
             - ./files/crowdsec/postoverflows/s01-whitelist/internal.yaml:/etc/crowdsec/postoverflows/s01-whitelist/internal.yaml:ro
@@ -470,7 +470,7 @@ services:
             - CONFIG_INSTANCE_LAPI_AUTH_PASSWORD=$CROWDSEC_WEBUI_LAPI_PASSWORD
             - CONFIG_INSTANCE_METRICS_URL=http://crowdsec:6060/metrics
         volumes:
-            - ../../../current_target/compose_live_state/crowdsec-web-ui/data:/app/data
+            - ${COMPOSE_STATE_DIR}/crowdsec-web-ui/data:/app/data
         labels:
             - "traefik.enable=true"
             - "traefik.http.routers.crowdsec_web_ui.rule=Host(`crowdsec.$CLOUD_SERVICES_DOMAIN`)"
@@ -494,7 +494,7 @@ services:
         mem_limit: 512M
         cpus: 1.0
         volumes:
-            - ../../../current_target/compose_live_state/plausible/db:/var/lib/postgresql/data
+            - ${COMPOSE_STATE_DIR}/plausible/db:/var/lib/postgresql/data
         environment:
             - POSTGRES_PASSWORD=$PLAUSIBLE_DB_PASSWORD
         healthcheck:
@@ -515,8 +515,8 @@ services:
         networks:
             - traefik
         volumes:
-            - ../../../current_target/compose_live_state/plausible/event_data:/var/lib/clickhouse
-            - ../../../current_target/compose_live_state/plausible/event_logs:/var/log/clickhouse-server
+            - ${COMPOSE_STATE_DIR}/plausible/event_data:/var/lib/clickhouse
+            - ${COMPOSE_STATE_DIR}/plausible/event_logs:/var/log/clickhouse-server
             - ./files/plausible/clickhouse-config.xml:/etc/clickhouse-server/config.d/clickhouse-config.xml:ro
             - ./files/plausible/clickhouse-low-resources.xml:/etc/clickhouse-server/users.d/low-resources.xml:ro
         environment:
@@ -549,9 +549,9 @@ services:
         security_opt:
             - no-new-privileges
         volumes:
-            - ../../../current_target/compose_live_state/plausible/event_data:/var/lib/clickhouse
-            - ../../../current_target/compose_live_state/plausible/event_logs:/var/log/clickhouse-server
-            - ../../../current_target/compose_live_state/plausible/data:/var/lib/plausible
+            - ${COMPOSE_STATE_DIR}/plausible/event_data:/var/lib/clickhouse
+            - ${COMPOSE_STATE_DIR}/plausible/event_logs:/var/log/clickhouse-server
+            - ${COMPOSE_STATE_DIR}/plausible/data:/var/lib/plausible
         command: chown -R 101:101 /var/lib/clickhouse /var/log/clickhouse-server && chown -R 999:999 /var/lib/plausible
     plausible:
         image: ghcr.io/plausible/community-edition:v3.2.1@sha256:33e60bfb40f2df5da00f8753b76fad04f67dba3abe6d73eb516e440e3fb62985
@@ -572,7 +572,7 @@ services:
         networks:
             - traefik
         volumes:
-            - ../../../current_target/compose_live_state/plausible/data:/var/lib/plausible
+            - ${COMPOSE_STATE_DIR}/plausible/data:/var/lib/plausible
         ulimits:
             nofile:
                 soft: 65535
@@ -645,7 +645,7 @@ services:
         image: ghcr.io/alexta69/metube:2026.11.06@sha256:96dfbf0d5b2944e4ee38f6ce1b34bb0e75a1a3c74eaefd93424ed11284cb72b2
         container_name: metube
         volumes:
-            - ../../../current_target/compose_live_state/metube:/downloads
+            - ${COMPOSE_STATE_DIR}/metube:/downloads
         networks:
             - traefik
         depends_on:
@@ -711,7 +711,7 @@ services:
             - 'traefik.http.middlewares.ikom-redirect-rewrite.redirectregex.permanent=true'
             - "traefik.http.services.ikom.loadbalancer.server.port=3000"
         volumes:
-            - "../../../current_target/compose_live_state/ikom:/app/data"
+            - "${COMPOSE_STATE_DIR}/ikom:/app/data"
         networks:
             - traefik
         restart: unless-stopped
@@ -727,7 +727,7 @@ services:
         depends_on:
             - traefik
         volumes:
-            - ../../../current_target/compose_live_state/attentiongame:/app/stories/private
+            - ${COMPOSE_STATE_DIR}/attentiongame:/app/stories/private
         labels:
             - "traefik.enable=true"
             - "traefik.http.routers.attentiongame.rule=Host(`attentiongame.$CLOUD_SERVICES_DOMAIN`)"
@@ -754,7 +754,7 @@ services:
             - PORT=3000
             - PUBLIC_URL=https://times.$CLOUD_SERVICES_DOMAIN
         volumes:
-            - ../../../current_target/compose_live_state/our-times:/app/data
+            - ${COMPOSE_STATE_DIR}/our-times:/app/data
         labels:
             - "traefik.enable=true"
             - "traefik.http.routers.our-times.rule=Host(`times.$CLOUD_SERVICES_DOMAIN`)"
@@ -834,8 +834,8 @@ services:
             - SITE_SUBDOMAINS=home,tech
             - ANALYTICS_COOKIE_DOMAIN=.$CLOUD_SERVICES_DOMAIN
         volumes:
-            - ../../../current_target/compose_live_state/sale-site/data:/app/data
-            - ../../../current_target/compose_live_state/sale-site/uploads:/app/uploads
+            - ${COMPOSE_STATE_DIR}/sale-site/data:/app/data
+            - ${COMPOSE_STATE_DIR}/sale-site/uploads:/app/uploads
         networks:
             - traefik
         restart: unless-stopped
@@ -869,7 +869,7 @@ services:
         depends_on:
             - traefik
         volumes:
-            - ../../../current_target/compose_live_state/owncast:/app/data
+            - ${COMPOSE_STATE_DIR}/owncast:/app/data
         labels:
             - "traefik.enable=true"
             - "traefik.http.routers.owncast.rule=Host(`owncast.$CLOUD_SERVICES_DOMAIN`)"
@@ -965,7 +965,7 @@ services:
         mem_limit: 256M
         cpus: 0.5
         volumes:
-            - ../../../current_target/compose_live_state/shlink/db:/var/lib/postgresql/data
+            - ${COMPOSE_STATE_DIR}/shlink/db:/var/lib/postgresql/data
         environment:
             - POSTGRES_PASSWORD=$SHLINK_DB_PASSWORD
         healthcheck:
@@ -1047,7 +1047,7 @@ services:
             - PUID=$MY_UID
             - PGID=$MY_UID
         volumes:
-            - ../../../current_target/compose_live_state/uptime:/app/data/
+            - ${COMPOSE_STATE_DIR}/uptime:/app/data/
         labels:
             - "traefik.enable=true"
             - "traefik.http.routers.uptime.rule=Host(`uptime.$CLOUD_SERVICES_DOMAIN`)"
@@ -1083,8 +1083,8 @@ services:
             - no-new-privileges:true
         volumes:
             - ../../../config/vps0/dscpln-agent/agent.json:/config/agent.json:ro
-            - ../../../current_target/compose_live_state:/data/state:ro
-            - ../../../current_target/dscpln-agent/state:/state
+            - ${COMPOSE_STATE_DIR}:/data/state:ro
+            - ${COMPOSE_STATE_DIR}/fl0w-agent:/state
         tmpfs:
             - /tmp
         healthcheck:

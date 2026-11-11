@@ -229,7 +229,7 @@ groups:
             datasourceUid: prometheus
             model:
               editorMode: code
-              expr: (node_filesystem_avail_bytes{node="srv0",mountpoint=~"/|/mnt/k3s_extra_storage"} / node_filesystem_size_bytes{node="srv0",mountpoint=~"/|/mnt/k3s_extra_storage"}) * 100
+              expr: (node_filesystem_avail_bytes{node="srv0",mountpoint="/"} / node_filesystem_size_bytes{node="srv0",mountpoint="/"}) * 100
               instant: true
               intervalMs: 1000
               maxDataPoints: 43200

@@ -15,7 +15,7 @@ services:
         container_name: go2rtc-init
         restart: "no"
         volumes:
-            - ../../../current_target/compose_live_state/go2rtc:/config
+            - ${COMPOSE_STATE_DIR}/go2rtc:/config
         entrypoint:
             - sh
             - -c
@@ -55,10 +55,10 @@ services:
         devices:
             - /dev/video0:/dev/video2
         volumes:
-            - ../../../current_target/compose_live_state/go2rtc:/config
+            - ${COMPOSE_STATE_DIR}/go2rtc:/config
             - ./files/go2rtc/go2rtc.yaml:/config/go2rtc.yaml:ro
         env_file:
-            - path: ../../../current_target/compose_live_state/go2rtc/go2rtc.env
+            - path: ${COMPOSE_STATE_DIR}/go2rtc/go2rtc.env
               required: false
         ports:
             - "8554:8554"
