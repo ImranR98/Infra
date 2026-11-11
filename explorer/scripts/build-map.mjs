@@ -195,7 +195,6 @@ function addFact(node, label, value, mono = false) {
 
 const SKIP_PREFIXES = [
   "config/",
-  "current_target/",
   "state_backups/",
   "explorer/node_modules/",
   "explorer/dist/",

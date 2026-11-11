@@ -91,7 +91,7 @@ Open <http://localhost:4173/>. The tours cover the request path, public edge, Wi
 
 - **Provision nodes only via `k3s-server.sh`/`k3s-join.sh`** — no raw installers or ad-hoc joins; those scripts carry the installer and the secret handling. Dev-only lint (`yamllint`/`shellcheck`) changes nothing.
 - **Get kubeconfig access through the unlock** — the admin kubeconfig remains root-only (0600); open a dev session with `kubeconfig-unlock.sh` and never restore group/world access or a permanent `KUBECONFIG`.
-- Leave `~/infra_state/` alone (runtime state). It holds `compose_live_state/` and `k3s_live_state/`; `current_target/` is only a temporary migration symlink.
+- Leave `~/infra_state/` alone (runtime state). It holds `compose_live_state/` and `k3s_live_state/`; do not recreate `current_target/` in the repo.
 - Keep secrets out of git (`config/`, `compose.private.yaml`, `targets/*/compose/.env` are ignored).
 - Give new components NetworkPolicies, and set requests/limits from observed usage.
 - `nfs-apps` is the default StorageClass; do not add new Longhorn PVs. The old Longhorn system is removed.
