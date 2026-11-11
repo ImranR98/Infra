@@ -73,7 +73,11 @@ move_path() {
     fi
     ensure_dir "$(dirname "$dst")"
     src_dev="$(stat -c %d "$(dirname "$src")")"
-    dst_dev="$(stat -c %d "$(dirname "$dst")")"
+    probe="$(dirname "$dst")"
+    while [ ! -d "$probe" ]; do
+        probe="$(dirname "$probe")"
+    done
+    dst_dev="$(stat -c %d "$probe")"
     if [ "$src_dev" = "$dst_dev" ]; then
         run mv "$src" "$dst"
     else
