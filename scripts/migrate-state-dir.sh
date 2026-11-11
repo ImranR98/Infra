@@ -107,6 +107,7 @@ echo "  state:     $NEW"
 echo "  legacy:    $OLD"
 [ "$DRY_RUN" = 1 ] && echo "  mode:      dry-run"
 
+legacy_present=0
 if [ -L "$OLD" ]; then
     target="$(readlink -f "$OLD")"
     if [ "$target" = "$(readlink -f "$NEW")" ]; then
@@ -116,6 +117,7 @@ if [ -L "$OLD" ]; then
         exit 1
     fi
 elif [ -d "$OLD" ]; then
+    legacy_present=1
     for child in "$OLD"/*; do
         [ -e "$child" ] || continue
         name="$(basename "$child")"
@@ -184,7 +186,7 @@ ensure_dir "$NEW"
 ensure_dir "$NEW/compose_live_state"
 ensure_dir "$NEW/k3s_live_state"
 
-if [ "$SYMLINK" = 1 ] && [ ! -e "$OLD" ]; then
+if [ "$SYMLINK" = 1 ] && [ "$legacy_present" = 1 ] && [ ! -e "$OLD" ]; then
     run ln -s "$NEW" "$OLD"
     echo "  [OK] temporary compatibility symlink $OLD -> $NEW"
 fi
