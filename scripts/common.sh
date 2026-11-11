@@ -19,7 +19,13 @@ export INFRA_ROOT
 # agree with the deploy user instead of using root's HOME.
 if [ -z "${INFRA_STATE_DIR:-}" ]; then
     _state_home=""
-    if [ -d "$INFRA_ROOT" ]; then
+    # If the checkout lives under the invoking user's home (e.g. /root/Infra
+    # on vps0), use that home. Otherwise (e.g. srv0 scripts run through sudo)
+    # use the home of the user who owns the checkout.
+    case "$INFRA_ROOT/" in
+        "$HOME/"*) _state_home="$HOME" ;;
+    esac
+    if [ -z "$_state_home" ] && [ -d "$INFRA_ROOT" ]; then
         _state_uid="$(stat -c %u "$INFRA_ROOT" 2>/dev/null || true)"
         if [ -n "$_state_uid" ]; then
             _state_home="$(getent passwd "$_state_uid" 2>/dev/null | cut -d: -f6 || true)"
