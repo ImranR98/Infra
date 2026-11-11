@@ -73,9 +73,10 @@ snapshot_arg() {
 # migration and the old /vps0 staging path.
 snapshot_path() {
     local snapshot="$1" suffix="$2"
+    # awk exits after the first match; tolerate restic's SIGPIPE under pipefail.
     restic ls "$snapshot" 2>/dev/null | awk -v s="$suffix" '
         length($0) >= length(s) && substr($0, length($0) - length(s) + 1) == s { print; exit }
-    '
+    ' || true
 }
 
 restore_to_staging() {
