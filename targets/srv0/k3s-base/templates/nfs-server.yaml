@@ -55,6 +55,25 @@ spec:
               protocol: TCP
           securityContext:
             privileged: true
+          lifecycle:
+            postStart:
+              exec:
+                command:
+                  - sh
+                  - -c
+                  - |
+                    # rpc.nfsd defaults to 8 kernel threads, which is far too
+                    # few for the shared app/media/PVC workload: a burst of slow
+                    # ops exhausts the pool and every client (Jellyfin included)
+                    # stalls for seconds. The entrypoint starts nfsd itself, so
+                    # wait for its first thread, then raise the pool.
+                    for i in $(seq 1 30); do
+                      if grep -q '^th [1-9]' /proc/net/rpc/nfsd 2>/dev/null; then
+                        echo 64 > /proc/fs/nfsd/threads && exit 0
+                      fi
+                      sleep 1
+                    done
+                    exit 0
           readinessProbe:
             tcpSocket:
               port: 2049
