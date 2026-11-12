@@ -28,8 +28,10 @@ spec:
               securityContext:
                 allowPrivilegeEscalation: false
               resources:
+                # bitnami/kubectl's Go runtime peaks around 50MiB; the old
+                # 64Mi limit OOM-killed the hourly job on 2026-11-12.
                 limits:
-                  memory: 64Mi
+                  memory: 128Mi
                 requests:
                   memory: 32Mi
                   cpu: 10m

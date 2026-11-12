@@ -118,6 +118,15 @@ spec:
       kube-state-metrics:
         metricsTuning:
           useDefaultAllowList: false
+        # A duplicate endpoint on the KSM telemetry port (8081) is discovered
+        # but never scraped successfully (the Service publishes 8080 only).
+        # Drop it so the target stays green.
+        extraDiscoveryRules: |
+          rule {
+            source_labels = ["__address__"]
+            regex         = ".*:8081"
+            action        = "drop"
+          }
     hostMetrics:
       enabled: true
       destinations: [prometheus]

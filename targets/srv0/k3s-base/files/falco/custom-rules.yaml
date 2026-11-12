@@ -169,3 +169,18 @@
         - [apps, fl0w-agent-bigpc-, ludusavi, /state/ludusavi/bin/]
   override:
     exceptions: append
+
+# The system-upgrade controller's plan Jobs run kubectl, ln, iptables and
+# friends from the image's writable layer on both nodes (e.g. the 2026-11-07
+# Fedora kernel upgrade). Scope to the controller's namespace and Job prefix;
+# any other dropped binary, including one inside another system-upgrade pod,
+# still fires the Critical rule.
+- rule: Drop and execute new binary in container
+  exceptions:
+    - name: system_upgrade_apply
+      fields: [k8s.ns.name, k8s.pod.name]
+      comps: ["=", startswith]
+      values:
+        - [system-upgrade, apply-]
+  override:
+    exceptions: append
