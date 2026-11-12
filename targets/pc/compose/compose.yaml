@@ -37,7 +37,7 @@ services:
     # umask 002 keeps new files group-writable, so the mounted tree is
     # editable on the host without sudo. Renovate digest-pins xpu-master.
     comfyui:
-        image: ghcr.io/reliq-hq/comfyui:xpu-master@sha256:86b38de832216781414f1234fb4dcc1c9033189cdbef4f2d73361a8afc0756b2
+        image: ghcr.io/reliq-hq/comfyui:xpu-master@sha256:38ebb83f4c849e8d80a4431af645ca10e0e695d98fe3267a89900ae1ca1f9f1a
         container_name: comfyui
         restart: unless-stopped
         user: "0:$MY_UID"
@@ -95,7 +95,7 @@ services:
     # (MY_UID) and umask 002 keeps new files group-writable, so the mounted
     # tree stays editable on the host. Renovate digest-pins server-intel.
     llama-sycl:
-        image: ghcr.io/ggml-org/llama.cpp:server-intel@sha256:5f81d305afe5dbb4f2d4e9e96d2f3b81f449b2d3c83239c758da8628e1ead01c
+        image: ghcr.io/ggml-org/llama.cpp:server-intel@sha256:8e59ff053ea808f0071a7772129de868b0b612cc6f0e89e3e14cbd2c759bf323
         container_name: llama-sycl
         restart: unless-stopped
         # One model is resident at a time (--models-max 1). 54G leaves ~8 GiB
