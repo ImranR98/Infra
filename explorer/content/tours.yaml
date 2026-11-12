@@ -89,10 +89,9 @@ tours:
   - boot-manual
 - id: maintenance
   title: Maintenance
-  subtitle: Hardware, storage, and recovery
-  description: The srv0 motherboard swap, the current NFS storage path, and restic recovery.
-  duration: 10 min
+  subtitle: Storage and recovery
+  description: The NFS storage path and restic recovery.
+  duration: 7 min
   chapters:
-  - hardware-swap
-  - storage-migration
+  - storage
   - restore

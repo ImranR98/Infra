@@ -72,7 +72,7 @@ spec:
         alloy:
           # Tail from the node's /var/log; SELinux denies container_t (even as
           # root) reads of host container_log_t files, so the collector runs
-          # under spc_t, matching node-exporter/node-facts.
+          # under spc_t, matching node-exporter.
           mounts:
             varlog: true
           securityContext:

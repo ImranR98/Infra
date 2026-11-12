@@ -36,17 +36,10 @@ if [ -z "${INFRA_STATE_DIR:-}" ]; then
 fi
 export INFRA_STATE_DIR
 
-# Active state root during the migration: use the new tree as soon as either
-# live-state child exists, otherwise keep the legacy in-repo tree. Fresh
-# machines (neither tree exists) start on the new root.
+# Runtime state root. Callers may pre-set it (in-cluster pods do); otherwise
+# it is the host's ~/infra_state tree.
 if [ -z "${STATE_ROOT:-}" ]; then
-    if [ -d "$INFRA_STATE_DIR/compose_live_state" ] || [ -d "$INFRA_STATE_DIR/k3s_live_state" ]; then
-        STATE_ROOT="$INFRA_STATE_DIR"
-    elif [ -d "$INFRA_ROOT/current_target/compose_live_state" ] || [ -d "$INFRA_ROOT/current_target/k3s_live_state" ]; then
-        STATE_ROOT="$INFRA_ROOT/current_target"
-    else
-        STATE_ROOT="$INFRA_STATE_DIR"
-    fi
+    STATE_ROOT="$INFRA_STATE_DIR"
 fi
 export STATE_ROOT
 
@@ -127,7 +120,7 @@ require_target() {
 }
 
 # require_target_host — like require_target, but hard-fails when this machine's
-# hostname does not match the target (compose ops run on the target machine).
+# hostname does not match the target (host-local installers and ops).
 require_target_host() {
     _require_target "$1"
     if [ "$(hostname)" != "$TARGET" ]; then

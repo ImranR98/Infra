@@ -311,7 +311,7 @@ EOF
 
 # check_san_routes <rendered> — every srv0 public route must have a SAN, and
 # report public SANs with no srv0 route (vps0-owned names are acceptable but
-# should be reviewed; stale names are how the old `send` false positive arose).
+# should be reviewed).
 check_san_routes() {
     local rendered="$1" ok=1
     local cert private routes public_routes missing stale
@@ -390,10 +390,6 @@ check_agent_schema() {
                 ok=0
             fi
         done
-        if yq -e ".DSCPLN_AGENTS[\"$name\"] | has(\"configSubdir\")" "$config_file" >/dev/null 2>&1; then
-            _err "ERROR: DSCPLN_AGENTS.$name.configSubdir is obsolete; use stateSubdir"
-            ok=0
-        fi
         bad=$(yq ".DSCPLN_AGENTS[\"$name\"].dataMounts // [] | .[] | select((has(\"name\") | not) or (has(\"subdir\") | not) or (has(\"mountPath\") | not)) | .name // \"<unnamed>\"" "$config_file" 2>/dev/null || true)
         if [ -n "$bad" ]; then
             _err "ERROR: DSCPLN_AGENTS.$name.dataMounts has invalid entries (need name/subdir/mountPath): $bad"
@@ -440,18 +436,11 @@ check_cluster_hardware() {
     done
 }
 
-# check_cluster_drift — catch leftovers that the single-node cluster should not
-# carry after the bigpc node was decommissioned.
-check_cluster_drift() {
+# check_released_pvs — a Released nfs-apps PV still points at a directory that
+# a recreated claim could reuse. Flag it for manual cleanup.
+check_released_pvs() {
     command -v kubectl >/dev/null 2>&1 || return 0
     kubectl get node srv0 >/dev/null 2>&1 || return 0
-
-    if kubectl get node srv0 -o json 2>/dev/null | jq -e '(.spec.taints // []) | any(.key == "infra.local/noschedule")' >/dev/null 2>&1; then
-        _err "WARNING: srv0 carries infra.local/noschedule; the primary node must be schedulable"
-    fi
-    if kubectl get nodes -o json 2>/dev/null | jq -e '[.items[] | (.spec.taints // [])[] | select(.key == "scheduling-discouraged")] | length > 0' >/dev/null 2>&1; then
-        _err "WARNING: a node still carries the legacy scheduling-discouraged taint"
-    fi
 
     local released
     released=$(kubectl get pv -o json 2>/dev/null | jq -r '.items[] | select(.spec.storageClassName == "nfs-apps" and .status.phase == "Released") | .metadata.name')
@@ -621,7 +610,7 @@ check_runtime_state() {
     local state_dir="$INFRA_STATE_DIR"
     if [ ! -d "$state_dir/k3s_live_state/nfs-apps" ]; then
         _err "ERROR: runtime state tree not found at $state_dir/k3s_live_state/nfs-apps"
-        _err "  run scripts/migrate-state-dir.sh on srv0 before deploying"
+        _err "  create it (scripts/prereqs.sh initialises the state tree) before deploying"
         return 1
     fi
     return 0
@@ -696,7 +685,7 @@ if [ -f "$config_values" ]; then
     fi
 fi
 
-# Static node labels replace NFD; warn if the target node is missing them.
+# Warn if the target node is missing its static labels.
 if command -v kubectl >/dev/null 2>&1 && kubectl get node "$TARGET" >/dev/null 2>&1; then
     for label in hostpath-main external-exposed; do
         value=$(kubectl get node "$TARGET" -o jsonpath="{.metadata.labels.infra\.local/$label}" 2>/dev/null || true)
@@ -708,7 +697,7 @@ if command -v kubectl >/dev/null 2>&1 && kubectl get node "$TARGET" >/dev/null 2
         echo "WARNING: $main_count nodes carry infra.local/hostpath-main=true; the static Main PVs and nfs-server expect exactly one data node." >&2
     fi
 
-    check_cluster_drift
+    check_released_pvs
     [ -f "$config_values" ] && check_cluster_hardware "$config_values"
 fi
 

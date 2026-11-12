@@ -1063,7 +1063,7 @@ services:
 
     # FL0W archive agent: streams the vps0 Compose state to FL0W over the
     # public-exposure tunnel. The same generic image as the bigpc Compose
-    # fl0w-agent; the job/config live in config/vps0/dscpln-agent/ (legacy path, kept for continuity).
+    # fl0w-agent; the job/config live in config/vps0/dscpln-agent/.
     fl0w-agent:
         profiles:
             - fl0w-agent

@@ -16,7 +16,7 @@
 
 **Critical** — breakage can cut off access, auth, storage, or the cluster:
 k3s and its system-upgrade Plans, Traefik/Gateway/CRDs, Authelia (srv0 and vps0),
-cert-manager, Longhorn, NFS server / csi-driver-nfs / host-volumes, public-exposure tunnel (WireGuard),
+cert-manager, NFS server / csi-driver-nfs / host-volumes, public-exposure tunnel (WireGuard),
 CrowdSec, coredns, and DB engines (authelia DB, immich-postgres, clickhouse, nextcloud DB).
 
 **Elevated** — user-facing apps with data or auth; recoverable but disruptive:
@@ -61,7 +61,6 @@ and a successful `publish` is the pin/rollout gate.
   helm-controller bumps.
 - Search for fresh regressions:
   `.../search/issues?q=repo:k3s-io/k3s+is:issue+is:open+<version>`.
-- Check Longhorn compatibility with the new Kubernetes minor before recommending.
 - Deploying is a rolling upgrade of every node (server-plan first, then agent-plan) —
   always treat as a maintenance-window action with a fresh backup.
 
@@ -129,7 +128,7 @@ then run `validate.sh srv0` (renders both charts and rejects `<no value>`).
 - k3s Plan bumps also roll k3s's bundled Traefik/coredns charts; after the upgrade
   confirm the `HelmChartConfig` customizations survived (Traefik args, Gateway
   `Programmed=True`, plugins).
-- `nfs-apps` is the default StorageClass; do not add new Longhorn PVs. App data on
+- `nfs-apps` is the default StorageClass; add no new dynamic PVs. App data on
   a host path must use the statically bound `hostpath` PV/PVC whose `nodeAffinity`
   pins the owning node.
 - App PRs use the shared preset (`github>ImranR98/Infra//renovate-preset`).
@@ -142,8 +141,7 @@ then run `validate.sh srv0` (renders both charts and rejects `<no value>`).
   PR is the rollout gate and needs approval. `minimumReleaseAgeBehaviour:
   timestamp-required` plus `internalChecksFilter: strict` holds every
   non-allowlisted update until it is 3 days old.
-- Compose syncthing/comfyui/llama are Renovate-managed now that watchtower is
-  removed; srv0's K3s syncthing is Renovate-managed too.
+- Compose syncthing/comfyui/llama are Renovate-managed; srv0's K3s syncthing is Renovate-managed too.
 - `scripts/check-images.sh` enforces exact tags + digests for raw image refs;
   the narrow channel-only allowlist is shared with `renovate.json`. Keep them
   in sync.

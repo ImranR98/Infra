@@ -36,7 +36,7 @@ VPS0_USER="${VPS0_USER:-root}"
 VPS0_STATE_DIR="${VPS0_STATE_DIR:-/root/infra_state/compose_live_state}"
 
 # The repository password lives outside git in the private fl0w-config
-# checkout; the old public default was removed during the 2026-10 migration.
+# checkout.
 if [ -z "${RESTIC_PASSWORD:-}" ]; then
     if [ -r "$FL0W_CONFIG_DIR/secrets/restic-password" ]; then
         RESTIC_PASSWORD="$(cat "$FL0W_CONFIG_DIR/secrets/restic-password")"
@@ -69,8 +69,8 @@ snapshot_arg() {
 }
 
 # snapshot_path <snapshot> <suffix> — find the absolute path recorded in the
-# snapshot. This keeps restores working across the current_target -> infra_state
-# migration and the old /vps0 staging path.
+# snapshot. The recorded path can differ from the current one (state tree
+# moves, a different staging dir), so match on the suffix instead of the prefix.
 snapshot_path() {
     local snapshot="$1" suffix="$2"
     # awk exits after the first match; tolerate restic's SIGPIPE under pipefail.

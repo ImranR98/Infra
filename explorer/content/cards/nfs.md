@@ -8,4 +8,4 @@ The NFS server is a privileged container because it hosts a kernel NFS server. I
 
 `nfs-apps` is the default StorageClass. Volumes are RWX, sizes are advisory, and reclaim is Retain. The CSI driver is the only NFS client; every share uses NFS 4.2.
 
-The tradeoff is deliberate: NFS is excellent for media and sequential reads, but SQLite/WAL and Postgres are latency-sensitive. That is the accepted cost of removing Longhorn.
+The tradeoff is deliberate: NFS is excellent for media and sequential reads, but SQLite/WAL and Postgres are latency-sensitive. That is the accepted cost of the NFS-backed design.

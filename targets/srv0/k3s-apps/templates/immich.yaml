@@ -327,7 +327,7 @@ spec:
             - name: POSTGRES_INITDB_ARGS
               value: --data-checksums
             # The Immich Postgres image refuses NFS-backed PGDATA unless this
-            # is set. The app-data share is intentionally NFS (no Longhorn).
+            # is set.
             - name: IGNORE_DATABASE_FSTYPE
               value: "true"
           ports:

@@ -238,9 +238,6 @@ spec:
               rm -rf "$tmpdir"
               echo "$card_version" > "$card_dir/.installed-version"
             fi
-            # Remove the legacy unversioned install path (kept temporarily for
-            # clients with stale cached frontends; no longer needed).
-            rm -rf "$www/advanced-camera-card"
         volumeMounts:
           - name: homeassistant-home-assistant-pvc
             mountPath: /config

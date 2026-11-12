@@ -11,4 +11,4 @@ The cluster is provisioned only through `scripts/k3s-server.sh` and `scripts/k3s
 
 Hardware is requested as a resource, not selected by a node label. The generic device plugin scans sysfs and `/dev` and advertises `infra.local/intel-gpu`, `amd-igpu`, `amd-dgpu`, `vaapi`, and `conbee`. That is why a workload can move to a different node without changing its manifest.
 
-`srv0` is the only node today. `bigpc` is a Compose host (llama.cpp, the FL0W agent, syncthing), not a worker; the cluster no longer carries an opt-in taint.
+`srv0` is the only node today. `bigpc` is a Compose host (llama.cpp, the FL0W agent, syncthing), not a worker.

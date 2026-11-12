@@ -1053,7 +1053,7 @@ steps:
   deepDive: 'The llama.cpp router keeps its GGUFs under `~/ai/llama`; download and delete through the built-in Models page. The FL0W agent state lives under `~/infra_state/compose_live_state/fl0w-agent/`, and FL0W reaches it at `http://<bigpc-ip>:8788` over the LAN. `rpi`''s go2rtc password is generated on first start under `~/infra_state/compose_live_state/go2rtc/`; the WebUI is loopback-only.
 
 
-    Renovate owns the Compose images on `pc`, `bigpc`, `vps0`, and `rpi`; there is no runtime watchtower updater.'
+    Renovate owns the Compose images on `pc`, `bigpc`, `vps0`, and `rpi`.'
   reveal:
   - target/bigpc
   - target/rpi
@@ -1235,7 +1235,7 @@ steps:
   body: 'The six-hourly Renovate CronJob (`0 */6 * * *`, America/Toronto) is a pure PR run with overlap forbidden. `scripts/renovate.sh infra` is the on-demand refresh; it runs the same pinned Renovate version as the CronJob.
 
 
-    The `vps0` image-prune timer runs monthly. The State Backups task defaults to Sundays 04:00. FL0W owns the backup schedule; the CronJob owns update discovery. Neither is a watchtower-style continuous updater.'
+    The `vps0` image-prune timer runs monthly. The State Backups task defaults to Sundays 04:00. FL0W owns the backup schedule; the CronJob owns update discovery.'
   deepDive: 'Renovate''s `startingDeadlineSeconds` and 7200s `activeDeadlineSeconds` keep a hung run from blocking the next six-hour slot. The `vps0` timer is a systemd oneshot service; the FL0W backup task is backup-only and restore is `scripts/restic-restore.sh`.
 
 
@@ -1273,7 +1273,7 @@ steps:
   deepDive: 'Each card names the source that implements the choice. Read it before changing one.
 
 
-    The remaining accepted choices are the removed header gate (`BOOTSTRAP_PRIVATE_APPS`), Prometheus instead of Mimir, Authelia ownership split between chart and config, shared multi-SAN edge certificates, public GHCR packages for app images, the NFS image tracking latest branch packages, the sale-site subdomain audiences, Falco as runtime security, the Renovate app/Infra split, and the accepted duplication list. Do not consolidate the accepted duplication without reading the reasoning.'
+    The remaining accepted choices are first-boot containment via `BOOTSTRAP_PRIVATE_APPS`, Prometheus instead of Mimir, Authelia ownership split between chart and config, shared multi-SAN edge certificates, public GHCR packages for app images, the NFS image tracking latest branch packages, the sale-site subdomain audiences, Falco as runtime security, the Renovate app/Infra split, and the accepted duplication list. Do not consolidate the accepted duplication without reading the reasoning.'
   reveal:
   - decision/storage/nfs-latency
   - decision/auth/app-own-login
@@ -1687,57 +1687,10 @@ steps:
     summary: Frigate, MQTT env, NFS media, and the GPU detector.
   - path: scripts/remote-access-client.sh
     summary: Fetches an AmneziaWG client profile from the pod PVC.
-- id: hardware-swap
+- id: storage
   stage: Maintenance
-  title: srv0 motherboard swap
-  body: 'The hardware swap moves the Framework 13 AMD 7840U mainboard from `pc` into `srv0`, and the Intel i5-1240P board into `pc`. RAM is not interchangeable: DDR5 stays with the AMD board, DDR4 stays with Intel.
-
-
-    After the swap, the device plugin should advertise `amd-igpu` and `vaapi` on srv0, and no `intel-gpu`. Set `GPU_PROFILE: "amd"` in `config/srv0/values.yaml`, then validate and deploy.
-
-    '
-  deepDive: 'Before disassembly, take a restic backup and an etcd snapshot, record `helm get values` for both releases, and verify the initramfs has the USB NIC/storage modules.
-
-
-    Frigate''s ROCm detector needs `yolov9-t-320.onnx` in the config PVC before switching `FRIGATE_DETECTOR=rocm`. Frigate is srv0-only (`amd-igpu`). Immich ML also uses `amd-igpu` with the ROCm/MIGraphX build; set `IMMICH_ML_HSA_OVERRIDE_GFX_VERSION=11.0.0` on Phoenix-class iGPUs or the CLIP text model segfaults the worker. Fallbacks are `FRIGATE_DETECTOR=cpu`, `IMMICH_ML_BACKEND=cpu`, `JELLYFIN_HWACCEL=none`, `IMMICH_SERVER_HWACCEL=none`, and `GPU_PROFILE=none`.'
-
-  reveal:
-  - srv0/cluster
-  - srv0/base/generic-device-plugin
-  - script/test-gpu-profiles
-  focus:
-  - srv0/cluster
-  - srv0/base/generic-device-plugin
-  - script/test-gpu-profiles
-  flow:
-  - - srv0/cluster
-  - - srv0/base/generic-device-plugin
-  - - script/test-gpu-profiles
-  zones:
-  - id: srv0
-    label: srv0 · hardware
-    members:
-    - srv0/cluster
-    - srv0/base/generic-device-plugin
-    - script/test-gpu-profiles
-  edges:
-  - from: srv0/cluster
-    to: srv0/base/generic-device-plugin
-    type: runs
-    label: device scan
-  - from: srv0/base/generic-device-plugin
-    to: script/test-gpu-profiles
-    type: verified-by
-    label: profiles
-  code:
-  - path: targets/srv0/k3s-base/files/generic-device-plugin-init.sh
-    summary: Generates hardware resources from sysfs and /dev.
-  - path: scripts/test-gpu-profiles.sh
-    summary: Renders the Intel/AMD/none profiles.
-- id: storage-migration
-  stage: Maintenance
-  title: Storage migration
-  body: 'The current storage path for application PVCs is the NFS-backed `nfs-apps` class: the `nfs-server` pod plus `csi-driver-nfs`. Sizes are advisory and PVCs are `ReadWriteMany`.
+  title: Storage
+  body: 'Application PVCs use the NFS-backed `nfs-apps` class: the `nfs-server` pod plus `csi-driver-nfs`. Sizes are advisory and PVCs are `ReadWriteMany`.
 
 
     Restores use `scripts/restic-restore.sh`; there is no tar-based PVC path.'

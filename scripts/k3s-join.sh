@@ -118,12 +118,4 @@ if [ "$hostpath_main" = true ]; then
     $SU "$kubectl_bin" label node "$node_name" infra.local/hostpath-main=true --overwrite
 fi
 
-# Legacy cleanup: the old soft taint and the AI-data node label are gone.
-$SU "$kubectl_bin" taint node "$node_name" scheduling-discouraged- 2>/dev/null || true
-$SU "$kubectl_bin" label node "$node_name" infra.local/amd-dgpu- 2>/dev/null || true
-
-# The opt-in taint was removed with the bigpc decommission; clear it if a
-# legacy node still carries it.
-$SU "$kubectl_bin" taint node "$node_name" infra.local/noschedule- 2>/dev/null || true
-
 echo "k3s-join: node '$node_name' joined."

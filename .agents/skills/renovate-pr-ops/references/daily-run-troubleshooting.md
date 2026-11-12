@@ -157,8 +157,7 @@ kubectl -n base create job --from=cronjob/renovate-daily "$job"
 kubectl -n base logs -f "job/$job"
 ```
 
-Do not run `scripts/renovate-daily.sh` on the host; it has been removed. The
-runner is the CronJob image with env/Secret inputs only.
+The runner is the CronJob image with env/Secret inputs only — never a host checkout.
 
 ## 8. Verify
 

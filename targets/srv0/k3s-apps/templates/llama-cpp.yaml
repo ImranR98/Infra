@@ -87,7 +87,7 @@ spec:
 ---
 # The endpoint is outside the pod network, so the baseline cluster egress
 # allows do not cover it. open-webui and opencode are the only in-cluster
-# consumers (same ones the old pod-based ingress policy admitted).
+# consumers.
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:

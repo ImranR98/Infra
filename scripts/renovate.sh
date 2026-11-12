@@ -125,7 +125,7 @@ export RENOVATE_REQUIRE_CONFIG=required
 
 # Renovate's Docker datasource keeps the Docker Hub tag list for a hardcoded
 # 90 days in the package cache. A mutable `latest` tag can then resolve to an
-# old build and produce backwards digest PRs (e.g. the redis PR #305). Cap that
+# old build and produce backwards digest PRs. Cap that
 # namespace at 7 days; cacheTtlOverride is the supported global override and
 # takes minutes.
 if [ -z "${RENOVATE_CACHE_TTL_OVERRIDE:-}" ]; then

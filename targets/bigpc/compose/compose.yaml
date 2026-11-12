@@ -27,11 +27,10 @@ services:
         network_mode: host
         logging: *logging
 
-    # llama.cpp router server on the RX 9070 (ROCm). This replaces the K3s
-    # Deployment that used to run on this node: the model tree at ~/ai/llama is
-    # unchanged, so existing GGUFs and the Models UI cache keep working. The
-    # built-in Discover UI downloads into LLAMA_CACHE; only cache models are
-    # deletable through the UI. Launching without -m puts the server in router
+    # llama.cpp router server on the RX 9070 (ROCm). The model tree at
+    # ~/ai/llama is unchanged, so existing GGUFs and the Models UI cache keep
+    # working. The built-in Discover UI downloads into LLAMA_CACHE; only cache
+    # models are deletable through the UI. Launching without -m puts the server in router
     # mode. srv0's Traefik reaches this port over the LAN and keeps
     # models.<SERVICES_DOMAIN> behind Authelia; the port is LAN-wide on purpose.
     # Renovate digest-pins server-rocm.

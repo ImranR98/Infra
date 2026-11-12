@@ -5,7 +5,7 @@ The IaC system for my homelab and other devices.
 ## Architecture
 
 - `vps0` is a cloud VPS that uses Docker Compose to run public-facing services like [`apps.obtainium.imranr.dev`](https://apps.obtainium.imranr.dev/) and tunnel some requests through to `srv0`.
-- `srv0` is a lightweight home server that uses Kubernetes (K3s) to run personal services like [Immich](https://immich.app/). Other worker K8s nodes exist but are not explicitly mentioned (so "K8s cluster" and `srv0` are generally interchangeable in the docs).
+- `srv0` is a lightweight home server that uses Kubernetes (K3s) to run personal services like [Immich](https://immich.app/). It is the only K8s node in the system.
 - `bigpc` is a gaming PC that runs llama.cpp in Docker Compose on its AMD RX 9070 (ROCm), exposed via `srv0`.
 - `pc` is a laptop that runs [Syncthing](https://syncthing.net/) (via Docker Compose) to sync files to `srv0`.
 - `rpi` is an SBC that streams a live camera feed to [Frigate](https://frigate.video/) on `srv0`.
