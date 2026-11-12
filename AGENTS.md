@@ -87,13 +87,37 @@ npm run dev
 
 Open <http://localhost:4173/>. The tours cover the request path, public edge, WireGuard, apps/data, operations, configuration/decisions, first boot, and maintenance. `explorer/README.md` documents the app itself.
 
+## Resource sizing
+
+Every container picks a tier from `infra.resources` (`_resources.tpl`, duplicated in `k3s-base` and `k3s-apps` because Helm helpers are chart-scoped). Raw `memory:`/`cpu:` keys in a container's `resources:` block are rejected by `validate.sh`.
+
+| Tier | CPU request | Memory request | Memory limit |
+|---|---|---|---|
+| `tiny` | 10m | 32Mi | 128Mi |
+| `small` | 10m | 64Mi | 256Mi |
+| `medium` | 25m | 128Mi | 512Mi |
+| `large` | 50m | 256Mi | 1Gi |
+| `xlarge` | 50m | 512Mi | 2Gi |
+| `2xlarge` | 100m | 1Gi | 4Gi |
+| `3xlarge` | 250m | 2Gi | 8Gi |
+
+The tiers come from 25 days of cadvisor history (Prometheus in `base`) and are re-derived the same way: memory request = smallest tier at or above the container's 7-day p50, memory limit = 4x that request (bumped a tier if it would fall below the observed peak), CPU request = the tier's value. Totals matter: requests across both charts must stay inside the per-node allocatable (16 CPU / ~30GiB).
+
+Three narrow deviations, each with an inline comment in the template:
+
+- `memLimit` raises the ceiling for a workload whose burst is real but rare (`linkwarden` 16Gi for page-archiving Chromium, `opencode` 4Gi for build spikes). The request still comes from the tier.
+- `cpu` overrides the tier's CPU request when CPU and memory disagree (`lifetagger` 1, `syncthing` 500m, `logtfy` 50m).
+- `custom` is for memory that tracks a model or cache rather than steady state (`llama-cpp` 4Gi/14Gi, `immich-machine-learning` 1Gi/8Gi). It requires explicit `memRequest` and `memLimit`; the helper fails the render without them.
+
+CPU limits stay off unless a chart sets one or the workload takes untrusted input (`crowdsec` 500m, `falco` 1, `prometheus` 1, `logtfy` 1). Don't add one to a normal app: requests don't cap bursts, limits do.
+
 ## Rules
 
 - **Provision nodes only via `k3s-server.sh`/`k3s-join.sh`** — no raw installers or ad-hoc joins; those scripts carry the installer and the secret handling. Dev-only lint (`yamllint`/`shellcheck`) changes nothing.
 - **Get kubeconfig access through the unlock** — the admin kubeconfig remains root-only (0600); open a dev session with `kubeconfig-unlock.sh` and never restore group/world access or a permanent `KUBECONFIG`.
 - Leave `~/infra_state/` alone (runtime state). It holds `compose_live_state/` and `k3s_live_state/`; do not recreate `current_target/` in the repo.
 - Keep secrets out of git (`config/`, `compose.private.yaml`, `targets/*/compose/.env` are ignored).
-- Give new components NetworkPolicies, and set requests/limits from observed usage.
+- Give new components NetworkPolicies, and pick their requests/limits from the tier ladder above (never ad-hoc numbers).
 - `nfs-apps` is the default StorageClass; do not add new Longhorn PVs. The old Longhorn system is removed.
 - The six user-facing apps (Home Assistant, Immich, Jellyfin, Linkwarden, Navidrome, Opodsync) have no Authelia forward-auth filter; use `BOOTSTRAP_PRIVATE_APPS` for first-boot LAN/VPN containment.
 - **Node placement is opt-in on bigpc** — every node is schedulable by default; `k3s-join.sh --noschedule` adds `infra.local/noschedule=true:NoSchedule` to a node that should run only workloads that explicitly tolerate it. There are no node-role labels. `k3s-server.sh` sets `infra.local/hostpath-main=true` and `infra.local/external-exposed=true` on srv0; `k3s-join.sh --hostpath-main` labels a replacement Main-data node. Do not reintroduce NFD/node-facts or an `infra.local/amd-dgpu` node label.

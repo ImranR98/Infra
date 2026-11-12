@@ -27,11 +27,7 @@ spec:
         container:
           runAsUser: {{ .Values.MY_UID }}
           runAsGroup: {{ .Values.MY_UID }}
-      resources:
-        limits:
-          memory: 512Mi
-        requests:
-          memory: 64Mi
+      {{- include "infra.resources" (dict "tier" "small") | nindent 6 }}
       probes:
         startup:
           failureThreshold: 30
@@ -437,11 +433,7 @@ spec:
             - /bitnami/postgresql
           securityContext:
             runAsUser: 0  # root required: chown on NFS-backed PVC for postgresql (uid 1001)
-          resources:
-            limits:
-              memory: 2Gi
-            requests:
-              memory: 128Mi
+          {{- include "infra.resources" (dict "tier" "small") | nindent 10 }}
           volumeMounts:
             - name: data
               mountPath: /bitnami/postgresql
@@ -474,11 +466,7 @@ spec:
           volumeMounts:
             - name: data
               mountPath: /bitnami/postgresql
-          resources:
-            limits:
-              memory: 256Mi
-            requests:
-              memory: 64Mi
+          {{- include "infra.resources" (dict "tier" "tiny") | nindent 10 }}
       volumes:
         - name: data
           persistentVolumeClaim:
@@ -533,11 +521,7 @@ spec:
           volumeMounts:
             - name: data
               mountPath: /bitnami/redis/data
-          resources:
-            limits:
-              memory: 128Mi
-            requests:
-              memory: 32Mi
+          {{- include "infra.resources" (dict "tier" "tiny") | nindent 10 }}
       volumes:
         - name: data
           persistentVolumeClaim:

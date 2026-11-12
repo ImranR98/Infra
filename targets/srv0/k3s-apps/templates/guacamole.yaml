@@ -173,11 +173,7 @@ spec:
               chown -R 999:999 /var/lib/postgresql/data
           securityContext:
             runAsUser: 0  # root required: chown on the NFS-backed PVC for postgresql (uid 999)
-          resources:
-            limits:
-              memory: 256Mi
-            requests:
-              memory: 32Mi
+          {{- include "infra.resources" (dict "tier" "tiny") | nindent 10 }}
           volumeMounts:
             - name: data
               mountPath: /var/lib/postgresql/data
@@ -218,11 +214,7 @@ spec:
                 secretKeyRef:
                   name: guacamole-db-secret
                   key: password
-          resources:
-            limits:
-              memory: 512Mi
-            requests:
-              memory: 128Mi
+          {{- include "infra.resources" (dict "tier" "tiny") | nindent 10 }}
           volumeMounts:
             - name: data
               mountPath: /var/lib/postgresql/data
@@ -285,11 +277,7 @@ spec:
             periodSeconds: 30
             timeoutSeconds: 5
             failureThreshold: 3
-          resources:
-            limits:
-              memory: 512Mi
-            requests:
-              memory: 64Mi
+          {{- include "infra.resources" (dict "tier" "medium") | nindent 10 }}
 ---
 apiVersion: v1
 kind: Service
@@ -341,11 +329,7 @@ spec:
                 - ALL
             seccompProfile:
               type: RuntimeDefault
-          resources:
-            limits:
-              memory: 256Mi
-            requests:
-              memory: 32Mi
+          {{- include "infra.resources" (dict "tier" "tiny") | nindent 10 }}
           volumeMounts:
             - name: schema
               mountPath: /sql
@@ -375,11 +359,7 @@ spec:
                 secretKeyRef:
                   name: guacamole-db-secret
                   key: password
-          resources:
-            limits:
-              memory: 256Mi
-            requests:
-              memory: 32Mi
+          {{- include "infra.resources" (dict "tier" "tiny") | nindent 10 }}
           volumeMounts:
             - name: schema
               mountPath: /sql
@@ -437,11 +417,7 @@ spec:
               value: X-Guac-User
             - name: REMOTE_IP_VALVE_ENABLED
               value: "true"
-          resources:
-            limits:
-              memory: 1Gi
-            requests:
-              memory: 512Mi
+          {{- include "infra.resources" (dict "tier" "large") | nindent 10 }}
       volumes:
         - name: schema
           emptyDir:

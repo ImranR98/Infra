@@ -181,12 +181,7 @@ spec:
           volumeMounts:
             - name: nextcloud-data
               mountPath: /var/www/html
-          resources:
-            limits:
-              memory: 1Gi
-            requests:
-              memory: 256Mi
-              cpu: 20m
+          {{- include "infra.resources" (dict "tier" "large") | nindent 10 }}
       volumes:
         - name: nextcloud-data
           persistentVolumeClaim:
@@ -288,11 +283,7 @@ spec:
               chown -R 999:999 /var/lib/postgresql/data
           securityContext:
             runAsUser: 0  # root required: chown on NFS-backed PVC for postgresql (uid 999)
-          resources:
-            limits:
-              memory: 2Gi
-            requests:
-              memory: 128Mi
+          {{- include "infra.resources" (dict "tier" "small") | nindent 10 }}
           volumeMounts:
             - name: data
               mountPath: /var/lib/postgresql/data
@@ -328,11 +319,7 @@ spec:
           volumeMounts:
             - name: data
               mountPath: /var/lib/postgresql/data
-          resources:
-            limits:
-              memory: 256Mi
-            requests:
-              memory: 64Mi
+          {{- include "infra.resources" (dict "tier" "tiny") | nindent 10 }}
       volumes:
         - name: data
           persistentVolumeClaim:

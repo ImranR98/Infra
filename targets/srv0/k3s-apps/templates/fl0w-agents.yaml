@@ -188,12 +188,7 @@ spec:
               type: RuntimeDefault
             seLinuxOptions:
               level: s0
-          resources:
-            limits:
-              memory: 256Mi
-            requests:
-              memory: 32Mi
-              cpu: 10m
+          {{- include "infra.resources" (dict "tier" "tiny") | nindent 10 }}
       {{- end }}
       {{- end }}
       containers:
@@ -227,12 +222,7 @@ spec:
               port: http
             initialDelaySeconds: 10
             periodSeconds: 60
-          resources:
-            limits:
-              memory: 512Mi
-            requests:
-              memory: 64Mi
-              cpu: 10m
+          {{- include "infra.resources" (dict "tier" "small") | nindent 10 }}
           volumeMounts:
             - name: config
               mountPath: /config

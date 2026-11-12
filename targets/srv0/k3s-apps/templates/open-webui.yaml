@@ -108,22 +108,14 @@ spec:
       - "none"
     websocket:
       redis:
-        resources:
-          requests:
-            memory: 32Mi
-          limits:
-            memory: 128Mi
+        {{- include "infra.resources" (dict "tier" "tiny") | nindent 8 }}
     persistence:
       enabled: true
       existingClaim: open-webui-data-pvc
     pipelines:
       persistence:
         existingClaim: open-webui-pipelines-pvc
-      resources:
-        limits:
-          memory: 512Mi
-        requests:
-          memory: 128Mi
+      {{- include "infra.resources" (dict "tier" "small") | nindent 6 }}
     extraEnvVars:
       - name: ENABLE_OAUTH_SIGNUP
         value: "true"
@@ -165,12 +157,7 @@ spec:
         value: "0"
       - name: DATABASE_SQLITE_PRAGMA_BUSY_TIMEOUT
         value: "30000"
-    resources:
-      limits:
-        memory: 2Gi
-      requests:
-        memory: 768Mi
-        cpu: 20m
+    {{- include "infra.resources" (dict "tier" "2xlarge") | nindent 4 }}
     # NOTE: open-webui, redis, and pipelines run as root — copy-app-data
     # init container copies files as root, sub-charts uncontrolled by parent.
     podSecurityContext:

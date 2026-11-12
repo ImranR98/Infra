@@ -231,12 +231,7 @@ spec:
               value: /backup-data/restic-cache
             - name: RESTIC_GID
               value: "{{ .Values.MY_UID }}"
-          resources:
-            limits:
-              memory: 2Gi
-            requests:
-              memory: 256Mi
-              cpu: 50m
+          {{- include "infra.resources" (dict "tier" "xlarge") | nindent 10 }}
           readinessProbe:
             {{- include "dscpln.readinessProbe" (dict "path" "/api/health" "port" "http") | nindent 12 }}
           volumeMounts:
@@ -293,13 +288,7 @@ spec:
               value: "1920"
             - name: SE_SCREEN_HEIGHT
               value: "1080"
-          resources:
-            limits:
-              memory: 2Gi
-              cpu: "2"
-            requests:
-              memory: 256Mi
-              cpu: 100m
+          {{- include "infra.resources" (dict "tier" "xlarge") | nindent 10 }}
           volumeMounts:
             - name: browser-profile
               mountPath: /home/seluser/.config

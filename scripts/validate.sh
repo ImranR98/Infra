@@ -501,6 +501,25 @@ check_node_placement() {
     [ -z "$released" ] || _err "WARNING: Released nfs-apps PVs remain: $released"
 }
 
+# check_resource_tiers <target_dir> — container resources come from the
+# infra.resources ladder, never from raw keys. The tiers (and the 4x memory
+# rule) are documented in AGENTS.md; the model/cache exception passes explicit
+# memRequest/memLimit arguments to the helper instead of YAML keys, so any
+# literal memory:/cpu: value in a template is drift.
+check_resource_tiers() {
+    local target_dir="$1"
+    local hits
+    hits=$(grep -rnE '^[[:space:]]+(memory|cpu):[[:space:]]*[^[:space:]]' \
+        "$target_dir"/k3s-base/templates/*.yaml \
+        "$target_dir"/k3s-apps/templates/*.yaml 2>/dev/null || true)
+    if [ -n "$hits" ]; then
+        _err "ERROR: raw memory/cpu values in templates — use include \"infra.resources\" (AGENTS.md: Resource sizing)"
+        printf '%s\n' "$hits" >&2
+        return 1
+    fi
+    return 0
+}
+
 check_helm() {
     local target_dir="$1"
     local config_file="$INFRA_ROOT/config/$TARGET/values.yaml"
@@ -622,7 +641,11 @@ if [ -f "$config_values" ]; then
     check_agent_schema "$config_values" || ok=0
 fi
 
-[ -d "$target_dir/k3s-base" ] && { check_helm "$target_dir" || ok=0; check_chart_repos "$target_dir" || ok=0; }
+[ -d "$target_dir/k3s-base" ] && {
+    check_helm "$target_dir" || ok=0
+    check_chart_repos "$target_dir" || ok=0
+    check_resource_tiers "$target_dir" || ok=0
+}
 
 [ -d "$target_dir/compose" ] && { check_compose_mounts "$target_dir" || ok=0; }
 

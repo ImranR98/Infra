@@ -100,13 +100,7 @@ spec:
       create: true
       interval: 60s
 
-    resources:
-      requests:
-        cpu: 100m
-        memory: 256Mi
-      limits:
-        cpu: "1"
-        memory: 768Mi
+    {{- include "infra.resources" (dict "tier" "large" "cpuLimit" "1") | nindent 4 }}
 ---
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy

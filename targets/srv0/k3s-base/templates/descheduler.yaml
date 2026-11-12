@@ -53,10 +53,4 @@ spec:
             deschedule:
               enabled:
                 - "RemovePodsViolatingNodeTaints"
-    resources:
-      limits:
-        memory: 128Mi
-        cpu: 500m
-      requests:
-        memory: 32Mi
-        cpu: 10m
+    {{- include "infra.resources" (dict "tier" "tiny" "cpuLimit" "500m") | nindent 4 }}

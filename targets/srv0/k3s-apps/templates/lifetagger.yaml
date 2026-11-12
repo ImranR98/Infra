@@ -143,13 +143,9 @@ spec:
             periodSeconds: 60
             timeoutSeconds: 5
             failureThreshold: 5
-          resources:
-            requests:
-              memory: 512Mi
-              cpu: 250m
-            limits:
-              memory: 4Gi
-              cpu: "4"
+          # CPU is 1 core because it runs a steady ~0.74 cores; memory sits
+          # below that on the ladder, hence the explicit cpu override.
+          {{- include "infra.resources" (dict "tier" "2xlarge" "cpu" "1") | nindent 10 }}
           volumeMounts:
             - name: data
               mountPath: /data

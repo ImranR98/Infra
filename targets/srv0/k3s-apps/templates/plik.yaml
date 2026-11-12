@@ -115,11 +115,7 @@ spec:
               mountPath: /home/plik/server/plikd.cfg
               subPath: plikd.cfg
               readOnly: true
-          resources:
-            limits:
-              memory: 256Mi
-            requests:
-              memory: 64Mi
+          {{- include "infra.resources" (dict "tier" "tiny") | nindent 10 }}
           env:
             - name: PLIKD_FEATURE_AUTHENTICATION
               value: "forced"

@@ -39,12 +39,10 @@ spec:
         - name: probe
           image: jellyfin/jellyfin:12.4@sha256:fea863d0cd9ec445985d9c75fc6ed64e38a1d2766cf0c250a33d553f4fc1b771
           imagePullPolicy: IfNotPresent
-          resources:
-            requests:
-              cpu: 10m
-              memory: 32Mi
-            limits:
-              memory: 128Mi
+          # A steady ~260m of CPU (it shells out on every check), but only a
+          # few MiB of memory, so the tier CPU is overridden rather than
+          # promoting the whole container a rung.
+          {{- include "infra.resources" (dict "tier" "tiny" "cpu" "250m") | nindent 10 }}
           command:
             - /bin/bash
             - -c
@@ -84,12 +82,7 @@ spec:
         - name: httpd
           image: busybox:1.38.0-uclibc@sha256:b2e35951f72501f6a99f1bf45bcfe6d4795be08c518c2f97d0ed2fe776958a3b
           imagePullPolicy: IfNotPresent
-          resources:
-            requests:
-              cpu: 5m
-              memory: 8Mi
-            limits:
-              memory: 32Mi
+          {{- include "infra.resources" (dict "tier" "tiny") | nindent 10 }}
           command:
             - httpd
             - -f

@@ -111,11 +111,7 @@ spec:
             capabilities:
               drop:
                 - ALL
-          resources:
-            limits:
-              memory: 64Mi
-            requests:
-              memory: 16Mi
+          {{- include "infra.resources" (dict "tier" "tiny") | nindent 10 }}
           volumeMounts:
             - name: config
               mountPath: /wg
@@ -135,11 +131,7 @@ spec:
                 - ALL
               add:
                 - NET_ADMIN
-          resources:
-            limits:
-              memory: 128Mi
-            requests:
-              memory: 16Mi
+          {{- include "infra.resources" (dict "tier" "tiny") | nindent 10 }}
           volumeMounts:
             - name: config
               mountPath: /wg
@@ -173,11 +165,7 @@ spec:
             capabilities:
               drop:
                 - ALL
-          resources:
-            limits:
-              memory: 32Mi
-            requests:
-              memory: 8Mi
+          {{- include "infra.resources" (dict "tier" "tiny") | nindent 10 }}
           volumeMounts:
             - name: config
               mountPath: /wg
@@ -253,11 +241,7 @@ spec:
             capabilities:
               drop:
                 - ALL
-          resources:
-            limits:
-              memory: 16Mi
-            requests:
-              memory: 8Mi
+          {{- include "infra.resources" (dict "tier" "tiny") | nindent 10 }}
       containers:
         - name: coredns
           image: coredns/coredns:1.15.0@sha256:0a9d8c8ddf34347eb59aad9a8784f0710de88d6d112726d11d271f9bc6daca26
@@ -271,11 +255,7 @@ spec:
                 - ALL
               add:
                 - NET_BIND_SERVICE
-          resources:
-            limits:
-              memory: 64Mi
-            requests:
-              memory: 16Mi
+          {{- include "infra.resources" (dict "tier" "tiny") | nindent 10 }}
           volumeMounts:
             - name: dns-config
               mountPath: /etc/coredns

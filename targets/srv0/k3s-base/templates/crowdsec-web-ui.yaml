@@ -84,11 +84,7 @@ spec:
               value: http://crowdsec-service.base.svc.cluster.local:6060/metrics
           ports:
             - containerPort: 3000
-          resources:
-            limits:
-              memory: 512Mi
-            requests:
-              memory: 128Mi
+          {{- include "infra.resources" (dict "tier" "xlarge") | nindent 10 }}
           readinessProbe:
             httpGet:
               path: /api/health

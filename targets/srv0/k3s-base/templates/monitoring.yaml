@@ -61,11 +61,7 @@ spec:
           tolerations:
             - operator: Exists
         alloy:
-          resources:
-            requests:
-              memory: 512Mi
-            limits:
-              memory: 1Gi
+          {{- include "infra.resources" (dict "tier" "2xlarge") | nindent 10 }}
       alloy-logs:
         enabled: true
         presets: [clustered]
@@ -82,17 +78,9 @@ spec:
           securityContext:
             seLinuxOptions:
               type: spc_t
-          resources:
-            requests:
-              memory: 192Mi
-            limits:
-              memory: 512Mi
+          {{- include "infra.resources" (dict "tier" "large") | nindent 10 }}
     alloy-operator:
-      resources:
-        requests:
-          memory: 128Mi
-        limits:
-          memory: 512Mi
+      {{- include "infra.resources" (dict "tier" "medium") | nindent 6 }}
     clusterMetrics:
       enabled: true
       destinations: [prometheus]
@@ -296,11 +284,7 @@ spec:
       accessModes:
         - ReadWriteMany
       storageClassName: nfs-apps
-    resources:
-      requests:
-        memory: 320Mi
-      limits:
-        memory: 1Gi
+    {{- include "infra.resources" (dict "tier" "xlarge") | nindent 4 }}
     grafana.ini:
       server:
         http_addr: 0.0.0.0
@@ -489,11 +473,7 @@ spec:
     deploymentMode: SingleBinary
     singleBinary:
       replicas: 1
-      resources:
-        requests:
-          memory: 256Mi
-        limits:
-          memory: 1Gi
+      {{- include "infra.resources" (dict "tier" "medium") | nindent 6 }}
       podSecurityContext:
         # Shared with the migration/backup pods: pod-level s0 (container-level
         # is ignored) keeps the filesystem-storage files readable across pods.
@@ -642,13 +622,7 @@ spec:
               readOnly: true
             - name: data
               mountPath: /data
-          resources:
-            requests:
-              cpu: 100m
-              memory: 512Mi
-            limits:
-              cpu: "1"
-              memory: 2Gi
+          {{- include "infra.resources" (dict "tier" "xlarge" "cpuLimit" "1") | nindent 10 }}
           readinessProbe:
             httpGet:
               path: /-/ready

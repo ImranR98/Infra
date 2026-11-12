@@ -273,18 +273,7 @@ spec:
       - name: ha-dashboards
         mountPath: /config/dashboards
         readOnly: true
-    resources:
-      limits:
-        memory: 1.5Gi
-{{- if $haConbee }}
-        infra.local/conbee: "1"
-{{- end }}
-      requests:
-        memory: 512Mi
-        cpu: 20m
-{{- if $haConbee }}
-        infra.local/conbee: "1"
-{{- end }}
+    {{- include "infra.resources" (dict "tier" "xlarge" "device" (ternary "conbee" "" $haConbee)) | nindent 4 }}
 ---
 ---
 apiVersion: gateway.networking.k8s.io/v1

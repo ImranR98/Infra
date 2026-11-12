@@ -279,18 +279,7 @@ spec:
               mountPath: /tmp
             - mountPath: /media/frigate
               name: frigate-media
-          resources:
-            limits:
-{{- with $frigateResource }}
-              infra.local/{{ . }}: "1"
-{{- end }}
-              memory: 3Gi
-            requests:
-              cpu: 50m
-{{- with $frigateResource }}
-              infra.local/{{ . }}: "1"
-{{- end }}
-              memory: 1.5Gi
+          {{- include "infra.resources" (dict "tier" "3xlarge" "device" $frigateResource) | nindent 10 }}
       volumes:
         - name: configmap
           configMap:

@@ -179,18 +179,9 @@ spec:
             - name: http
               containerPort: 8080
               protocol: TCP
-          resources:
-            limits:
-              memory: 14Gi
-{{- if ne $llamaGpu "none" }}
-              infra.local/{{ $llamaGpu }}: "1"
-{{- end }}
-            requests:
-              memory: 4Gi
-              cpu: 100m
-{{- if ne $llamaGpu "none" }}
-              infra.local/{{ $llamaGpu }}: "1"
-{{- end }}
+          # Model memory, not steady state: the ceiling must fit whatever GGUF
+          # is loaded through the Models UI, so it is sized explicitly.
+          {{- include "infra.resources" (dict "tier" "custom" "cpu" "100m" "memRequest" "4Gi" "memLimit" "14Gi" "device" (ternary $llamaGpu "" (ne $llamaGpu "none"))) | nindent 10 }}
           volumeMounts:
             - name: models
               mountPath: /models

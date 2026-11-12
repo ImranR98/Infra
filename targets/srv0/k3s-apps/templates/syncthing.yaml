@@ -78,12 +78,9 @@ spec:
             # Clear it when using the explicit --config/--data split.
             - name: STHOMEDIR
               value: ""
-          resources:
-            limits:
-              memory: 4Gi
-            requests:
-              memory: 2Gi
-              cpu: 100m
+          # CPU is 500m because it runs a steady ~0.34 cores; the memory tier
+          # alone would only reserve 250m.
+          {{- include "infra.resources" (dict "tier" "3xlarge" "cpu" "500m") | nindent 10 }}
           readinessProbe:
             # A TCP probe against the TLS listener made kubelet open and drop
             # a connection every 30s, which Syncthing logged as "Failed TLS

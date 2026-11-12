@@ -26,13 +26,7 @@ spec:
 
     appsec:
       enabled: true
-      resources:
-        limits:
-          memory: 256Mi
-          cpu: 500m
-        requests:
-          memory: 64Mi
-          cpu: 50m
+      {{- include "infra.resources" (dict "tier" "small" "cpuLimit" "500m") | nindent 6 }}
       acquisitions:
         - source: appsec
           listen_addr: "0.0.0.0:7422"
@@ -66,13 +60,7 @@ spec:
       # Secret; the pods only read them at startup (no SIGHUP is sent).
       podAnnotations:
         checksum/lapi-configs: {{ printf "%s|%s|%s" .Values.TARGET .Values.NTFY_WRITE_ONLY_ACCOUNT_TOKEN .Values.SERVICES_DOMAIN | sha256sum }}
-      resources:
-        limits:
-          memory: 1Gi
-          cpu: 500m
-        requests:
-          memory: 192Mi
-          cpu: 50m
+      {{- include "infra.resources" (dict "tier" "small" "cpuLimit" "500m") | nindent 6 }}
       podSecurityContext:
         fsGroup: {{ .Values.MY_UID }}
         seLinuxOptions:
@@ -123,13 +111,7 @@ spec:
       podAnnotations:
         checksum/lapi-configs: {{ printf "%s|%s|%s" .Values.TARGET .Values.NTFY_WRITE_ONLY_ACCOUNT_TOKEN .Values.SERVICES_DOMAIN | sha256sum }}
         checksum/crowdsec-secrets: {{ printf "%s|%s|%s" .Values.CROWDSEC_BOUNCER_KEY .Values.CROWDSEC_LAPI_SECRET .Values.CROWDSEC_WEBUI_LAPI_PASSWORD | sha256sum }}
-      resources:
-        limits:
-          memory: 512Mi
-          cpu: 500m
-        requests:
-          memory: 128Mi
-          cpu: 50m
+      {{- include "infra.resources" (dict "tier" "medium" "cpuLimit" "500m") | nindent 6 }}
       podSecurityContext:
         fsGroup: {{ .Values.MY_UID }}
       containerSecurityContext:

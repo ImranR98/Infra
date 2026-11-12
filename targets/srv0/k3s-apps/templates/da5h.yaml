@@ -77,12 +77,7 @@ spec:
               value: "https://dash.{{ .Values.SERVICES_DOMAIN }}"
             - name: UV_USE_IO_URING
               value: "0"
-          resources:
-            limits:
-              memory: 256Mi
-            requests:
-              memory: 64Mi
-              cpu: 20m
+          {{- include "infra.resources" (dict "tier" "small") | nindent 10 }}
           readinessProbe:
             {{- include "dscpln.readinessProbe" (dict "path" "/api/health" "port" "http") | nindent 12 }}
           volumeMounts:
@@ -160,12 +155,7 @@ spec:
                   key: token
             - name: LOCKDOWN_CONFIG
               value: /config/lockdown.json
-          resources:
-            limits:
-              memory: 64Mi
-            requests:
-              memory: 16Mi
-              cpu: 5m
+          {{- include "infra.resources" (dict "tier" "tiny") | nindent 10 }}
           readinessProbe:
             httpGet:
               path: /healthz

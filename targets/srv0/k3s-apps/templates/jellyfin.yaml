@@ -130,18 +130,7 @@ spec:
             periodSeconds: 10
             timeoutSeconds: 3
             failureThreshold: 3
-          resources:
-            limits:
-              memory: 1.5Gi
-{{- if $jellyfinVaapi }}
-              infra.local/vaapi: "1"
-{{- end }}
-            requests:
-              memory: 512Mi
-              cpu: 20m
-{{- if $jellyfinVaapi }}
-              infra.local/vaapi: "1"
-{{- end }}
+          {{- include "infra.resources" (dict "tier" "xlarge" "device" (ternary "vaapi" "" $jellyfinVaapi)) | nindent 10 }}
           volumeMounts:
             - mountPath: /config
               name: config

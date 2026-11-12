@@ -50,11 +50,7 @@ spec:
         - "-log-level=debug"
     clusterRoleBinding:
       clusterRoleName: headlamp-readonly
-    resources:
-      limits:
-        memory: 256Mi
-      requests:
-        memory: 64Mi
+    {{- include "infra.resources" (dict "tier" "tiny") | nindent 4 }}
 ---
 ---
 apiVersion: gateway.networking.k8s.io/v1

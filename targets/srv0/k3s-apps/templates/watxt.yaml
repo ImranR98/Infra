@@ -42,12 +42,7 @@ spec:
               value: "https://watxt.{{ .Values.SERVICES_DOMAIN }}"
           readinessProbe:
             {{- include "dscpln.readinessProbe" (dict "path" "/api/health" "port" "8787" "initialDelaySeconds" 10) | nindent 12 }}
-          resources:
-            limits:
-              memory: 1Gi
-            requests:
-              memory: 128Mi
-              cpu: 10m
+          {{- include "infra.resources" (dict "tier" "large") | nindent 10 }}
           volumeMounts:
             - name: tmp
               mountPath: /tmp

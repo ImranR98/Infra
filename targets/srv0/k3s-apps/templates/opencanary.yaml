@@ -207,11 +207,7 @@ spec:
           securityContext:
             # runs as root: entrypoint uses sudo internally, needs low ports for honeypot
             allowPrivilegeEscalation: false
-          resources:
-            limits:
-              memory: 256Mi
-            requests:
-              memory: 64Mi
+          {{- include "infra.resources" (dict "tier" "small") | nindent 10 }}
           readinessProbe:
             tcpSocket:
               port: 21

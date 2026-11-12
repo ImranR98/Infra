@@ -16,29 +16,17 @@ spec:
     image:
       repository: quay.io/jetstack/cert-manager-controller
       tag: v1.21.3
-    resources:
-      limits:
-        memory: 256Mi
-      requests:
-        memory: 64Mi
+    {{- include "infra.resources" (dict "tier" "small") | nindent 4 }}
     cainjector:
       image:
         repository: quay.io/jetstack/cert-manager-cainjector
         tag: v1.21.3
-      resources:
-        limits:
-          memory: 256Mi
-        requests:
-          memory: 64Mi
+      {{- include "infra.resources" (dict "tier" "small") | nindent 6 }}
     webhook:
       image:
         repository: quay.io/jetstack/cert-manager-webhook
         tag: v1.21.3
-      resources:
-        limits:
-          memory: 128Mi
-        requests:
-          memory: 32Mi
+      {{- include "infra.resources" (dict "tier" "tiny") | nindent 6 }}
     startupapicheck:
       image:
         repository: quay.io/jetstack/cert-manager-startupapicheck

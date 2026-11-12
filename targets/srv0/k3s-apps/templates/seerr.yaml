@@ -25,12 +25,7 @@ spec:
     extraEnv:
       - name: TZ
         value: {{ .Values.TZ }}
-    resources:
-      requests:
-        memory: 256Mi
-        cpu: 20m
-      limits:
-        memory: 1Gi
+    {{- include "infra.resources" (dict "tier" "large") | nindent 4 }}
     podSecurityContext:
       runAsUser: {{ .Values.MY_UID }}
       runAsGroup: {{ .Values.MY_UID }}

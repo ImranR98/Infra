@@ -28,11 +28,7 @@ spec:
             {{- include "dscpln.containerSecurityContext" (dict "uid" .Values.MY_UID "readOnlyRootFilesystem" true) | nindent 12 }}
           ports:
             - containerPort: 3300
-          resources:
-            limits:
-              memory: 2Gi
-            requests:
-              memory: 256Mi
+          {{- include "infra.resources" (dict "tier" "medium") | nindent 10 }}
           readinessProbe:
             {{- include "dscpln.readinessProbe" (dict "path" "/api/health" "port" "3300") | nindent 12 }}
           env:

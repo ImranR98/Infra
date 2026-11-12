@@ -197,12 +197,9 @@ spec:
             timeoutSeconds: 5
             failureThreshold: 3
             initialDelaySeconds: 10
-          resources:
-            limits:
-              memory: 4Gi
-            requests:
-              memory: 256Mi
-              cpu: 50m
+          # The 4Gi ceiling is deliberate: the agent compiles and runs test
+          # suites, whose spikes are well above the ~90Mi idle footprint.
+          {{- include "infra.resources" (dict "tier" "medium" "memLimit" "4Gi") | nindent 10 }}
           volumeMounts:
             - name: home
               mountPath: /home/opencode

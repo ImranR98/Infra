@@ -65,18 +65,7 @@ spec:
               # Resources are per-component (the top-level controllers.main is
               # shared across all Immich components, so anything set there
               # leaks into valkey/ML). The vaapi grant is for transcoding.
-              resources:
-                limits:
-                  memory: 4Gi
-{{- if $immichServerVaapi }}
-                  infra.local/vaapi: "1"
-{{- end }}
-                requests:
-                  memory: 1.5Gi
-                  cpu: 20m
-{{- if $immichServerVaapi }}
-                  infra.local/vaapi: "1"
-{{- end }}
+              {{- include "infra.resources" (dict "tier" "3xlarge" "device" (ternary "vaapi" "" $immichServerVaapi)) | nindent 14 }}
 {{- if $immichServerVaapi }}
               env:
                 HWACCEL_VAAPI_ENABLED: "true"
@@ -121,18 +110,10 @@ spec:
                 HSA_OVERRIDE_GFX_VERSION: {{ . | quote }}
 {{- end }}
 {{- end }}
-              resources:
-                limits:
-                  memory: 6Gi
-{{- with $immichMlResource }}
-                  infra.local/{{ . }}: "1"
-{{- end }}
-                requests:
-                  memory: 384Mi
-                  cpu: 20m
-{{- with $immichMlResource }}
-                  infra.local/{{ . }}: "1"
-{{- end }}
+              # ML memory tracks the loaded model (spikes to ~6Gi when the
+              # model loads, ~170Mi idle), so it is sized explicitly rather
+              # than from the request tier; 6Gi OOM-killed it once, 8Gi fits.
+              {{- include "infra.resources" (dict "tier" "custom" "cpu" "500m" "memRequest" "1Gi" "memLimit" "8Gi" "device" $immichMlResource) | nindent 14 }}
       defaultPodOptions:
         securityContext:
           seLinuxOptions:
@@ -160,12 +141,8 @@ spec:
                 tag: "9.2"
               # The chart's top-level controllers.main is shared across all
               # components, so the server's DRI grant + 8Gi limit would leak
-              # into valkey; override with the small tier (no device).
-              resources:
-                limits:
-                  memory: 256Mi
-                requests:
-                  memory: 64Mi
+              # into valkey; override with the tiny tier (no device).
+              {{- include "infra.resources" (dict "tier" "tiny") | nindent 14 }}
       enabled: true
 ---
 ---
@@ -362,11 +339,7 @@ spec:
               value: "true"
           ports:
             - containerPort: 5432
-          resources:
-            limits:
-              memory: 2Gi
-            requests:
-              memory: 128Mi
+          {{- include "infra.resources" (dict "tier" "xlarge") | nindent 10 }}
           volumeMounts:
             - name: data
               mountPath: /var/lib/postgresql/data

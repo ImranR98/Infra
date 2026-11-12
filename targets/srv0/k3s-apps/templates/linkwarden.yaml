@@ -69,12 +69,7 @@ spec:
             runAsUser: 999
             runAsGroup: 999
             allowPrivilegeEscalation: false
-          resources:
-            limits:
-              memory: 64Mi
-            requests:
-              cpu: 5m
-              memory: 16Mi
+          {{- include "infra.resources" (dict "tier" "tiny") | nindent 10 }}
       containers:
         - name: linkwarden
           image: ghcr.io/linkwarden/linkwarden:v2.16.3@sha256:0664c28a039bda8ffa6663389e8536b2fc717219e329f85b83faca7efed3b144
@@ -139,12 +134,10 @@ spec:
           volumeMounts:
             - name: linkwarden-data
               mountPath: /data/data
-          resources:
-            limits:
-              memory: 16Gi
-            requests:
-              memory: 512Mi
-              cpu: 20m
+          # The ceiling is deliberately far above the 4x rule: Linkwarden
+          # spawns headless Chromium to preserve pages, and a burst of
+          # archiving is the one thing that can actually consume it.
+          {{- include "infra.resources" (dict "tier" "xlarge" "memLimit" "16Gi") | nindent 10 }}
       volumes:
         - name: linkwarden-data
           persistentVolumeClaim:
@@ -197,11 +190,7 @@ spec:
               chown -R 999:999 /var/lib/postgresql/data
           securityContext:
             runAsUser: 0  # root required: chown on PVC for postgresql (uid 999)
-          resources:
-            limits:
-              memory: 512Mi
-            requests:
-              memory: 128Mi
+          {{- include "infra.resources" (dict "tier" "small") | nindent 10 }}
           volumeMounts:
             - name: data
               mountPath: /var/lib/postgresql/data
@@ -237,11 +226,7 @@ spec:
           volumeMounts:
             - name: data
               mountPath: /var/lib/postgresql/data
-          resources:
-            limits:
-              memory: 256Mi
-            requests:
-              memory: 64Mi
+          {{- include "infra.resources" (dict "tier" "tiny") | nindent 10 }}
       volumes:
         - name: data
           persistentVolumeClaim:
@@ -309,11 +294,7 @@ spec:
           volumeMounts:
             - name: meili-data
               mountPath: /meili_data
-          resources:
-            limits:
-              memory: 512Mi
-            requests:
-              memory: 128Mi
+          {{- include "infra.resources" (dict "tier" "small") | nindent 10 }}
       volumes:
         - name: meili-data
           persistentVolumeClaim:

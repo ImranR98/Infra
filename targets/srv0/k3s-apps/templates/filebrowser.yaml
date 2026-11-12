@@ -140,12 +140,7 @@ spec:
             timeoutSeconds: 5
             failureThreshold: 3
             initialDelaySeconds: 10
-          resources:
-            limits:
-              memory: 2Gi
-            requests:
-              memory: 256Mi
-              cpu: 50m
+          {{- include "infra.resources" (dict "tier" "xlarge") | nindent 10 }}
           volumeMounts:
             - name: config
               mountPath: /config

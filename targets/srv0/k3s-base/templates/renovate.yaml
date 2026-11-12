@@ -126,12 +126,7 @@ spec:
                 - name: scripts
                   mountPath: /opt/renovate
                   readOnly: true
-              resources:
-                limits:
-                  memory: 2Gi
-                requests:
-                  memory: 768Mi
-                  cpu: 100m
+              {{- include "infra.resources" (dict "tier" "2xlarge") | nindent 14 }}
           volumes:
             - name: scripts
               configMap:

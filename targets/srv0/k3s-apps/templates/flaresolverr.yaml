@@ -23,11 +23,7 @@ spec:
             allowPrivilegeEscalation: false
           ports:
             - containerPort: 8191
-          resources:
-            limits:
-              memory: 1.5Gi
-            requests:
-              memory: 256Mi
+          {{- include "infra.resources" (dict "tier" "large") | nindent 10 }}
           readinessProbe:
             tcpSocket:
               port: 8191

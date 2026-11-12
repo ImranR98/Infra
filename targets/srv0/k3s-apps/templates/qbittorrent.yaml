@@ -179,11 +179,7 @@ spec:
                 - ALL
               add:
                 - NET_ADMIN
-          resources:
-            limits:
-              memory: 64Mi
-            requests:
-              memory: 16Mi
+          {{- include "infra.resources" (dict "tier" "tiny") | nindent 10 }}
           volumeMounts:
             - name: qbt-wg
               mountPath: /etc/wireguard
@@ -203,11 +199,7 @@ spec:
               protocol: TCP
             - containerPort: 56881
               protocol: UDP
-          resources:
-            limits:
-              memory: 256Mi
-            requests:
-              memory: 64Mi
+          {{- include "infra.resources" (dict "tier" "small") | nindent 10 }}
           readinessProbe:
             tcpSocket:
               port: 8080

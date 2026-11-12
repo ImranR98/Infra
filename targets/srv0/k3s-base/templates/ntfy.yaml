@@ -149,11 +149,7 @@ spec:
                   key: auth-access
           ports:
             - containerPort: 3000
-          resources:
-            limits:
-              memory: 256Mi
-            requests:
-              memory: 64Mi
+          {{- include "infra.resources" (dict "tier" "tiny") | nindent 10 }}
           readinessProbe:
             httpGet:
               path: /v1/health

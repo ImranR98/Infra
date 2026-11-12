@@ -34,11 +34,7 @@ spec:
             timeoutSeconds: 5
             failureThreshold: 3
             initialDelaySeconds: 10
-          resources:
-            limits:
-              memory: 384Mi
-            requests:
-              memory: 64Mi
+          {{- include "infra.resources" (dict "tier" "small") | nindent 10 }}
           env:
             - name: TZ
               value: "{{ .Values.TZ }}"

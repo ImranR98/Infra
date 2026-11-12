@@ -139,16 +139,11 @@ spec:
           securityContext:
             # runs as root: imranrdev image breaks with non-root uid
             allowPrivilegeEscalation: false
-          resources:
-            limits:
-              # The per-line parser used to be effectively unbounded during
-              # public-traffic spikes. The stream prefilter removes most of
-              # that work; this caps the remainder.
-              cpu: 250m
-              memory: 2Gi
-            requests:
-              memory: 128Mi
-              cpu: 50m
+          # The CPU ceiling stays: the per-line parser used to be effectively
+          # unbounded during public-traffic spikes and the stream prefilter
+          # removes most of that work, so this caps the remainder. 250m was
+          # throttling 95% of the time; 1 core keeps the cap without it.
+          {{- include "infra.resources" (dict "tier" "small" "cpuLimit" "1") | nindent 10 }}
       volumes:
         - name: journal
           persistentVolumeClaim:

@@ -37,11 +37,7 @@ spec:
             - nfsd
           securityContext:
             privileged: true
-          resources:
-            limits:
-              memory: 128Mi
-            requests:
-              memory: 32Mi
+          {{- include "infra.resources" (dict "tier" "tiny") | nindent 10 }}
           volumeMounts:
             - mountPath: /lib/modules
               name: modules
@@ -86,11 +82,9 @@ spec:
             periodSeconds: 60
             timeoutSeconds: 5
             failureThreshold: 3
-          resources:
-            limits:
-              memory: 128Mi
-            requests:
-              memory: 32Mi
+          # The 32Mi request stays tiny, but the ceiling has to clear the
+          # ~125Mi startup spike that once sat at 98% of the old 128Mi cap.
+          {{- include "infra.resources" (dict "tier" "small") | nindent 10 }}
           volumeMounts:
             - mountPath: /exports
               name: exports-root
