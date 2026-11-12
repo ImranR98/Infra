@@ -7,7 +7,9 @@
 # helm lint + both-scope template renders ('<no value>' rejected) plus Gateway
 # certificateRef/ReferenceGrant checks; compose mounts under ../../../config/
 # must exist. Variable NAMES and paths only are printed — values never reach
-# stdout/stderr. Runs from any machine.
+# stdout/stderr. Runs from any machine; the host-gated deploy preconditions
+# (Compose machine-fact .env, srv0 runtime state and cluster access) run only
+# on the target machine.
 set -euo pipefail
 
 if [ -z "${INFRA_ROOT:-}" ]; then
@@ -35,6 +37,9 @@ usage() {
     echo "    ReferenceGrant"
     echo "  - compose mounts under ../../../config/ point at existing files"
     echo "  - raw image refs are exact-tagged (or allowlisted) and digest-pinned"
+    echo "  - on the target machine: the generated Compose machine-fact .env is"
+    echo "    present, mode 0600, and matches this host's uid/docker gid"
+    echo "  - on srv0: the runtime state tree exists and the cluster is reachable"
     exit 1
 }
 
@@ -568,6 +573,70 @@ check_chart_repos() {
     [ "$ok" = 1 ]
 }
 
+# check_compose_machine_env <target> — the generated Compose machine-fact .env
+# (targets/<t>/compose/.env, written by prereqs.sh) supplies MY_UID,
+# DOCKER_GID, MY_USERNAME, and the state paths to `docker compose`. A missing
+# or stale file makes containers run as root and leaves bind mounts root-owned,
+# so it is a deploy precondition. Host-local: only the target machine has it.
+check_compose_machine_env() {
+    local tgt="$1"
+    local env_file="$INFRA_ROOT/targets/$tgt/compose/.env"
+    local ok=1 got want
+
+    if [ ! -f "$env_file" ]; then
+        _err "ERROR: $env_file is missing — run scripts/prereqs.sh on $tgt"
+        return 1
+    fi
+    if [ "$(stat -c '%a' "$env_file" 2>/dev/null || true)" != "600" ]; then
+        _err "ERROR: $env_file is not mode 0600 (it carries host facts)"
+        ok=0
+    fi
+
+    want="${MY_UID:-$(id -u)}"
+    got="$(sed -n 's/^MY_UID=//p' "$env_file")"
+    if [ "$got" != "$want" ]; then
+        _err "ERROR: $env_file has MY_UID='$got' but this user is $want — re-run scripts/prereqs.sh"
+        ok=0
+    fi
+
+    want="$(getent group docker | cut -d: -f3 || true)"
+    got="$(sed -n 's/^DOCKER_GID=//p' "$env_file")"
+    if [ -n "$want" ] && [ "$got" != "$want" ]; then
+        _err "ERROR: $env_file has DOCKER_GID='$got' but the docker group is $want — re-run scripts/prereqs.sh"
+        ok=0
+    fi
+
+    got="$(sed -n 's/^MY_USERNAME=//p' "$env_file")"
+    [ -n "$got" ] || { _err "ERROR: $env_file has an empty MY_USERNAME — re-run scripts/prereqs.sh"; ok=0; }
+
+    got="$(sed -n 's/^COMPOSE_STATE_DIR=//p' "$env_file")"
+    [ -n "$got" ] || { _err "ERROR: $env_file has an empty COMPOSE_STATE_DIR — re-run scripts/prereqs.sh"; ok=0; }
+
+    [ "$ok" = 1 ]
+}
+
+# check_runtime_state — srv0's PVCs bind to the live state tree under
+# ~/infra_state. Deploying without it leaves claims unbound, so fail early.
+check_runtime_state() {
+    local state_dir="$INFRA_STATE_DIR"
+    if [ ! -d "$state_dir/k3s_live_state/nfs-apps" ]; then
+        _err "ERROR: runtime state tree not found at $state_dir/k3s_live_state/nfs-apps"
+        _err "  run scripts/migrate-state-dir.sh on srv0 before deploying"
+        return 1
+    fi
+    return 0
+}
+
+# check_cluster_access — srv0 deploys run as the dev user against a root-only
+# kubeconfig; without an unlock session helm/kubectl fail with a bare
+# permission error. Warn here so the cause is obvious.
+check_cluster_access() {
+    command -v kubectl >/dev/null 2>&1 || return 0
+    kubectl get nodes >/dev/null 2>&1 && return 0
+    _err "WARNING: cannot reach the cluster — run scripts/kubeconfig-unlock.sh in another terminal before helm/kubectl deploy steps"
+    return 0
+}
+
 [ $# -ge 1 ] || usage
 require_target "$1"
 target_dir="$INFRA_ROOT/targets/$TARGET"
@@ -600,6 +669,18 @@ fi
 }
 
 [ -d "$target_dir/compose" ] && { check_compose_mounts "$target_dir" || ok=0; }
+
+# Deploy preconditions that only exist on the target machine: the Compose
+# machine-fact .env and, on srv0, the runtime state tree and cluster access.
+if [ "$(hostname)" = "$TARGET" ]; then
+    if [ -d "$target_dir/compose" ]; then
+        check_compose_machine_env "$TARGET" || ok=0
+    fi
+    if [ "$TARGET" = srv0 ]; then
+        check_runtime_state || ok=0
+        check_cluster_access
+    fi
+fi
 
 # vps0's Authelia config is rendered from the committed base + config rules.
 # The generated file only exists on vps0, so check it there.

@@ -475,7 +475,7 @@ steps:
   deepDive: 'The runner gets `RENOVATE_TOKEN`, the repo list, Docker Hub host rules, and the git author from the `renovate-secrets` Secret. It mounts no repo; a small ConfigMap provides the run wrapper and ntfy notifier, and it runs as the image''s non-root user.
 
 
-    After an app PR merges and its image `publish` job promotes `:latest`, the next scheduled Renovate run opens the first-party Infra digest PR immediately; third-party images and chart versions wait for the 3-day age gate. There is no manual pin step; `scripts/renovate.sh infra` runs the same Renovate version on demand, but it does not bypass the gate. The skill merges ready open app PRs (including ones Renovate left open, but not `renovate/stability-days` holds) and handles approved majors. `infra-digest-pin` marks Renovate image pins that need a deploy; merging is inert until `scripts/deploy.sh <target>`.'
+    After an app PR merges and its image `publish` job promotes `:latest`, the next scheduled Renovate run opens the first-party Infra digest PR immediately; third-party images and chart versions wait for the 3-day age gate. There is no manual pin step; `scripts/renovate.sh infra` runs the same Renovate version on demand, but it does not bypass the gate. The skill merges ready open app PRs (including ones Renovate left open, but not `renovate/stability-days` holds) and handles approved majors. `infra-digest-pin` marks Renovate image pins that need a deploy; merging is inert until the target is deployed (`validate.sh` then `helm upgrade` or `sudo docker compose up`).'
   reveal:
   - srv0/base/renovate/cronjob/renovate-daily
   - concept/renovate-pr-ops
@@ -891,8 +891,8 @@ steps:
     summary: The platform chart.
   - path: targets/srv0/k3s-apps/Chart.yaml
     summary: The app chart.
-  - path: scripts/deploy.sh
-    summary: Applies both charts and waits for rollouts.
+  - path: scripts/validate.sh
+    summary: Read-only gate before every chart upgrade.
 - id: app-catalog
   stage: App
   title: The app catalog
@@ -1146,28 +1146,23 @@ steps:
 
 
     Target-selecting scripts take `<target>` as their first argument. Machine-local scripts (`prereqs`, `renovate`, `preboot`, `wireguard`, `kubeconfig-unlock`, `k3s-server`, `k3s-join`, `restic-restore`) act on the machine they run on.'
-  deepDive: '`~/infra_state/` is runtime state; leave it alone. `config/` mirrors each target''s `config_template/`. `compose.sh` supplies the config env, generated machine facts, private overlay, and profiles, and renders vps0 Authelia before `up`.
+  deepDive: '`~/infra_state/` is runtime state; leave it alone. `config/` mirrors each target''s `config_template/`. A deploy is `validate.sh <target>` followed by the two `helm upgrade --install` commands (srv0) or `sudo docker compose` with both env files (Compose targets); vps0 renders its Authelia config with `render-vps0-authelia.sh` before `up`.
 
 
-    Run `validate.sh <target>` before every `helm upgrade --install`; it is read-only. Hostnames must match the target directory; scripts warn or hard-fail.
+    Run `validate.sh <target>` before every `helm upgrade --install`; it is read-only. On the target machine it also checks the Compose machine-fact `.env` and, on srv0, the runtime state tree and cluster access.
 
 
-    Scripts share one shape: `# DESC:`, `set -euo pipefail`, `usage()`, and `common.sh`; target-selecting scripts call `require_target`, and mutating ones call `require_target_host`. The common environment includes `$INFRA_ROOT`, `$TARGET`, `$COMPOSE_STATE_DIR`, `$STATE_BACKUP_DIR`, and `$MY_UID`.'
+    Scripts share one shape: `# DESC:`, `set -euo pipefail`, `usage()`, and `common.sh`; target-selecting scripts call `require_target`. The common environment includes `$INFRA_ROOT`, `$TARGET`, `$COMPOSE_STATE_DIR`, `$STATE_BACKUP_DIR`, and `$MY_UID`.'
   reveal:
   - script/validate
-  - script/deploy
   focus:
   - srv0/base
   - srv0/apps
   - script/validate
-  - script/deploy
-  - script/compose
   flow:
   - - srv0/base
     - srv0/apps
   - - script/validate
-    - script/deploy
-    - script/compose
   zones:
   - id: tree
     label: WORKING TREE
@@ -1175,8 +1170,6 @@ steps:
     - srv0/base
     - srv0/apps
     - script/validate
-    - script/deploy
-    - script/compose
   edges:
   - from: srv0/base
     to: script/validate
@@ -1186,21 +1179,11 @@ steps:
     to: script/validate
     type: validates
     label: Helm
-  - from: script/validate
-    to: script/deploy
-    type: gates
-    label: preflight
-  - from: script/deploy
-    to: script/compose
-    type: uses
-    label: Compose
   code:
   - path: AGENTS.md
     summary: Repo rules, commands, and the target layout.
-  - path: scripts/deploy.sh
-    summary: Validates and runs the Helm or Compose flow for a target.
-  - path: scripts/compose.sh
-    summary: 'Compose wrapper: config env, machine facts, overlay, profiles, Authelia render.'
+  - path: scripts/validate.sh
+    summary: 'Preflight: config, charts, machine facts, and deploy preconditions.'
 - id: config
   stage: Operations
   title: Configuration layers
@@ -1368,7 +1351,7 @@ steps:
 - id: boot-prereqs
   stage: Bootstrap
   title: Prerequisites
-  body: 'Run `scripts/prereqs.sh` on every machine. It installs packages, the pinned Helm binary, Docker, the machine-fact `.env`, host bind dirs, and the Traefik ACME seed. Make sure the deploy user can reach the Docker socket (`docker compose version` without sudo) before using the Compose wrapper.
+  body: 'Run `scripts/prereqs.sh` on every machine. It installs packages, the pinned Helm binary, Docker, the machine-fact `.env`, host bind dirs, and the Traefik ACME seed. Docker requires `sudo`; run every Compose command with it (the machine-fact `.env` still supplies the container UID).
 
 
     Run it on srv0 and vps0 before `init-config.sh`; `init-config` needs `yq` from prereqs.
@@ -1486,13 +1469,13 @@ steps:
 - id: boot-vps
   stage: Bootstrap
   title: Bring up vps0
-  body: 'Deploy vps0 before srv0. `scripts/deploy.sh vps0` renders Authelia and runs Compose; srv0''s ACME challenges need the edge serving.
+  body: 'Deploy vps0 before srv0. `scripts/render-vps0-authelia.sh` regenerates the Authelia config, then `sudo docker compose` with both env files brings the edge up; srv0''s ACME challenges need the edge serving.
 
 
     The public-exposure hub needs its WireGuard conf copied from srv0. Traefik needs DNS and the public ports.
 
     '
-  deepDive: '`scripts/compose.sh vps0 up -d` is the direct wrapper. It supplies the config env, machine facts, private overlay, and profiles, and renders Authelia before `up`.'
+  deepDive: 'Run `scripts/validate.sh vps0` first: it fails when the rendered Authelia config is stale. Then `sudo docker compose --env-file config/vps0/compose.env -f targets/vps0/compose/compose.yaml -f targets/vps0/compose/compose.private.yaml --env-file targets/vps0/compose/.env up -d`. The second `--env-file` carries the machine facts and `COMPOSE_PROFILES`; passing any `--env-file` disables `.env` auto-discovery.'
   reveal:
   - vps0
   - vps0/edge
@@ -1514,22 +1497,20 @@ steps:
     type: runs
     label: edge
   code:
-  - path: scripts/deploy.sh
-    summary: The target deploy flow.
-  - path: scripts/compose.sh
-    summary: The Compose wrapper.
   - path: scripts/render-vps0-authelia.sh
     summary: Renders the live Authelia config.
+  - path: targets/vps0/compose/compose.yaml
+    summary: The vps0 edge stack.
 - id: boot-srv
   stage: Bootstrap
   title: Bootstrap srv0
-  body: 'On srv0, run `scripts/preflight-task-runner.sh --fix` if using FL0W, then `k3s-server.sh`, unlock the kubeconfig in another terminal, bring up the Compose sidecar, and run `scripts/deploy.sh srv0`.
+  body: 'On srv0, run `scripts/preflight-task-runner.sh --fix` if using FL0W, then `k3s-server.sh`, unlock the kubeconfig in another terminal, bring up the Compose sidecar, then run `scripts/validate.sh srv0` and the two `helm upgrade --install` commands.
 
 
     Set `BOOTSTRAP_PRIVATE_APPS: "true"` for the first boot; set it back to `"false"` and redeploy once Authelia is Ready.
 
     '
-  deepDive: '`deploy.sh srv0` runs both chart upgrades, waits for helm-controller, checks rollouts, pod readiness, HelmChart failures, restart counts, and API readiness.
+  deepDive: '`validate.sh srv0` checks the runtime state tree and cluster access before the chart upgrades. `helm upgrade --install srv0-base` and `srv0-apps` render the charts; helm-controller then installs the `HelmChart` CRs asynchronously. Verify with `kubectl -n base get helmcharts`, the rollout loop over deployments/statefulsets/daemonsets, the pod sweep, and `kubectl get --raw /readyz`.
 
 
     The admin kubeconfig stays root-only; use `kubeconfig-unlock.sh` for a dev session.'
@@ -1537,17 +1518,17 @@ steps:
   - srv0
   - srv0/cluster
   - script/k3s-server
-  - script/deploy
+  - script/validate
   focus:
   - srv0
   - srv0/cluster
   - script/k3s-server
-  - script/deploy
+  - script/validate
   flow:
   - - srv0
   - - srv0/cluster
   - - script/k3s-server
-    - script/deploy
+  - - script/validate
   zones:
   - id: srv0
     label: srv0 · bootstrap
@@ -1555,7 +1536,7 @@ steps:
     - srv0
     - srv0/cluster
     - script/k3s-server
-    - script/deploy
+    - script/validate
   edges:
   - from: srv0
     to: srv0/cluster
@@ -1566,16 +1547,16 @@ steps:
     type: prepares
     label: installer
   - from: srv0
-    to: script/deploy
-    type: deploys
+    to: script/validate
+    type: validates
     label: charts
   code:
   - path: scripts/k3s-server.sh
     summary: Control-plane bootstrap and static labels.
   - path: scripts/kubeconfig-unlock.sh
     summary: Temporary admin kubeconfig access.
-  - path: scripts/deploy.sh
-    summary: Chart upgrades and rollout checks.
+  - path: scripts/validate.sh
+    summary: State-tree and cluster-access preconditions.
 - id: boot-nodes
   stage: Bootstrap
   title: Optional nodes
@@ -1614,13 +1595,13 @@ steps:
 - id: boot-verify
   stage: Bootstrap
   title: Verify
-  body: 'Run `scripts/validate.sh srv0` and `scripts/validate.sh vps0`. Check nodes, pods, PVCs, Helm releases, the Authelia URL, Immich, Frigate, Home Assistant, vps0 `docker compose ps`, and one restore listing.
+  body: 'Run `scripts/validate.sh srv0` and `scripts/validate.sh vps0`. Check nodes, pods, PVCs, Helm releases, the Authelia URL, Immich, Frigate, Home Assistant, vps0 `sudo docker compose ps`, and one restore listing.
 
 
-    `deploy.sh` performs the rollout, pod, HelmChart-failure, restart-count, and API readiness checks in one pass.
+    The post-deploy check is the rollout loop over deployments/statefulsets/daemonsets, the pod sweep, `kubectl -n base|apps get helmcharts`, and `kubectl get --raw /readyz`.
 
     '
-  deepDive: If `deploy.sh` cannot reach the cluster, `kubeconfig-unlock.sh` is not running. If apps remain LAN/VPN-only, `BOOTSTRAP_PRIVATE_APPS` is still true.
+  deepDive: If `kubectl` cannot reach the cluster, `kubeconfig-unlock.sh` is not running. If apps remain LAN/VPN-only, `BOOTSTRAP_PRIVATE_APPS` is still true.
   reveal:
   - script/validate
   - srv0/ops/tooling
@@ -1647,16 +1628,14 @@ steps:
     label: preflight
   code:
   - path: scripts/validate.sh
-    summary: Config and chart preflight.
-  - path: scripts/deploy.sh
-    summary: Rollout and readiness checks.
+    summary: Config, chart, and deploy preconditions.
 - id: boot-manual
   stage: Bootstrap
   title: Manual first-time setup
   body: 'Some first-boot steps have no API seed: Radarr/Sonarr authentication and root folders, Prowlarr apps and indexers, Seerr''s Jellyfin login, FileBrowser''s first OIDC user, the Frigate↔Home Assistant MQTT integration, CrowdSec Web UI LAPI registration, and the VPN client profile.
 
 
-    Do these once after `deploy.sh` reports healthy.'
+    Do these once the deploy verification passes.'
   deepDive: 'The arr API keys are pre-configured in `radarr-secret`/`sonarr-secret`; Prowlarr registers Radarr and Sonarr with them. Seerr logs in through Jellyfin. Frigate uses `mosquitto:1883` and writes recordings to the `frigate-media-pvc` NFS claim.
 
 

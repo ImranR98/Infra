@@ -220,9 +220,9 @@ Push `master` first so remote checkouts can `git pull`. Present one consolidated
 ask, then deploy in risk order using
 [references/deploy-and-verify.md](references/deploy-and-verify.md):
 
-1. srv0: `bash scripts/deploy.sh srv0` inside an unlock session (validate →
-   `srv0-base` → `srv0-apps` → helm-controller, rollout, pod, restart, and
-   `/readyz` checks). The raw `helm upgrade` commands remain the fallback.
+1. srv0: `bash scripts/validate.sh srv0` then the two `helm upgrade --install`
+   commands inside an unlock session (`srv0-base` → `srv0-apps` →
+   helm-controller, rollout, pod, restart, and `/readyz` checks).
 2. srv0 compose sidecars that changed (for example the public-exposure client).
 3. vps0: compose `up -d <changed services>` over SSH, using the user-supplied
    target and verified repo path.

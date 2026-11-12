@@ -90,7 +90,7 @@ if [ ! -x /usr/local/bin/helm ]; then
     rm -rf /tmp/helm.tar.gz "/tmp/linux-${arch}"
 fi
 
-if ! command -v docker >/dev/null 2>&1 || ! docker compose version >/dev/null 2>&1; then
+if ! command -v docker >/dev/null 2>&1 || ! $SU docker compose version >/dev/null 2>&1; then
     echo "==> Installing Docker (official bootstrap)"
     curl -fsSL --connect-timeout 30 --max-time 300 https://get.docker.com -o /tmp/get-docker.sh
     $SU sh /tmp/get-docker.sh
@@ -122,22 +122,13 @@ if [ -d "$target_dir/compose" ] && [ -f "$target_dir/compose/compose.yaml" ]; th
     # facts would override any collision, which is the point).
     [ -f "$INFRA_ROOT/config/$local_target/compose.env" ] && env_args=(--env-file "$INFRA_ROOT/config/$local_target/compose.env" "${env_args[@]}")
 
-    profile_args=()
-    profiles="$(config_env "$local_target" COMPOSE_PROFILES || true)"
-    if [ -n "$profiles" ]; then
-        IFS=', ' read -r -a profile_list <<<"$profiles"
-        for profile in "${profile_list[@]}"; do
-            [ -n "$profile" ] && profile_args+=(--profile "$profile")
-        done
-    fi
-
     echo "==> Resolving compose host bind dirs"
     # Host bind dirs come from `docker compose config` itself (the interpolated,
     # resolved output) — the compose file is the single source of truth. Docker
     # would create missing dirs as root; creating them here keeps them writable
     # by containers running as $MY_UID.
     bind_dirs=$(
-        docker compose -p "$local_target" "${compose_files[@]}" "${env_args[@]}" "${profile_args[@]}" \
+        $SU docker compose -p "$local_target" "${compose_files[@]}" "${env_args[@]}" \
             config --format yaml 2>/dev/null |
             yq -r '.services[] | select(.volumes) | .volumes[] | (.source? // .) | split(":") | .[0]' |
             grep -F "$STATE_ROOT/" || true
@@ -190,7 +181,7 @@ for tool in helm docker yq jq curl python3 openssl shellcheck yamllint node npm 
     echo "  [MISSING] $tool"
     missing=1
 done
-if docker compose version >/dev/null 2>&1; then
+if $SU docker compose version >/dev/null 2>&1; then
     echo "  [OK] docker compose"
 else
     echo "  [MISSING] docker compose"

@@ -44,18 +44,107 @@ bash scripts/init-config.sh vps0
 bash scripts/validate.sh srv0
 bash scripts/validate.sh vps0
 
-# Deploy one target; srv0 uses Helm, the rest use the Compose wrapper.
-bash scripts/deploy.sh srv0
-bash scripts/deploy.sh vps0
-bash scripts/deploy.sh pc
-
-# Or run Compose directly through the wrapper (env files, machine facts,
-# private overlay, profiles, and vps0 Authelia render are automatic).
-bash scripts/compose.sh vps0 up -d
-bash scripts/compose.sh vps0 logs -f authelia
+# Deploy — validate.sh is read-only and must run before every deploy.
+# Copy-paste commands for Compose targets and srv0 are in "Deploy" below.
 
 # Run Renovate manually (the in-cluster jobs do this on a schedule) — machine-local
 bash scripts/renovate.sh [apps|infra|all|clear-cache] [--dry-run]
+```
+
+## Deploy
+
+Run these on the target machine, in its repo checkout. `bash scripts/prereqs.sh`
+must have run there once: it writes the machine-fact
+`targets/<t>/compose/.env` and creates `~/infra_state/`.
+
+`docker compose` needs `sudo` on these machines; `validate.sh` and the Helm
+commands do not.
+
+### vps0, pc, bigpc, rpi — Compose
+
+```bash
+bash scripts/validate.sh vps0
+
+# vps0 only: regenerate the Authelia config from config/vps0/authelia/.
+bash scripts/render-vps0-authelia.sh
+
+sudo docker compose \
+  --env-file config/vps0/compose.env \
+  -f targets/vps0/compose/compose.yaml \
+  -f targets/vps0/compose/compose.private.yaml \
+  --env-file targets/vps0/compose/.env \
+  up -d --remove-orphans
+```
+
+For `pc`, `bigpc`, and `rpi`, use their own path and drop the
+`compose.private.yaml` line. `srv0`'s Compose sidecar (the public-exposure
+client) uses `config/srv0/compose.env` and
+`targets/srv0/compose/compose.yaml`.
+
+Repeat the same flags for every other Compose command — `ps`, `logs -f <svc>`,
+`down <svc>`, `up -d --force-recreate --no-deps <svc>`:
+
+```bash
+sudo docker compose \
+  --env-file config/vps0/compose.env \
+  -f targets/vps0/compose/compose.yaml \
+  -f targets/vps0/compose/compose.private.yaml \
+  --env-file targets/vps0/compose/.env \
+  ps
+```
+
+Why each flag:
+
+- `--env-file config/<t>/compose.env` — the target's VARS and secrets. Without
+  it the `${VAR:?}` guards abort and optional vars interpolate empty.
+- `--env-file targets/<t>/compose/.env` — generated machine facts (`MY_UID`,
+  `DOCKER_GID`, `MY_USERNAME`, `COMPOSE_STATE_DIR`). Without it containers run
+  as root and bind mounts end up root-owned. This file also carries
+  `COMPOSE_PROFILES`, so no `--profile` flag is needed.
+- Passing any `--env-file` disables Compose's `.env` auto-discovery, which is
+  why the machine-fact file is passed explicitly.
+- `--remove-orphans` drops containers for services removed from the file.
+
+Keep the flags explicit: `sudo` strips exported variables, so shortcuts like
+`COMPOSE_FILE`/`COMPOSE_ENV_FILES` (or a shell alias) do not survive.
+
+### srv0 — K3s
+
+```bash
+# Terminal 1, for the whole session (the admin kubeconfig is root-only):
+bash scripts/kubeconfig-unlock.sh
+
+# Terminal 2:
+bash scripts/validate.sh srv0
+helm upgrade --install srv0-base targets/srv0/k3s-base -n base --create-namespace \
+  -f targets/srv0/k3s-base/values.yaml -f config/srv0/values.yaml
+helm upgrade --install srv0-apps targets/srv0/k3s-apps -n apps --create-namespace \
+  -f targets/srv0/k3s-apps/values.yaml -f config/srv0/values.yaml
+```
+
+Apply `base` before `apps`; delete in reverse order. `helm` returning success is
+not the end: the base chart ships `HelmChart` CRs that k3s's helm-controller
+installs asynchronously.
+
+```bash
+kubectl -n base get helmcharts
+kubectl -n apps get helmcharts
+for ns in base apps; do
+  kubectl -n "$ns" get deploy,statefulset,daemonset -o name |
+    while read -r r; do kubectl -n "$ns" rollout status "$r" --timeout=120s || echo "FAILED: $r"; done
+done
+kubectl get pods -A --no-headers | grep -vE 'Running|Completed' || echo "pods OK"
+kubectl get --raw /readyz
+kubectl get events -A --field-selector type=Warning --sort-by=.lastTimestamp | tail -20
+```
+
+### Remote machines
+
+`vps0`, `pc`, `bigpc`, and `rpi` deploy from their own checkout, so pull first
+and then run the block above on that machine:
+
+```bash
+ssh -A <user@host> 'cd <repo path> && git pull --ff-only'
 ```
 
 ## Guided documentation

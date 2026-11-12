@@ -28,22 +28,22 @@ bash scripts/validate.sh vps0
 
 # K3s (srv0) — the kubeconfig is root-only. Unlock it in another terminal:
 bash scripts/kubeconfig-unlock.sh
-bash scripts/deploy.sh srv0          # validate + base/apps + rollout checks
+bash scripts/validate.sh srv0         # read-only gate before every deploy
 helm upgrade --install srv0-base targets/srv0/k3s-base -n base --create-namespace \
   -f targets/srv0/k3s-base/values.yaml -f config/srv0/values.yaml
 helm upgrade --install srv0-apps targets/srv0/k3s-apps -n apps --create-namespace \
   -f targets/srv0/k3s-apps/values.yaml -f config/srv0/values.yaml
 helm uninstall srv0-apps -n apps     # delete apps first, then srv0-base
 
-# Compose — from the repo root, ON the target machine. The wrapper supplies
-# the config env, generated machine facts, private overlay, Compose profiles,
-# and (for vps0) renders Authelia before `up`.
-bash scripts/compose.sh vps0 up -d
-bash scripts/compose.sh vps0 down <svc>                         # then up -d <svc>
-bash scripts/compose.sh vps0 up -d --force-recreate --no-deps <svc>
-bash scripts/compose.sh srv0 up -d                              # public-exposure client
-bash scripts/compose.sh pc up -d
-# `deploy.sh <target>` runs validate + the appropriate Compose/Helm flow.
+# Compose — from the repo root, ON the target machine, with sudo. Both env
+# files are required; the second carries machine facts and COMPOSE_PROFILES.
+sudo docker compose \
+  --env-file config/vps0/compose.env \
+  -f targets/vps0/compose/compose.yaml \
+  -f targets/vps0/compose/compose.private.yaml \
+  --env-file targets/vps0/compose/.env \
+  up -d --remove-orphans
+# The same flags work for ps / logs -f <svc> / down <svc> / up -d <svc>.
 # First-time setup: bash scripts/init-config.sh <target> [--detect]
 
 # Backups (FL0W scheduled task; manual restore):
@@ -73,7 +73,7 @@ yamllint -c .yamllint targets/*/config_template \
   targets/srv0/k3s-apps/values.yaml targets/srv0/k3s-apps/Chart.yaml
 ```
 
-Scripts warn or hard-fail (`require_target_host`) on hostname/target mismatches. Pass `-y` to PVC commands for non-interactive confirmations.
+Scripts warn when the hostname does not match the target; `validate.sh` runs its deploy preconditions (Compose machine-fact `.env`, srv0 state tree and cluster access) only on the target machine. Pass `-y` to PVC commands for non-interactive confirmations.
 
 ## Documentation
 

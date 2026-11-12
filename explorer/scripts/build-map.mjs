@@ -1529,10 +1529,10 @@ function buildCompose() {
     id: "concept/compose-target",
     kind: "concept",
     title: "Other Compose targets",
-    subtitle: "same wrapper, not covered here",
+    subtitle: "same flags, not covered here",
     parent: "vps0/ops",
     summary:
-      "vps0 runs through scripts/compose.sh. Other machines can use the same Compose wrapper; for example, the pc target is another Compose stack. This map deliberately covers only srv0 and vps0, so those targets appear only as passing references.",
+      "vps0 and the other Compose machines run the same raw `sudo docker compose` invocation: two `--env-file` flags (target config, then generated machine facts) plus the compose files. For example, the pc target is another Compose stack. This map deliberately covers only srv0 and vps0, so those targets appear only as passing references.",
     tags: ["ops"],
     lane: "external",
   });
@@ -1562,7 +1562,7 @@ function scriptParent(rel) {
     return "vps0/edge";
   }
   if (rel.includes("srv0/compose/files")) return "srv0/service/public-exposure-client-wg";
-  if (rel === "scripts/deploy.sh" || rel === "scripts/validate.sh" || rel === "scripts/compose.sh" ||
+  if (rel === "scripts/validate.sh" ||
       rel === "scripts/common.sh" || rel === "scripts/config.sh" || rel === "scripts/repos.sh") return "srv0/ops/tooling";
   return "srv0/ops/tooling";
 }

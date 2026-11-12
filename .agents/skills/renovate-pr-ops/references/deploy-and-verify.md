@@ -34,36 +34,47 @@ The app image and its Infra pin are two automatic steps:
 
 ## srv0 (K3s) — apply base, then apps
 
-Preferred path (validates, upgrades both charts, waits for the helm-controller jobs
-and workload rollouts, then checks pods, HelmChart failures, restart counts, and
-`/readyz`; workloads only on NotReady nodes are warned and skipped):
-
 ```bash
-bash scripts/deploy.sh srv0
-```
-
-Raw fallback:
-
-```bash
+bash scripts/validate.sh srv0
 helm upgrade --install srv0-base targets/srv0/k3s-base -n base --create-namespace \
   -f targets/srv0/k3s-base/values.yaml -f config/srv0/values.yaml
 helm upgrade --install srv0-apps targets/srv0/k3s-apps -n apps --create-namespace \
   -f targets/srv0/k3s-apps/values.yaml -f config/srv0/values.yaml
 ```
 
-`base` before `apps`; delete in reverse order if ever needed. HelmChart CRs reconcile
-asynchronously via helm-controller — check its jobs/pods before declaring success.
+`base` before `apps`; delete in reverse order if ever needed. HelmChart CRs
+reconcile asynchronously via helm-controller — check its jobs/pods before
+declaring success:
+
+```bash
+kubectl -n base get helmcharts
+kubectl -n apps get helmcharts
+for ns in base apps; do
+  kubectl -n "$ns" get deploy,statefulset,daemonset -o name |
+    while read -r r; do kubectl -n "$ns" rollout status "$r" --timeout=120s || echo "FAILED: $r"; done
+done
+kubectl get pods -A --no-headers | grep -vE 'Running|Completed' || echo "pods OK"
+kubectl get --raw /readyz
+```
 
 ## srv0 compose sidecars
 
 The public-exposure client is a host-network compose service, separate from K3s:
 
 ```bash
-bash scripts/compose.sh srv0 up -d public-exposure-client-wg
+bash scripts/validate.sh srv0
+sudo docker compose \
+  --env-file config/srv0/compose.env \
+  -f targets/srv0/compose/compose.yaml \
+  --env-file targets/srv0/compose/.env \
+  up -d public-exposure-client-wg
 ```
 
-The wrapper needs access to the Docker socket. If the current agent user cannot
-open it, print the command for the user to run in their shell.
+Both `--env-file` flags are required: the first carries the target config, the
+second the generated machine facts (`MY_UID`, `DOCKER_GID`, state paths) and
+`COMPOSE_PROFILES`. Passing any `--env-file` disables `.env` auto-discovery.
+Docker requires `sudo` on these machines; if the current agent user cannot run
+it non-interactively, print the command for the user to run in their shell.
 
 ## vps0 (Compose over SSH)
 
@@ -73,10 +84,23 @@ then:
 
 ```bash
 ssh -A <user@host> 'set -e; cd <repo path> && git pull --ff-only &&
-  bash scripts/compose.sh vps0 up -d <services>'
+  bash scripts/validate.sh vps0'
 ```
 
-Then run `bash scripts/compose.sh vps0 ps <services>` to confirm health. `-A`
+Then run the Compose block on vps0 (`bash scripts/render-vps0-authelia.sh`
+first when the Authelia rules changed — `validate.sh` fails if the rendered
+config is stale):
+
+```bash
+sudo docker compose \
+  --env-file config/vps0/compose.env \
+  -f targets/vps0/compose/compose.yaml \
+  -f targets/vps0/compose/compose.private.yaml \
+  --env-file targets/vps0/compose/.env \
+  up -d <services>
+```
+
+Confirm health with the same flags plus `ps <services>`. `-A`
 (agent forwarding) is only needed so the remote `git pull` can authenticate to
 the git host; a deploy key there removes the need for it.
 
@@ -85,10 +109,16 @@ the git host; a deploy key there removes the need for it.
 ```bash
 # on the machine, in its repo checkout:
 git pull
-bash scripts/compose.sh <target> up -d <service>
+bash scripts/validate.sh <target>
+sudo docker compose \
+  --env-file config/<target>/compose.env \
+  -f targets/<target>/compose/compose.yaml \
+  --env-file targets/<target>/compose/.env \
+  up -d <service>
 ```
 
-The machine-fact `.env` is supplied by the wrapper; no extra `--env-file`.
+Both env files are required; the machine-fact `.env` is written by
+`prereqs.sh`, not by the deploy command.
 
 ## Verification checklist
 
@@ -105,7 +135,7 @@ The machine-fact `.env` is supplied by the wrapper; no extra `--env-file`.
   `kubectl -n apps get deploy <name> -o jsonpath='{.spec.template.spec.containers[0].image}'`.
 - StatefulSets (for example Open WebUI) are checked with `get statefulset`, not
   `get deploy`.
-- Compose: `docker compose ... ps` healthy for every changed service; check
+- Compose: `sudo docker compose ... ps` healthy for every changed service; check
   `docker logs --tail 20 <svc>` on auth/data services for startup errors.
 - Public edge: `curl -sS -o /dev/null -w '%{http_code}' https://<host>` for a
   representative app, and a control-plane request through the public-exposure
