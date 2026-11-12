@@ -6,8 +6,8 @@ The IaC system for my homelab and other devices.
 
 - `vps0` is a cloud VPS that uses Docker Compose to run public-facing services like [`apps.obtainium.imranr.dev`](https://apps.obtainium.imranr.dev/) and tunnel some requests through to `srv0`.
 - `srv0` is a lightweight home server that uses Kubernetes (K3s) to run personal services like [Immich](https://immich.app/).
-- `bigpc` is a gaming PC that runs llama.cpp in Docker Compose on its AMD RX 9070 (ROCm), plus a FL0W game-save agent and Syncthing. `srv0`'s Traefik routes `https://models.<SERVICES_DOMAIN>` (llama.cpp's Models page) to it over the LAN, so the same hostname works publicly, on the VPN, and on the LAN.
-- `pc` is a laptop that runs [Syncthing](https://syncthing.net/) (via Docker Compose) to sync files to `srv0`, plus ComfyUI and a llama.cpp router on its Intel Arc iGPU. ComfyUI and the router keep their data under the shared `~/ai` tree (`~/ai/comfyui`, `~/ai/llama`); the router's Discover UI (loopback at `127.0.0.1:18080`) downloads models into `~/ai/llama/.cache`.
+- `bigpc` is a gaming PC that runs llama.cpp in Docker Compose on its AMD RX 9070 (ROCm), exposed via `srv0`.
+- `pc` is a laptop that runs [Syncthing](https://syncthing.net/) (via Docker Compose) to sync files to `srv0`.
 - `rpi` is an SBC that streams a live camera feed to [Frigate](https://frigate.video/) on `srv0`.
 
 <p align="center">
@@ -24,8 +24,7 @@ The IaC system for my homelab and other devices.
   - **Network policies** are used in the `srv0` Kubernetes stack to ensure that pod-to-pod communication is only allowed where necessary.
   - **WireGuard key pairs** (as opposed to symmetric token-based encryption) protect the public-exposure tunnel between `srv0` and `vps0`; each peer authenticates with its own key, preventing certain kinds of MITM attacks.
   - **The Principle of Least Privilege** is applied to containers, with elevated privileges and root runtime user only allowed where necessary. Host devices are granted as Kubernetes device-plugin resources (via the generic-device-plugin) rather than `privileged: true`.
-  - **Comprehensive Monitoring and Alerting** is done using [Alloy](https://grafana.com/docs/alloy/) + [Prometheus](https://prometheus.io/), [Loki](https://grafana.com/docs/loki/latest/), [Grafana](https://grafana.com/), [Ntfy.sh](https://ntfy.sh/) + [Logtfy](https://github.com/ImranR98/Logtfy), [Headlamp](https://headlamp.dev/), [Dozzle](https://dozzle.dev/), and [Uptime Kuma](https://github.com/louislam/uptime-kuma).
-  - **[Falco](https://falco.org/)** flags suspicious activity on K3s nodes.
+  - **Comprehensive Monitoring and Alerting** is done using [Alloy](https://grafana.com/docs/alloy/) + [Prometheus](https://prometheus.io/), [Loki](https://grafana.com/docs/loki/latest/), [Grafana](https://grafana.com/), [Ntfy.sh](https://ntfy.sh/) + [Logtfy](https://github.com/ImranR98/Logtfy), [Headlamp](https://headlamp.dev/), [Dozzle](https://dozzle.dev/), [Uptime Kuma](https://github.com/louislam/uptime-kuma), and [Falco](https://falco.org/).
   - **A Honeypot ([Opencanary](https://github.com/thinkst/opencanary))** is used to discover intruders.
   - **Regular update checking** is done via [Renovate](https://www.mend.io/renovate/): a six-hourly Renovate-only run opens PRs and auto-merges non-major app updates after their test gate, while every Infra digest/chart PR is a manual rollout gate.
 

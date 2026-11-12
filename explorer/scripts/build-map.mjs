@@ -373,7 +373,7 @@ function addTargets() {
     title: "Cluster & hardware",
     subtitle: "K3s control plane · nodes · accelerators",
     summary:
-      "Node provisioning, static labels, optional worker nodes, and hardware resources exposed through the generic device plugin.",
+      "Node provisioning, static labels, and hardware resources exposed through the generic device plugin.",
     tags: ["cluster", "updates"],
     lane: "runtime",
   });
@@ -480,7 +480,7 @@ function addTargets() {
       summary: `Applications grouped for navigation.`,
       subtitle: ({
         media: "photos · video · NVR",
-        home: "home automation · sync · RDP",
+        home: "home automation · sync",
         arr: "indexers · downloads · requests",
         productivity: "docs · feeds · files",
         tools: "agents · UI · logs",
