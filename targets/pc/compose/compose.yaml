@@ -65,7 +65,14 @@ services:
               fi
               find $$dirs -type d -exec chmod g+s {} +
               umask 002
-              exec /app/start.sh
+              # start.sh hardcodes `--listen`, so launch main.py directly to
+              # pass ComfyUI's own flags. --disable-smart-memory unloads models
+              # after every prompt, and --cache-none drops the execution cache,
+              # so idle RAM returns to the host instead of being kept for the
+              # next run. Both cost speed: every run reloads models and
+              # re-executes every node.
+              export PATH="/app/venv/bin:$$PATH"
+              exec python3 /app/main.py --listen --disable-smart-memory --cache-none
         # 54G leaves ~8 GiB of the 62 GiB total for GNOME and host services.
         # Realistic ComfyUI peaks for current models are ~30G, so this is
         # headroom, not a target. Don't raise further: swap is zram-only.
