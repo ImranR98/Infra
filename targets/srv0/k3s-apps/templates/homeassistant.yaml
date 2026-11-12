@@ -225,7 +225,7 @@ spec:
             card_dir="$www/advanced-camera-card-2026"
             mkdir -p "$card_dir"
             # Pinned (Renovate-managed); the GitHub release API is not polled.
-            card_latest="v8.1.0"
+            card_latest="v8.2.0"
             # Layout token guards against stale installs (e.g. pre-zip layout) with the same version
             card_version="$card_latest+zip"
             if [ "$(cat "$card_dir/.installed-version" 2>/dev/null)" != "$card_version" ]; then
