@@ -1,0 +1,146 @@
+# Health exporter for the two signals we care about:
+#   - nfsd kernel thread states (I/R/D/S), read from the host PID namespace so
+#     the NFS server's kernel threads are visible.
+#   - Jellyfin /health time-to-first-byte, so a stalled request pipeline is
+#     observable even when the cause is elsewhere.
+# Exposed as Prometheus metrics on :9101 and scraped by Alloy via PodMonitor.
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: infra-health-exporter
+  namespace: base
+  labels:
+    app: infra-health-exporter
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: infra-health-exporter
+  template:
+    metadata:
+      labels:
+        app: infra-health-exporter
+    spec:
+      hostPID: true
+      nodeSelector:
+        kubernetes.io/hostname: srv0
+      # spc_t + root: SELinux denies container_t access to host /proc entries
+      # (node-exporter uses the same combination for host metrics).
+      securityContext:
+        runAsUser: 0
+        runAsGroup: 0
+        fsGroup: 0
+        seLinuxOptions:
+          type: spc_t
+      containers:
+        - name: probe
+          image: jellyfin/jellyfin:12.4@sha256:fea863d0cd9ec445985d9c75fc6ed64e38a1d2766cf0c250a33d553f4fc1b771
+          imagePullPolicy: IfNotPresent
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              memory: 128Mi
+          command:
+            - /bin/bash
+            - -c
+            - |
+              set -u
+              while true; do
+                out=/metrics/metrics.tmp
+                {
+                  echo '# HELP nfsd_threads Number of nfsd kernel threads by state'
+                  echo '# TYPE nfsd_threads gauge'
+                  declare -A c=([I]=0 [R]=0 [D]=0 [S]=0 [T]=0 [t]=0 [X]=0 [Z]=0 [P]=0)
+                  total=0
+                  for p in /proc/[0-9]*; do
+                    [ "$(cat "$p/comm" 2>/dev/null)" = "nfsd" ] || continue
+                    st=$(cut -d' ' -f3 "$p/stat" 2>/dev/null)
+                    [ -n "$st" ] || continue
+                    total=$((total + 1))
+                    c[$st]=$(( ${c[$st]:-0} + 1 ))
+                  done
+                  for s in I R D S T t X Z P; do
+                    echo "nfsd_threads{state=\"$s\"} ${c[$s]:-0}"
+                  done
+                  echo "nfsd_threads_total $total"
+                  echo '# HELP jellyfin_health_ttfb_seconds Jellyfin /health time to first byte'
+                  echo '# TYPE jellyfin_health_ttfb_seconds gauge'
+                  ttfb=$(curl -s -o /dev/null -m 5 -w '%{time_starttransfer}' \
+                    http://jellyfin.apps.svc.cluster.local:8096/health 2>/dev/null) || ttfb=-1
+                  [ -n "$ttfb" ] || ttfb=-1
+                  echo "jellyfin_health_ttfb_seconds $ttfb"
+                  echo "jellyfin_health_up $([ "$ttfb" = "-1" ] && echo 0 || echo 1)"
+                } > "$out" && mv "$out" /metrics/metrics
+                sleep 10
+              done
+          volumeMounts:
+            - name: metrics
+              mountPath: /metrics
+        - name: httpd
+          image: busybox:1.38.0-uclibc@sha256:b2e35951f72501f6a99f1bf45bcfe6d4795be08c518c2f97d0ed2fe776958a3b
+          imagePullPolicy: IfNotPresent
+          resources:
+            requests:
+              cpu: 5m
+              memory: 8Mi
+            limits:
+              memory: 32Mi
+          command:
+            - httpd
+            - -f
+            - -p
+            - "9101"
+            - -h
+            - /metrics
+          ports:
+            - name: metrics
+              containerPort: 9101
+              protocol: TCP
+          volumeMounts:
+            - name: metrics
+              mountPath: /metrics
+      volumes:
+        - name: metrics
+          emptyDir: {}
+---
+# Allow the Alloy metrics collector (base namespace) to scrape :9101.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: infra-health-exporter
+  namespace: base
+spec:
+  podSelector:
+    matchLabels:
+      app: infra-health-exporter
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: base
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: alloy-metrics
+      ports:
+        - protocol: TCP
+          port: 9101
+  policyTypes:
+    - Ingress
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: infra-health-exporter
+  namespace: base
+spec:
+  podMetricsEndpoints:
+    - port: metrics
+      interval: 30s
+  selector:
+    matchLabels:
+      app: infra-health-exporter

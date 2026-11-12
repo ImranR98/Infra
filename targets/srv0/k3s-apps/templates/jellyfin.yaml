@@ -241,6 +241,14 @@ spec:
         - podSelector:
             matchLabels:
               app: sonarr
+        # Health exporter (base/infra-health-exporter) probes /health to make
+        # stalled request pipelines observable.
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: base
+          podSelector:
+            matchLabels:
+              app: infra-health-exporter
         # kubelet readiness probes originate from the node's LAN address.
         - ipBlock:
             cidr: {{ $lanCidr }}
