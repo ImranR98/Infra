@@ -42,8 +42,7 @@ spec:
         # generated config only at startup).
         checksum/config: {{ .Files.Get "files/generic-device-plugin-init.sh" | sha256sum }}
     spec:
-      # Run on every node, including opt-in-only bigpc
-      # (infra.local/noschedule), so the AMD resource is registered there.
+      # Run on every node so each node registers its own hardware resources.
       tolerations:
         - operator: Exists
       securityContext:

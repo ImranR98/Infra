@@ -26,3 +26,154 @@ services:
             - /mnt/ssd2:/mnt/ssd2
         network_mode: host
         logging: *logging
+
+    # llama.cpp router server on the RX 9070 (ROCm). This replaces the K3s
+    # Deployment that used to run on this node: the model tree at ~/ai/llama is
+    # unchanged, so existing GGUFs and the Models UI cache keep working. The
+    # built-in Discover UI downloads into LLAMA_CACHE; only cache models are
+    # deletable through the UI. Launching without -m puts the server in router
+    # mode. srv0's Traefik reaches this port over the LAN and keeps
+    # models.<SERVICES_DOMAIN> behind Authelia; the port is LAN-wide on purpose.
+    # Renovate digest-pins server-rocm.
+    llama-cpp:
+        image: ghcr.io/ggml-org/llama.cpp:server-rocm@sha256:1da62f4e1bca273de30b04b260c9643dda7ac1d336c783484ef5f1bf2373280f
+        container_name: llama-cpp
+        restart: unless-stopped
+        # Model memory, not steady state: one resident model plus --fit headroom
+        # for the largest context. Leaves ~18 GiB of the 32 GiB total for the
+        # desktop.
+        mem_limit: 14G
+        memswap_limit: 14G
+        user: "$MY_UID:$MY_UID"
+        # The K3s Deployment ran with spc_t; /home files are user_home_t.
+        security_opt:
+            - label=type:spc_t
+        devices:
+            # KFD + render node; MIGraphX renders through renderD128.
+            - /dev/kfd:/dev/kfd
+            - /dev/dri:/dev/dri
+        command:
+            - "--host"
+            - "0.0.0.0"
+            - "--port"
+            - "8080"
+            # Cache mode: models downloaded through the built-in UI/API live
+            # under LLAMA_CACHE and are the only models the server can delete.
+            - "--models-max"
+            - "1"
+            - "--models-memory-margin"
+            - "1024"
+            - "--n-gpu-layers"
+            - "99"
+            # MoE expert tensors dominate the 35B model's file size. Keep the
+            # first 24 of 40 layers' experts in system RAM so --fit has room for
+            # a large KV cache while attention/dense weights stay on GPU.
+            - "--n-cpu-moe"
+            - "24"
+            - "--flash-attn"
+            - "on"
+            - "--cache-type-k"
+            - "q8_0"
+            - "--cache-type-v"
+            - "q8_0"
+            - "--no-mmproj-offload"
+            - "--jinja"
+            - "--parallel"
+            - "1"
+            # Let each model take the largest context that leaves ~1 GiB free
+            # for the desktop; models with a smaller native window cap there.
+            - "--fit"
+            - "on"
+            - "--fit-target"
+            - "1792"
+            # Never let --fit fall back to its 4k default; 32k is the practical
+            # floor for tool-heavy agent sessions.
+            - "--fit-ctx"
+            - "32768"
+            - "--cache-ram"
+            - "2048"
+            - "--sleep-idle-seconds"
+            - "300"
+            - "--batch-size"
+            - "2048"
+            - "--ubatch-size"
+            - "512"
+            # Enable the built-in Discover/download UI. It is off by default.
+            - "--ui-config"
+            - '{"enableDiscoverModels": true, "useHuggingFaceHub": true}'
+            # The built-in UI is reached through srv0 Traefik at
+            # models.<SERVICES_DOMAIN> behind Authelia; restrict browser CORS
+            # to that origin.
+            - "--cors-origins"
+            - "https://models.${SERVICES_DOMAIN:?SERVICES_DOMAIN must be set in config/bigpc/compose.env}"
+        environment:
+            - HOME=/tmp
+            - LLAMA_CACHE=/models
+        volumes:
+            - /home/$MY_USERNAME/ai/llama:/models
+        ports:
+            # LAN-wide. Every remote path still goes through srv0 Traefik and
+            # Authelia at models.<SERVICES_DOMAIN>.
+            - "8080:8080"
+        logging: *logging
+
+    # Ludusavi artifact fetch for the FL0W agent. One-shot: the agent only
+    # starts after the binary is staged in /state. Renovate tracks the version
+    # in ARTIFACT_URL below.
+    fl0w-agent-init:
+        image: ghcr.io/imranr98/fl0w-agent-gtk:latest@sha256:7c775a678814bc2fa9d1e5801788595edd7eb35386194d354e2b0053caa8da1a
+        container_name: fl0w-agent-init
+        restart: "no"
+        user: "$MY_UID:$MY_UID"
+        security_opt:
+            - label=type:spc_t
+        cap_drop:
+            - ALL
+        entrypoint:
+            - /app/fetch-artifact.sh
+        environment:
+            - ARTIFACT_URL=https://github.com/mtkennerly/ludusavi/releases/download/v0.31.0/ludusavi-v0.31.0-linux.tar.gz
+            - ARTIFACT_VERSION=0.31.0
+            - ARTIFACT_MEMBER=ludusavi
+            - ARTIFACT_DEST=/state/ludusavi/bin/ludusavi
+            - ARTIFACT_CHECK_ARGS=--version
+        volumes:
+            - ${COMPOSE_STATE_DIR}/fl0w-agent:/state
+        tmpfs:
+            - /tmp
+        logging: *logging
+
+    # FL0W game-save agent (Ludusavi). Replaces the K3s fl0w-agent-bigpc
+    # Deployment; FL0W on srv0 reaches it at http://<bigpc-ip>:8788 over the
+    # LAN. Enrollment is token-gated and allowFrom is the LAN CIDR.
+    fl0w-agent:
+        image: ghcr.io/imranr98/fl0w-agent-gtk:latest@sha256:7c775a678814bc2fa9d1e5801788595edd7eb35386194d354e2b0053caa8da1a
+        container_name: fl0w-agent
+        restart: unless-stopped
+        network_mode: host
+        user: "$MY_UID:$MY_UID"
+        security_opt:
+            - label=type:spc_t
+            - no-new-privileges:true
+        cap_drop:
+            - ALL
+        depends_on:
+            fl0w-agent-init:
+                condition: service_completed_successfully
+        volumes:
+            - ../../../config/bigpc/fl0w-agent/agent.json:/config/agent.json:ro
+            - ${COMPOSE_STATE_DIR}/fl0w-agent:/state
+            - /home/$MY_USERNAME/Games:/home/$MY_USERNAME/Games:ro
+            - /home/$MY_USERNAME/.local/share:/home/$MY_USERNAME/.local/share:ro
+            - /home/$MY_USERNAME/.steam:/home/$MY_USERNAME/.steam:ro
+            - /home/$MY_USERNAME/.config:/home/$MY_USERNAME/.config:ro
+            - /home/$MY_USERNAME/.var/app/com.heroicgameslauncher.hgl/config/heroic:/home/$MY_USERNAME/.var/app/com.heroicgameslauncher.hgl/config/heroic:ro
+            - /home/$MY_USERNAME/Main/Media/Software/Games/PC/Saves:/data/saves
+        tmpfs:
+            - /tmp
+        healthcheck:
+            test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8788/healthz"]
+            interval: 30s
+            timeout: 5s
+            retries: 3
+        logging: *logging

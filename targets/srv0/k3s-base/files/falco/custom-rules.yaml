@@ -37,30 +37,6 @@
 
 # --- False-alarm exceptions from the first observation window (2026-10-26) ---
 
-# RocketLeague under Proton/Wine uses ptrace for its anti-cheat on bigpc. This
-# is host-only and process-scoped; a container, or another host process, still
-# fires the rule.
-- rule: PTRACE attached to process
-  exceptions:
-    - name: rocket_league_eac_host
-      fields: [container.name, proc.name]
-      comps: ["=", "="]
-      values:
-        - [host, RocketLeague_EA]
-  override:
-    exceptions: append
-
-# Same game process also produces the anti-debug NOTICE.
-- rule: PTRACE anti-debug attempt
-  exceptions:
-    - name: rocket_league_eac_antidebug_host
-      fields: [container.name, proc.name]
-      comps: ["=", "="]
-      values:
-        - [host, RocketLeague_EA]
-  override:
-    exceptions: append
-
 # FlareSolverr launches its bundled chromedriver from the writable layer on
 # first solve. Scope to that pod and process only; any other binary still
 # triggers the Critical rule.
@@ -157,24 +133,11 @@
   override:
     exceptions: append
 
-# Ludusavi is fetched by the bigpc agent's artifact init and run by its process
-# job from the state PVC. Scope to that pod and the canonical/staged binary so
-# any other dropped executable still fires the Critical rule.
-- rule: Drop and execute new binary in container
-  exceptions:
-    - name: fl0w_agent_bigpc_ludusavi
-      fields: [k8s.ns.name, k8s.pod.name, proc.name, proc.exe]
-      comps: ["=", startswith, "=", startswith]
-      values:
-        - [apps, fl0w-agent-bigpc-, ludusavi, /state/ludusavi/bin/]
-  override:
-    exceptions: append
-
 # The system-upgrade controller's plan Jobs run kubectl, ln, iptables and
-# friends from the image's writable layer on both nodes (e.g. the 2026-11-07
-# Fedora kernel upgrade). Scope to the controller's namespace and Job prefix;
-# any other dropped binary, including one inside another system-upgrade pod,
-# still fires the Critical rule.
+# friends from the image's writable layer (e.g. the 2026-11-07 Fedora kernel
+# upgrade). Scope to the controller's namespace and Job prefix; any other
+# dropped binary, including one inside another system-upgrade pod, still fires
+# the Critical rule.
 - rule: Drop and execute new binary in container
   exceptions:
     - name: system_upgrade_apply

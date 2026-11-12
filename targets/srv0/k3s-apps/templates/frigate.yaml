@@ -134,7 +134,7 @@ spec:
         checksum/config: {{ printf "%s-%s-%s" (.Values.FRIGATE_ADDITIONAL_CONFIG | sha256sum) $frigateDetector $frigateResource | sha256sum }}
     spec:
       # Frigate always runs on srv0's media GPU. It never tolerates the
-      # bigpc no-schedule taint, so it can never move to bigpc.
+      # srv0-only hardware, so it can never move off the host.
       initContainers:
         - name: copyconfig
 {{- if eq $frigateDetector "rocm" }}

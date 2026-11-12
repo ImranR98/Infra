@@ -89,11 +89,10 @@ tours:
   - boot-manual
 - id: maintenance
   title: Maintenance
-  subtitle: Hardware, storage, Windows, and recovery
-  description: The srv0 motherboard swap, the current NFS storage path, the Guacamole/Windows route, and restic recovery.
+  subtitle: Hardware, storage, and recovery
+  description: The srv0 motherboard swap, the current NFS storage path, and restic recovery.
   duration: 10 min
   chapters:
   - hardware-swap
   - storage-migration
-  - windows-remote
   - restore

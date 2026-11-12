@@ -1,4 +1,7 @@
 ---
+# Kept deployed for future multi-node needs. With srv0 as the only node this is
+# a no-op today; the profile is the taint safety net for nodes added later
+# (evict pods that do not tolerate a node's taints, when they fit elsewhere).
 apiVersion: helm.cattle.io/v1
 kind: HelmChart
 metadata:
@@ -26,17 +29,12 @@ spec:
     # supersedes any failure — keep only the most recent failed job (its
     # pods' logs) for debugging.
     failedJobsHistoryLimit: 1
-    # Cleanup safety net for the opt-in-only bigpc node:
-    #   - RemovePodsViolatingNodeTaints: evicts pods on bigpc that do NOT
-    #     tolerate infra.local/noschedule (only if they fit elsewhere, i.e.
-    #     srv0). llama.cpp/Immich ML/FL0W and node agents tolerate it
-    #     -> never touched. A stray platform or app pod is removed.
     deschedulerPolicy:
       maxNoOfPodsToEvictPerNode: 2
       maxNoOfPodsToEvictPerNamespace: 3
       maxNoOfPodsToEvictTotal: 5
       profiles:
-        - name: "bigpc-cleanup"
+        - name: "taint-cleanup"
           pluginConfig:
             - name: "DefaultEvictor"
               args:
@@ -45,10 +43,9 @@ spec:
                 podProtections:
                   defaultDisabled:
                     - PodsWithLocalStorage
+            # No includedTaints: every taint is considered, so a future tainted
+            # node gets the same cleanup the old opt-in node did.
             - name: "RemovePodsViolatingNodeTaints"
-              args:
-                includedTaints:
-                  - infra.local/noschedule
           plugins:
             deschedule:
               enabled:

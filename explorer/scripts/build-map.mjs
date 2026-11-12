@@ -1487,24 +1487,23 @@ function buildCompose() {
     id: "target/bigpc",
     kind: "target",
     title: "bigpc",
-    subtitle: "optional K3s worker · RX 9070",
-    parent: "srv0/cluster",
+    subtitle: "Compose host · RX 9070",
+    parent: "srv0/apps/tools/llama-cpp",
     summary:
-      "Optional, opt-in-only K3s worker; advertises the RX 9070 and runs llama.cpp. Its Compose stack also runs syncthing.",
-    tags: ["cluster", "gpu", "context"],
-    badges: ["optional", "gpu"],
+      "Compose-only desktop: llama.cpp on the RX 9070, the FL0W Ludusavi agent, and syncthing. Not a Kubernetes node.",
+    tags: ["gpu", "context"],
+    badges: ["gpu"],
     context: true,
     facts: [
-      { label: "Role", value: "optional, opt-in-only K3s worker" },
-      { label: "Accelerator", value: "AMD RX 9070 → infra.local/amd-dgpu" },
-      { label: "Scheduling", value: "infra.local/noschedule taint" },
-      { label: "AI data", value: "ai-data-pv (hostname-pinned hostPath)" },
-      { label: "Relevant to", value: "llama.cpp · Immich ML" },
+      { label: "Role", value: "Compose host (not a K3s node)" },
+      { label: "Accelerator", value: "AMD RX 9070 (ROCm, host)" },
+      { label: "AI data", value: "~/ai/llama (LLAMA_CACHE)" },
+      { label: "Reached via", value: "BIGPC_HOST:8080 (EndpointSlice)" },
+      { label: "Relevant to", value: "models.<domain> · FL0W" },
     ],
     lane: "external",
   });
-  addEdge("srv0/cluster", "target/bigpc", "may-run-on", "optional worker");
-  addEdge("target/bigpc", "srv0/apps/tools/llama-cpp", "runs", "GPU");
+  addEdge("target/bigpc", "srv0/apps/tools/llama-cpp", "hosts", "Compose + ROCm");
 
   addNode({
     id: "target/rpi",

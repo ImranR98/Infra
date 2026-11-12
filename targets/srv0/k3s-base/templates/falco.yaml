@@ -35,7 +35,7 @@ spec:
     # and ships it to Loki for browsing/forensics.
     tty: true
 
-    # Node sensor: run on every node, including opt-in-only bigpc.
+    # Node sensor: run on every Linux node.
     tolerations:
       - operator: Exists
 

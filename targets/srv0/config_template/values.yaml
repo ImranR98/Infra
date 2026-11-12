@@ -97,20 +97,21 @@ LAN_CIDR: "<lan-cidr>"
 # ====== Accelerators ======
 # Deployment-wide media/ML backend: intel | amd | none.
 #   intel: Frigate/Immich ML OpenVINO on an Intel iGPU; VAAPI for Jellyfin/Immich.
-#   amd:   Frigate ROCm on srv0's iGPU; Immich ML ROCm on bigpc's dGPU;
-#          VAAPI for Jellyfin/Immich; llama.cpp on bigpc's dGPU.
+#   amd:   Frigate ROCm on srv0's iGPU; Immich ML ROCm on srv0's iGPU;
+#          VAAPI for Jellyfin/Immich. llama.cpp runs in Compose on bigpc.
 #   none:  CPU/no-GPU fallbacks.
 # Per-app overrides below are optional; empty derives from GPU_PROFILE.
 GPU_PROFILE: "intel"
 FRIGATE_DETECTOR: ""         # openvino | rocm | cpu
 IMMICH_ML_BACKEND: ""        # openvino | rocm | cpu
-IMMICH_ML_GPU_RESOURCE: ""   # intel-gpu | amd-dgpu
-# Optional ROCm selection when bigpc has more than one KFD-visible GPU.
+IMMICH_ML_GPU_RESOURCE: ""   # intel-gpu | amd-igpu | amd-dgpu
+# Optional ROCm selection when a node has more than one KFD-visible GPU.
 IMMICH_ML_ROCR_VISIBLE_DEVICES: ""
+# MIGraphX on Phoenix-class iGPUs needs the gfx1100 ISA target; without it the
+# CLIP text model segfaults the ML worker. Set to "11.0.0" on srv0.
 IMMICH_ML_HSA_OVERRIDE_GFX_VERSION: ""
 JELLYFIN_HWACCEL: ""         # vaapi | none
 IMMICH_SERVER_HWACCEL: ""    # vaapi | none
-LLAMA_CPP_GPU: ""            # amd-dgpu | none
 # Hardware-specific Home Assistant integrations. Disable either when the
 # device/adapter is not present; the pod then drops the matching mount/grant.
 HA_CONBEE: true
@@ -134,7 +135,7 @@ AUTHELIA_USERS_DATABASE: |
 # use only the built-in bypasses + admin catch-all. Supports Helm templating,
 # e.g. {{ .Values.SERVICES_DOMAIN }}. Example:
 # AUTHELIA_ACCESS_CONTROL_RULES: |
-#   - domain: win.{{ .Values.SERVICES_DOMAIN }}
+#   - domain: app.{{ .Values.SERVICES_DOMAIN }}
 #     policy: one_factor
 #     subject:
 #       - 'group:admins'
@@ -163,17 +164,15 @@ AUTHELIA_HEADLAMP_CLIENT_SECRET_HASHED: "change_me"
 AUTHELIA_LINKWARDEN_CLIENT_SECRET_HASHED: "change_me"
 AUTHELIA_FILEBROWSER_CLIENT_SECRET_HASHED: "change_me" # hash of the filebrowser plaintext above
 
-# ====== App group mapping / browser RDP ======
+# ====== App group mapping ======
 # Open WebUI maps these Authelia groups to its allowed/admin roles.
 OPENWEBUI_ALLOWED_ROLES: "admins"
 OPENWEBUI_ADMIN_ROLES: "admins"
 # FileBrowser's OIDC admin group.
 FILEBROWSER_ADMIN_GROUP: "admins"
-# Windows machine reachable by the Guacamole RDP gateway. Keep it an IP: the
-# guacd egress NetworkPolicy is a /32 ipBlock. The Windows firewall allows
-# 3389 from the LAN, so the host only needs to be reachable from the cluster
-# nodes.
-GUACAMOLE_WINDOWS_HOST: "<windows-ip>"
+# llama.cpp backend (Compose on bigpc) and the bigpc FL0W agent are reached
+# through a selectorless Service + EndpointSlice / egress /32. Keep it an IP.
+BIGPC_HOST: "<bigpc-ip>"
 
 # ====== Bootstrap-private apps (optional) ======
 # Set BOOTSTRAP_PRIVATE_APPS: "true" in config/srv0/values.yaml during a
@@ -361,52 +360,6 @@ DSCPLN_CONFIG_PATH: ""
 WATXT_CONFIG_PATH: ""
 FL0W_CONFIG_PATH: ""
 DA5H_CONFIG_PATH: ""
-# Per-node FL0W agents. Each entry renders a fl0w-agent-<name>
-# Deployment/Service, a ConfigMap for agent.json, a local PV/PVC for
-# <stateSubdir>/state (token + state), a local PV/PVC per data mount, and one
-# artifact-fetch initContainer per artifact. The PV nodeAffinity pins the pod
-# to the named node.
-#
-# Data mounts are read-only by default; set `readOnly: false` for an output
-# directory. `runtime: gtk` selects fl0w-agent-gtk; otherwise the slim agent
-# is used. A process job runs a configured binary, writes an optional request
-# body to <configDir>/<configFile>, and can summarize/validate JSON stdout.
-# Artifact versions come from committed values (LUDUSAVI_VERSION for Ludusavi)
-# unless an artifact sets its own `version`. The real config belongs in
-# config/srv0/values.yaml:
-# FL0W_AGENTS:
-#   node1:
-#     node: node1
-#     stateSubdir: infra_state/k3s_live_state/fl0w-agent
-#     runtime: gtk
-#     artifacts:
-#       - name: tool
-#         repo: owner/tool
-#         asset: tool-v{version}-linux.tar.gz
-#         member: tool
-#         dest: /state/tool/bin/tool
-#         checkArgs: --version
-#     config: |
-#       {
-#         "listen": "0.0.0.0",
-#         "port": 8788,
-#         "stateDir": "/state",
-#         "jobs": {
-#           "tool": {
-#             "type": "process",
-#             "binary": "/state/tool/bin/tool",
-#             "args": ["--config", "{configDir}"],
-#             "configDir": "/state/tool/config",
-#             "configFile": "config.yaml",
-#             "timeoutSeconds": 1800
-#           }
-#         }
-#       }
-#     dataMounts:
-#       - name: input
-#         subdir: data/input
-#         mountPath: /data/input
-FL0W_AGENTS: {}
 # D$CPLN config (workbook path, sheets, API state) lives in the private
 # dscpln-config repo; FL0W, W@TXT and DA5H have their own config repos.
 

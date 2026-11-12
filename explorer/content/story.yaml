@@ -61,7 +61,7 @@ steps:
   deepDive: 'The sidecar is the one piece of `srv0` that is not Kubernetes. It owns `pubexp-client0` (`10.99.0.2/32`) and removes the interface when the container stops.
 
 
-    `bigpc` is an optional K3s worker with a discrete AMD GPU; it is not a peer machine in this request path.'
+    `bigpc` is a Compose desktop that runs llama.cpp and a FL0W agent; it is not a cluster node in this request path.'
   reveal:
   - srv0
   focus:
@@ -361,7 +361,7 @@ steps:
   body: 'The chart runs four moving parts: the **server**, **machine learning**, **Postgres**, and **Valkey**.
 
 
-    The server uses the vendor-neutral `infra.local/vaapi` resource. Machine learning uses `intel-gpu` (OpenVINO) or bigpc''s `amd-dgpu` (ROCm), with CPU fallbacks. `GPU_PROFILE` (`intel|amd|none`) selects the media/ML backends. Frigate recordings and the Jellyfin libraries stay on NFS.
+    The server uses the vendor-neutral `infra.local/vaapi` resource. Machine learning uses `intel-gpu` (OpenVINO) or `amd-igpu` (ROCm), with CPU fallbacks. `GPU_PROFILE` (`intel|amd|none`) selects the media/ML backends. Frigate recordings and the Jellyfin libraries stay on NFS.
 
     '
   deepDive: 'The database claim is backed up; the library claim is the primary photo store on `nfs-apps`. Immich''s external library is the read-only media local PV.
@@ -584,13 +584,13 @@ steps:
   body: 'Grafana provisions one webhook contact point (`ntfy`) plus file-backed alerting config: 27 rules in the **Falco** folder, the policy tree (`group_by: alertname`, 12h repeat), and the markdown body template group.
 
 
-    Falco runs as a DaemonSet on srv0 and bigpc with the modern eBPF driver. It is the runtime counterpart to CrowdSec (L7) and opencanary (honeypot): syscall rules catch shells, credential access, crypto miners, and escape helpers that HTTP-layer tools cannot see.
+    Falco runs as a DaemonSet on srv0 with the modern eBPF driver. It is the runtime counterpart to CrowdSec (L7) and opencanary (honeypot): syscall rules catch shells, credential access, crypto miners, and escape helpers that HTTP-layer tools cannot see.
 
     '
   deepDive: 'Falco events are JSON on stdout and Alloy''s pod-log collector ships them to Loki. Metrics drive Grafana alerts; response is manual. There is no Talon/auto-remediation and no k8saudit plugin yet.
 
 
-    Alerting is designed to be quiet when bigpc is powered off. `falco-daemonset-not-ready` is critical only when Falco is not ready on a **Ready** node; `falco-warning-events` requires a warning to recur for 30 minutes. Known false alarms are excepted in `custom-rules.yaml`.
+    `falco-daemonset-not-ready` is critical only when Falco is not ready on a **Ready** node; `falco-warning-events` requires a warning to recur for 30 minutes. Known false alarms are excepted in `custom-rules.yaml`.
 
     '
   reveal:
@@ -1012,41 +1012,30 @@ steps:
   body: 'The generic device plugin scans each node''s sysfs and `/dev` and advertises hardware as resources: `infra.local/intel-gpu`, `amd-igpu`, `amd-dgpu`, `vaapi`, and `conbee`.
 
 
-    Workloads request the resource they need. On the current Intel `srv0`, that is `intel-gpu` + `vaapi`; after the board swap it is `amd-igpu` + `vaapi`. Immich ML uses `intel-gpu` (OpenVINO) or `bigpc`''s `amd-dgpu` (ROCm). Frigate always uses `amd-igpu` on srv0. `GPU_PROFILE` (`intel|amd|none`) selects the media/ML backends. A node without the device advertises zero.'
+    Workloads request the resource they need. On the current AMD `srv0`, that is `amd-igpu` + `vaapi`: Frigate uses ROCm on the iGPU and Immich ML uses the same `amd-igpu` resource with a `MIGraphX` ROCm build. `GPU_PROFILE` (`intel|amd|none`) selects the media/ML backends. A node without the device advertises zero. llama.cpp is not a device-plugin consumer: it runs in Compose on `bigpc`.'
   deepDive: 'The plugin normalizes device names to `renderD128`/`card0`/`ttyACM0`, so a workload does not depend on enumeration order or a node label.
 
 
-    bigpc is an optional K3s worker with the RX 9070. It is not a peer machine in this walk; it supplies `amd-dgpu` when present.'
+    Phoenix-class iGPUs compile the CLIP text model only with `IMMICH_ML_HSA_OVERRIDE_GFX_VERSION=11.0.0`; without it the MIGraphX worker segfaults.'
   reveal:
   - srv0/base/generic-device-plugin
-  - target/bigpc
   focus:
   - srv0/apps/media/immich
   - srv0/base/generic-device-plugin
-  - target/bigpc
   flow:
   - - srv0/apps/media/immich
   - - srv0/base/generic-device-plugin
-  - - target/bigpc
   zones:
   - id: srv0
     label: srv0 · hardware
     members:
     - srv0/apps/media/immich
     - srv0/base/generic-device-plugin
-  - id: context
-    label: optional context
-    members:
-    - target/bigpc
   edges:
   - from: srv0/apps/media/immich
     to: srv0/base/generic-device-plugin
     type: requests
-    label: vaapi / gpu
-  - from: srv0/base/generic-device-plugin
-    to: target/bigpc
-    type: advertises
-    label: amd-dgpu
+    label: vaapi / amd-igpu
   code:
   - path: targets/srv0/k3s-base/files/generic-device-plugin-init.sh
     summary: Generates the device resources from sysfs and /dev.
@@ -1057,11 +1046,11 @@ steps:
 - id: other-machines
   stage: App
   title: The other machines
-  body: '`bigpc` is an optional, opt-in-only K3s agent and desktop. It advertises `amd-dgpu` on the RX 9070 and runs llama.cpp; Compose also runs syncthing. `rpi` is a Pi 400 that turns a webcam into an authenticated RTSP stream with go2rtc, consumed by Frigate on `srv0`.
+  body: '`bigpc` is a Compose-only desktop: llama.cpp on the RX 9070 (ROCm), the FL0W Ludusavi agent, and syncthing. It is not a Kubernetes node; `srv0` Traefik routes `models.<SERVICES_DOMAIN>` to its LAN address so the same hostname works publicly, on the VPN, and on the LAN. `rpi` is a Pi 400 that turns a webcam into an authenticated RTSP stream with go2rtc, consumed by Frigate on `srv0`.
 
 
-    `pc` is Compose-only: syncthing, ComfyUI, and a llama.cpp router on its Intel Arc iGPU. None of them is on the `srv0`/`vps0` request path.'
-  deepDive: '`bigpc` is tainted `infra.local/noschedule=true:NoSchedule`; only node agents, llama.cpp, Immich ML (AMD dGPU branch), and the FL0W agent tolerate it. llama.cpp uses the hostname-pinned `ai-data-pv` via the `llama` subPath. `rpi`''s go2rtc password is generated on first start under `~/infra_state/compose_live_state/go2rtc/`; the WebUI is loopback-only. The bigpc K3s FL0W agent state lives under `~/infra_state/k3s_live_state/fl0w-agent/`.
+    `pc` is Compose-only too: syncthing, ComfyUI, and a llama.cpp router on its Intel Arc iGPU. None of them is on the `srv0`/`vps0` request path.'
+  deepDive: 'The llama.cpp router keeps its GGUFs under `~/ai/llama`; download and delete through the built-in Models page. The FL0W agent state lives under `~/infra_state/compose_live_state/fl0w-agent/`, and FL0W reaches it at `http://<bigpc-ip>:8788` over the LAN. `rpi`''s go2rtc password is generated on first start under `~/infra_state/compose_live_state/go2rtc/`; the WebUI is loopback-only.
 
 
     Renovate owns the Compose images on `pc`, `bigpc`, `vps0`, and `rpi`; there is no runtime watchtower updater.'
@@ -1071,12 +1060,12 @@ steps:
   focus:
   - target/bigpc
   - target/rpi
-  - srv0/base/generic-device-plugin
+  - srv0/apps/tools/llama-cpp
   - srv0/apps/media/frigate
   flow:
   - - target/bigpc
     - target/rpi
-  - - srv0/base/generic-device-plugin
+  - - srv0/apps/tools/llama-cpp
     - srv0/apps/media/frigate
   zones:
   - id: context
@@ -1087,20 +1076,20 @@ steps:
   - id: srv0
     label: srv0 CONSUMERS
     members:
-    - srv0/base/generic-device-plugin
+    - srv0/apps/tools/llama-cpp
     - srv0/apps/media/frigate
   edges:
   - from: target/bigpc
-    to: srv0/base/generic-device-plugin
-    type: advertises
-    label: amd-dgpu
+    to: srv0/apps/tools/llama-cpp
+    type: hosts
+    label: Compose + ROCm
   - from: target/rpi
     to: srv0/apps/media/frigate
     type: feeds
     label: RTSP
   code:
   - path: targets/bigpc/compose/compose.yaml
-    summary: 'bigpc Compose services: syncthing.'
+    summary: 'bigpc Compose services: llama.cpp, the FL0W agent, and syncthing.'
   - path: targets/rpi/compose/compose.yaml
     summary: go2rtc and the generated stream password.
   - path: targets/srv0/k3s-base/templates/generic-device-plugin.yaml
@@ -1590,39 +1579,29 @@ steps:
 - id: boot-nodes
   stage: Bootstrap
   title: Optional nodes
-  body: 'Add bigpc with `scripts/k3s-join.sh` only if you want a GPU worker. It joins as an agent by default; `--noschedule` marks it opt-in-only, and `--hostpath-main` is a singleton replacement for the Main-data owner, not a second owner.
+  body: 'Add another node with `scripts/k3s-join.sh` only when you need one. It joins as an agent by default, and `--hostpath-main` is a singleton replacement for the Main-data owner, not a second owner. Today `srv0` is the only node; `bigpc`, `pc`, and `rpi` are Compose targets.
 
-
-    `pc` and `rpi` are separate Compose targets; they are not part of the srv0/vps0 request path.
 
     '
-  deepDive: '`k3s-join.sh` streams node prep and the installer over SSH with the token on stdin, never argv. It waits for Ready, then applies the taint and optional labels.
+  deepDive: '`k3s-join.sh` streams node prep and the installer over SSH with the token on stdin, never argv. It waits for Ready, then applies optional labels.
 
 
-    `--noschedule` adds `infra.local/noschedule=true:NoSchedule` for a desktop worker. All other nodes are schedulable by default.'
+    '
   reveal:
-  - target/bigpc
   - script/k3s-join
   focus:
-  - target/bigpc
   - script/k3s-join
   - script/validate
   flow:
-  - - target/bigpc
   - - script/k3s-join
   - - script/validate
   zones:
   - id: context
     label: OPTIONAL
     members:
-    - target/bigpc
     - script/k3s-join
     - script/validate
   edges:
-  - from: script/k3s-join
-    to: target/bigpc
-    type: joins
-    label: agent
   - from: script/k3s-join
     to: script/validate
     type: then
@@ -1826,50 +1805,6 @@ steps:
     summary: The default nfs-apps StorageClass.
   - path: scripts/restic-restore.sh
     summary: Manual restore path.
-- id: windows-remote
-  stage: Maintenance
-  title: Windows remote desktop
-  body: 'Guacamole runs in `srv0-apps`; the public path is `vps0` Traefik → public-exposure tunnel → `srv0` Traefik → Guacamole → guacd → Windows:3389.
-
-
-    Authelia gates the route; the Windows credentials are prompted by guacd on each connection and are not stored. `win` has no geoblock.'
-  deepDive: 'The Authelia rule lives in `AUTHELIA_ACCESS_CONTROL_RULES` in `config/srv0/values.yaml`, not the chart. `guacadmin` is disabled; the seeded connection has `max_connections=1`.
-
-
-    The Windows firewall allows RDP from the LAN, so the Guacamole stack is not pinned. `win-header-auth` sets `X-Guac-User: shared` after forward-auth; the Service is ClusterIP and NetworkPolicies admit only Traefik.'
-  reveal:
-  - srv0/apps/home/guacamole
-  - srv0/base/gateway
-  - srv0/base/authelia
-  focus:
-  - srv0/base/gateway
-  - srv0/base/authelia
-  - srv0/apps/home/guacamole
-  flow:
-  - - srv0/base/gateway
-  - - srv0/base/authelia
-  - - srv0/apps/home/guacamole
-  zones:
-  - id: srv0
-    label: srv0 · Guacamole
-    members:
-    - srv0/base/gateway
-    - srv0/base/authelia
-    - srv0/apps/home/guacamole
-  edges:
-  - from: srv0/base/gateway
-    to: srv0/base/authelia
-    type: guarded-by
-    label: one_factor
-  - from: srv0/base/gateway
-    to: srv0/apps/home/guacamole
-    type: routes-to
-    label: win
-  code:
-  - path: targets/srv0/k3s-apps/templates/guacamole.yaml
-    summary: Guacamole, guacd, DB, seed, and NetworkPolicies.
-  - path: targets/srv0/k3s-base/templates/traefik.yaml
-    summary: The win-header-auth middleware.
 - id: restore
   stage: Maintenance
   title: Restore

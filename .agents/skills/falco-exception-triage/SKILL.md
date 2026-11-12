@@ -5,7 +5,7 @@ description: Triage Falco false alarms from Loki and add scoped exceptions to th
 
 # Falco Exception Triage
 
-Falco runs in `base` on srv0 and bigpc; its custom rules are file-backed at
+Falco runs in `base` on srv0 (the only K3s node); its custom rules are file-backed at
 `targets/srv0/k3s-base/files/falco/custom-rules.yaml`. `AGENTS.md` is the source
 of truth for repo layout and deploy commands.
 

@@ -1,224 +1,16 @@
-{{- $llamaGpu := include "gpu.llamaCppGpu" . | trim -}}
----
-# Generic AI data root on the bigpc host. The PV is hostname-pinned because
-# this is local desktop data, not a GPU selector. Consumers mount subPaths:
-# llama.cpp uses "llama"; future AI tools use their own subdirectory.
-apiVersion: v1
-kind: PersistentVolume
-metadata:
-  name: ai-data-pv
-spec:
-  capacity:
-    storage: 500Gi
-  volumeMode: Filesystem
-  accessModes:
-    - ReadWriteOnce
-  persistentVolumeReclaimPolicy: Retain
-  storageClassName: hostpath
-  local:
-    path: {{ include "path.home" . }}/ai
-  nodeAffinity:
-    required:
-      nodeSelectorTerms:
-        - matchExpressions:
-            - key: kubernetes.io/hostname
-              operator: In
-              values:
-                - bigpc
----
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: ai-data-pvc
-  namespace: apps
-spec:
-  accessModes:
-    - ReadWriteOnce
-  storageClassName: hostpath
-  resources:
-    requests:
-      storage: 500Gi
-  volumeName: ai-data-pv
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: llama-cpp
-  namespace: apps
-  labels:
-    app.kubernetes.io/name: llama-cpp
-    app.kubernetes.io/instance: llama-cpp
-spec:
-  replicas: 1
-  strategy:
-    type: Recreate
-  revisionHistoryLimit: 10
-  selector:
-    matchLabels:
-      app.kubernetes.io/name: llama-cpp
-      app.kubernetes.io/instance: llama-cpp
-  template:
-    metadata:
-      labels:
-        app.kubernetes.io/name: llama-cpp
-        app.kubernetes.io/instance: llama-cpp
-    spec:
-      automountServiceAccountToken: false
-      terminationGracePeriodSeconds: 60
-      securityContext:
-        {{- include "dscpln.podSecurityContext" (dict "uid" .Values.MY_UID "seType" "spc_t" "seLevel" "s0") | nindent 8 }}
-      initContainers:
-        # The local PV is a bind mount of the host tree; fix ownership and the
-        # SELinux label once so the router can write its model cache. The main
-        # container needs read-write /models because llama.cpp downloads and
-        # deletes cache models through its API/UI.
-        - name: prepare-models
-          image: fedora:44@sha256:15da97ed9aa94dd3d92c3925eb89520f6c80e07ea7ee24cba848d1f8b6912b3e
-          command:
-            - sh
-            - -c
-            - |
-              set -eu
-              if [ ! -e /models/.owner-{{ .Values.MY_UID }} ]; then
-                chown -R {{ .Values.MY_UID }}:{{ .Values.MY_UID }} /models
-                chcon -R -t container_file_t /models
-                touch /models/.owner-{{ .Values.MY_UID }}
-                chown {{ .Values.MY_UID }}:{{ .Values.MY_UID }} /models/.owner-{{ .Values.MY_UID }}
-              fi
-          securityContext:
-            runAsUser: 0
-            runAsGroup: 0
-            allowPrivilegeEscalation: false
-            capabilities:
-              drop:
-                - ALL
-              add:
-                - CHOWN
-                - DAC_OVERRIDE
-                - FOWNER
-                - FSETID
-            seccompProfile:
-              type: RuntimeDefault
-          volumeMounts:
-            - name: models
-              mountPath: /models
-              subPath: llama
-      containers:
-        - name: llama-cpp
-          securityContext:
-            {{- include "dscpln.containerSecurityContext" (dict "uid" .Values.MY_UID) | nindent 12 }}
-          {{- if eq $llamaGpu "none" }}
-          image: ghcr.io/ggml-org/llama.cpp:server@sha256:2103d1f4f2e2e223ad80587dcb39fc15a9f912f29ae1fa9fc1193fe8c1aea82f
-          {{- else }}
-          image: ghcr.io/ggml-org/llama.cpp:server-rocm@sha256:1da62f4e1bca273de30b04b260c9643dda7ac1d336c783484ef5f1bf2373280f
-          {{- end }}
-          imagePullPolicy: IfNotPresent
-          args:
-            - "--host"
-            - "0.0.0.0"
-            - "--port"
-            - "8080"
-            # Cache mode: models downloaded through the built-in UI/API live
-            # under LLAMA_CACHE and are the only models the server can delete.
-            - "--models-max"
-            - "1"
-            - "--models-memory-margin"
-            - "1024"
-            - "--n-gpu-layers"
-            - "99"
-            # MoE expert tensors dominate the 35B model's file size. Keep the
-            # first 24 of 40 layers' experts in system RAM so --fit has room
-            # for a large KV cache while attention/dense weights stay on GPU.
-            # Dense models ignore this; the Qwen3.6 A3B only activates ~3B
-            # params per token, so CPU experts remain practical.
-            - "--n-cpu-moe"
-            - "24"
-            - "--flash-attn"
-            - "on"
-            - "--cache-type-k"
-            - "q8_0"
-            - "--cache-type-v"
-            - "q8_0"
-            - "--no-mmproj-offload"
-            - "--jinja"
-            - "--parallel"
-            - "1"
-            # Let each model take the largest context that leaves ~1 GiB free
-            # for the desktop; models with a smaller native window cap there.
-            - "--fit"
-            - "on"
-            - "--fit-target"
-            - "1792"
-            # Never let --fit fall back to its 4k default; 32k is the
-            # practical floor for tool-heavy agent sessions.
-            - "--fit-ctx"
-            - "32768"
-            - "--cache-ram"
-            - "2048"
-            - "--sleep-idle-seconds"
-            - "300"
-            - "--batch-size"
-            - "2048"
-            - "--ubatch-size"
-            - "512"
-            # Enable the built-in Discover/download UI. It is off by default.
-            - "--ui-config"
-            - '{"enableDiscoverModels": true, "useHuggingFaceHub": true}'
-            # The built-in UI is exposed at models.<SERVICES_DOMAIN> behind
-            # Authelia; restrict browser CORS to that origin.
-            - "--cors-origins"
-            - "https://models.{{ .Values.SERVICES_DOMAIN }}"
-          env:
-            - name: HOME
-              value: /tmp
-            - name: LLAMA_CACHE
-              value: /models
-            - name: TZ
-              value: "{{ .Values.TZ }}"
-          ports:
-            - name: http
-              containerPort: 8080
-              protocol: TCP
-          # Model memory, not steady state: the ceiling must fit whatever GGUF
-          # is loaded through the Models UI, so it is sized explicitly.
-          {{- include "infra.resources" (dict "tier" "custom" "cpu" "100m" "memRequest" "4Gi" "memLimit" "14Gi" "device" (ternary $llamaGpu "" (ne $llamaGpu "none"))) | nindent 10 }}
-          volumeMounts:
-            - name: models
-              mountPath: /models
-              subPath: llama
-            - name: tmp
-              mountPath: /tmp
-          startupProbe:
-            httpGet:
-              path: /v1/models
-              port: http
-            periodSeconds: 10
-            timeoutSeconds: 5
-            failureThreshold: 30
-          readinessProbe:
-            httpGet:
-              path: /v1/models
-              port: http
-            periodSeconds: 30
-            timeoutSeconds: 5
-            failureThreshold: 3
-          livenessProbe:
-            httpGet:
-              path: /v1/models
-              port: http
-            periodSeconds: 30
-            timeoutSeconds: 5
-            failureThreshold: 5
-      volumes:
-        - name: models
-          persistentVolumeClaim:
-            claimName: ai-data-pvc
-        - name: tmp
-          emptyDir: {}
-      tolerations:
-        - key: infra.local/noschedule
-          operator: Exists
-          effect: NoSchedule
+{{- /*
+llama.cpp runs in Compose on bigpc now, not in this cluster. This file keeps
+the in-cluster address and the Models route stable:
+
+  - A selectorless Service plus a hand-managed EndpointSlice points at the
+    host's LAN IP, so open-webui/opencode keep using
+    http://llama-cpp.apps.svc.cluster.local:8080 and srv0 Traefik can route
+    models.<SERVICES_DOMAIN> to the same backend (public and LAN/VPN).
+  - The EndpointSlice is the only cluster object that names bigpc's address.
+    Keep BIGPC_HOST an IP: it is both an endpoint address and an
+    egress-policy ipBlock. Update it if the host's DHCP lease changes.
+*/ -}}
+{{- $llamaHost := required "BIGPC_HOST must be set in config/srv0/values.yaml" .Values.BIGPC_HOST -}}
 ---
 apiVersion: v1
 kind: Service
@@ -235,9 +27,24 @@ spec:
       port: 8080
       targetPort: http
       protocol: TCP
-  selector:
-    app.kubernetes.io/name: llama-cpp
-    app.kubernetes.io/instance: llama-cpp
+---
+apiVersion: discovery.k8s.io/v1
+kind: EndpointSlice
+metadata:
+  name: llama-cpp-external
+  namespace: apps
+  labels:
+    kubernetes.io/service-name: llama-cpp
+addressType: IPv4
+endpoints:
+  - addresses:
+      - {{ $llamaHost | quote }}
+    conditions:
+      ready: true
+ports:
+  - name: http
+    port: 8080
+    protocol: TCP
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
@@ -278,30 +85,43 @@ spec:
           namespace: apps
           port: 8080
 ---
+# The endpoint is outside the pod network, so the baseline cluster egress
+# allows do not cover it. open-webui and opencode are the only in-cluster
+# consumers (same ones the old pod-based ingress policy admitted).
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: allow-llama-cpp-ingress
+  name: allow-open-webui-to-llama-cpp
   namespace: apps
 spec:
   podSelector:
     matchLabels:
-      app.kubernetes.io/instance: llama-cpp
-  ingress:
-    - from:
-        - podSelector:
-            matchLabels:
-              app.kubernetes.io/instance: open-webui
-        - podSelector:
-            matchLabels:
-              app: opencode
-        - namespaceSelector:
-            matchLabels:
-              kubernetes.io/metadata.name: kube-system
-          podSelector:
-            matchLabels:
-              app.kubernetes.io/name: traefik
-      ports:
-        - port: 8080
+      app.kubernetes.io/component: open-webui
   policyTypes:
-    - Ingress
+    - Egress
+  egress:
+    - to:
+        - ipBlock:
+            cidr: {{ $llamaHost }}/32
+      ports:
+        - protocol: TCP
+          port: 8080
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-opencode-to-llama-cpp
+  namespace: apps
+spec:
+  podSelector:
+    matchLabels:
+      app: opencode
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - ipBlock:
+            cidr: {{ $llamaHost }}/32
+      ports:
+        - protocol: TCP
+          port: 8080

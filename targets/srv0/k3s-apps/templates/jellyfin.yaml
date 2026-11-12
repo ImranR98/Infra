@@ -59,7 +59,7 @@ spec:
     spec:
       serviceAccountName: jellyfin
       # Jellyfin's libraries are NFS. Placement is the vaapi resource; it
-      # never tolerates the bigpc no-schedule taint, so it stays on srv0.
+      # is srv0-only, so it stays on srv0.
       securityContext:
         runAsUser: {{ .Values.MY_UID }}
         runAsGroup: {{ .Values.MY_UID }}

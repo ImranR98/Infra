@@ -13,7 +13,6 @@ srv0:
     - homeassistant
     - mosquitto
     - syncthing
-    - guacamole
   arr:
     - prowlarr
     - qbittorrent
@@ -37,7 +36,6 @@ srv0:
     - dscpln
     - watxt
     - fl0w
-    - fl0w-agent-bigpc
     - da5h
     - dscpln-ledger
     - app-config-storage

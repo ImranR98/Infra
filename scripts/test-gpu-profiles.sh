@@ -78,31 +78,24 @@ render intel "$tmp/intel.yaml"
 assert_has "$tmp/intel.yaml" "infra.local/intel-gpu"
 assert_line "$tmp/intel.yaml" "tag: ${immich_ml_base}-openvino"
 assert_has "$tmp/intel.yaml" "infra.local/vaapi"
-assert_has "$tmp/intel.yaml" "infra.local/amd-dgpu"   # llama.cpp on bigpc
-assert_has "$tmp/intel.yaml" "image: ghcr.io/ggml-org/llama.cpp:server-rocm"
+# llama.cpp is a Compose service on bigpc now; the chart only keeps the stable
+# in-cluster address and the Models route.
+assert_has "$tmp/intel.yaml" "kind: EndpointSlice"
 assert_has "$tmp/intel.yaml" "models.home.example.org"
-assert_has "$tmp/intel.yaml" "LLAMA_CACHE"
-assert_has "$tmp/intel.yaml" '"--fit"'
-assert_not "$tmp/intel.yaml" '"--models-preset"'
-assert_not "$tmp/intel.yaml" "hf-file"
+assert_not "$tmp/intel.yaml" "ghcr.io/ggml-org/llama.cpp"
 assert_image "$tmp/intel.yaml" "ghcr.io/blakeblackshear/frigate:${frigate_base}"
 assert_not_line "$tmp/intel.yaml" "image: ghcr.io/blakeblackshear/frigate:${frigate_base}-rocm"
 assert_not_line "$tmp/intel.yaml" "tag: ${immich_ml_base}-rocm"
 assert_not "$tmp/intel.yaml" "name: ensure-model"
-assert_has "$tmp/intel.yaml" "infra.local/noschedule"
 assert_not "$tmp/intel.yaml" "scheduling-discouraged"
 
 render amd "$tmp/amd.yaml"
 assert_image "$tmp/amd.yaml" "ghcr.io/blakeblackshear/frigate:${frigate_base}-rocm"
 assert_line "$tmp/amd.yaml" "tag: ${immich_ml_base}-rocm"
 assert_has "$tmp/amd.yaml" "infra.local/amd-igpu"
-assert_has "$tmp/amd.yaml" "infra.local/amd-dgpu"
-assert_has "$tmp/amd.yaml" "image: ghcr.io/ggml-org/llama.cpp:server-rocm"
 assert_has "$tmp/amd.yaml" "models.home.example.org"
-assert_has "$tmp/amd.yaml" "LLAMA_CACHE"
-assert_has "$tmp/amd.yaml" '"--fit"'
-assert_not "$tmp/amd.yaml" '"--models-preset"'
-assert_not "$tmp/amd.yaml" "hf-file"
+assert_has "$tmp/amd.yaml" "kind: EndpointSlice"
+assert_not "$tmp/amd.yaml" "ghcr.io/ggml-org/llama.cpp"
 assert_has "$tmp/amd.yaml" "infra.local/vaapi"
 assert_not "$tmp/amd.yaml" "infra.local/intel-gpu"
 # The ROCm detector requires the NCHW float32 yolo-generic model config plus
@@ -112,22 +105,16 @@ assert_has "$tmp/amd.yaml" "input_tensor: nchw"
 assert_has "$tmp/amd.yaml" "input_dtype: float"
 assert_has "$tmp/amd.yaml" "name: ensure-model"
 assert_has "$tmp/amd.yaml" "yolov9-t-320.onnx"
-assert_has "$tmp/amd.yaml" "infra.local/noschedule"
 assert_not "$tmp/amd.yaml" "scheduling-discouraged"
 
 render none "$tmp/none.yaml"
 assert_image "$tmp/none.yaml" "ghcr.io/blakeblackshear/frigate:${frigate_base}"
 assert_line "$tmp/none.yaml" "tag: ${immich_ml_base}"
-# llama.cpp has a CPU image for the no-GPU profile.
-assert_has "$tmp/none.yaml" "image: ghcr.io/ggml-org/llama.cpp:server@"
-assert_not "$tmp/none.yaml" "server-rocm"
 assert_has "$tmp/none.yaml" "models.home.example.org"
-assert_has "$tmp/none.yaml" "LLAMA_CACHE"
-assert_not "$tmp/none.yaml" '"--models-preset"'
-assert_not "$tmp/none.yaml" "hf-file"
+assert_has "$tmp/none.yaml" "kind: EndpointSlice"
+assert_not "$tmp/none.yaml" "ghcr.io/ggml-org/llama.cpp"
 assert_not "$tmp/none.yaml" "infra.local/vaapi"
 assert_not "$tmp/none.yaml" "infra.local/intel-gpu"
-assert_has "$tmp/none.yaml" "infra.local/noschedule"
 assert_not "$tmp/none.yaml" "scheduling-discouraged"
 assert_not "$tmp/none.yaml" "name: ensure-model"
 

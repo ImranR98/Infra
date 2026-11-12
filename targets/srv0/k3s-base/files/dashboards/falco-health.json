@@ -37,7 +37,7 @@
       "id": 101,
       "type": "stat",
       "title": "Ready pods",
-      "description": "Falco DaemonSet pods reporting Ready. The desired count is 2 (srv0 + bigpc).",
+      "description": "Falco DaemonSet pods reporting Ready. The desired count is 1 (srv0).",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"

@@ -390,10 +390,13 @@ spec:
   policyTypes:
     - Ingress
 ---
+# Agents live outside the pod network: the vps0 archive agent via the
+# public-exposure tunnel and the bigpc agent over the LAN. Everything else in
+# the app is cluster or public-internet traffic.
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: allow-fl0w-vps0-agent-egress
+  name: allow-fl0w-agent-egress
   namespace: apps
 spec:
   podSelector:
@@ -405,6 +408,8 @@ spec:
     - to:
         - ipBlock:
             cidr: 10.99.0.1/32
+        - ipBlock:
+            cidr: {{ .Values.BIGPC_HOST }}/32
       ports:
         - protocol: TCP
           port: 8788

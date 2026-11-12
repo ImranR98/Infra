@@ -4,13 +4,11 @@
 # dry-run capable. Run as the checkout owner on the machine being migrated.
 #
 # Usage:
-#   migrate-state-dir.sh [--dry-run] [--no-symlink] [--k3s-agent-state]
+#   migrate-state-dir.sh [--dry-run] [--no-symlink]
 #
 #   --dry-run           print what would move; change nothing
 #   --no-symlink        do not leave the temporary current_target -> infra_state
 #                       compatibility symlink behind
-#   --k3s-agent-state   also move the legacy ~/dscpln-agent/state tree to
-#                       ~/infra_state/k3s_live_state/fl0w-agent (bigpc)
 set -euo pipefail
 
 if [ -z "${INFRA_ROOT:-}" ]; then
@@ -23,12 +21,10 @@ set_my_uid
 
 DRY_RUN=0
 SYMLINK=1
-K3S_AGENT=0
 while [ $# -gt 0 ]; do
     case "$1" in
         --dry-run) DRY_RUN=1 ;;
         --no-symlink) SYMLINK=0 ;;
-        --k3s-agent-state) K3S_AGENT=1 ;;
         -h | --help)
             sed -n '2,15p' "$0" | sed 's/^# //'
             exit 0
@@ -153,32 +149,6 @@ elif [ -d "$OLD" ]; then
             echo "Error: $OLD is not empty after migration; inspect it before removing" >&2
             exit 1
         fi
-    fi
-fi
-
-# The bigpc K3s FL0W agent state predates current_target and lives at
-# ~/dscpln-agent/state. Move it into the K3s state tree when requested.
-if [ "$K3S_AGENT" = 1 ]; then
-    old_agent="$HOME/dscpln-agent"
-    new_agent="$NEW/k3s_live_state/fl0w-agent"
-    if [ -d "$old_agent/state" ]; then
-        if [ -e "$new_agent" ]; then
-            echo "Error: destination already exists: $new_agent" >&2
-            exit 1
-        fi
-        if [ ! -e "$old_agent.pre-infra-state" ]; then
-            run cp -a "$old_agent" "$old_agent.pre-infra-state"
-        fi
-        move_path "$old_agent/state" "$new_agent"
-        if [ -z "$(find "$old_agent" -mindepth 1 -maxdepth 1 ! -name state -print -quit)" ]; then
-            run rmdir "$old_agent"
-        else
-            echo "  [WARN] $old_agent has entries besides state/; left in place" >&2
-        fi
-    elif [ -d "$new_agent" ]; then
-        echo "  [OK] K3s agent state already at $new_agent"
-    else
-        echo "  [SKIP] no legacy K3s agent state at $old_agent/state"
     fi
 fi
 

@@ -25,7 +25,7 @@ The default screen is the tour library. Each tour is linear: a chapter panel, a 
 | **Keeping it running** | Renovate, CI, schedules, State Backups, Grafana/Falco, and NetworkPolicy/SELinux isolation |
 | **Configuration and decisions** | The working tree, config layers, and accepted tradeoffs |
 | **First boot** | DNS, prerequisites, config, tunnel material, vps0, srv0, optional nodes, verification, and manual setup |
-| **Maintenance** | Motherboard swap, NFS storage, Guacamole/Windows, and restic recovery |
+| **Maintenance** | Motherboard swap, NFS storage, and restic recovery |
 
 Every chapter has a **Code explained** list that opens the relevant files in the source viewer.
 
@@ -39,4 +39,4 @@ Every chapter has a **Code explained** list that opens the relevant files in the
 
 The graph is compiled from tracked files. Source files are indexed into `public/snippets/` for the viewer; generated output under `public/` is ignored.
 
-Audience: `srv0` and `vps0` are the subject. `bigpc` and `rpi` are contextual only; `pc` is a passing mention.
+Audience: `srv0` and `vps0` are the subject. `bigpc` (the Compose llama.cpp host behind srv0 Traefik) and `rpi` are contextual only; `pc` is a passing mention.

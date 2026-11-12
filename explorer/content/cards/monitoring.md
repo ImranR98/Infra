@@ -6,4 +6,4 @@ tags: [observability]
 ---
 The k8s-monitoring chart generates the Alloy collectors: cluster metrics, host metrics, and pod logs. Prometheus is the metrics store (180-day retention); Loki holds logs. Grafana reads both and provisions dashboards and alert rules from files in `k3s-base/files/`.
 
-Falco is the runtime sensor: modern eBPF, JSON events to Loki, metrics to Prometheus. Alerts are gated to avoid paging on bigpc being powered off; the Falco dashboards are provisioned alongside the core alerts.
+Falco is the runtime sensor: modern eBPF, JSON events to Loki, metrics to Prometheus. It runs as a DaemonSet on the K3s node (`srv0`); the Falco dashboards are provisioned alongside the core alerts. Bigpc is Compose-only, so host sensors no longer cover it.

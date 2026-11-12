@@ -118,13 +118,6 @@ spec:
         securityContext:
           seLinuxOptions:
             level: s0
-{{- if eq $immichMlResource "amd-dgpu" }}
-        # Only the AMD dGPU branch is allowed on opt-in-only bigpc.
-        tolerations:
-          - key: infra.local/noschedule
-            operator: Exists
-            effect: NoSchedule
-{{- end }}
 
     immich:
       persistence:

@@ -53,7 +53,7 @@ spec:
         on_success: break
 
     agent:
-      # Node sensor: run on every node, including opt-in-only bigpc.
+      # Node sensor: run on every Linux node.
       tolerations:
         - operator: Exists
       # Whitelists and the notification config are volume-mounted from a

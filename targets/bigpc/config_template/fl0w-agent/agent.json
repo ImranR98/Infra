@@ -1,0 +1,35 @@
+{
+  "listen": "0.0.0.0",
+  "port": 8788,
+  "stateDir": "/state",
+  "enrollment": {
+    "enabled": true,
+    "windowSeconds": 0,
+    "allowFrom": ["192.168.8.0/24"]
+  },
+  "jobs": {
+    "ludusavi": {
+      "type": "process",
+      "binary": "/state/ludusavi/bin/ludusavi",
+      "args": [
+        "--config", "{configDir}",
+        "--try-manifest-update",
+        "backup",
+        "--api",
+        "--force",
+        "--no-cloud-sync",
+        "--path", "{outputDir}"
+      ],
+      "configDir": "/state/ludusavi/config",
+      "configFile": "config.yaml",
+      "outputDir": "/data/saves",
+      "home": "/home/imranr",
+      "timeoutSeconds": 1800,
+      "result": {
+        "json": "overall",
+        "summary": "ludusavi: {processedGames} games, {processedBytes} bytes",
+        "require": {"processedGames": 1}
+      }
+    }
+  }
+}

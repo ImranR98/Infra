@@ -1,11 +1,11 @@
 ---
 id: target/bigpc
 title: bigpc
-summary: "Opt-in-only K3s worker; advertises the RX 9070 and runs llama.cpp."
+summary: "Compose desktop: llama.cpp on the RX 9070, a FL0W Ludusavi agent, and syncthing."
 tags: [context, gpu]
 ---
-bigpc is not one of the two subjects. It appears because it supplies an AMD RX 9070 as `infra.local/amd-dgpu`, which lets Immich ML and llama.cpp run on a discrete GPU. It is tainted `infra.local/noschedule=true:NoSchedule`, so only workloads that explicitly tolerate the taint run there: the node-agent DaemonSets, llama.cpp, Immich ML (AMD dGPU branch), and the bigpc FL0W agent. Platform services and normal apps never tolerate it.
+bigpc is not one of the two subjects and no longer a Kubernetes node. It runs a Compose stack that supplies the one workload the cluster still depends on: llama.cpp on the AMD RX 9070 (ROCm). `srv0` Traefik reaches it over the LAN through a selectorless `llama-cpp` Service and EndpointSlice at `BIGPC_HOST`, so `models.<SERVICES_DOMAIN>` keeps working publicly, on the VPN, and on the LAN. Everything behind that hostname stays behind Authelia; the raw container port is LAN-only.
 
-`ai-data-pv` / `ai-data-pvc` is a hostname-pinned hostPath under `<HOME_DIR>/ai`; llama.cpp mounts `subPath: llama`. Its Compose stack is out of scope.
+The router keeps its GGUFs in `~/ai/llama` (`LLAMA_CACHE`); download and delete them through the built-in Models page at `models.<SERVICES_DOMAIN>`. The FL0W game-save agent runs in the same Compose project and keeps its state under `~/infra_state/compose_live_state/fl0w-agent/`; FL0W on `srv0` reaches it at `http://<bigpc-ip>:8788` over the LAN.
 
-The llama.cpp router keeps its GGUFs in the `llama` subPath; download and delete them through the built-in Models page at `models.<SERVICES_DOMAIN>`. ComfyUI runs in Compose on `pc` (loopback-only), not on bigpc.
+ComfyUI runs in Compose on `pc` (loopback-only). bigpc no longer runs Falco, CrowdSec, or node-exporter: those follow the K3s node, which is `srv0`.

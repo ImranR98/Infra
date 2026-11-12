@@ -240,7 +240,7 @@
       "id": 4,
       "type": "stat",
       "title": "Falco nodes reporting",
-      "description": "Scrape targets with up=1. bigpc powered off shows 1 until it returns.",
+      "description": "Scrape targets with up=1 on the single node.",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"

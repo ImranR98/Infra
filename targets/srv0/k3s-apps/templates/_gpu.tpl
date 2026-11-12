@@ -69,13 +69,3 @@ none
 vaapi
 {{- end -}}
 {{- end -}}
-
-{{- define "gpu.llamaCppGpu" -}}
-{{- if .Values.LLAMA_CPP_GPU -}}
-{{- .Values.LLAMA_CPP_GPU -}}
-{{- else if eq (include "gpu.profile" .) "none" -}}
-none
-{{- else -}}
-amd-dgpu
-{{- end -}}
-{{- end -}}

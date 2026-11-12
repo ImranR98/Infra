@@ -2,8 +2,8 @@
 # DESC: Join a node to the K3s cluster. Run ON the control plane: reads the
 # token there, streams node prep + the official installer to the joining node
 # over SSH (the token travels via stdin only — never argv), waits for Ready,
-# then applies the taint/Longhorn replica count. Prompts for sudo on both
-# machines (they may differ).
+# then applies optional node labels. Prompts for sudo on both machines (they
+# may differ).
 set -euo pipefail
 
 if [ -z "${INFRA_ROOT:-}" ]; then
@@ -20,7 +20,6 @@ usage() {
 Usage: $(basename "$0") <node_ip> <node_user> [options]
 
   --role agent|server          joining role (default: agent)
-  --noschedule                 taint the node infra.local/noschedule=true:NoSchedule
   --hostpath-main              label the node infra.local/hostpath-main=true
 
 Run ON the control plane. The first SSH to the node prompts to accept the host
@@ -35,12 +34,10 @@ node_user="$2"
 shift 2
 
 k3s_role=agent
-noschedule=false
 hostpath_main=false
 while [ $# -gt 0 ]; do
     case "$1" in
         --role) k3s_role="${2:?--role needs agent|server}"; shift 2 ;;
-        --noschedule) noschedule=true; shift ;;
         --hostpath-main) hostpath_main=true; shift ;;
         -h | --help) usage ;;
         *) echo "Error: unknown option '$1'" >&2; usage ;;
@@ -125,11 +122,8 @@ fi
 $SU "$kubectl_bin" taint node "$node_name" scheduling-discouraged- 2>/dev/null || true
 $SU "$kubectl_bin" label node "$node_name" infra.local/amd-dgpu- 2>/dev/null || true
 
-if [ "$noschedule" = true ]; then
-    $SU "$kubectl_bin" taint node "$node_name" infra.local/noschedule=true:NoSchedule --overwrite
-else
-    # All nodes are schedulable unless explicitly marked otherwise.
-    $SU "$kubectl_bin" taint node "$node_name" infra.local/noschedule- 2>/dev/null || true
-fi
+# The opt-in taint was removed with the bigpc decommission; clear it if a
+# legacy node still carries it.
+$SU "$kubectl_bin" taint node "$node_name" infra.local/noschedule- 2>/dev/null || true
 
 echo "k3s-join: node '$node_name' joined."

@@ -3,27 +3,6 @@
 Use these as hypotheses, not blind rules. Confirm the pod/process/file in the
 events, then scope the exception as narrowly as the data allows.
 
-## Host games / anti-cheat (bigpc)
-
-RocketLeague under Steam/Proton/Wine calls `ptrace` for Easy Anti-Cheat:
-
-```yaml
-- rule: PTRACE attached to process
-  exceptions:
-    - name: rocket_league_eac_host
-      fields: [container.name, proc.name]
-      comps: ["=", "="]
-      values:
-        - [host, RocketLeague_EA]
-  override:
-    exceptions: append
-```
-
-The same process also produces `PTRACE anti-debug attempt` (Notice); add a
-separate exception if you want the log clean. Other Proton games have different
-`proc.name` values; add one per game, never a host-wide `container.name=host`
-exception.
-
 ## Browser automation
 
 FlareSolverr, Selenium/Chromium (Task Runner's browser sidecar), Playwright
