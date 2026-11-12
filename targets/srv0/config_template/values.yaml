@@ -437,7 +437,7 @@ LIFETAGGER_EXCLUDE_EXT: "txt,pp3,json,xmp,aae,db,ini,log"
 
 # ====== Infra paths (k3s-chart-only, machine/env layout) ======
 # Repo path. Defaults to <MAIN_PARENT_DIR>/Main/Infra. Drives the infra
-# hostpath PV (Renovate + Task Runner) and state_backups; the PV claim, not a
+# hostpath PV (Renovate + FL0W) and state_backups; the PV claim, not a
 # nodeSelector, pins the pods.
 INFRA_ROOT: ""
 # Runtime state root. Defaults to <HOME_DIR>/infra_state. Must be outside

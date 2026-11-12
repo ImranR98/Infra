@@ -91,7 +91,7 @@ spec:
         infra.local/external-exposed: "true"
       securityContext:
         # spc_t for host-netns objects (container_t is denied); s0 stops kubelet
-        # MCS-relabeling the Longhorn volume (labels from Longhorn's own mounts).
+        # MCS-relabeling the VPN config volume.
         seLinuxOptions:
           type: spc_t
           level: s0

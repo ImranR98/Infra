@@ -581,7 +581,7 @@ steps:
 - id: watching
   stage: Operations
   title: Watching the system
-  body: 'Grafana provisions one webhook contact point (`ntfy`) plus file-backed alerting config: 27 rules in the **Falco** folder, the policy tree (`group_by: alertname`, 12h repeat), and the markdown body template group.
+  body: 'Grafana provisions one webhook contact point (`ntfy`) plus file-backed alerting config: 29 rules in the **Falco** folder, the policy tree (`group_by: alertname`, 12h repeat), and the markdown body template group.
 
 
     Falco runs as a DaemonSet on srv0 with the modern eBPF driver. It is the runtime counterpart to CrowdSec (L7) and opencanary (honeypot): syscall rules catch shells, credential access, crypto miners, and escape helpers that HTTP-layer tools cannot see.
@@ -1368,7 +1368,7 @@ steps:
 - id: boot-prereqs
   stage: Bootstrap
   title: Prerequisites
-  body: 'Run `scripts/prereqs.sh` on every machine. It installs packages, the pinned Helm binary, Docker, the machine-fact `.env`, host bind dirs, and the Traefik ACME seed.
+  body: 'Run `scripts/prereqs.sh` on every machine. It installs packages, the pinned Helm binary, Docker, the machine-fact `.env`, host bind dirs, and the Traefik ACME seed. Make sure the deploy user can reach the Docker socket (`docker compose version` without sudo) before using the Compose wrapper.
 
 
     Run it on srv0 and vps0 before `init-config.sh`; `init-config` needs `yq` from prereqs.
@@ -1403,7 +1403,7 @@ steps:
 - id: boot-config
   stage: Bootstrap
   title: Configuration
-  body: 'Run `init-config.sh srv0 --detect` on srv0 and `init-config.sh vps0` on vps0. Fill `config/srv0/values.yaml`, `config/vps0/compose.env`, `config/VARS.env`, and the Authelia files.
+  body: 'Run `init-config.sh srv0 --detect` on srv0 and `init-config.sh vps0` on vps0. Fill `config/srv0/values.yaml`, `config/vps0/compose.env`, `config/VARS.env`, and the Authelia files. For bigpc''s Compose stack, run `init-config.sh bigpc`, then fill `config/bigpc/compose.env` and `config/bigpc/fl0w-agent/agent.json`.
 
 
     Set `BOOTSTRAP_PRIVATE_APPS: "true"` for the first boot so the six apps with their own authentication stay LAN/VPN-only until Authelia is Ready.
@@ -1720,7 +1720,7 @@ steps:
   deepDive: 'Before disassembly, take a restic backup and an etcd snapshot, record `helm get values` for both releases, and verify the initramfs has the USB NIC/storage modules.
 
 
-    Frigate''s ROCm detector needs `yolov9-t-320.onnx` in the config PVC before switching `FRIGATE_DETECTOR=rocm`. Frigate is srv0-only (`amd-igpu`). Fallbacks are `FRIGATE_DETECTOR=cpu`, `IMMICH_ML_BACKEND=cpu`, `JELLYFIN_HWACCEL=none`, `IMMICH_SERVER_HWACCEL=none`, and `GPU_PROFILE=none`.'
+    Frigate''s ROCm detector needs `yolov9-t-320.onnx` in the config PVC before switching `FRIGATE_DETECTOR=rocm`. Frigate is srv0-only (`amd-igpu`). Immich ML also uses `amd-igpu` with the ROCm/MIGraphX build; set `IMMICH_ML_HSA_OVERRIDE_GFX_VERSION=11.0.0` on Phoenix-class iGPUs or the CLIP text model segfaults the worker. Fallbacks are `FRIGATE_DETECTOR=cpu`, `IMMICH_ML_BACKEND=cpu`, `JELLYFIN_HWACCEL=none`, `IMMICH_SERVER_HWACCEL=none`, and `GPU_PROFILE=none`.'
 
   reveal:
   - srv0/cluster

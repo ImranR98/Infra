@@ -483,7 +483,7 @@ function addTargets() {
         home: "home automation · sync",
         arr: "indexers · downloads · requests",
         productivity: "docs · feeds · files",
-        tools: "agents · UI · logs",
+        tools: "agents · LLM · UI · logs",
         dscpln: "archive · tasks · ledger",
         security: "honeypot",
       })[cat] || "apps",
@@ -517,10 +517,10 @@ function addTargets() {
     id: "srv0/ops/backups",
     kind: "group",
     title: "State backups",
-    subtitle: "restic · Task Runner · restore",
+    subtitle: "restic · FL0W · restore",
     parent: "srv0/ops",
     summary:
-      "Backup-only routine in the D$CPLN Task Runner. One encrypted restic repository captures auto-backup PVCs and Compose state; restore is a manual script.",
+      "Backup-only routine in FL0W. One encrypted restic repository captures auto-backup PVCs and Compose state; restore is a manual script.",
     tags: ["storage", "backup"],
     lane: "ops",
   });
@@ -2489,7 +2489,7 @@ function buildScenes() {
         "srv0/base/csi-driver-nfs/storageclass/nfs-apps", "srv0/ops/backups", "script/restic-restore",
         "srv0/apps", "vps0/apps", "srv0/apps/media/immich", "srv0/apps/media/frigate",
         "srv0/apps/home/homeassistant", "srv0/apps/productivity/nextcloud",
-        "srv0/apps/home/syncthing", "srv0/ops/backups", "srv0/apps/dscpln/dscpln-task-runner"],
+        "srv0/apps/home/syncthing", "srv0/ops/backups", "srv0/apps/dscpln/fl0w"],
     },
     {
       id: "auth",

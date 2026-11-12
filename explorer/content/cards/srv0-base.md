@@ -11,6 +11,6 @@ The `base` namespace is the platform contract. Everything in `apps` can assume t
 - Authelia, CrowdSec, Falco, and the NetworkPolicy baseline
 - Alloy/Prometheus/Loki/Grafana and ntfy
 - the generic device plugin and node-upgrade controller
-- the Renovate CronJobs
+- the Renovate CronJob
 
 Most components are file-scoped: opening one shows the resources it owns, the images it runs, and the other components it references.

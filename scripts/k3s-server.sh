@@ -1,7 +1,7 @@
 #!/bin/bash
 # DESC: Bootstrap THIS machine as the K3s control plane: node prep, the official
 # get.k3s.io installer, server config (cluster-init, flannel-wireguard), and
-# the post-install Longhorn default-disk label. Run ON the node — no args.
+# static node labels. Run ON the node — no args.
 set -euo pipefail
 
 if [ -z "${INFRA_ROOT:-}" ]; then

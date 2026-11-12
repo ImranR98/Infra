@@ -6,4 +6,4 @@ tags: [storage]
 ---
 `csi-driver-nfs` is the only NFS client in the cluster. It provisions subdirectories under the app-data export and exposes them as the default `nfs-apps` StorageClass.
 
-Volumes are RWX, sizes are advisory, reclaim is Retain, and the driver mounts with NFS 4.2. The hostNetwork node plugin is pinned like the NFS server; this is the storage backbone every app PVC uses.
+Volumes are RWX, sizes are advisory, reclaim is Retain, and the driver mounts with NFS 4.2. The hostNetwork node plugin runs on every Linux node; this is the storage backbone every app PVC uses.

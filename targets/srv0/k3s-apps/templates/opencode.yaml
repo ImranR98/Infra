@@ -48,9 +48,9 @@ spec:
           port: 4096
 ---
 # Machine-wide (system) configuration for the agent. /etc/opencode has the
-# highest precedence, so this pins the in-cluster llama.cpp router without
-# touching the user-owned config on opencode-home-pvc. The model list is
-# intentionally empty: add models here after downloading them in the
+# highest precedence, so this pins the llama-cpp Service (Compose on bigpc)
+# without touching the user-owned config on opencode-home-pvc. The model list
+# is intentionally empty: add models here after downloading them in the
 # llama.cpp Models UI (models.<SERVICES_DOMAIN>).
 apiVersion: v1
 kind: ConfigMap

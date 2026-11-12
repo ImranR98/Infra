@@ -24,7 +24,7 @@ The default screen is the tour library. Each tour is linear: a chapter panel, a 
 | **Apps and data** | The K3s split, app catalog, Immich, authentication, hardware resources, contextual machines, NFS, and backups |
 | **Keeping it running** | Renovate, CI, schedules, State Backups, Grafana/Falco, and NetworkPolicy/SELinux isolation |
 | **Configuration and decisions** | The working tree, config layers, and accepted tradeoffs |
-| **First boot** | DNS, prerequisites, config, tunnel material, vps0, srv0, optional nodes, verification, and manual setup |
+| **First boot** | DNS, prerequisites, config, tunnel material, vps0, srv0, optional nodes and the bigpc Compose target, verification, and manual setup |
 | **Maintenance** | Motherboard swap, NFS storage, and restic recovery |
 
 Every chapter has a **Code explained** list that opens the relevant files in the source viewer.
