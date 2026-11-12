@@ -55,6 +55,26 @@ spec:
       annotations:
         checksum/linkwarden-secrets: {{ printf "%s|%s|%s|%s" .Values.LINKWARDEN_NEXTAUTH_SECRET .Values.AUTHELIA_LINKWARDEN_CLIENT_SECRET_HASHABLE .Values.LINKWARDEN_DB_PASSWORD .Values.LINKWARDEN_MEILI_MASTER_KEY | sha256sum }}
     spec:
+      # The worker exits 1 (killing the container) when PostgreSQL is briefly
+      # unreachable; that is upstream behaviour. This only prevents the app
+      # from racing the database during startup after a node reboot.
+      initContainers:
+        - name: wait-for-db
+          image: postgres:16.15-alpine@sha256:aa6cb33cf4c19c765cefcf48d96176258800870a9a1e930ad126200f9d825139
+          command:
+            - sh
+            - -c
+            - until pg_isready -h linkwarden-postgresql -U postgres -d linkwarden; do sleep 2; done
+          securityContext:
+            runAsUser: 999
+            runAsGroup: 999
+            allowPrivilegeEscalation: false
+          resources:
+            limits:
+              memory: 64Mi
+            requests:
+              cpu: 5m
+              memory: 16Mi
       containers:
         - name: linkwarden
           image: ghcr.io/linkwarden/linkwarden:v2.16.3@sha256:0664c28a039bda8ffa6663389e8536b2fc717219e329f85b83faca7efed3b144

@@ -156,6 +156,15 @@ spec:
         value: "false"
       - name: OAUTH_CODE_CHALLENGE_METHOD
         value: "S256"
+      # The data PVC is on nfs-apps. SQLite on a network filesystem is not
+      # supported: WAL's mmap-backed -shm file can raise SIGBUS (exit 135) on
+      # an NFS hiccup, which is what restarted open-webui on 2026-11-11.
+      # Disable mmap and widen the busy timeout as a stop-gap; migrating the
+      # database to PostgreSQL is the durable fix.
+      - name: DATABASE_SQLITE_PRAGMA_MMAP_SIZE
+        value: "0"
+      - name: DATABASE_SQLITE_PRAGMA_BUSY_TIMEOUT
+        value: "30000"
     resources:
       limits:
         memory: 2Gi
