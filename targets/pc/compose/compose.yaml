@@ -102,7 +102,7 @@ services:
     # (MY_UID) and umask 002 keeps new files group-writable, so the mounted
     # tree stays editable on the host. Renovate digest-pins server-intel.
     llama-sycl:
-        image: ghcr.io/ggml-org/llama.cpp:server-intel@sha256:8e59ff053ea808f0071a7772129de868b0b612cc6f0e89e3e14cbd2c759bf323
+        image: ghcr.io/ggml-org/llama.cpp:server-intel@sha256:4fad818e2ccd0add09b5ede1f51b64ee8c86a9d5fc2c632dab545be3dbea204f
         container_name: llama-sycl
         restart: unless-stopped
         # One model is resident at a time (--models-max 1). 54G leaves ~8 GiB
