@@ -175,10 +175,6 @@ kind: PersistentVolumeClaim
 metadata:
   name: lifetagger-data-pvc
   namespace: apps
-  labels:
-    auto-backup: "true"
-  annotations:
-    backup.infra/exclude: "thumbs,previews,face-thumbs,models"
 spec:
   accessModes:
     - ReadWriteOnce

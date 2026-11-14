@@ -253,6 +253,8 @@ metadata:
   namespace: apps
   labels:
     auto-backup: "true"
+  annotations:
+    backup.infra/exclude: "metadata log"
 spec:
   accessModes:
     - ReadWriteOnce

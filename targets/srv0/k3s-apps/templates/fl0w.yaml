@@ -72,6 +72,33 @@ subjects:
     name: fl0w-backup
     namespace: apps
 ---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: fl0w-backup-pods
+  namespace: apps
+rules:
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list"]
+  - apiGroups: [""]
+    resources: ["pods/exec"]
+    verbs: ["create"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: fl0w-backup-pods
+  namespace: apps
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: fl0w-backup-pods
+subjects:
+  - kind: ServiceAccount
+    name: fl0w-backup
+    namespace: apps
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -95,6 +122,8 @@ spec:
       securityContext:
         runAsUser: 0
         runAsGroup: {{ .Values.MY_UID }}
+        # local-apps app pods use SELinux level s0 so the backup task can read
+        # their data; the separate MCS categories would block it.
         seLinuxOptions:
           type: spc_t
           level: s0
@@ -227,10 +256,6 @@ spec:
               value: http://da5h:8080
             - name: APP_ORIGIN
               value: "https://flow.{{ .Values.SERVICES_DOMAIN }}"
-            - name: RESTIC_CACHE_DIR
-              value: /backup-data/restic-cache
-            - name: RESTIC_GID
-              value: "{{ .Values.MY_UID }}"
           {{- include "infra.resources" (dict "tier" "xlarge") | nindent 10 }}
           readinessProbe:
             {{- include "dscpln.readinessProbe" (dict "path" "/api/health" "port" "http") | nindent 12 }}
@@ -257,9 +282,11 @@ spec:
               mountPath: {{ $homeDir }}/Main/Media
             - name: main-documents
               mountPath: {{ $homeDir }}/Main/Documents
+            # Read-write: SQLite's online backup needs to create/read the -shm
+            # sidecar for WAL databases.
             - name: infra-state
               mountPath: {{ include "path.infraState" . }}
-              readOnly: true
+              readOnly: false
             - name: state-backups
               mountPath: {{ $homeDir }}/Main/Infra/state_backups
             - name: backup-data

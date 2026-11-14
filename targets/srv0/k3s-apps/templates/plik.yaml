@@ -85,6 +85,8 @@ spec:
     spec:
       securityContext:
         fsGroup: {{ .Values.MY_UID }}
+        seLinuxOptions:
+          level: s0
       initContainers:
         - name: fix-perms
           image: busybox:1.38.0-uclibc@sha256:b2e35951f72501f6a99f1bf45bcfe6d4795be08c518c2f97d0ed2fe776958a3b
@@ -174,8 +176,6 @@ kind: PersistentVolumeClaim
 metadata:
   name: plik-state-pvc
   namespace: apps
-  labels:
-    auto-backup: "true"
 spec:
   accessModes:
     - ReadWriteOnce

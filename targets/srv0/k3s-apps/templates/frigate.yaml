@@ -390,6 +390,8 @@ metadata:
   namespace: apps
   labels:
     auto-backup: "true"
+  annotations:
+    backup.infra/exclude: "model_cache backup.db"
 spec:
   accessModes:
     - ReadWriteOnce

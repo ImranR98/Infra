@@ -533,53 +533,53 @@ steps:
 - id: backups
   stage: Operations
   title: How it survives
-  body: 'The **State Backups** task in the FL0W is the active backup system. It runs on a schedule (default Sundays 04:00) and has a manual **Run now**.
+  body: 'The **State Backups** task in FL0W is the active backup system. It runs daily and has a manual **Run now**.
 
 
-    One encrypted, deduplicated restic repository at `state_backups/restic` contains every PVC labelled `auto-backup=true` under `~/infra_state/k3s_live_state/app-data/<namespace>/<pvc>`, the srv0 Compose state, and the vps0 Compose state, fetched over SSH with the existing key.
+    Each run writes a timestamped snapshot under `state_backups/snapshots/` containing the `auto-backup=true` PVCs under `~/infra_state/k3s_live_state/app-data/<namespace>/<pvc>`, consistent Postgres/SQLite dumps, the srv0/vps0 Compose state, and a manifest. Rebuildable caches, logs, and DB files are excluded. The newest 2 snapshots are kept; unchanged files are hardlinked from the previous snapshot.
 
     '
-  deepDive: 'The FL0W backup instance runs as root in the `apps` namespace so it can read the Postgres/Redis-owned PVC data; it mounts the Infra tree read-only and only `state_backups/` writable.
+  deepDive: 'The FL0W backup instance runs as root in the `apps` namespace so it can read the Postgres/Redis-owned PVC data; it mounts the Infra state tree and `state_backups/` writable.
 
 
-    `retention` maps to `restic forget --keep-last N --prune` (default 7). Each run also does `restic check --read-data-subset=1%`.
+    The snapshot is plain rsync output with no repository format or password dependency; Syncthing replicates the tree. `retention` keeps the newest 2 snapshots.
 
 
-    Restore is intentionally outside the app: `scripts/restic-restore.sh list`, `... pvc <name> [snapshot] [--live]`, and `... compose srv0|vps0 [snapshot] [--live]`. The script works on a fresh cluster and uses the repo/password/key directly.
+    Restore is intentionally outside the app: `scripts/state-restore.sh list`, `... restore [snapshot] [--live]`, `... db <ns/pvc> [snapshot]`, and `... compose srv0|vps0 [snapshot] [--live]`. The script works on a fresh cluster and uses the snapshot tree directly.
 
     '
   reveal:
   - srv0/ops/backups
-  - concept/backups/restic-repository
-  - script/restic-restore
+  - concept/backups/state-snapshots
+  - script/state-restore
   focus:
   - srv0/ops/backups
-  - concept/backups/restic-repository
-  - script/restic-restore
+  - concept/backups/state-snapshots
+  - script/state-restore
   edges:
   - from: srv0
     to: srv0/ops/backups
     type: runs
     label: scheduled task
   - from: srv0/ops/backups
-    to: concept/backups/restic-repository
+    to: concept/backups/state-snapshots
     type: writes
-    label: restic
-  - from: concept/backups/restic-repository
-    to: script/restic-restore
+    label: daily snapshot
+  - from: concept/backups/state-snapshots
+    to: script/state-restore
     type: restored-by
     label: manual
   flow:
   - - srv0/ops/backups
-  - - concept/backups/restic-repository
-  - - script/restic-restore
+  - - concept/backups/state-snapshots
+  - - script/state-restore
   zones:
   - id: ops
     label: OPERATIONS
     members:
     - srv0/ops/backups
-    - concept/backups/restic-repository
-    - script/restic-restore
+    - concept/backups/state-snapshots
+    - script/state-restore
 - id: watching
   stage: Operations
   title: Watching the system
@@ -1147,7 +1147,7 @@ steps:
   body: 'Everything a target needs lives in `targets/<t>/`; shared logic lives in `scripts/`; secrets live in the gitignored `config/`. There is no build step.
 
 
-    Target-selecting scripts take `<target>` as their first argument. Machine-local scripts (`prereqs`, `renovate`, `preboot`, `wireguard`, `kubeconfig-unlock`, `k3s-server`, `k3s-join`, `restic-restore`) act on the machine they run on.'
+    Target-selecting scripts take `<target>` as their first argument. Machine-local scripts (`prereqs`, `renovate`, `preboot`, `wireguard`, `kubeconfig-unlock`, `k3s-server`, `k3s-join`, `state-restore`) act on the machine they run on.'
   deepDive: '`~/infra_state/` is runtime state; leave it alone. `config/` mirrors each target''s `config_template/`. A deploy is `validate.sh <target>` followed by the two `helm upgrade --install` commands (srv0) or `sudo docker compose` with both env files (Compose targets); vps0 renders its Authelia config with `render-vps0-authelia.sh` before `up`.
 
 
@@ -1238,7 +1238,7 @@ steps:
 
 
     The `vps0` image-prune timer runs monthly. The State Backups task defaults to Sundays 04:00. FL0W owns the backup schedule; the CronJob owns update discovery.'
-  deepDive: 'Renovate''s `startingDeadlineSeconds` and 7200s `activeDeadlineSeconds` keep a hung run from blocking the next six-hour slot. The `vps0` timer is a systemd oneshot service; the FL0W backup task is backup-only and restore is `scripts/restic-restore.sh`.
+  deepDive: 'Renovate''s `startingDeadlineSeconds` and 7200s `activeDeadlineSeconds` keep a hung run from blocking the next six-hour slot. The `vps0` timer is a systemd oneshot service; the FL0W backup task is backup-only and restore is `scripts/state-restore.sh`.
 
 
     Host packages are separate. `vps0` runs `unattended-upgrades`. `srv0` and `bigpc` are Fedora: `dnf5-plugin-automatic` is not installed by default; enable security-only updates with `upgrade_type = security` and `reboot = never`, then check `dnf5 needs-restarting -r` and reboot in a maintenance window.'
@@ -1281,21 +1281,21 @@ steps:
   - decision/auth/app-own-login
   - decision/cluster/hostpath-singleton
   - decision/auth/geoblock-api
-  - decision/storage/restic-backups
+  - decision/storage/state-snapshots
   - decision/updates/merge-is-not-deploy
   focus:
   - decision/storage/nfs-latency
   - decision/auth/app-own-login
   - decision/cluster/hostpath-singleton
   - decision/auth/geoblock-api
-  - decision/storage/restic-backups
+  - decision/storage/state-snapshots
   - decision/updates/merge-is-not-deploy
   flow:
   - - decision/storage/nfs-latency
     - decision/auth/app-own-login
     - decision/cluster/hostpath-singleton
   - - decision/auth/geoblock-api
-    - decision/storage/restic-backups
+    - decision/storage/state-snapshots
     - decision/updates/merge-is-not-deploy
   zones:
   - id: decisions
@@ -1305,7 +1305,7 @@ steps:
     - decision/auth/app-own-login
     - decision/cluster/hostpath-singleton
     - decision/auth/geoblock-api
-    - decision/storage/restic-backups
+    - decision/storage/state-snapshots
     - decision/updates/merge-is-not-deploy
   edges: []
   code:
@@ -1695,7 +1695,7 @@ steps:
   body: 'Application PVCs use one of two classes over the same tree, `~/infra_state/k3s_live_state/app-data`. `nfs-apps` is the default: the `nfs-server` pod plus `csi-driver-nfs`, RWX, sizes advisory. `local-apps` is its local twin: a dedicated `local-path-provisioner` on the `hostpath-main` node, RWO, same `<namespace>/<pvc>` layout, pinned by `infra.local/hostpath-main`.
 
 
-    Restores use `scripts/restic-restore.sh`; there is no tar-based PVC path.'
+    Restores use `scripts/state-restore.sh`; there is no tar-based PVC path.'
   deepDive: 'The app-data export is `/exports/apps` → `~/infra_state/k3s_live_state/app-data` with `no_root_squash`. `IGNORE_DATABASE_FSTYPE=true` is required for Immich Postgres on NFS.
 
 
@@ -1705,22 +1705,22 @@ steps:
   - srv0/base/csi-driver-nfs
   - srv0/base/local-apps
   - srv0/base/local-apps/storageclass/local-apps
-  - concept/backups/restic-repository
-  - script/restic-restore
+  - concept/backups/state-snapshots
+  - script/state-restore
   focus:
   - srv0/base/nfs-server
   - srv0/base/csi-driver-nfs
   - srv0/base/local-apps
   - srv0/base/local-apps/storageclass/local-apps
-  - concept/backups/restic-repository
-  - script/restic-restore
+  - concept/backups/state-snapshots
+  - script/state-restore
   flow:
   - - srv0/base/nfs-server
   - - srv0/base/csi-driver-nfs
   - - srv0/base/local-apps
     - srv0/base/local-apps/storageclass/local-apps
-  - - concept/backups/restic-repository
-    - script/restic-restore
+  - - concept/backups/state-snapshots
+    - script/state-restore
   zones:
   - id: data
     label: STORAGE
@@ -1729,8 +1729,8 @@ steps:
     - srv0/base/csi-driver-nfs
     - srv0/base/local-apps
     - srv0/base/local-apps/storageclass/local-apps
-    - concept/backups/restic-repository
-    - script/restic-restore
+    - concept/backups/state-snapshots
+    - script/state-restore
   edges:
   - from: srv0/base/csi-driver-nfs
     to: srv0/base/nfs-server
@@ -1740,8 +1740,8 @@ steps:
     to: srv0/base/local-apps
     type: managed-by
     label: local-path
-  - from: concept/backups/restic-repository
-    to: script/restic-restore
+  - from: concept/backups/state-snapshots
+    to: script/state-restore
     type: restored-by
     label: manual
   code:
@@ -1751,51 +1751,51 @@ steps:
     summary: The default nfs-apps StorageClass.
   - path: targets/srv0/k3s-base/templates/local-apps.yaml
     summary: The local-apps StorageClass and its local-path-provisioner.
-  - path: scripts/restic-restore.sh
+  - path: scripts/state-restore.sh
     summary: Manual restore path.
 - id: restore
   stage: Maintenance
   title: Restore
-  body: 'The State Backups task is backup-only. `scripts/restic-restore.sh list` lists snapshots; `pvc <name>` and `compose srv0|vps0` stage by default and accept `--live`.
+  body: 'The State Backups task is backup-only. `scripts/state-restore.sh list` lists snapshots; `restore [snapshot] [--live]` replaces app-data; `db <ns/pvc> [snapshot]` stages a DB dump; and `compose srv0|vps0 [snapshot] [--live]` handles Compose state.
 
 
-    The script works on a fresh cluster with the repository, password, and key. It does not depend on FL0W being deployed.
+    The script works on a fresh cluster with the snapshot tree and the key. It does not depend on FL0W being deployed.
 
     '
-  deepDive: 'The repository is at `state_backups/restic` in the Syncthing-replicated Main/Infra tree. Only srv0 writes it; wait for Syncthing to settle before restoring from a peer.
+  deepDive: 'Snapshots live at `state_backups/snapshots` in the Syncthing-replicated Main/Infra tree. Only srv0 writes them; wait for Syncthing to settle before restoring from a peer.
 
 
-    The restic password lives in the private `fl0w-config` checkout. Record it off-cluster; a fresh restore needs it.'
+    There is no repository password or special format; restore reads the plain snapshot tree directly.'
   reveal:
   - srv0/ops/backups
-  - concept/backups/restic-repository
-  - script/restic-restore
+  - concept/backups/state-snapshots
+  - script/state-restore
   focus:
   - srv0/ops/backups
-  - concept/backups/restic-repository
-  - script/restic-restore
+  - concept/backups/state-snapshots
+  - script/state-restore
   flow:
   - - srv0/ops/backups
-  - - concept/backups/restic-repository
-  - - script/restic-restore
+  - - concept/backups/state-snapshots
+  - - script/state-restore
   zones:
   - id: ops
     label: RESTORE
     members:
     - srv0/ops/backups
-    - concept/backups/restic-repository
-    - script/restic-restore
+    - concept/backups/state-snapshots
+    - script/state-restore
   edges:
   - from: srv0/ops/backups
-    to: concept/backups/restic-repository
+    to: concept/backups/state-snapshots
     type: writes
-    label: restic
-  - from: concept/backups/restic-repository
-    to: script/restic-restore
+    label: daily snapshot
+  - from: concept/backups/state-snapshots
+    to: script/state-restore
     type: restored-by
     label: manual
   code:
-  - path: scripts/restic-restore.sh
-    summary: Lists and restores PVC/Compose snapshots.
+  - path: scripts/state-restore.sh
+    summary: Lists and restores app-data, DB, and Compose snapshots.
   - path: targets/srv0/k3s-apps/templates/fl0w.yaml
     summary: The FL0W backup instance.

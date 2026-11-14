@@ -8,8 +8,8 @@ server:
       config:
         defaultEnabled: true
         rules:
-          # The restic repo is Syncthing's source, not a user browsing target;
-          # indexing ~66GB of pack files on startup is pure overhead.
+          # The state snapshot tree is Syncthing's source, not a user browsing
+          # target; indexing it on startup is pure overhead.
           - folderPath: "Infra/state_backups"
 http:
   port: 80
@@ -177,10 +177,6 @@ kind: PersistentVolumeClaim
 metadata:
   name: filebrowser-pvc
   namespace: apps
-  labels:
-    auto-backup: "true"
-  annotations:
-    backup.infra/exclude: "cache"
 spec:
   accessModes:
     - ReadWriteOnce

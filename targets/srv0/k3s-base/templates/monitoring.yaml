@@ -254,6 +254,10 @@ spec:
       userKey: admin-user
       passwordKey: admin-password
     envFromSecret: grafana-oidc-secret
+    securityContext:
+      fsGroup: {{ .Values.MY_UID }}
+      seLinuxOptions:
+        level: s0
     # Restart Grafana when a provisioning input changes: alerting file
     # provisioning is loaded at startup (upstream requires a restart or the
     # admin reload API), and env-referenced Secrets never reach a running pod.
@@ -284,8 +288,6 @@ spec:
       accessModes:
         - ReadWriteOnce
       storageClassName: local-apps
-      extraPvcLabels:
-        auto-backup: "true"
     {{- include "infra.resources" (dict "tier" "xlarge") | nindent 4 }}
     grafana.ini:
       server:

@@ -1,11 +1,11 @@
 ---
-id: decision/storage/restic-backups
-title: Backups are backup-only
+id: decision/storage/state-snapshots
+title: Backups are daily snapshots
 appliesTo:
   - srv0/ops/backups
   - srv0/apps/dscpln/fl0w
-  - script/restic-restore
+  - script/state-restore
 ---
-The State Backups task runs in FL0W and writes one encrypted, deduplicated restic repository at `state_backups/restic`. It captures every `auto-backup=true` PVC and the srv0/vps0 Compose state.
+The State Backups task runs in FL0W and writes a timestamped rsync snapshot under `state_backups/snapshots/` every day. Each snapshot contains the `auto-backup=true` PVCs under `app-data/`, consistent Postgres/SQLite dumps under `db-dumps/`, the srv0/vps0 Compose state under `compose/`, and a `manifest.json`. Raw DB files/dirs are replaced by the dumps; rebuildable caches/logs are excluded. Only the newest 2 snapshots are kept; unchanged files are hardlinked from the previous one.
 
-Restore is intentionally outside the app: `scripts/restic-restore.sh` works on a fresh cluster and uses the repo/password directly. The app is backup-only, so a broken app cannot block recovery.
+Restore is outside the app: `scripts/state-restore.sh list`, `restore`, `db`, and `compose`. The app is backup-only, so a broken app cannot block recovery.

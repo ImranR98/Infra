@@ -157,6 +157,13 @@ spec:
   restartPolicy: Never
   nodeSelector:
     infra.local/hostpath-main: "true"
+  securityContext:
+    runAsUser: 0
+    runAsGroup: 0
+    # local-apps app pods use SELinux level s0; the maintenance pod must too.
+    seLinuxOptions:
+      type: spc_t
+      level: s0
   containers:
     - name: sqlite
       image: $IMAGE

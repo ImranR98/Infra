@@ -114,6 +114,8 @@ spec:
       {{- include "infra.resources" (dict "tier" "medium" "cpuLimit" "500m") | nindent 6 }}
       podSecurityContext:
         fsGroup: {{ .Values.MY_UID }}
+        seLinuxOptions:
+          level: s0
       containerSecurityContext:
         allowPrivilegeEscalation: false
       dashboard:
@@ -211,8 +213,6 @@ kind: PersistentVolumeClaim
 metadata:
   name: crowdsec-pvc
   namespace: base
-  labels:
-    auto-backup: "true"
 spec:
   accessModes:
     - ReadWriteOnce
