@@ -666,7 +666,7 @@ services:
     # Obtainium Apps
     obtainium_apps:
         container_name: obtainium_apps
-        image: ghcr.io/imranr98/apps.obtainium.imranr.dev:latest@sha256:c592c8631650c9350405dd13238c8a6e1e0a0f9a55daa594cdedad5a36dc330e
+        image: ghcr.io/imranr98/apps.obtainium.imranr.dev:latest@sha256:fa4532d6f1e9b672c0bc0a4158705848f9b075d5596d38a2dbef8898d0f13ecb
         depends_on:
             - traefik
         # Fetch Plausible stats over the local edge, not Cloudflare (Bot Fight Mode
@@ -746,7 +746,7 @@ services:
     # Our Times - long-term countdown timers (Authelia headers carry the identity)
     our-times:
         container_name: our-times
-        image: ghcr.io/imranr98/our-times:latest@sha256:acaf061b6776276589b4c70ff4b94f02042fe18278b3b0c2642eba8026dab03c
+        image: ghcr.io/imranr98/our-times:latest@sha256:680504ff1dff40cc990effef224f83c2dacbb51754335ab5d76139b98d291252
         user: "$MY_UID:$MY_UID"
         depends_on:
             - traefik
@@ -798,7 +798,7 @@ services:
     # remain valid; all three routers share the single sale-site service.
     sale-site:
         container_name: sale-site
-        image: ghcr.io/imranr98/moving-sale-2027:latest@sha256:380e5255b8ac4f84581422c6f938dfc65452e6817117eb947d85106ba7fdb14b
+        image: ghcr.io/imranr98/moving-sale-2027:latest@sha256:f62e00070c58207bd842229c7f4b33a4fb8a00a396dd7bee60caefc7b84435ac
         depends_on:
             - traefik
         labels:
