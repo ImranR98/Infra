@@ -872,7 +872,23 @@ function addImagesFromText(node, text, rel) {
   }
 }
 
+// Helm vendor charts into charts/*.tgz. The explorer reads each subchart's
+// template source to build the component graph, so extract any tarball first.
+function extractVendoredCharts() {
+  const dir = path.join(ROOT, "targets/srv0/k3s-apps/charts");
+  if (!fs.existsSync(dir)) return;
+  for (const entry of fs.readdirSync(dir)) {
+    if (!entry.endsWith(".tgz")) continue;
+    const name = entry.replace(/-\d+\.\d+\.\d+.*\.tgz$/, "");
+    const dest = path.join(dir, name);
+    if (fs.existsSync(dest)) continue;
+    fs.mkdirSync(dest, { recursive: true });
+    execFileSync("tar", ["-xzf", path.join(dir, entry), "-C", dest, "--strip-components=1"]);
+  }
+}
+
 function buildK8s() {
+  extractVendoredCharts();
   const base = helmRender("map-base", "targets/srv0/k3s-base", "base");
   const apps = helmRender("map-apps", "targets/srv0/k3s-apps", "apps");
   const resources = [

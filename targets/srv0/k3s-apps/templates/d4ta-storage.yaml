@@ -98,3 +98,44 @@ spec:
   resources:
     requests:
       storage: 50Gi
+---
+# FL0W runtime helpers that used to be created by the per-app template. They
+# are recreated here because the D4TA chart only references existing claims.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: backupctl-home-pvc
+  namespace: apps
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: nfs-apps
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: task-runner-backup-pvc
+  namespace: apps
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: nfs-apps
+  resources:
+    requests:
+      storage: 10Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: backupctl-browser-pvc
+  namespace: apps
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: nfs-apps
+  resources:
+    requests:
+      storage: 1Gi
