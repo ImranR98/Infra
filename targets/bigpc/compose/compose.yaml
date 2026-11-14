@@ -35,7 +35,7 @@ services:
     # models.<SERVICES_DOMAIN> behind Authelia; the port is LAN-wide on purpose.
     # Renovate digest-pins server-rocm.
     llama-cpp:
-        image: ghcr.io/ggml-org/llama.cpp:server-rocm@sha256:4bbbd2e33deb54330fd23edde3a2cdf12b05ce4415139c7e8639a9aebbacdcf2
+        image: ghcr.io/ggml-org/llama.cpp:server-rocm@sha256:6da04cde049c6410fd93a45810dc2072ea8c8041ad9fc091f48e3064e322fb83
         container_name: llama-cpp
         restart: unless-stopped
         # Model memory, not steady state: one resident model plus --fit headroom
@@ -121,7 +121,7 @@ services:
     # allowFrom is the LAN CIDR. The agent archives each Heroic prefix's
     # drive_c/users/steamuser tree for the Wine Game Saves task.
     fl0w-agent:
-        image: ghcr.io/imranr98/fl0w-agent:latest@sha256:1ac43219cae0f019a52c9418434aea35d462a0b02fea6423b5f6d56507f6bee0
+        image: ghcr.io/imranr98/fl0w-agent:latest@sha256:4b2a3f2de65db79afff838ae7357c5479381eb1a9e44900c8bff50b9228f2a9e
         container_name: fl0w-agent
         restart: unless-stopped
         network_mode: host

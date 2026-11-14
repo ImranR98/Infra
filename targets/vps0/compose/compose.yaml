@@ -958,7 +958,7 @@ services:
             - "traefik.http.services.shlink.loadbalancer.server.port=8080"
         logging: *logging
     shlink_db:
-        image: postgres:17.11-alpine@sha256:3540c0362c809df084ffac0ae69fe794515f9de92692f02178bcdce0ef0302ac
+        image: postgres:17.11-alpine@sha256:e5d2edd28b1f8d40a0a6c0c9cdc545b19b56a0d5d88f94bc11a97d970d4700d0
         container_name: shlink_db
         restart: unless-stopped
         user: "$MY_UID:$MY_UID"
@@ -1067,7 +1067,7 @@ services:
     fl0w-agent:
         profiles:
             - fl0w-agent
-        image: ghcr.io/imranr98/fl0w-agent:latest@sha256:1ac43219cae0f019a52c9418434aea35d462a0b02fea6423b5f6d56507f6bee0
+        image: ghcr.io/imranr98/fl0w-agent:latest@sha256:4b2a3f2de65db79afff838ae7357c5479381eb1a9e44900c8bff50b9228f2a9e
         container_name: fl0w-agent
         restart: unless-stopped
         network_mode: host
