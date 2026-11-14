@@ -116,13 +116,13 @@ services:
             - "8080:8080"
         logging: *logging
 
-    # FL0W archive agent for Wine prefixes. FL0W on srv0 reaches it at
+    # D4TA archive agent for Wine prefixes. D4TA on srv0 reaches it at
     # http://<bigpc-ip>:8788 over the LAN; enrollment is token-gated and
     # allowFrom is the LAN CIDR. The agent archives each Heroic prefix's
     # drive_c/users/steamuser tree for the Wine Game Saves task.
-    fl0w-agent:
-        image: ghcr.io/imranr98/fl0w-agent:latest@sha256:1ac43219cae0f019a52c9418434aea35d462a0b02fea6423b5f6d56507f6bee0
-        container_name: fl0w-agent
+    d4ta-agent:
+        image: ghcr.io/imranr98/d4ta-agent:latest@sha256:9b2328f747efd55a2aeefe21778de64b880f835142a00481f0ba8654c7f190d2
+        container_name: d4ta-agent
         restart: unless-stopped
         network_mode: host
         user: "$MY_UID:$MY_UID"
@@ -132,8 +132,8 @@ services:
         cap_drop:
             - ALL
         volumes:
-            - ../../../config/bigpc/fl0w-agent/agent.json:/config/agent.json:ro
-            - ${COMPOSE_STATE_DIR}/fl0w-agent:/state
+            - ../../../config/bigpc/d4ta-agent/agent.json:/config/agent.json:ro
+            - ${COMPOSE_STATE_DIR}/d4ta-agent:/state
             - /home/$MY_USERNAME/Games/Heroic/Prefixes:/data/prefixes:ro
         tmpfs:
             - /tmp

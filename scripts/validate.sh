@@ -265,7 +265,7 @@ check_gateway_certrefs() {
 # explicitly allowlisted for manual/script-only values.
 check_template_values() {
     local template="$1" target_dir="$2" ok=1 key
-    local allowlist=(HA_MQTT_PASSWORD TARGET)
+    local allowlist=(HA_MQTT_PASSWORD TARGET d4ta)
     while IFS= read -r key; do
         [ -n "$key" ] || continue
         case " ${allowlist[*]} " in
@@ -300,10 +300,9 @@ check_rendered_paths() {
         fi
     done <<'EOF'
 hostpath-main-node-media-pv|MEDIA_DIR_PATH
-dscpln-app-config-pv|DSCPLN_CONFIG_PATH
-watxt-app-config-pv|WATXT_CONFIG_PATH
-fl0w-app-config-pv|FL0W_CONFIG_PATH
-da5h-app-config-pv|DA5H_CONFIG_PATH
+hostpath-main-node-d4ta-watxt-pv|D4TA_WATXT_DATA_PATH
+d4ta-config-pv|D4TA_CONFIG_PATH
+d4ta-ledger-pv|D4TA_LEDGER_PATH
 external-exposed-node-syslog-pv|JOURNAL_DIR
 EOF
     [ "$ok" = 1 ]
@@ -365,42 +364,17 @@ check_global_config() {
     if [ "$TARGET" = "vps0" ]; then
         profiles="$(config_env vps0 COMPOSE_PROFILES || true)"
         case ",${profiles// /,}," in
-            *,fl0w-agent,*)
-                if [ ! -s "$INFRA_ROOT/config/vps0/dscpln-agent/agent.json" ]; then
-                    _err "ERROR: COMPOSE_PROFILES enables fl0w-agent but config/vps0/dscpln-agent/agent.json is missing"
+            *,d4ta-agent,*)
+                if [ ! -s "$INFRA_ROOT/config/vps0/d4ta-agent/agent.json" ]; then
+                    _err "ERROR: COMPOSE_PROFILES enables d4ta-agent but config/vps0/d4ta-agent/agent.json is missing"
                     ok=0
-                elif grep -q '<[A-Za-z]' "$INFRA_ROOT/config/vps0/dscpln-agent/agent.json"; then
-                    _err "ERROR: config/vps0/dscpln-agent/agent.json still contains template placeholders"
+                elif grep -q '<[A-Za-z]' "$INFRA_ROOT/config/vps0/d4ta-agent/agent.json"; then
+                    _err "ERROR: config/vps0/d4ta-agent/agent.json still contains template placeholders"
                     ok=0
                 fi
                 ;;
         esac
     fi
-    [ "$ok" = 1 ]
-}
-
-# check_agent_schema <config> — validate DSCPLN_AGENTS without rendering.
-check_agent_schema() {
-    local config_file="$1" ok=1 name key bad
-    while IFS= read -r name; do
-        [ -n "$name" ] || continue
-        for key in node stateSubdir config; do
-            if ! yq -e ".DSCPLN_AGENTS[\"$name\"].$key" "$config_file" >/dev/null 2>&1; then
-                _err "ERROR: DSCPLN_AGENTS.$name.$key is required"
-                ok=0
-            fi
-        done
-        bad=$(yq ".DSCPLN_AGENTS[\"$name\"].dataMounts // [] | .[] | select((has(\"name\") | not) or (has(\"subdir\") | not) or (has(\"mountPath\") | not)) | .name // \"<unnamed>\"" "$config_file" 2>/dev/null || true)
-        if [ -n "$bad" ]; then
-            _err "ERROR: DSCPLN_AGENTS.$name.dataMounts has invalid entries (need name/subdir/mountPath): $bad"
-            ok=0
-        fi
-        bad=$(yq ".DSCPLN_AGENTS[\"$name\"].dataMounts // [] | .[] | select(has(\"readOnly\") and ((.readOnly | type) != \"!!bool\")) | .name // \"<unnamed>\"" "$config_file" 2>/dev/null || true)
-        if [ -n "$bad" ]; then
-            _err "ERROR: DSCPLN_AGENTS.$name.dataMounts[].readOnly must be a boolean: $bad"
-            ok=0
-        fi
-    done < <(yq '.DSCPLN_AGENTS // {} | keys | .[]' "$config_file")
     [ "$ok" = 1 ]
 }
 
@@ -466,6 +440,31 @@ check_resource_tiers() {
     return 0
 }
 
+# ensure_chart_deps <chart_dir> — Helm dependencies are vendored under charts/
+# (gitignored). Build them when missing or older than Chart.lock. This is the
+# only step in validate.sh that may touch the network and the chart directory;
+# it is a no-op after the first run or a chart bump.
+ensure_chart_deps() {
+    local chart_dir="$1" charts lock
+    [ -f "$chart_dir/Chart.yaml" ] || return 0
+    grep -q '^dependencies:' "$chart_dir/Chart.yaml" || return 0
+    charts="$chart_dir/charts"
+    lock="$chart_dir/Chart.lock"
+    local need=0
+    if ! compgen -G "$charts/*.tgz" >/dev/null 2>&1; then
+        need=1
+    elif [ -f "$lock" ] && [ "$lock" -nt "$(ls -t "$charts"/*.tgz 2>/dev/null | head -1)" ]; then
+        need=1
+    fi
+    if [ "$need" = 1 ]; then
+        echo "validate: building Helm chart dependencies for $(basename "$chart_dir") (first run or chart bump; needs network)" >&2
+        if ! helm dependency build "$chart_dir" >/dev/null; then
+            _err "ERROR: helm dependency build failed for $chart_dir"
+            return 1
+        fi
+    fi
+}
+
 check_helm() {
     local target_dir="$1"
     local config_file="$INFRA_ROOT/config/$TARGET/values.yaml"
@@ -479,6 +478,8 @@ check_helm() {
         release="$TARGET-$ns"
         vars_args=(-f "$chart_dir/values.yaml")
         [ -f "$config_file" ] && vars_args+=(-f "$config_file")
+
+        ensure_chart_deps "$chart_dir" || { ok=0; continue; }
 
         if ! helm lint "$chart_dir" "${vars_args[@]}" >/dev/null 2>&1; then
             _err "ERROR: helm lint failed ($chart)"
@@ -525,6 +526,7 @@ check_chart_repos() {
         "oci://ghcr.io/seerr-team/seerr/seerr-chart"
         "https://helm.openwebui.com"
         "https://blog.pavelsklenar.com/home-assistant-helm-chart"
+        "oci://ghcr.io/imranr98/charts"
     )
     local ok=1 f repo chart a found
     for f in "$target_dir"/k3s-base/templates/*.yaml "$target_dir"/k3s-apps/templates/*.yaml; do
@@ -558,6 +560,47 @@ check_chart_repos() {
                 ok=0
             fi
         done < <(grep -hE '^  chart: oci://' "$f" || true)
+    done
+
+    # Chart.yaml dependencies are not template files; check their repositories
+    # against the same project-maintained allowlist.
+    local chart_file chart_repo
+    for chart_file in "$target_dir"/k3s-*/Chart.yaml; do
+        [ -f "$chart_file" ] || continue
+        while IFS= read -r chart_repo; do
+            chart_repo="${chart_repo#"${chart_repo%%[![:space:]]*}"}"
+            chart_repo="${chart_repo#repository: }"
+            chart_repo="${chart_repo%/}"
+            found=0
+            for a in "${allowed[@]}"; do
+                [ "$chart_repo" = "$a" ] && { found=1; break; }
+            done
+            if [ "$found" = 0 ]; then
+                _err "ERROR: unapproved Helm chart dependency in ${chart_file#"$INFRA_ROOT"/}: $chart_repo"
+                ok=0
+            fi
+        done < <(grep -hE '^[[:space:]]+repository: ' "$chart_file" | grep -v '^[[:space:]]*#' || true)
+    done
+    [ "$ok" = 1 ]
+}
+
+# check_d4ta_images — the D4TA chart's image refs are split across
+# repository/tag/digest in the committed values file, so check them here rather
+# than relying on the raw image: ref scan.
+check_d4ta_images() {
+    local values="$INFRA_ROOT/targets/srv0/k3s-apps/values.yaml"
+    [ -f "$values" ] || return 0
+    local ok=1 module repo tag digest
+    for module in home dscpln watxt flow tags; do
+        repo=$(yq -r ".d4ta.images.$module.repository // \"\"" "$values" 2>/dev/null || true)
+        [ -n "$repo" ] && [ "$repo" != "null" ] || continue
+        tag=$(yq -r ".d4ta.images.$module.tag // \"\"" "$values" 2>/dev/null || true)
+        digest=$(yq -r ".d4ta.images.$module.digest // \"\"" "$values" 2>/dev/null || true)
+        [ "$tag" = "latest" ] || { _err "ERROR: d4ta $module image tag must be latest"; ok=0; }
+        if ! [[ "$digest" =~ ^sha256:[a-f0-9]{64}$ ]]; then
+            _err "ERROR: d4ta $module image digest is missing or invalid"
+            ok=0
+        fi
     done
     [ "$ok" = 1 ]
 }
@@ -647,11 +690,9 @@ fi
 check_global_config || ok=0
 
 config_values="$INFRA_ROOT/config/$TARGET/values.yaml"
-if [ -f "$config_values" ]; then
-    check_agent_schema "$config_values" || ok=0
-fi
 
 [ -d "$target_dir/k3s-base" ] && {
+    check_d4ta_images || ok=0
     check_helm "$target_dir" || ok=0
     check_chart_repos "$target_dir" || ok=0
     check_resource_tiers "$target_dir" || ok=0

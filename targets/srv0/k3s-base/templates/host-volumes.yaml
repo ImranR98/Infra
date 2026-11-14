@@ -117,7 +117,7 @@ spec:
 apiVersion: v1
 kind: PersistentVolume
 metadata:
-  name: hostpath-main-node-wa-txt-pv
+  name: hostpath-main-node-d4ta-watxt-pv
 spec:
   capacity:
     storage: 4096Gi
@@ -127,7 +127,7 @@ spec:
   persistentVolumeReclaimPolicy: Retain
   storageClassName: hostpath
   local:
-    path: {{ include "path.waTxt" . }}
+    path: {{ include "path.d4taWatxtData" . }}
   nodeAffinity:
     required:
       nodeSelectorTerms:
@@ -140,7 +140,7 @@ spec:
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: hostpath-main-node-wa-txt-pvc
+  name: hostpath-main-node-d4ta-watxt-pvc
   namespace: apps
 spec:
   accessModes:
@@ -149,7 +149,7 @@ spec:
   resources:
     requests:
       storage: 4096Gi
-  volumeName: hostpath-main-node-wa-txt-pv
+  volumeName: hostpath-main-node-d4ta-watxt-pv
 ---
 apiVersion: v1
 kind: PersistentVolume

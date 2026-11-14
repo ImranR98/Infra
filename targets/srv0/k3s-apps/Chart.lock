@@ -1,0 +1,6 @@
+dependencies:
+- name: d4ta
+  repository: oci://ghcr.io/imranr98/charts
+  version: 0.1.1
+digest: sha256:c401050e650b2d3327ff84e0f72a98827bf9688988ce2aaef01544ce3bf71fec
+generated: "2026-11-14T17:21:36.287072509-05:00"

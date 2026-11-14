@@ -32,12 +32,17 @@ srv0:
     - opencode
     - headlamp
     - logtfy
-  dscpln:
-    - dscpln
-    - watxt
-    - fl0w
-    - da5h
-    - dscpln-ledger
-    - app-config-storage
+  d4ta:
+    - d4ta-home
+    - d4ta-dscpln
+    - d4ta-watxt
+    - d4ta-flow
+    - d4ta-tags
+    - d4ta-blocker
+    - d4ta-secrets
+    - d4ta-storage
+    - d4ta-networkpolicies
+    - d4ta-ingress
+    - d4ta-flow-podmonitor
   security:
     - opencanary

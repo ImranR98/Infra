@@ -35,7 +35,7 @@ of truth for repo layout and deploy commands.
 
 Ask for, or infer:
 - time range: `--since 24h`, or `--from`/`--to` (ISO 8601)
-- app/pod/namespace substring: `--app dscpln,task-runner`
+- app/pod/namespace substring: `--app d4ta,d4ta-flow`
 - optional: `--priority` (default `Emergency,Alert,Critical,Error,Warning`),
   `--rule`, `--namespace`
 - action: propose (default) or apply

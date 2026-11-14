@@ -469,7 +469,7 @@ function addTargets() {
     });
   }
 
-  for (const cat of ["media", "home", "arr", "productivity", "tools", "dscpln", "security"]) {
+  for (const cat of ["media", "home", "arr", "productivity", "tools", "d4ta", "security"]) {
     addNode({
       id: `srv0/apps/${cat}`,
       kind: "group",
@@ -628,7 +628,7 @@ function addTargets() {
   addEdge("srv0/ops/access", "srv0/config/values", "reads-config", "tunnel");
   addEdge("srv0/ops/ci", "config/VARS", "reads-config", "tokens");
   addEdge("srv0/ops/renovate", "config/VARS", "reads-config", "tokens");
-  for (const cat of ["media", "home", "arr", "productivity", "tools", "dscpln", "security"]) {
+  for (const cat of ["media", "home", "arr", "productivity", "tools", "d4ta", "security"]) {
     addEdge("srv0/apps", `srv0/apps/${cat}`, "groups", cat);
   }
   addEdge("srv0/apps", "srv0/base", "depends-on", "platform");
