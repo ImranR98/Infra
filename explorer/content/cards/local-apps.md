@@ -12,4 +12,4 @@ A dedicated `local-path-provisioner` (v0.0.37, not the K3s addon) runs on the `h
 - `nodeAffinityKey: infra.local/hostpath-main` + `allowedTopologies` — PVs are pinned by label, never by hostname.
 - `defaultVolumeType: local`, `reclaimPolicy: Retain`, `volumeBindingMode: WaitForFirstConsumer`, `ReadWriteOnce`.
 
-It is not database-specific: any single-node workload that needs a real POSIX filesystem can use it. Databases (SQLite in particular) are the main consumers because NFS's per-lock cache flush stalls and corrupts them. Bulk and shared data stays on `nfs-apps`.
+It is not database-specific: any single-node workload that needs a real POSIX filesystem can use it. SQLite databases are the main consumers because NFS's per-lock cache flush stalls and corrupts them. Postgres and the observability stores (Loki, Prometheus) remain on `nfs-apps` with the measured NFS cost accepted; bulk and shared data also stays there.

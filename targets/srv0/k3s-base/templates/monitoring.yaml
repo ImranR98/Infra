@@ -535,8 +535,13 @@ spec:
         retention_delete_delay: 2h
         delete_request_store: filesystem
       limits_config:
-        # 90 days of logs; compactor enforces this against the object store.
-        retention_period: 2160h
+        # 180 days of logs, matching Prometheus; the compactor enforces this
+        # against the object store. The 10Gi volume holds ~4GiB at this rate.
+        retention_period: 4320h
+        # Query across the full retention window; the frontend default is 30d.
+        max_query_length: 4320h
+        # 180-day queries are split by 15m and need more than the 300s default.
+        query_timeout: 600s
         # Keep reject_old_samples at its default (true): disabling it lets
         # old docker logs flood the log store and saturate node storage.
     chunksCache:
