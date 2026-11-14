@@ -110,6 +110,14 @@ spec:
                   value: required
                 - name: RENOVATE_CACHE_TTL_OVERRIDE
                   value: '{"datasource-docker-hub-cache":10080}'
+                # Docker Hub caps anonymous tag pagination at 1,000 tags; page
+                # 11 returns 403 and Renovate then falls back to the registry
+                # tag list, which has no timestamps, so the 3-day age gate
+                # would hold every Docker Hub image bump forever. dockerMaxPages
+                # is globalOnly, so it must be set here (and in
+                # scripts/renovate.sh for local runs).
+                - name: RENOVATE_DOCKER_MAX_PAGES
+                  value: "10"
                 - name: LOG_LEVEL
                   value: info
                 - name: NTFY_URL

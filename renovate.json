@@ -200,6 +200,19 @@
       "minimumReleaseAge": null
     },
     {
+      "description": "GHCR, Quay, GitLab and registry.k8s.io expose no per-tag timestamps, so minimumReleaseAgeBehaviour=timestamp-required would hold their updates in the Dependency Dashboard's Pending Status Checks forever. Docker Hub is the only registry Renovate can timestamp (it needs the pagination cap set in RENOVATE_DOCKER_MAX_PAGES, see scripts/renovate.sh and the CronJob). Allow timestamp-less registry tags through while keeping the 3-day gate wherever a timestamp exists.",
+      "matchDatasources": [
+        "docker"
+      ],
+      "matchPackageNames": [
+        "ghcr.io/**",
+        "quay.io/**",
+        "registry.gitlab.com/**",
+        "registry.k8s.io/**"
+      ],
+      "minimumReleaseAgeBehaviour": "timestamp-optional"
+    },
+    {
       "description": "One PR for all docker digest pins and refreshes (the noisy batch); version bumps stay separate",
       "matchUpdateTypes": [
         "pinDigest",

@@ -135,6 +135,15 @@ fi
 # shellcheck disable=SC2090 # JSON literal, not shell quoting
 export RENOVATE_CACHE_TTL_OVERRIDE
 
+# Docker Hub's tag API caps anonymous pagination at 1,000 tags (page 11 returns
+# 403 "pagination offset too large"). Renovate then falls back to the registry
+# tag list, which carries no timestamps, and minimumReleaseAgeBehaviour=
+# timestamp-required holds every Docker Hub update forever. Basic auth does not
+# lift the cap (the Hub API ignores it; only its JWT flow does). Stop at the
+# last page that answers so the timestamps survive. dockerMaxPages is
+# globalOnly, so it must come from the environment, not renovate.json.
+export RENOVATE_DOCKER_MAX_PAGES="${RENOVATE_DOCKER_MAX_PAGES:-10}"
+
 export LOG_LEVEL="${LOG_LEVEL:-info}"
 
 # Attribute commits to the repo's configured git identity instead of Renovate's
