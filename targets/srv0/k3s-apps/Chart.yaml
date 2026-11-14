@@ -5,5 +5,5 @@ type: application
 version: 0.1.0
 dependencies:
   - name: d4ta
-    version: 0.1.1
+    version: 0.1.2
     repository: oci://ghcr.io/imranr98/charts
