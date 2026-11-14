@@ -89,15 +89,15 @@ spec:
 {{- if eq $immichMlBackend "openvino" }}
               image:
                 repository: ghcr.io/immich-app/immich-machine-learning
-                tag: v3.3.6-openvino
+                tag: v3.4.0-openvino
 {{- else if eq $immichMlBackend "rocm" }}
               image:
                 repository: ghcr.io/immich-app/immich-machine-learning
-                tag: v3.3.6-rocm
+                tag: v3.4.0-rocm
 {{- else }}
               image:
                 repository: ghcr.io/immich-app/immich-machine-learning
-                tag: v3.3.6
+                tag: v3.4.0
 {{- end }}
               securityContext:
                 allowPrivilegeEscalation: false
