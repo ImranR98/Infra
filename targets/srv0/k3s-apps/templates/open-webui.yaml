@@ -150,15 +150,10 @@ spec:
         value: "false"
       - name: OAUTH_CODE_CHALLENGE_METHOD
         value: "S256"
-      # The data PVC is on nfs-apps. SQLite on a network filesystem is not
-      # supported: WAL's mmap-backed -shm file can raise SIGBUS (exit 135) on
-      # an NFS hiccup, which is what restarted open-webui on 2026-11-11.
-      # Disable mmap and widen the busy timeout as a stop-gap; migrating the
-      # database to PostgreSQL is the durable fix.
-      - name: DATABASE_SQLITE_PRAGMA_MMAP_SIZE
-        value: "0"
-      - name: DATABASE_SQLITE_PRAGMA_BUSY_TIMEOUT
-        value: "30000"
+      # The data PVC is on local-apps (a real local filesystem), so SQLite
+      # WAL's mmap-backed -shm works normally. The NFS workaround
+      # (MMAP_SIZE=0, BUSY_TIMEOUT=30000), added after the 2026-11-11 SIGBUS
+      # restart, is no longer needed.
     {{- include "infra.resources" (dict "tier" "2xlarge") | nindent 4 }}
     # NOTE: open-webui, redis, and pipelines run as root — copy-app-data
     # init container copies files as root, sub-charts uncontrolled by parent.
@@ -176,11 +171,11 @@ metadata:
     auto-backup: "true"
 spec:
   accessModes:
-    - ReadWriteMany
+    - ReadWriteOnce
   resources:
     requests:
       storage: 5Gi
-  storageClassName: nfs-apps
+  storageClassName: local-apps
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim

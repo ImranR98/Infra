@@ -178,8 +178,8 @@ metadata:
     auto-backup: "true"
 spec:
   accessModes:
-    - ReadWriteMany
-  storageClassName: nfs-apps
+    - ReadWriteOnce
+  storageClassName: local-apps
   resources:
     requests:
       storage: 5Gi

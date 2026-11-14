@@ -436,15 +436,15 @@ check_cluster_hardware() {
     done
 }
 
-# check_released_pvs — a Released nfs-apps PV still points at a directory that
-# a recreated claim could reuse. Flag it for manual cleanup.
+# check_released_pvs — a Released nfs-apps/local-apps PV still points at a
+# directory that a recreated claim could reuse. Flag it for manual cleanup.
 check_released_pvs() {
     command -v kubectl >/dev/null 2>&1 || return 0
     kubectl get node srv0 >/dev/null 2>&1 || return 0
 
     local released
-    released=$(kubectl get pv -o json 2>/dev/null | jq -r '.items[] | select(.spec.storageClassName == "nfs-apps" and .status.phase == "Released") | .metadata.name')
-    [ -z "$released" ] || _err "WARNING: Released nfs-apps PVs remain: $released"
+    released=$(kubectl get pv -o json 2>/dev/null | jq -r '.items[] | select((.spec.storageClassName == "nfs-apps" or .spec.storageClassName == "local-apps") and .status.phase == "Released") | .metadata.name')
+    [ -z "$released" ] || _err "WARNING: Released nfs-apps/local-apps PVs remain: $released"
 }
 
 # check_resource_tiers <target_dir> — container resources come from the
@@ -608,8 +608,8 @@ check_compose_machine_env() {
 # ~/infra_state. Deploying without it leaves claims unbound, so fail early.
 check_runtime_state() {
     local state_dir="$INFRA_STATE_DIR"
-    if [ ! -d "$state_dir/k3s_live_state/nfs-apps" ]; then
-        _err "ERROR: runtime state tree not found at $state_dir/k3s_live_state/nfs-apps"
+    if [ ! -d "$state_dir/k3s_live_state/app-data" ]; then
+        _err "ERROR: runtime state tree not found at $state_dir/k3s_live_state/app-data"
         _err "  create it (scripts/prereqs.sh initialises the state tree) before deploying"
         return 1
     fi

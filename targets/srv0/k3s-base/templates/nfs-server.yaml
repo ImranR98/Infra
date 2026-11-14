@@ -128,7 +128,7 @@ spec:
             type: DirectoryOrCreate
         - name: apps-storage
           hostPath:
-            path: {{ include "path.infraState" . }}/k3s_live_state/nfs-apps
+            path: {{ include "path.infraState" . }}/k3s_live_state/app-data
             type: DirectoryOrCreate
         - name: code-sandbox-storage
           hostPath:

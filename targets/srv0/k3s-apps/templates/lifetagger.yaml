@@ -181,11 +181,11 @@ metadata:
     backup.infra/exclude: "thumbs,previews,face-thumbs,models"
 spec:
   accessModes:
-    - ReadWriteMany
+    - ReadWriteOnce
   resources:
     requests:
       storage: 50Gi
-  storageClassName: nfs-apps
+  storageClassName: local-apps
 ---
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy

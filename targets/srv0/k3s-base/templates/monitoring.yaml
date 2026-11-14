@@ -282,8 +282,10 @@ spec:
       enabled: true
       size: 5Gi
       accessModes:
-        - ReadWriteMany
-      storageClassName: nfs-apps
+        - ReadWriteOnce
+      storageClassName: local-apps
+      extraPvcLabels:
+        auto-backup: "true"
     {{- include "infra.resources" (dict "tier" "xlarge") | nindent 4 }}
     grafana.ini:
       server:

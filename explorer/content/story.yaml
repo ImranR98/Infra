@@ -408,16 +408,18 @@ steps:
 - id: data
   stage: Data
   title: Where the photo lives
-  body: 'The `nfs-server` pod in `base` exports host paths; `csi-driver-nfs` mounts them. The app-data export is `/exports/apps` → `{{ .Values.INFRA_STATE_DIR }}/k3s_live_state/nfs-apps`, with `no_root_squash` (needed by CSI subdir creation and Postgres chowns).
+  body: 'The `nfs-server` pod in `base` exports host paths; `csi-driver-nfs` mounts them. The app-data export is `/exports/apps` → `{{ .Values.INFRA_STATE_DIR }}/k3s_live_state/app-data`, with `no_root_squash` (needed by CSI subdir creation and Postgres chowns).
 
 
     The dynamic StorageClass **`nfs-apps`** is the default. It provisions `subDir: ${pvc.metadata.namespace}/${pvc.metadata.name}`, `mountPermissions: "0777"`, `reclaimPolicy: Retain`, `onDelete: retain`, `volumeBindingMode: Immediate`, and `allowVolumeExpansion: false` (sizes are advisory; NFS has no quota).
+
+    Its local twin is **`local-apps`**: the same `<namespace>/<pvc>` layout under the same tree, mounted from the host filesystem by a dedicated `local-path-provisioner` on the `hostpath-main` node (RWO, Retain, WaitForFirstConsumer). Databases use it; bulk and shared data stay on `nfs-apps`.
 
     '
   deepDive: 'Migrated PVCs use `ReadWriteMany` so backup/restore pods can run on any node. The CSI driver is the only NFS client (hostNetwork node plugin); all mounts use `nfsvers=4.2`.
 
 
-    NFS is excellent for read-heavy/sequential workloads and media. SQLite/WAL and Postgres are latency-sensitive: the full-NFS migration accepted the measured cost (~3× SQLite p95 and ~2.6× Postgres latency under load). Immich Postgres requires `IGNORE_DATABASE_FSTYPE=true` to start on NFS.
+    NFS is excellent for read-heavy/sequential workloads and media, and remains the default for bulk data (~3× SQLite p95 and ~2.6× Postgres latency under load is the accepted cost there). It is not acceptable for SQLite: the per-lock cache flush stalled and corrupted several databases, so those volumes use the local `local-apps` twin. Immich Postgres still requires `IGNORE_DATABASE_FSTYPE=true` to start on NFS.
 
 
     `hostpath-main` is a singleton: exactly one node owns the Main tree. A hostPath must not be the only reason a pod is pinned; back it with a statically bound `hostpath` PV/PVC and let the claim do the scheduling.
@@ -534,7 +536,7 @@ steps:
   body: 'The **State Backups** task in the FL0W is the active backup system. It runs on a schedule (default Sundays 04:00) and has a manual **Run now**.
 
 
-    One encrypted, deduplicated restic repository at `state_backups/restic` contains every PVC labelled `auto-backup=true` under `~/infra_state/k3s_live_state/nfs-apps/<namespace>/<pvc>`, the srv0 Compose state, and the vps0 Compose state, fetched over SSH with the existing key.
+    One encrypted, deduplicated restic repository at `state_backups/restic` contains every PVC labelled `auto-backup=true` under `~/infra_state/k3s_live_state/app-data/<namespace>/<pvc>`, the srv0 Compose state, and the vps0 Compose state, fetched over SSH with the existing key.
 
     '
   deepDive: 'The FL0W backup instance runs as root in the `apps` namespace so it can read the Postgres/Redis-owned PVC data; it mounts the Infra tree read-only and only `state_backups/` writable.
@@ -1690,27 +1692,33 @@ steps:
 - id: storage
   stage: Maintenance
   title: Storage
-  body: 'Application PVCs use the NFS-backed `nfs-apps` class: the `nfs-server` pod plus `csi-driver-nfs`. Sizes are advisory and PVCs are `ReadWriteMany`.
+  body: 'Application PVCs use one of two classes over the same tree, `~/infra_state/k3s_live_state/app-data`. `nfs-apps` is the default: the `nfs-server` pod plus `csi-driver-nfs`, RWX, sizes advisory. `local-apps` is its local twin: a dedicated `local-path-provisioner` on the `hostpath-main` node, RWO, same `<namespace>/<pvc>` layout, pinned by `infra.local/hostpath-main`.
 
 
     Restores use `scripts/restic-restore.sh`; there is no tar-based PVC path.'
-  deepDive: 'The app-data export is `/exports/apps` → `~/infra_state/k3s_live_state/nfs-apps` with `no_root_squash`. `IGNORE_DATABASE_FSTYPE=true` is required for Immich Postgres on NFS.
+  deepDive: 'The app-data export is `/exports/apps` → `~/infra_state/k3s_live_state/app-data` with `no_root_squash`. `IGNORE_DATABASE_FSTYPE=true` is required for Immich Postgres on NFS.
 
 
-    The tradeoff is measured: about 3× SQLite p95 and 2.6× Postgres latency under load compared with block storage.'
+    The split is deliberate. NFS remains the right choice for bulk data (~3× SQLite p95 and 2.6× Postgres latency under load), but the NFS client flushes dirty pages and drops the page cache on every fcntl lock (`fs/nfs/file.c` `do_setlk`), which stalled and corrupted SQLite. Databases now run on `local-apps`; the physical tree and backup paths are unchanged.'
   reveal:
   - srv0/base/nfs-server
   - srv0/base/csi-driver-nfs
+  - srv0/base/local-apps
+  - srv0/base/local-apps/storageclass/local-apps
   - concept/backups/restic-repository
   - script/restic-restore
   focus:
   - srv0/base/nfs-server
   - srv0/base/csi-driver-nfs
+  - srv0/base/local-apps
+  - srv0/base/local-apps/storageclass/local-apps
   - concept/backups/restic-repository
   - script/restic-restore
   flow:
   - - srv0/base/nfs-server
   - - srv0/base/csi-driver-nfs
+  - - srv0/base/local-apps
+    - srv0/base/local-apps/storageclass/local-apps
   - - concept/backups/restic-repository
     - script/restic-restore
   zones:
@@ -1719,6 +1727,8 @@ steps:
     members:
     - srv0/base/nfs-server
     - srv0/base/csi-driver-nfs
+    - srv0/base/local-apps
+    - srv0/base/local-apps/storageclass/local-apps
     - concept/backups/restic-repository
     - script/restic-restore
   edges:
@@ -1726,6 +1736,10 @@ steps:
     to: srv0/base/nfs-server
     type: mounts
     label: NFS 4.2
+  - from: srv0/base/local-apps/storageclass/local-apps
+    to: srv0/base/local-apps
+    type: managed-by
+    label: local-path
   - from: concept/backups/restic-repository
     to: script/restic-restore
     type: restored-by
@@ -1735,6 +1749,8 @@ steps:
     summary: The NFS server and exports.
   - path: targets/srv0/k3s-base/templates/csi-driver-nfs.yaml
     summary: The default nfs-apps StorageClass.
+  - path: targets/srv0/k3s-base/templates/local-apps.yaml
+    summary: The local-apps StorageClass and its local-path-provisioner.
   - path: scripts/restic-restore.sh
     summary: Manual restore path.
 - id: restore

@@ -128,9 +128,12 @@ then run `validate.sh srv0` (renders both charts and rejects `<no value>`).
 - k3s Plan bumps also roll k3s's bundled Traefik/coredns charts; after the upgrade
   confirm the `HelmChartConfig` customizations survived (Traefik args, Gateway
   `Programmed=True`, plugins).
-- `nfs-apps` is the default StorageClass; add no new dynamic PVs. App data on
-  a host path must use the statically bound `hostpath` PV/PVC whose `nodeAffinity`
-  pins the owning node.
+- `nfs-apps` is the default StorageClass for bulk/shared data; `local-apps` is
+  its local twin (same `<namespace>/<pvc>` tree under
+  `~/infra_state/k3s_live_state/app-data`, RWO, pinned to `hostpath-main` by
+  label). Use `local-apps` for POSIX/lock-sensitive workloads. Add no other
+  dynamic PVs; app data on a host path must use the statically bound `hostpath`
+  PV/PVC whose `nodeAffinity` pins the owning node.
 - App PRs use the shared preset (`github>ImranR98/Infra//renovate-preset`).
   Non-major updates are auto-merged by Renovate after the `test` check; majors are
   Dependency Dashboard approvals. If a major is approved and merged, it still

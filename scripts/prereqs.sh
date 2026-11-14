@@ -112,7 +112,7 @@ if [ -d "$target_dir/compose" ] && [ -f "$target_dir/compose/compose.yaml" ]; th
 
     echo "==> Ensuring runtime state dirs"
     mkdir -p "$INFRA_STATE_DIR"
-    mkdir -p "$STATE_ROOT/compose_live_state" "$STATE_ROOT/k3s_live_state"
+    mkdir -p "$STATE_ROOT/compose_live_state" "$STATE_ROOT/k3s_live_state" "$STATE_ROOT/k3s_live_state/app-data"
     # The private overlay can carry secrets; keep it owner-only.
     if [ -f "$target_dir/compose/compose.private.yaml" ]; then
         $SU chmod 600 "$target_dir/compose/compose.private.yaml"

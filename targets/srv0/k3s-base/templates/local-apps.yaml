@@ -1,0 +1,211 @@
+# local-apps — the local twin of the nfs-apps StorageClass.
+#
+# Same purpose, same <namespace>/<pvc> layout under the app-data tree, but
+# mounted from the host filesystem instead of NFS. Databases need a real
+# filesystem: the NFS client flushes dirty pages and drops the page cache on
+# every fcntl lock (fs/nfs/file.c do_setlk), which serializes SQLite WAL
+# transactions and has twice corrupted app databases. Non-database apps that
+# need a POSIX filesystem can use it too; it is not DB-specific.
+#
+# A dedicated local-path-provisioner instance (not the K3s addon) provides the
+# class. pathPattern reuses the existing app-data/<ns>/<pvc> directories, so
+# no data moves; nodeAffinityKey pins PVs by the hostpath-main node label
+# rather than by hostname.
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: local-apps-provisioner
+  namespace: base
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: local-apps-provisioner
+  namespace: base
+rules:
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list", "watch", "create", "patch", "update", "delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: local-apps-provisioner
+  namespace: base
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: local-apps-provisioner
+subjects:
+  - kind: ServiceAccount
+    name: local-apps-provisioner
+    namespace: base
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: local-apps-provisioner
+rules:
+  - apiGroups: [""]
+    resources: ["nodes", "persistentvolumeclaims", "configmaps", "pods", "pods/log"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["persistentvolumes"]
+    verbs: ["get", "list", "watch", "create", "patch", "update", "delete"]
+  - apiGroups: [""]
+    resources: ["events"]
+    verbs: ["create", "patch"]
+  - apiGroups: ["storage.k8s.io"]
+    resources: ["storageclasses"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: local-apps-provisioner
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: local-apps-provisioner
+subjects:
+  - kind: ServiceAccount
+    name: local-apps-provisioner
+    namespace: base
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  # local-path-provisioner hardcodes the helper-script ConfigMap name to
+  # local-path-config. This is namespace-scoped in base and does not touch the
+  # K3s addon's kube-system/local-path-config.
+  name: local-path-config
+  namespace: base
+data:
+  config.json: |
+    {
+      "nodePathMap": [
+        {
+          "node": "DEFAULT_PATH_FOR_NON_LISTED_NODES",
+          "paths": ["{{ include "path.infraState" . }}/k3s_live_state/app-data"]
+        }
+      ]
+    }
+  setup: |-
+    #!/bin/sh
+    set -eu
+    mkdir -m 0777 -p "$VOL_DIR"
+  teardown: |-
+    #!/bin/sh
+    set -eu
+    # reclaimPolicy is Retain: never delete app data from a teardown hook.
+    exit 0
+  helperPod.yaml: |-
+    apiVersion: v1
+    kind: Pod
+    metadata:
+      name: helper-pod
+    spec:
+      priorityClassName: system-node-critical
+      tolerations:
+        - key: node.kubernetes.io/disk-pressure
+          operator: Exists
+          effect: NoSchedule
+      containers:
+        - name: helper-pod
+          image: busybox:1.38.0-uclibc@sha256:b2e35951f72501f6a99f1bf45bcfe6d4795be08c518c2f97d0ed2fe776958a3b
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: local-apps-provisioner
+  namespace: base
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: local-apps-provisioner
+  template:
+    metadata:
+      labels:
+        app: local-apps-provisioner
+    spec:
+      serviceAccountName: local-apps-provisioner
+      # The helper pod must run on the node that owns app-data; pinning the
+      # provisioner too keeps the whole path local to one node.
+      nodeSelector:
+        infra.local/hostpath-main: "true"
+      containers:
+        - name: provisioner
+          image: docker.io/rancher/local-path-provisioner:v0.0.37@sha256:e757967a5ec338f6a9b371c5a9688bedaa8c3578ea3dd4db329ea0084be0a86f
+          imagePullPolicy: IfNotPresent
+          command:
+            - local-path-provisioner
+            - start
+            - --config=/etc/config/config.json
+            - --helper-pod-file=/etc/config/helperPod.yaml
+            - --provisioner-name=local.imranr.dev/local-apps
+            - --service-account-name=local-apps-provisioner
+          ports:
+            - name: health
+              containerPort: 8080
+              protocol: TCP
+          startupProbe:
+            httpGet:
+              path: /health
+              port: health
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            failureThreshold: 12
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: health
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: health
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          env:
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: CONFIG_MOUNT_PATH
+              value: /etc/config/
+            - name: HEALTH_PORT
+              value: "8080"
+          volumeMounts:
+            - name: config
+              mountPath: /etc/config/
+          {{- include "infra.resources" (dict "tier" "tiny") | nindent 10 }}
+      volumes:
+        - name: config
+          configMap:
+            name: local-path-config
+---
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: local-apps
+  annotations:
+    # The provisioner creates local PVs (nodeAffinity-bearing).
+    defaultVolumeType: local
+    # Deliberately not the default class; nfs-apps remains the default.
+provisioner: local.imranr.dev/local-apps
+parameters:
+  # Go template interpreted by local-path-provisioner, not by Helm.
+  pathPattern: '{{ "{{ .PVC.Namespace }}/{{ .PVC.Name }}/" }}'
+  nodeAffinityKey: infra.local/hostpath-main
+reclaimPolicy: Retain
+volumeBindingMode: WaitForFirstConsumer
+allowedTopologies:
+  - matchLabelExpressions:
+      - key: infra.local/hostpath-main
+        values:
+          - "true"

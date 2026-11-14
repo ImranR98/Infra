@@ -189,13 +189,15 @@ kind: PersistentVolumeClaim
 metadata:
   name: ntfy-pvc
   namespace: base
+  labels:
+    auto-backup: "true"
 spec:
   accessModes:
-    - ReadWriteMany
+    - ReadWriteOnce
   resources:
     requests:
       storage: 5Gi
-  storageClassName: nfs-apps
+  storageClassName: local-apps
 ---
 apiVersion: v1
 kind: Secret

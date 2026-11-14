@@ -183,8 +183,8 @@ metadata:
     backup.infra/exclude: "cache"
 spec:
   accessModes:
-    - ReadWriteMany
-  storageClassName: nfs-apps
+    - ReadWriteOnce
+  storageClassName: local-apps
   resources:
     requests:
       storage: 10Gi

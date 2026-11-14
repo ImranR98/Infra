@@ -442,7 +442,7 @@ LIFETAGGER_EXCLUDE_EXT: "txt,pp3,json,xmp,aae,db,ini,log"
 INFRA_ROOT: ""
 # Runtime state root. Defaults to <HOME_DIR>/infra_state. Must be outside
 # INFRA_ROOT. Holds compose_live_state (Compose bind state) and
-# k3s_live_state (NFS app data and K3s agent state).
+# k3s_live_state (app-data volumes and K3s agent state).
 INFRA_STATE_DIR: ""
 TARGET: "srv0"
 

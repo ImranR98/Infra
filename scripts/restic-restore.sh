@@ -145,11 +145,14 @@ restore_pvc() {
     ns=$(kubectl get pvc -A -o json | jq -r --arg pvc "$pvc" \
         '.items[] | select(.metadata.name == $pvc) | .metadata.namespace' | head -n1)
     [ -n "$ns" ] || { echo "PVC not found: $pvc" >&2; exit 1; }
-    dest="$K3S_STATE_DIR/nfs-apps/$ns/$pvc"
+    dest="$K3S_STATE_DIR/app-data/$ns/$pvc"
     [ -d "$dest" ] || { echo "Destination not found: $dest" >&2; exit 1; }
 
     snap="$(snapshot_arg "$snapshot")"
-    source_path="$(snapshot_path "$snap" "/nfs-apps/$ns/$pvc")"
+    # Snapshots taken before the nfs-apps -> app-data rename store the old
+    # path; prefer the current path, then fall back.
+    source_path="$(snapshot_path "$snap" "/app-data/$ns/$pvc")"
+    [ -n "$source_path" ] || source_path="$(snapshot_path "$snap" "/nfs-apps/$ns/$pvc")"
     [ -n "$source_path" ] || {
         echo "PVC path not found in snapshot $snap: $ns/$pvc" >&2
         exit 1

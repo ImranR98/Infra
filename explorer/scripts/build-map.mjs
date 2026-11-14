@@ -256,7 +256,7 @@ for (const [cat, items] of Object.entries(appCats.srv0 || {})) {
 
 const baseCategories = {
   network: ["gateway", "edge-certs", "traefik", "cert-manager"],
-  storage: ["nfs-server", "host-volumes", "csi-driver-nfs"],
+  storage: ["nfs-server", "host-volumes", "csi-driver-nfs", "local-apps"],
   security: ["authelia", "crowdsec", "crowdsec-cert-roll", "crowdsec-web-ui", "falco", "app-egress", "namespaces"],
   observability: ["monitoring", "ntfy"],
   cluster: ["descheduler", "system-upgrade-controller", "system-upgrade", "generic-device-plugin"],
@@ -297,7 +297,7 @@ function addTargets() {
       { label: "Orchestrator", value: "K3s + Helm charts" },
       { label: "Namespace", value: "base (platform) / apps (workloads)" },
       { label: "Exposure", value: "LAN/VPN + public-exposure tunnel" },
-      { label: "Storage", value: "NFS (nfs-apps) + static host paths" },
+      { label: "Storage", value: "NFS (nfs-apps) + local (local-apps) + static host paths" },
       { label: "Pinned by", value: "infra.local/hostpath-main, infra.local/external-exposed" },
     ],
     lane: "runtime",
@@ -904,7 +904,7 @@ function buildK8s() {
       parent = `srv0/base/${cat}`;
       lane = ["gateway", "edge-certs", "traefik", "cert-manager"].includes(stem)
         ? "entry"
-        : ["nfs-server", "host-volumes", "csi-driver-nfs"].includes(stem)
+        : ["nfs-server", "host-volumes", "csi-driver-nfs", "local-apps"].includes(stem)
           ? "data"
           : ["authelia", "crowdsec", "crowdsec-cert-roll", "crowdsec-web-ui", "falco", "app-egress", "namespaces"].includes(stem)
             ? "security"
@@ -2486,7 +2486,8 @@ function buildScenes() {
       title: "Storage",
       subtitle: "NFS backbone · host paths · backups",
       include: ["srv0/base/nfs-server", "srv0/base/host-volumes", "srv0/base/csi-driver-nfs",
-        "srv0/base/csi-driver-nfs/storageclass/nfs-apps", "srv0/ops/backups", "script/restic-restore",
+        "srv0/base/csi-driver-nfs/storageclass/nfs-apps", "srv0/base/local-apps",
+        "srv0/base/local-apps/storageclass/local-apps", "srv0/ops/backups", "script/restic-restore",
         "srv0/apps", "vps0/apps", "srv0/apps/media/immich", "srv0/apps/media/frigate",
         "srv0/apps/home/homeassistant", "srv0/apps/productivity/nextcloud",
         "srv0/apps/home/syncthing", "srv0/ops/backups", "srv0/apps/dscpln/fl0w"],
@@ -2591,7 +2592,7 @@ function finishNodes() {
     // Badges from facts.
     const allFacts = n.facts.map((f) => `${f.label}=${f.value}`).join(" ");
     if (/public|websecure-proxy|home\.|Host\(/i.test(allFacts) && !n.badges.includes("public")) n.badges.push("public");
-    if (/storageClass|nfs-apps|auto-backup/i.test(allFacts) && !n.badges.includes("storage")) n.badges.push("storage");
+    if (/storageClass|nfs-apps|local-apps|auto-backup/i.test(allFacts) && !n.badges.includes("storage")) n.badges.push("storage");
     if (/(?:intel-gpu|amd-igpu|amd-dgpu|vaapi|conbee)/.test(allFacts) && !n.badges.includes("gpu")) n.badges.push("gpu");
     if (n.tags.includes("auth") && !n.badges.includes("auth")) n.badges.push("auth");
     if (n.tags.includes("backup") && !n.badges.includes("backup")) n.badges.push("backup");

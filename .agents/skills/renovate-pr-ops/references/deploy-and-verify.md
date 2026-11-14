@@ -127,7 +127,7 @@ Both env files are required; the machine-fact `.env` is written by
 - `kubectl -n apps rollout status deploy/<name> --timeout=120s` for each affected app.
 - `kubectl -n base get helmcharts` and `kubectl -n apps get helmcharts` — no FAILED.
 - `kubectl get pvc -A --no-headers | grep -v Bound` — no unbound or lost PVCs
-  (`nfs-apps` is the default StorageClass).
+  (`nfs-apps` is the default StorageClass; `local-apps` is its local twin).
 - `kubectl get --raw /readyz` — `ok`.
 - `kubectl get events -A --field-selector type=Warning --sort-by=.lastTimestamp | tail`
   — no new post-deploy warnings.
