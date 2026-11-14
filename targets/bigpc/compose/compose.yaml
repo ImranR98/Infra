@@ -116,37 +116,12 @@ services:
             - "8080:8080"
         logging: *logging
 
-    # Ludusavi artifact fetch for the FL0W agent. One-shot: the agent only
-    # starts after the binary is staged in /state. Renovate tracks the version
-    # in ARTIFACT_URL below.
-    fl0w-agent-init:
-        image: ghcr.io/imranr98/fl0w-agent-gtk:latest@sha256:7c775a678814bc2fa9d1e5801788595edd7eb35386194d354e2b0053caa8da1a
-        container_name: fl0w-agent-init
-        restart: "no"
-        user: "$MY_UID:$MY_UID"
-        security_opt:
-            - label=type:spc_t
-        cap_drop:
-            - ALL
-        entrypoint:
-            - /app/fetch-artifact.sh
-        environment:
-            - ARTIFACT_URL=https://github.com/mtkennerly/ludusavi/releases/download/v0.31.0/ludusavi-v0.31.0-linux.tar.gz
-            - ARTIFACT_VERSION=0.31.0
-            - ARTIFACT_MEMBER=ludusavi
-            - ARTIFACT_DEST=/state/ludusavi/bin/ludusavi
-            - ARTIFACT_CHECK_ARGS=--version
-        volumes:
-            - ${COMPOSE_STATE_DIR}/fl0w-agent:/state
-        tmpfs:
-            - /tmp
-        logging: *logging
-
-    # FL0W game-save agent (Ludusavi). Replaces the K3s fl0w-agent-bigpc
-    # Deployment; FL0W on srv0 reaches it at http://<bigpc-ip>:8788 over the
-    # LAN. Enrollment is token-gated and allowFrom is the LAN CIDR.
+    # FL0W archive agent for Wine prefixes. FL0W on srv0 reaches it at
+    # http://<bigpc-ip>:8788 over the LAN; enrollment is token-gated and
+    # allowFrom is the LAN CIDR. The agent archives each Heroic prefix's
+    # drive_c/users/steamuser tree for the Wine Game Saves task.
     fl0w-agent:
-        image: ghcr.io/imranr98/fl0w-agent-gtk:latest@sha256:7c775a678814bc2fa9d1e5801788595edd7eb35386194d354e2b0053caa8da1a
+        image: ghcr.io/imranr98/fl0w-agent:latest@sha256:1ac43219cae0f019a52c9418434aea35d462a0b02fea6423b5f6d56507f6bee0
         container_name: fl0w-agent
         restart: unless-stopped
         network_mode: host
@@ -156,18 +131,10 @@ services:
             - no-new-privileges:true
         cap_drop:
             - ALL
-        depends_on:
-            fl0w-agent-init:
-                condition: service_completed_successfully
         volumes:
             - ../../../config/bigpc/fl0w-agent/agent.json:/config/agent.json:ro
             - ${COMPOSE_STATE_DIR}/fl0w-agent:/state
-            - /home/$MY_USERNAME/Games:/home/$MY_USERNAME/Games:ro
-            - /home/$MY_USERNAME/.local/share:/home/$MY_USERNAME/.local/share:ro
-            - /home/$MY_USERNAME/.steam:/home/$MY_USERNAME/.steam:ro
-            - /home/$MY_USERNAME/.config:/home/$MY_USERNAME/.config:ro
-            - /home/$MY_USERNAME/.var/app/com.heroicgameslauncher.hgl/config/heroic:/home/$MY_USERNAME/.var/app/com.heroicgameslauncher.hgl/config/heroic:ro
-            - /home/$MY_USERNAME/Main/Media/Software/Games/PC/Saves:/data/saves
+            - /home/$MY_USERNAME/Games/Heroic/Prefixes:/data/prefixes:ro
         tmpfs:
             - /tmp
         healthcheck:

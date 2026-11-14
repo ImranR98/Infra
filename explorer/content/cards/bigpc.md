@@ -1,7 +1,7 @@
 ---
 id: target/bigpc
 title: bigpc
-summary: "Compose desktop: llama.cpp on the RX 9070, a FL0W Ludusavi agent, and syncthing."
+summary: "Compose desktop: llama.cpp on the RX 9070, a FL0W Wine game-save archive agent, and syncthing."
 tags: [context, gpu]
 ---
 bigpc is not one of the two subjects; it is a Compose host, not a Kubernetes node. It runs a Compose stack that supplies the one workload the cluster still depends on: llama.cpp on the AMD RX 9070 (ROCm). `srv0` Traefik reaches it over the LAN through a selectorless `llama-cpp` Service and EndpointSlice at `BIGPC_HOST`, so `models.<SERVICES_DOMAIN>` keeps working publicly, on the VPN, and on the LAN. Everything behind that hostname stays behind Authelia; the raw container port is LAN-only.

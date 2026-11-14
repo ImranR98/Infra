@@ -1048,7 +1048,7 @@ steps:
 - id: other-machines
   stage: App
   title: The other machines
-  body: '`bigpc` is a Compose-only desktop: llama.cpp on the RX 9070 (ROCm), the FL0W Ludusavi agent, and syncthing. It is not a Kubernetes node; `srv0` Traefik routes `models.<SERVICES_DOMAIN>` to its LAN address so the same hostname works publicly, on the VPN, and on the LAN. `rpi` is a Pi 400 that turns a webcam into an authenticated RTSP stream with go2rtc, consumed by Frigate on `srv0`.
+  body: '`bigpc` is a Compose-only desktop: llama.cpp on the RX 9070 (ROCm), the FL0W Wine game-save archive agent, and syncthing. It is not a Kubernetes node; `srv0` Traefik routes `models.<SERVICES_DOMAIN>` to its LAN address so the same hostname works publicly, on the VPN, and on the LAN. `rpi` is a Pi 400 that turns a webcam into an authenticated RTSP stream with go2rtc, consumed by Frigate on `srv0`.
 
 
     `pc` is Compose-only too: syncthing, ComfyUI, and a llama.cpp router on its Intel Arc iGPU. None of them is on the `srv0`/`vps0` request path.'

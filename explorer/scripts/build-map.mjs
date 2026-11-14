@@ -1490,7 +1490,7 @@ function buildCompose() {
     subtitle: "Compose host · RX 9070",
     parent: "srv0/apps/tools/llama-cpp",
     summary:
-      "Compose-only desktop: llama.cpp on the RX 9070, the FL0W Ludusavi agent, and syncthing. Not a Kubernetes node.",
+      "Compose-only desktop: llama.cpp on the RX 9070, the FL0W Wine game-save archive agent, and syncthing. Not a Kubernetes node.",
     tags: ["gpu", "context"],
     badges: ["gpu"],
     context: true,

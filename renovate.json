@@ -157,20 +157,6 @@
       "depNameTemplate": "helm/helm",
       "datasourceTemplate": "github-releases",
       "versioningTemplate": "semver"
-    },
-    {
-      "customType": "regex",
-      "description": "Ludusavi release fetched by the bigpc Compose agent's artifact init",
-      "managerFilePatterns": [
-        "/^targets\\/bigpc\\/compose\\/compose\\.yaml$/"
-      ],
-      "matchStrings": [
-        "ludusavi/releases/download/v(?<currentValue>\\d+\\.\\d+\\.\\d+)/"
-      ],
-      "depNameTemplate": "mtkennerly/ludusavi",
-      "datasourceTemplate": "github-releases",
-      "versioningTemplate": "semver",
-      "extractVersionTemplate": "^v(?<version>\\d+\\.\\d+\\.\\d+)$"
     }
   ],
   "packageRules": [
