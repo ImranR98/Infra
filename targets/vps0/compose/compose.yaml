@@ -223,7 +223,7 @@ services:
     # (files/public-exposure/forwards.conf). Host effects are lifecycle-bound:
     # stopping the container removes the interface, DNAT and firewall rules.
     public-exposure-server-wg:
-        image: lscr.io/linuxserver/wireguard:latest@sha256:236f9a9a89c701bc83f6d41007157dc77361114d14e56a08e846bb4499622e97
+        image: lscr.io/linuxserver/wireguard:latest@sha256:10db56ad834f94541307d5dfdbe87370e26d155bb341a5bf65789f970f24ab5c
         container_name: public-exposure-server-wg
         restart: always
         network_mode: host
@@ -246,7 +246,7 @@ services:
 
     # Prints one line per preboot-client handshake so logtfy can alert on it.
     public-exposure-watch:
-        image: lscr.io/linuxserver/wireguard:latest@sha256:236f9a9a89c701bc83f6d41007157dc77361114d14e56a08e846bb4499622e97
+        image: lscr.io/linuxserver/wireguard:latest@sha256:10db56ad834f94541307d5dfdbe87370e26d155bb341a5bf65789f970f24ab5c
         container_name: public-exposure-watch
         restart: unless-stopped
         network_mode: host
