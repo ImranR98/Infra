@@ -9,7 +9,8 @@
 # must exist. Variable NAMES and paths only are printed — values never reach
 # stdout/stderr. Runs from any machine; the host-gated deploy preconditions
 # (Compose machine-fact .env, srv0 runtime state and cluster access) run only
-# on the target machine.
+# on the target machine. The one write is vendoring the gitignored Helm chart
+# dependency into targets/<t>/k3s-*/charts/ on the first run or after a bump.
 set -euo pipefail
 
 if [ -z "${INFRA_ROOT:-}" ]; then

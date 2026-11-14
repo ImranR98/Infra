@@ -22,7 +22,7 @@ Run `validate.sh` before every `helm upgrade --install`.
 bash scripts/init-config.sh srv0 --detect
 bash scripts/init-config.sh vps0
 
-# Preflight — read-only, any machine:
+# Preflight — any machine (vendors the D4TA chart dependency on first run):
 bash scripts/validate.sh srv0
 bash scripts/validate.sh vps0
 
