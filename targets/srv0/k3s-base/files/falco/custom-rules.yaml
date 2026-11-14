@@ -147,3 +147,22 @@
         - [system-upgrade, apply-]
   override:
     exceptions: append
+
+# Added by falco-exception-triage (2026-11-14)
+- rule: Redirect STDOUT/STDIN to Network Connection in Container
+  exceptions:
+  - name: infra_health_exporter_httpd
+    fields:
+    - k8s.ns.name
+    - k8s.pod.name
+    - proc.name
+    comps:
+    - '='
+    - startswith
+    - '='
+    values:
+    - - base
+      - infra-health-exporter-
+      - httpd
+  override:
+    exceptions: append
