@@ -619,7 +619,7 @@ services:
     # ISBN Lookup
     isbn-lookup:
         container_name: isbn-lookup
-        image: ghcr.io/imranr98/isbn-lookup:latest@sha256:a3eb3d8a104db1945b6b50465c5b64d98cf3430181f8df7b1658cb082e7ae9c5
+        image: ghcr.io/imranr98/isbn-lookup:latest@sha256:e844b80b7ddef8d6a655fe4613dc4f39d635ba6940cc335ea9506ec92a90c502
         restart: unless-stopped
         mem_limit: 128M
         cpus: 0.25
