@@ -119,7 +119,8 @@ services:
     # D4TA archive agent for Wine prefixes. D4TA on srv0 reaches it at
     # http://<bigpc-ip>:8788 over the LAN; enrollment is token-gated and
     # allowFrom is the LAN CIDR. The agent archives each Heroic prefix's
-    # drive_c/users/steamuser tree for the Wine Game Saves task.
+    # drive_c/users/steamuser tree, plus the Main-local prefixes nested under
+    # main/, for the Wine Game Saves task.
     d4ta-agent:
         image: ghcr.io/imranr98/d4ta-agent:latest@sha256:55daedb22a474ce6ebaea2d3191d0004753ed7c8e579a96f7ef8ec4bbf13f678
         container_name: d4ta-agent
@@ -135,6 +136,7 @@ services:
             - ../../../config/bigpc/d4ta-agent/agent.json:/config/agent.json:ro
             - ${COMPOSE_STATE_DIR}/d4ta-agent:/state
             - /home/$MY_USERNAME/Games/Heroic/Prefixes:/data/prefixes:ro
+            - /home/$MY_USERNAME/Main/Media/Software/Games/PC/wineprefixes:/data/prefixes/main:ro
         tmpfs:
             - /tmp
         healthcheck:
