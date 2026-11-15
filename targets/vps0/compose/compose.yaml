@@ -1067,7 +1067,7 @@ services:
     d4ta-agent:
         profiles:
             - d4ta-agent
-        image: ghcr.io/imranr98/d4ta-agent:latest@sha256:9b2328f747efd55a2aeefe21778de64b880f835142a00481f0ba8654c7f190d2
+        image: ghcr.io/imranr98/d4ta-agent:latest@sha256:55daedb22a474ce6ebaea2d3191d0004753ed7c8e579a96f7ef8ec4bbf13f678
         container_name: d4ta-agent
         restart: unless-stopped
         network_mode: host
