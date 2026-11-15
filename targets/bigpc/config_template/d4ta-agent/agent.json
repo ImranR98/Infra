@@ -11,7 +11,7 @@
     "wine-saves": {
       "type": "archive",
       "root": "/data/prefixes",
-      "include": ["*/drive_c/users/steamuser", "main/*/drive_c/users/steamuser"],
+      "include": ["heroic/*/drive_c/users/steamuser", "main/*/drive_c/users/steamuser"],
       "exclude": ["*/AppData/Local/Temp"],
       "ignoreReadErrors": true,
       "format": "tar.gz",
