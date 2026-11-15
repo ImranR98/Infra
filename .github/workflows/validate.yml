@@ -52,6 +52,9 @@ jobs:
             targets/srv0/k3s-apps/values.yaml \
             targets/srv0/k3s-apps/Chart.yaml
 
+      - name: Helm dependencies
+        run: helm dependency build targets/srv0/k3s-apps
+
       - name: Helm lint and render
         run: |
           set -euo pipefail
