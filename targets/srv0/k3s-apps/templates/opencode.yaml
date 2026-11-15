@@ -247,8 +247,6 @@ kind: PersistentVolumeClaim
 metadata:
   name: opencode-home-pvc
   namespace: apps
-  labels:
-    auto-backup: "true"
 spec:
   accessModes:
     - ReadWriteOnce

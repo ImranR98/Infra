@@ -20,7 +20,7 @@
       "customType": "regex",
       "description": "Sole K3s image manager: repository/tag pairs and single-line image refs. currentDigest is captured so digest-pinned images are recognized as pinned and refreshed; without it Renovate re-pins them and the branch update fails verification. The built-in kubernetes manager is intentionally not scoped to these files: it also extracts Deployment/NetworkPolicy API versions and duplicate image deps.",
       "managerFilePatterns": [
-        "/targets\\/srv0\\/k3s-(base|apps)\\/.+\\.ya?ml$/"
+        "/targets\\/srv0\\/k3s-(base|apps)\\/templates\\/.+\\.ya?ml$/"
       ],
       "matchStrings": [
         "repository:\\s*(?<depName>\\S+)\\s*\\n(?:[^\\n]*\\n){0,10}?\\s*tag:\\s*\"?(?<currentValue>[^\"\\s@#]+)(?:@(?<currentDigest>sha256:[a-f0-9]+))?\"?",
@@ -157,6 +157,18 @@
       "depNameTemplate": "helm/helm",
       "datasourceTemplate": "github-releases",
       "versioningTemplate": "semver"
+    },
+    {
+      "customType": "regex",
+      "description": "D4TA chart images: repository/tag/digest are separate values. Capture the digest so Renovate refreshes it instead of treating latest as unpinned.",
+      "managerFilePatterns": [
+        "/targets/srv0/k3s-apps/values\\.yaml$/"
+      ],
+      "matchStrings": [
+        "repository:\\s*(?<depName>ghcr\\.io/imranr98/d4ta-[a-z]+)\\s*\\n\\s*tag:\\s*\"?(?<currentValue>latest)\"?\\s*\\n\\s*digest:\\s*\"(?<currentDigest>sha256:[a-f0-9]{64})\""
+      ],
+      "datasourceTemplate": "docker",
+      "versioningTemplate": "docker"
     }
   ],
   "packageRules": [

@@ -185,7 +185,7 @@ phase exists only for the leftovers:
    the next scheduled Infra run opens the digest PR; third-party images wait for
    the 3-day age gate. Record the merge commit SHA and note the app as "Infra
    pin pending" until it appears.
-5. Config-only repos (`dscpln-config`, `*-config`) have no image; nothing to pin.
+5. Config-only repos (`d4ta-config`, `*-config`) have no image; nothing to pin.
 
 ## Phase 5 — Infra PRs (human gate)
 

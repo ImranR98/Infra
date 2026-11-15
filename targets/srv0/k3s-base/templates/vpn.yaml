@@ -31,8 +31,6 @@ kind: PersistentVolumeClaim
 metadata:
   name: remote-access-amneziawg-pvc
   namespace: base
-  labels:
-    auto-backup: "true"
 spec:
   accessModes:
     - ReadWriteMany

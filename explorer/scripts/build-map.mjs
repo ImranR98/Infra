@@ -229,6 +229,28 @@ function trackedFiles() {
     });
 }
 
+// Vendored subchart sources are gitignored, so `git ls-files` does not see
+// them. Walk charts/ after extracting the tarballs so the explorer can show
+// the D4TA chart's templates and snippets.
+function vendoredChartFiles() {
+  const base = "targets/srv0/k3s-apps/charts";
+  const root = path.join(ROOT, base);
+  const out = [];
+  if (!fs.existsSync(root)) return out;
+  const walk = (rel) => {
+    for (const entry of fs.readdirSync(path.join(ROOT, rel), { withFileTypes: true })) {
+      const next = path.posix.join(rel, entry.name);
+      if (entry.isDirectory()) walk(next);
+      else {
+        const ext = path.extname(entry.name);
+        if (TEXT_EXT.has(ext) || entry.name === "Chart.yaml") out.push(next);
+      }
+    }
+  };
+  walk(base);
+  return out;
+}
+
 function indexSources(files) {
   // Overwrite in place. Removing and recreating the directory makes Vite's
   // public-dir cache serve the SPA fallback for snippets generated while the
@@ -469,7 +491,7 @@ function addTargets() {
     });
   }
 
-  for (const cat of ["media", "home", "arr", "productivity", "tools", "dscpln", "security"]) {
+  for (const cat of ["media", "home", "arr", "productivity", "tools", "d4ta", "security"]) {
     addNode({
       id: `srv0/apps/${cat}`,
       kind: "group",
@@ -517,30 +539,30 @@ function addTargets() {
     id: "srv0/ops/backups",
     kind: "group",
     title: "State backups",
-    subtitle: "restic · FL0W · restore",
+    subtitle: "daily snapshots · FL0W · restore",
     parent: "srv0/ops",
     summary:
-      "Backup-only routine in FL0W. One encrypted restic repository captures auto-backup PVCs and Compose state; restore is a manual script.",
+      "Backup-only routine in FL0W. Daily rsync snapshots capture auto-backup PVCs, DB dumps, and Compose state; restore is a manual script.",
     tags: ["storage", "backup"],
     lane: "ops",
   });
   addNode({
-    id: "concept/backups/restic-repository",
+    id: "concept/backups/state-snapshots",
     kind: "concept",
-    title: "Restic repository",
-    subtitle: "encrypted · deduplicated · off-app restore",
+    title: "State snapshots",
+    subtitle: "daily · hardlinked · off-app restore",
     parent: "srv0/ops/backups",
-    summary: "One restic repository under state_backups/restic. It holds auto-backup PVCs and the srv0/vps0 Compose state; restore is a standalone script.",
+    summary: "Timestamped snapshots under state_backups/snapshots. They hold auto-backup PVCs, Postgres/SQLite dumps, and the srv0/vps0 Compose state; restore is a standalone script.",
     tags: ["storage", "backup"],
     facts: [
-      { label: "Location", value: "state_backups/restic" },
-      { label: "Retention", value: "restic forget --keep-last N --prune" },
-      { label: "Restore", value: "scripts/restic-restore.sh", mono: true },
+      { label: "Location", value: "state_backups/snapshots" },
+      { label: "Retention", value: "newest 2 daily snapshots" },
+      { label: "Restore", value: "scripts/state-restore.sh", mono: true },
     ],
     lane: "data",
   });
-  addEdge("srv0/ops/backups", "concept/backups/restic-repository", "writes", "restic");
-  addEdge("concept/backups/restic-repository", "script/restic-restore", "restored-by", "manual");
+  addEdge("srv0/ops/backups", "concept/backups/state-snapshots", "writes", "daily snapshot");
+  addEdge("concept/backups/state-snapshots", "script/state-restore", "restored-by", "manual");
 
   addNode({
     id: "srv0/ops/ci",
@@ -628,7 +650,7 @@ function addTargets() {
   addEdge("srv0/ops/access", "srv0/config/values", "reads-config", "tunnel");
   addEdge("srv0/ops/ci", "config/VARS", "reads-config", "tokens");
   addEdge("srv0/ops/renovate", "config/VARS", "reads-config", "tokens");
-  for (const cat of ["media", "home", "arr", "productivity", "tools", "dscpln", "security"]) {
+  for (const cat of ["media", "home", "arr", "productivity", "tools", "d4ta", "security"]) {
     addEdge("srv0/apps", `srv0/apps/${cat}`, "groups", cat);
   }
   addEdge("srv0/apps", "srv0/base", "depends-on", "platform");
@@ -673,7 +695,13 @@ function parseRendered(text, chartDir) {
     const sourceMatch = raw.match(/^# Source:\s*(.+)$/m);
     if (!sourceMatch) continue;
     const source = sourceMatch[1].trim();
-    const rel = path.join(chartDir, source.replace(/^[^/]+\//, ""));
+    // Helm renders a subchart with a "<chart>/templates/..." source. The
+    // subchart lives under charts/<chart>/, not the parent's templates/ dir.
+    const [chartName, ...rest] = source.split("/");
+    const subchart = path.join(chartDir, "charts", chartName, ...rest);
+    const rel = fs.existsSync(subchart)
+      ? subchart
+      : path.join(chartDir, source.replace(/^[^/]+\//, ""));
     const body = raw.replace(/^# Source:\s*.+$/m, "").trim();
     if (!body || !/^\s*(apiVersion|kind):/m.test(body)) continue;
     let docs;
@@ -869,6 +897,23 @@ function addImagesFromText(node, text, rel) {
     });
     addFact(img, "Image", ref, true);
     addEdge(node.id, id, "uses-image", tag || "image");
+  }
+}
+
+// Helm vendor charts into charts/*.tgz. The explorer reads each subchart's
+// template source to build the component graph, so extract any tarball first.
+function extractVendoredCharts() {
+  const dir = path.join(ROOT, "targets/srv0/k3s-apps/charts");
+  if (!fs.existsSync(dir)) return;
+  for (const entry of fs.readdirSync(dir)) {
+    if (!entry.endsWith(".tgz")) continue;
+    const name = entry.replace(/-\d+\.\d+\.\d+.*\.tgz$/, "");
+    const dest = path.join(dir, name);
+    // Always refresh the extracted copy: Helm may have replaced the tarball
+    // (and removed the directory) since the last map run.
+    fs.rmSync(dest, { recursive: true, force: true });
+    fs.mkdirSync(dest, { recursive: true });
+    execFileSync("tar", ["-xzf", path.join(dir, entry), "-C", dest, "--strip-components=1"]);
   }
 }
 
@@ -1544,7 +1589,7 @@ function buildCompose() {
 
 function scriptParent(rel) {
   if (rel === "scripts/renovate.sh" || rel === "scripts/repos.sh") return "srv0/ops/renovate";
-  if (rel === "scripts/restic-restore.sh") return "srv0/ops/backups";
+  if (rel === "scripts/state-restore.sh") return "srv0/ops/backups";
   if (rel.startsWith("scripts/k3s-") || rel === "scripts/update-node-ip.sh" || rel === "scripts/kubeconfig-unlock.sh" ||
       rel === "scripts/prereqs.sh" || rel === "scripts/init-config.sh") return "srv0/cluster";
   if (rel === "scripts/preboot.sh" || rel === "scripts/public-exposure-keygen.sh" ||
@@ -1604,7 +1649,7 @@ function buildScripts(files) {
       if (body) addFact(n, "Usage", body.replace(/^\s*echo\s+"/gm, "").replace(/"\s*$/gm, "").replace(/\\n/g, "\n"), true);
     }
     if (rel.includes("renovate")) n.tags.push("updates");
-    if (rel.includes("restic") || rel.includes("backup")) n.tags.push("storage", "backup");
+    if (rel.includes("state-restore") || rel.includes("backup") || rel.includes("state_backups")) n.tags.push("storage", "backup");
     if (rel.includes("public-exposure") || rel.includes("wireguard") || rel.includes("remote-access")) n.tags.push("network");
     if (rel.includes("authelia")) n.tags.push("auth");
     if (rel.includes("k3s") || rel.includes("kubeconfig")) n.tags.push("cluster");
@@ -2487,7 +2532,7 @@ function buildScenes() {
       subtitle: "NFS backbone · host paths · backups",
       include: ["srv0/base/nfs-server", "srv0/base/host-volumes", "srv0/base/csi-driver-nfs",
         "srv0/base/csi-driver-nfs/storageclass/nfs-apps", "srv0/base/local-apps",
-        "srv0/base/local-apps/storageclass/local-apps", "srv0/ops/backups", "script/restic-restore",
+        "srv0/base/local-apps/storageclass/local-apps", "srv0/ops/backups", "script/state-restore",
         "srv0/apps", "vps0/apps", "srv0/apps/media/immich", "srv0/apps/media/frigate",
         "srv0/apps/home/homeassistant", "srv0/apps/productivity/nextcloud",
         "srv0/apps/home/syncthing", "srv0/ops/backups", "srv0/apps/dscpln/fl0w"],
@@ -2606,7 +2651,8 @@ function finishNodes() {
 /* ------------------------------------------------------------------ */
 
 function main() {
-  const files = trackedFiles();
+  extractVendoredCharts();
+  const files = [...new Set([...trackedFiles(), ...vendoredChartFiles()])];
   indexSources(files);
 
   addTargets();

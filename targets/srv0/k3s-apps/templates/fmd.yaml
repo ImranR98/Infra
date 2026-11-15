@@ -20,6 +20,8 @@ spec:
     spec:
       securityContext:
         fsGroup: {{ .Values.MY_UID }}
+        seLinuxOptions:
+          level: s0
       containers:
         - name: fmd
           image: registry.gitlab.com/fmd-foss/fmd-server:0.17.1@sha256:c2591217d10da52836f65666719da51be72ffaaff9342634986b0b7e0e7568d0

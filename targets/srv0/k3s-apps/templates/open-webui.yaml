@@ -159,6 +159,8 @@ spec:
     # init container copies files as root, sub-charts uncontrolled by parent.
     podSecurityContext:
       fsGroup: {{ .Values.MY_UID }}
+      seLinuxOptions:
+        level: s0
     containerSecurityContext:
       allowPrivilegeEscalation: false
 ---
@@ -167,8 +169,6 @@ kind: PersistentVolumeClaim
 metadata:
   name: open-webui-data-pvc
   namespace: apps
-  labels:
-    auto-backup: "true"
 spec:
   accessModes:
     - ReadWriteOnce

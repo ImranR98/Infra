@@ -68,6 +68,8 @@ metadata:
   namespace: apps
   labels:
     auto-backup: "true"
+  annotations:
+    backup.infra/exclude: "logs MediaCover Backups logs.db"
 spec:
   accessModes:
     - ReadWriteOnce
@@ -105,6 +107,9 @@ spec:
       annotations:
         checksum/radarr-secret: {{ .Values.RADARR_API_KEY | sha256sum }}
     spec:
+      securityContext:
+        seLinuxOptions:
+          level: s0
       containers:
         - name: radarr
           image: lscr.io/linuxserver/radarr:latest@sha256:51a9ac2a9eb47afc833541e5fd6c11b86eb9f810694c22fa2429e3078e9194b2

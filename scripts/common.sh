@@ -15,7 +15,7 @@ fi
 export INFRA_ROOT
 
 # Runtime state lives outside the repo at ~/infra_state. Resolve the home of
-# the user who owns the checkout so root-run scripts (restic-restore --live)
+# the user who owns the checkout so root-run scripts (state-restore --live)
 # agree with the deploy user instead of using root's HOME.
 if [ -z "${INFRA_STATE_DIR:-}" ]; then
     _state_home=""

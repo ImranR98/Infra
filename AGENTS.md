@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Infra is the infrastructure-as-code repo for a multi-machine homelab. Everything a target needs lives in `targets/<t>/`; shared logic sits in `scripts/`; secrets live in the gitignored `config/`. There is no build step in this repo. Target-selecting scripts (`validate`) take `<target>` as their first argument; machine-local scripts (`prereqs`, `renovate`, `preboot`, `wireguard`, `kubeconfig-unlock`, `k3s-server`, `k3s-join`, `restic-restore`) act on the machine they run on.
+Infra is the infrastructure-as-code repo for a multi-machine homelab. Everything a target needs lives in `targets/<t>/`; shared logic sits in `scripts/`; secrets live in the gitignored `config/`. There is no build step in this repo. Target-selecting scripts (`validate`) take `<target>` as their first argument; machine-local scripts (`prereqs`, `renovate`, `preboot`, `wireguard`, `kubeconfig-unlock`, `k3s-server`, `k3s-join`, `state-restore`) act on the machine they run on.
 
 ## Targets
 
@@ -8,7 +8,7 @@ Infra is the infrastructure-as-code repo for a multi-machine homelab. Everything
 |---|---|---|
 | `srv0` | K3s control-plane + public-exposure client Compose sidecar | Main home server, LUKS-encrypted root; most workloads |
 | `vps0` | Compose | Public VPS: Traefik edge, public-exposure WireGuard hub, web apps |
-| `bigpc` | Compose | Desktop: llama.cpp on AMD RX 9070 (ROCm), FL0W Wine game-save archive agent; syncthing |
+| `bigpc` | Compose | Desktop: llama.cpp on AMD RX 9070 (ROCm), D4TA Wine game-save archive agent; syncthing |
 | `pc` | Compose | Desktop: ComfyUI/llama.cpp on the Intel Arc iGPU; syncthing |
 | `rpi` | Compose | Pi 400 webcam → authenticated RTSP (go2rtc), consumed by Frigate on srv0 |
 
@@ -22,13 +22,14 @@ Run `validate.sh` before every `helm upgrade --install`.
 bash scripts/init-config.sh srv0 --detect
 bash scripts/init-config.sh vps0
 
-# Preflight — read-only, any machine:
+# Preflight — any machine (vendors the D4TA chart dependency on first run):
 bash scripts/validate.sh srv0
 bash scripts/validate.sh vps0
 
 # K3s (srv0) — the kubeconfig is root-only. Unlock it in another terminal:
 bash scripts/kubeconfig-unlock.sh
-bash scripts/validate.sh srv0         # read-only gate before every deploy
+# First run / after a chart bump: validate.sh vendors the D4TA chart dependency.
+bash scripts/validate.sh srv0         # gate before every deploy
 helm upgrade --install srv0-base targets/srv0/k3s-base -n base --create-namespace \
   -f targets/srv0/k3s-base/values.yaml -f config/srv0/values.yaml
 helm upgrade --install srv0-apps targets/srv0/k3s-apps -n apps --create-namespace \
@@ -46,10 +47,13 @@ sudo docker compose \
 # The same flags work for ps / logs -f <svc> / down <svc> / up -d <svc>.
 # First-time setup: bash scripts/init-config.sh <target> [--detect]
 
-# Backups (FL0W scheduled task; manual restore):
-bash scripts/restic-restore.sh list
-bash scripts/restic-restore.sh pvc <pvc-name> [snapshot] [--live]
-bash scripts/restic-restore.sh compose srv0|vps0 [snapshot] [--live]
+# Backups (D4TA Jobs scheduled task; manual restore):
+# Daily snapshots keep the newest 2; `restore` replaces app-data, `db` stages
+# a DB dump, and `compose` handles the Compose state.
+bash scripts/state-restore.sh list
+bash scripts/state-restore.sh restore [snapshot] [--live]
+bash scripts/state-restore.sh db <ns/pvc> [snapshot]
+bash scripts/state-restore.sh compose srv0|vps0 [snapshot] [--live]
 sudo bash scripts/update-node-ip.sh [--ip X] [--force]
 
 # Machine-local (no target):
@@ -105,7 +109,7 @@ The tiers come from 25 days of cadvisor history (Prometheus in `base`) and are r
 Three narrow deviations, each with an inline comment in the template:
 
 - `memLimit` raises the ceiling for a workload whose burst is real but rare (`linkwarden` 16Gi for page-archiving Chromium, `opencode` 4Gi for build spikes). The request still comes from the tier.
-- `cpu` overrides the tier's CPU request when CPU and memory disagree (`lifetagger` 1, `syncthing` 500m, `logtfy` 50m).
+- `cpu` overrides the tier's CPU request when CPU and memory disagree (`d4ta-tags` 1, `syncthing` 500m, `logtfy` 50m).
 - `custom` is for memory that tracks a model or cache rather than steady state (`immich-machine-learning` 1Gi/8Gi). It requires explicit `memRequest` and `memLimit`; the helper fails the render without them.
 
 CPU limits stay off unless a chart sets one or the workload takes untrusted input (`crowdsec` 500m, `falco` 1, `prometheus` 1, `logtfy` 1). Don't add one to a normal app: requests don't cap bursts, limits do.
@@ -119,7 +123,7 @@ CPU limits stay off unless a chart sets one or the workload takes untrusted inpu
 - Give new components NetworkPolicies, and pick their requests/limits from the tier ladder above (never ad-hoc numbers).
 - **`nfs-apps` is the default StorageClass for shared/bulk data; `local-apps` is its local twin** — same `<namespace>/<pvc>` layout under `~/infra_state/k3s_live_state/app-data`, mounted from the host filesystem instead of NFS, `ReadWriteOnce`, provisioned by the dedicated `local-path-provisioner` instance on the `hostpath-main` node (pinned by `infra.local/hostpath-main`, never by hostname). Use `local-apps` for SQLite and any single-node app that needs a real filesystem; use `nfs-apps` for RWX bulk data. Postgres and the observability stores (Loki, Prometheus) remain on `nfs-apps` with the measured NFS cost accepted. Add no other dynamic PVs; the static `hostpath` claims remain the only exception.
 - The six user-facing apps (Home Assistant, Immich, Jellyfin, Linkwarden, Navidrome, Opodsync) have no Authelia forward-auth filter; use `BOOTSTRAP_PRIVATE_APPS` for first-boot LAN/VPN containment.
-- **srv0 is the only K3s node** — bigpc is Compose-only (llama.cpp, the FL0W Wine game-save archive agent, syncthing). There are no node-role labels. `k3s-server.sh` sets `infra.local/hostpath-main=true` and `infra.local/external-exposed=true` on srv0; `k3s-join.sh --hostpath-main` labels a replacement Main-data node.
+- **srv0 is the only K3s node** — bigpc is Compose-only (llama.cpp, the D4TA Wine game-save archive agent, syncthing). There are no node-role labels. `k3s-server.sh` sets `infra.local/hostpath-main=true` and `infra.local/external-exposed=true` on srv0; `k3s-join.sh --hostpath-main` labels a replacement Main-data node.
 - **HostPath data is exposed through a local PV/PVC** — app data that lives on a host path must be mounted via a statically bound `hostpath` PV/PVC whose `nodeAffinity` names the node that owns the path (`infra.local/hostpath-main` for the Main tree) so the claim pins the pod. Never add a pod `nodeSelector` to compensate for a raw `hostPath`; device/system paths (`/dev`, `/run/dbus`, `/var/lib/kubelet`) are exempt. `hostpath-main` is a singleton: exactly one node owns the Main tree and `~/infra_state`; `k3s-join.sh --hostpath-main` replaces that owner. Bigpc's AI data is host-local Compose data under `~/ai`, not a cluster PV.
 - **Hardware is requested through the generic device plugin** — use `infra.local/intel-gpu`, `infra.local/amd-igpu`, `infra.local/amd-dgpu`, `infra.local/vaapi`, or `infra.local/conbee` rather than a node label as a hardware proxy. The plugin generates resources from sysfs and `/dev` at startup; device paths are normalized to `renderD128`/`ttyACM0`. The extended resource is the only hardware selector.
 - **Accelerator selection is config, not chart edits** — `GPU_PROFILE` (`intel|amd|none`) chooses the media/ML backends; per-app overrides (`FRIGATE_DETECTOR`, `IMMICH_ML_BACKEND`, `IMMICH_ML_GPU_RESOURCE`, `JELLYFIN_HWACCEL`, `IMMICH_SERVER_HWACCEL`) exist for mixed/fallback cases. On the current AMD board Frigate and Immich ML both use `infra.local/amd-igpu`; Phoenix-class iGPUs need `IMMICH_ML_HSA_OVERRIDE_GFX_VERSION=11.0.0` or the CLIP text model segfaults the ML worker. Frigate is srv0-only. `HA_CONBEE`/`HA_BLUETOOTH` gate the HA hardware mounts.
@@ -127,5 +131,6 @@ CPU limits stay off unless a chart sets one or the workload takes untrusted inpu
 - Geoblock uses `get.geojs.io`.
 - **Renovate splits app and Infra** — app repos extend `renovate-preset.json`; Renovate auto-merges non-major app updates after the `test` check once the **3-day** `minimumReleaseAge` passes (`internalChecksFilter: strict` holds updates until eligible; `timestamp-required` means an update without a release timestamp is not eligible), while majors wait on the Dependency Dashboard. Infra image refs use immutable version tags and wait the same 3 days. The sole image-age exception is the narrow allowlist in `renovate.json`: first-party `ghcr.io/imranr98/**` app images (`:latest@sha`, opened on the next run after publish), plus channel-only images that publish no immutable tag (`lscr.io/linuxserver/**`, `ghcr.io/reliq-hq/comfyui`, `ghcr.io/ggml-org/llama.cpp`, and the Bitnami DB/kubectl pins). Infra Renovate PRs are never auto-merged; the `renovate-pr-ops` skill researches, validates, and presents them for approval. Never hand-pin an app digest. If a non-allowlisted image stays pending for more than 3 days, it is being rebuilt faster than the age gate: pin an immutable version tag or add a well-justified allowlist entry. `scripts/check-images.sh` enforces the tag/digest policy. The repo list (Infra + apps) lives in `config/srv0/values.yaml` and feeds both the CronJob and local runs. No app checkout is assumed; use the GitHub API or a temporary clone.
 - **Helm charts** — only project-maintained charts; `validate.sh` enforces the allowlist. Home Assistant is the single approved third-party exception. Pin `image.repository`/`image.tag` on app-version-sensitive charts so Renovate tracks the app, not just the chart.
+- **D4TA is one suite, one host** — `data.<SERVICES_DOMAIN>` carries the home dashboard plus D$CPLN (`/dscpln`), W@TXT (`/watxt`), FL0W (`/flow`), TAG5 (`/tags`) and Lockdown (`/lockdown`). The app repo publishes the `d4ta-*` images and a standalone Helm chart; `srv0-apps` consumes it as an OCI dependency. The private config is one `d4ta-config` checkout at `D4TA_CONFIG_PATH`. The old per-app hosts, images, repos and config checkouts are gone; do not reintroduce `dscpln`/`watxt`/`fl0w`/`da5h`/`lifetagger` deployment names.
 - TLS is `edge-public-tls` (exact SANs from `PUBLIC_HOSTS`) plus `edge-private-tls` (`PRIVATE_HOSTS`, `websecure` only). Adding a public app means adding its label to `PUBLIC_HOSTS` and its route, then re-issuing; no per-app certs or wildcards.
 - **Authelia access control is dual-source** — structural bypasses and the final admin catch-all stay in the charts; group/user/deployment-specific rules live in `config/` (`AUTHELIA_ACCESS_CONTROL_RULES` on srv0; `config/vps0/authelia/access_control.yml` rendered by `scripts/render-vps0-authelia.sh` on vps0). Don't add personal group names to the chart.

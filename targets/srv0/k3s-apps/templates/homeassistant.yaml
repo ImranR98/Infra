@@ -342,6 +342,8 @@ metadata:
   namespace: apps
   labels:
     auto-backup: "true"
+  annotations:
+    backup.infra/exclude: "backups wyoming-piper-data wyoming-whisper-data"
 spec:
   accessModes:
     - ReadWriteOnce

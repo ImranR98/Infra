@@ -90,7 +90,7 @@ tours:
 - id: maintenance
   title: Maintenance
   subtitle: Storage and recovery
-  description: The NFS storage path and restic recovery.
+  description: The NFS storage path and snapshot recovery.
   duration: 7 min
   chapters:
   - storage

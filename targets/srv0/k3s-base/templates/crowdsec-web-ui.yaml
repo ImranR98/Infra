@@ -59,6 +59,8 @@ spec:
     spec:
       securityContext:
         fsGroup: {{ .Values.MY_UID }}
+        seLinuxOptions:
+          level: s0
       containers:
         - name: crowdsec-web-ui
           image: ghcr.io/theduffman85/crowdsec-web-ui:2026.11.11@sha256:b2c4e13d1a36ab306db090d58efb54ab347ea5616c81badcb5bd8055e5dc4c2c
@@ -135,8 +137,6 @@ kind: PersistentVolumeClaim
 metadata:
   name: crowdsec-web-ui-pvc
   namespace: base
-  labels:
-    auto-backup: "true"
 spec:
   accessModes:
     - ReadWriteOnce

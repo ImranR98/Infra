@@ -68,14 +68,14 @@ spec:
           podSelector:
             matchLabels:
               app: logtfy
-        # DA5H notification relay: the only publisher (apps post to DA5H,
+        # D4TA home notification relay: the only publisher (modules post to D4TA,
         # never to ntfy directly).
         - namespaceSelector:
             matchLabels:
               kubernetes.io/metadata.name: apps
           podSelector:
             matchLabels:
-              app: da5h
+              app: d4ta-home
         - namespaceSelector:
             matchLabels:
               kubernetes.io/metadata.name: apps
@@ -123,6 +123,8 @@ spec:
     spec:
       securityContext:
         fsGroup: {{ .Values.MY_UID }}
+        seLinuxOptions:
+          level: s0
       containers:
         - name: ntfy
           image: binwiederhier/ntfy:v2.37.2@sha256:1875ddcf815c8a3c981d6d78c67a93452d0abba79b1ab9520b1f5f5238902bd7

@@ -56,6 +56,8 @@ spec:
       securityContext:
         runAsUser: {{ .Values.MY_UID }}
         runAsGroup: {{ .Values.MY_UID }}
+        seLinuxOptions:
+          level: s0
       containers:
         - name: navidrome
           image: deluan/navidrome:0.64.2@sha256:38dc2727bfcfd5ede290f8ada114fc90368146f265ae4701ddddbcbe2a44ee52
@@ -110,8 +112,6 @@ kind: PersistentVolumeClaim
 metadata:
   name: navidrome-data-pvc
   namespace: apps
-  labels:
-    auto-backup: "true"
 spec:
   accessModes:
     - ReadWriteOnce

@@ -27,8 +27,11 @@ spec:
         value: {{ .Values.TZ }}
     {{- include "infra.resources" (dict "tier" "large") | nindent 4 }}
     podSecurityContext:
+      fsGroup: {{ .Values.MY_UID }}
       runAsUser: {{ .Values.MY_UID }}
       runAsGroup: {{ .Values.MY_UID }}
+      seLinuxOptions:
+        level: s0
 ---
 ---
 apiVersion: gateway.networking.k8s.io/v1

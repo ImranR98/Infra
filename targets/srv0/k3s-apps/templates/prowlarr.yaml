@@ -68,6 +68,8 @@ metadata:
   namespace: apps
   labels:
     auto-backup: "true"
+  annotations:
+    backup.infra/exclude: "logs logs.db Backups Definitions"
 spec:
   accessModes:
     - ReadWriteOnce
@@ -105,6 +107,9 @@ spec:
       annotations:
         checksum/prowlarr-secret: {{ .Values.PROWLARR_API_KEY | sha256sum }}
     spec:
+      securityContext:
+        seLinuxOptions:
+          level: s0
       containers:
         - name: prowlarr
           image: lscr.io/linuxserver/prowlarr:latest@sha256:6660787a99b2e58203539583663c973b48979fc00ff2cb78dc0ea17429e1f6ef
