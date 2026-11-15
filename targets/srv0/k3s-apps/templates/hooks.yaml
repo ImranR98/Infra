@@ -77,6 +77,9 @@ metadata:
     helm.sh/hook-weight: "10"
 spec:
   backoffLimit: 3
+  # Bound the whole hook so a stuck step fails the Job (and the release)
+  # quickly instead of hanging until Helm's 5m hook timeout.
+  activeDeadlineSeconds: 240
   template:
     metadata:
       labels:
@@ -99,6 +102,18 @@ spec:
             - |
               set -euo pipefail
               echo "=== Checking Immich configuration ==="
+
+              # Bound every exec into the Immich pod. When postgres restarts
+              # underneath the server, `immich-admin` can block on a dead DB
+              # connection; an unbounded exec then hung this post-upgrade hook
+              # until Helm's timeout failed the release (revision 480 on
+              # 2026-11-15, cleared by deleting the Job and re-running). A
+              # bound turns that into a fast, visible hook failure.
+              SEED_EXEC_TIMEOUT=30
+              exec_immich() {
+                timeout "$SEED_EXEC_TIMEOUT" kubectl exec -n apps deploy/immich-server "$@"
+              }
+
               # Wait on the Deployment rather than every matching Pod. A
               # node reboot can leave an old ReplicaSet pod in a failed
               # state; a pod-label wait would then hang forever even though
@@ -117,14 +132,14 @@ spec:
 
               _try_login() {
                 TOKEN=$(printf '{"email":"%s","password":"%s"}' "$ADMIN_EMAIL" "$1" | \
-                  kubectl exec -i -n apps deploy/immich-server -- \
+                  exec_immich -i -- \
                   curl -sk -X POST http://localhost:2283/api/auth/login \
                     -H "Content-Type: application/json" \
                     -d @- 2>/dev/null | jq -r '.accessToken // empty' 2>/dev/null || echo "")
                 [ -n "$TOKEN" ]
               }
 
-              USERS=$(kubectl exec -n apps deploy/immich-server -- immich-admin list-users 2>/dev/null || true)
+              USERS=$(exec_immich -- immich-admin list-users 2>/dev/null || true)
               ADMIN_OAUTH_ID=$(printf '%s\n' "$USERS" | awk '
                 /^  \{/ {inobj=1; oauth=""; isadmin=0}
                 inobj && /oauthId: / { oauth=$0 }
@@ -141,7 +156,7 @@ spec:
               if echo "$USERS" | grep -q "isAdmin: true"; then
                 # Admin exists but has no OAuth identity. Password login must be
                 # available for the API login to work.
-                kubectl exec -n apps deploy/immich-server -- immich-admin enable-password-login >/dev/null 2>&1 || true
+                exec_immich -- immich-admin enable-password-login >/dev/null 2>&1 || true
                 if [ -z "$ADMIN_PWD" ] || ! _try_login "$ADMIN_PWD"; then
                   echo "Error: admin exists without an OAuth identity and no persisted seed password." >&2
                   echo "Reset the admin password manually (immich-admin reset-admin-password), then re-run." >&2
@@ -152,7 +167,7 @@ spec:
                 # persist the generated password for future runs.
                 PWD=$(head -c 12 /dev/urandom | od -An -tx1 | tr -d ' \n')
                 printf '{"email":"%s","name":"Admin","password":"%s"}' "$ADMIN_EMAIL" "$PWD" | \
-                  kubectl exec -i -n apps deploy/immich-server -- \
+                  exec_immich -i -- \
                   curl -sk -X POST "http://localhost:2283/api/auth/admin-sign-up" \
                     -H "Content-Type: application/json" \
                     -d @- 2>/dev/null
@@ -169,7 +184,7 @@ spec:
               fi
 
               echo "Configuring OAuth and system settings..."
-              CONFIG_JSON=$(printf '%s\n' "$TOKEN" | kubectl exec -i -n apps deploy/immich-server -- \
+              CONFIG_JSON=$(printf '%s\n' "$TOKEN" | exec_immich -i -- \
                 sh -c 'IFS= read -r tok; curl -sk "http://localhost:2283/api/system-config" \
                     -H "Authorization: Bearer $tok" 2>/dev/null')
               UPDATED_JSON=$(jq -c \
@@ -186,7 +201,7 @@ spec:
                  | .ffmpeg.accel="vaapi"
                  | .passwordLogin.enabled=false
                  | .library.watch.enabled=true' <<< "$CONFIG_JSON")
-              { printf '%s\n' "$TOKEN"; printf '%s\n' "$UPDATED_JSON"; } | kubectl exec -i -n apps deploy/immich-server -- \
+              { printf '%s\n' "$TOKEN"; printf '%s\n' "$UPDATED_JSON"; } | exec_immich -i -- \
                 sh -c 'IFS= read -r tok; curl -sk -X PUT "http://localhost:2283/api/system-config" \
                     -H "Authorization: Bearer $tok" \
                     -H "Content-Type: application/json" \
