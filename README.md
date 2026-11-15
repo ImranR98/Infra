@@ -77,13 +77,32 @@ sudo docker compose \
   up -d --remove-orphans
 ```
 
-For `pc`, `bigpc`, and `rpi`, use their own path and drop the
-`compose.private.yaml` line. `srv0`'s Compose sidecar (the public-exposure
-client) uses `config/srv0/compose.env` and
-`targets/srv0/compose/compose.yaml`.
+`bigpc` has a `config_template`, so it keeps both env files and only drops the
+`compose.private.yaml` line:
 
-Repeat the same flags for every other Compose command — `ps`, `logs -f <svc>`,
-`down <svc>`, `up -d --force-recreate --no-deps <svc>`:
+```bash
+sudo docker compose \
+  --env-file config/bigpc/compose.env \
+  -f targets/bigpc/compose/compose.yaml \
+  --env-file targets/bigpc/compose/.env \
+  up -d
+```
+
+`pc` and `rpi` have no `config_template`, so they have no config env and use the
+machine-fact file alone:
+
+```bash
+sudo docker compose \
+  -f targets/pc/compose/compose.yaml \
+  --env-file targets/pc/compose/.env \
+  up -d
+```
+
+`srv0`'s Compose sidecar (the public-exposure client) uses
+`config/srv0/compose.env` and `targets/srv0/compose/compose.yaml`.
+
+Repeat a target's flags for every other Compose command on it — `ps`,
+`logs -f <svc>`, `down <svc>`, `up -d --force-recreate --no-deps <svc>`:
 
 ```bash
 sudo docker compose \
@@ -96,8 +115,10 @@ sudo docker compose \
 
 Why each flag:
 
-- `--env-file config/<t>/compose.env` — the target's VARS and secrets. Without
-  it the `${VAR:?}` guards abort and optional vars interpolate empty.
+- `--env-file config/<t>/compose.env` — the target's VARS and secrets, for the
+  targets that have a `config_template` (`srv0`, `vps0`, `bigpc`). Without it
+  the `${VAR:?}` guards abort and optional vars interpolate empty. `pc` and
+  `rpi` have no config env; skip this flag there.
 - `--env-file targets/<t>/compose/.env` — generated machine facts (`MY_UID`,
   `DOCKER_GID`, `MY_USERNAME`, `COMPOSE_STATE_DIR`). Without it containers run
   as root and bind mounts end up root-owned. This file also carries

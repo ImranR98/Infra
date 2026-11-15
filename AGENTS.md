@@ -36,8 +36,10 @@ helm upgrade --install srv0-apps targets/srv0/k3s-apps -n apps --create-namespac
   -f targets/srv0/k3s-apps/values.yaml -f config/srv0/values.yaml
 helm uninstall srv0-apps -n apps     # delete apps first, then srv0-base
 
-# Compose — from the repo root, ON the target machine, with sudo. Both env
-# files are required; the second carries machine facts and COMPOSE_PROFILES.
+# Compose — from the repo root, ON the target machine, with sudo. Always pass
+# --env-file targets/<t>/compose/.env (machine facts + COMPOSE_PROFILES); add
+# --env-file config/<t>/compose.env only where a config_template exists
+# (srv0, vps0, bigpc). pc and rpi have none.
 sudo docker compose \
   --env-file config/vps0/compose.env \
   -f targets/vps0/compose/compose.yaml \
@@ -45,7 +47,8 @@ sudo docker compose \
   --env-file targets/vps0/compose/.env \
   up -d --remove-orphans
 # The same flags work for ps / logs -f <svc> / down <svc> / up -d <svc>.
-# First-time setup: bash scripts/init-config.sh <target> [--detect]
+# First-time setup: bash scripts/init-config.sh <target> [--detect] — targets
+# with a config_template only (srv0, vps0, bigpc).
 
 # Backups (D4TA Jobs scheduled task; manual restore):
 # Daily snapshots keep the newest 2; `restore` replaces app-data, `db` stages

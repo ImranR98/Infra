@@ -104,21 +104,38 @@ Confirm health with the same flags plus `ps <services>`. `-A`
 (agent forwarding) is only needed so the remote `git pull` can authenticate to
 the git host; a deploy key there removes the need for it.
 
-## pc / bigpc / rpi — print these, do not run
+## pc / rpi — print these, do not run
 
 ```bash
 # on the machine, in its repo checkout:
 git pull
 bash scripts/validate.sh <target>
 sudo docker compose \
-  --env-file config/<target>/compose.env \
   -f targets/<target>/compose/compose.yaml \
   --env-file targets/<target>/compose/.env \
   up -d <service>
 ```
 
-Both env files are required; the machine-fact `.env` is written by
-`prereqs.sh`, not by the deploy command.
+`pc` and `rpi` have no `config_template`, so there is no
+`config/<target>/compose.env`; the machine-fact `.env` (written by
+`prereqs.sh`) is the only env file.
+
+## bigpc — print these, do not run
+
+```bash
+# on the machine, in its repo checkout:
+git pull
+bash scripts/validate.sh bigpc
+sudo docker compose \
+  --env-file config/bigpc/compose.env \
+  -f targets/bigpc/compose/compose.yaml \
+  --env-file targets/bigpc/compose/.env \
+  up -d <service>
+```
+
+`bigpc` has a `config_template` (`SERVICES_DOMAIN` and the D4TA agent file), so
+it keeps both env files; the machine-fact `.env` is written by `prereqs.sh`,
+not by the deploy command.
 
 ## Verification checklist
 

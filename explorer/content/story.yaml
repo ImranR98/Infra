@@ -1148,7 +1148,7 @@ steps:
 
 
     Target-selecting scripts take `<target>` as their first argument. Machine-local scripts (`prereqs`, `renovate`, `preboot`, `wireguard`, `kubeconfig-unlock`, `k3s-server`, `k3s-join`, `state-restore`) act on the machine they run on.'
-  deepDive: '`~/infra_state/` is runtime state; leave it alone. `config/` mirrors each target''s `config_template/`. A deploy is `validate.sh <target>` followed by the two `helm upgrade --install` commands (srv0) or `sudo docker compose` with both env files (Compose targets); vps0 renders its Authelia config with `render-vps0-authelia.sh` before `up`.
+  deepDive: '`~/infra_state/` is runtime state; leave it alone. `config/` mirrors each target''s `config_template/`. A deploy is `validate.sh <target>` followed by the two `helm upgrade --install` commands (srv0) or `sudo docker compose` with the machine-fact `.env` plus the target config env where one exists (`srv0`, `vps0`, `bigpc`; `pc` and `rpi` have none); vps0 renders its Authelia config with `render-vps0-authelia.sh` before `up`.
 
 
     Run `validate.sh <target>` before every `helm upgrade --install`; it is read-only. On the target machine it also checks the Compose machine-fact `.env` and, on srv0, the runtime state tree and cluster access.
