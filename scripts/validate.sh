@@ -454,7 +454,7 @@ ensure_chart_deps() {
     local need=0
     if ! compgen -G "$charts/*.tgz" >/dev/null 2>&1; then
         need=1
-    elif [ -f "$lock" ] && [ "$lock" -nt "$(ls -t "$charts"/*.tgz 2>/dev/null | head -1)" ]; then
+    elif [ -f "$lock" ] && [ -z "$(find "$charts" -maxdepth 1 -name '*.tgz' -newer "$lock" -print -quit 2>/dev/null)" ]; then
         need=1
     fi
     if [ "$need" = 1 ]; then
