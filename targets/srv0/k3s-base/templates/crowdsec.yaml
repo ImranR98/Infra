@@ -208,6 +208,36 @@ spec:
   policyTypes:
     - Ingress
 ---
+# The Web UI scrapes the agent and AppSec metrics directly; the policy above
+# only opens the LAPI pod. Without this, deny-all-ingress drops those scrapes
+# and the parser/scenario/AppSec panels stay empty.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-crowdsec-component-metrics
+  namespace: base
+spec:
+  podSelector:
+    matchExpressions:
+      - key: k8s-app
+        operator: In
+        values:
+          - crowdsec
+      - key: type
+        operator: In
+        values:
+          - agent
+          - appsec
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: crowdsec-web-ui
+      ports:
+        - port: 6060
+  policyTypes:
+    - Ingress
+---
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:

@@ -82,8 +82,28 @@ spec:
                   key: webui-lapi-password
             - name: CONFIG_INSTANCE_LAPI_TLS_CA_FILE
               value: /etc/crowdsec-web-ui/ca.crt
-            - name: CONFIG_INSTANCE_METRICS_URL
+            # The chart runs LAPI, agent and AppSec as separate pods, each with
+            # its own metrics endpoint: LAPI has cs_lapi_*/cs_alerts, the agent
+            # owns parser/bucket counters, AppSec owns cs_appsec_*. One URL only
+            # would leave the parser, scenario and AppSec panels at zero.
+            - name: CONFIG_INSTANCES_0_METRICS_0_ID
+              value: lapi
+            - name: CONFIG_INSTANCES_0_METRICS_0_NAME
+              value: LAPI
+            - name: CONFIG_INSTANCES_0_METRICS_0_URL
               value: http://crowdsec-service.base.svc.cluster.local:6060/metrics
+            - name: CONFIG_INSTANCES_0_METRICS_1_ID
+              value: agent
+            - name: CONFIG_INSTANCES_0_METRICS_1_NAME
+              value: Agent
+            - name: CONFIG_INSTANCES_0_METRICS_1_URL
+              value: http://crowdsec-agent-service.base.svc.cluster.local:6060/metrics
+            - name: CONFIG_INSTANCES_0_METRICS_2_ID
+              value: appsec
+            - name: CONFIG_INSTANCES_0_METRICS_2_NAME
+              value: AppSec
+            - name: CONFIG_INSTANCES_0_METRICS_2_URL
+              value: http://crowdsec-appsec-service.base.svc.cluster.local:6060/metrics
           ports:
             - containerPort: 3000
           {{- include "infra.resources" (dict "tier" "xlarge") | nindent 10 }}
