@@ -40,28 +40,16 @@ chart-scoped.
 {{- include "path.main" . -}}/Code/sandbox
 {{- end -}}
 
-{{- define "path.dscplnConfig" -}}
-{{- if .Values.DSCPLN_CONFIG_PATH -}}{{ .Values.DSCPLN_CONFIG_PATH }}{{- else -}}{{ include "path.main" . }}/Code/Apps/DSCPLN/config{{- end -}}
+{{- define "path.d4taConfig" -}}
+{{- if .Values.D4TA_CONFIG_PATH -}}{{ .Values.D4TA_CONFIG_PATH }}{{- else -}}{{ include "path.main" . }}/Code/Apps/D4TA/config{{- end -}}
 {{- end -}}
 
-{{- define "path.watxtConfig" -}}
-{{- if .Values.WATXT_CONFIG_PATH -}}{{ .Values.WATXT_CONFIG_PATH }}{{- else -}}{{ include "path.main" . }}/Code/Apps/WATXT/config{{- end -}}
+{{- define "path.d4taLedger" -}}
+{{- if .Values.D4TA_LEDGER_PATH -}}{{ .Values.D4TA_LEDGER_PATH }}{{- else -}}{{ include "path.main" . }}/Documents/Balance{{- end -}}
 {{- end -}}
 
-{{- define "path.fl0wConfig" -}}
-{{- if .Values.FL0W_CONFIG_PATH -}}{{ .Values.FL0W_CONFIG_PATH }}{{- else -}}{{ include "path.main" . }}/Code/Apps/FL0W/config{{- end -}}
-{{- end -}}
-
-{{- define "path.da5hConfig" -}}
-{{- if .Values.DA5H_CONFIG_PATH -}}{{ .Values.DA5H_CONFIG_PATH }}{{- else -}}{{ include "path.main" . }}/Code/Apps/DA5H/config{{- end -}}
-{{- end -}}
-
-{{- define "path.dscplnLedger" -}}
-{{- if .Values.DSCPLN_LEDGER_PATH -}}{{ .Values.DSCPLN_LEDGER_PATH }}{{- else -}}{{ include "path.main" . }}/Documents/Balance{{- end -}}
-{{- end -}}
-
-{{- define "path.waTxt" -}}
-{{- if .Values.WA_TXT_PATH -}}{{ .Values.WA_TXT_PATH }}{{- else -}}{{ include "path.main" . }}/Backups/WhatsApp TXT{{- end -}}
+{{- define "path.d4taWatxtData" -}}
+{{- if .Values.D4TA_WATXT_DATA_PATH -}}{{ .Values.D4TA_WATXT_DATA_PATH }}{{- else -}}{{ include "path.main" . }}/Backups/WhatsApp TXT{{- end -}}
 {{- end -}}
 
 {{- define "path.infraRoot" -}}

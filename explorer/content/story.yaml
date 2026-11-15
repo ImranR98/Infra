@@ -61,7 +61,7 @@ steps:
   deepDive: 'The sidecar is the one piece of `srv0` that is not Kubernetes. It owns `pubexp-client0` (`10.99.0.2/32`) and removes the interface when the container stops.
 
 
-    `bigpc` is a Compose desktop that runs llama.cpp and a FL0W agent; it is not a cluster node in this request path.'
+    `bigpc` is a Compose desktop that runs llama.cpp and a D4TA agent; it is not a cluster node in this request path.'
   reveal:
   - srv0
   focus:
@@ -533,13 +533,13 @@ steps:
 - id: backups
   stage: Operations
   title: How it survives
-  body: 'The **State Backups** task in FL0W is the active backup system. It runs daily and has a manual **Run now**.
+  body: 'The **State Backups** task in D4TA Jobs is the active backup system. It runs daily and has a manual **Run now**.
 
 
     Each run writes a timestamped snapshot under `state_backups/snapshots/` containing the `auto-backup=true` PVCs under `~/infra_state/k3s_live_state/app-data/<namespace>/<pvc>`, consistent Postgres/SQLite dumps, the srv0/vps0 Compose state, and a manifest. Rebuildable caches, logs, and DB files are excluded. The newest 2 snapshots are kept; unchanged files are hardlinked from the previous snapshot.
 
     '
-  deepDive: 'The FL0W backup instance runs as root in the `apps` namespace so it can read the Postgres/Redis-owned PVC data; it mounts the Infra state tree and `state_backups/` writable.
+  deepDive: 'The D4TA Jobs instance runs as root in the `apps` namespace so it can read the Postgres/Redis-owned PVC data; it mounts the Infra state tree and `state_backups/` writable.
 
 
     The snapshot is plain rsync output with no repository format or password dependency; Syncthing replicates the tree. `retention` keeps the newest 2 snapshots.
@@ -898,7 +898,7 @@ steps:
 - id: app-catalog
   stage: App
   title: The app catalog
-  body: 'Apps are grouped by purpose: media, home, arr, productivity, tools, D$CPLN, and security. Each app owns its route, storage claims, middleware chain, probes, and image pins.
+  body: 'Apps are grouped by purpose: media, home, arr, productivity, tools, D4TA, and security. Most apps own their route, storage claims, middleware chain, probes, and image pins in this repo; the D4TA suite is a Helm subchart with one route and one shared config claim.
 
 
     The per-app blocks are deliberately explicit: the PVCs, HTTPRoute filters, and probe stanzas are the app''s ownership and security record.'
@@ -912,7 +912,7 @@ steps:
   - srv0/apps/arr
   - srv0/apps/productivity
   - srv0/apps/tools
-  - srv0/apps/dscpln
+  - srv0/apps/d4ta
   - srv0/apps/security
   focus:
   - srv0/apps/media
@@ -920,7 +920,7 @@ steps:
   - srv0/apps/arr
   - srv0/apps/productivity
   - srv0/apps/tools
-  - srv0/apps/dscpln
+  - srv0/apps/d4ta
   - srv0/apps/security
   flow:
   - - srv0/apps/media
@@ -928,7 +928,7 @@ steps:
     - srv0/apps/arr
     - srv0/apps/productivity
   - - srv0/apps/tools
-    - srv0/apps/dscpln
+    - srv0/apps/d4ta
     - srv0/apps/security
   zones:
   - id: srv0
@@ -939,7 +939,7 @@ steps:
     - srv0/apps/arr
     - srv0/apps/productivity
     - srv0/apps/tools
-    - srv0/apps/dscpln
+    - srv0/apps/d4ta
     - srv0/apps/security
   edges: []
   code:
@@ -1048,11 +1048,11 @@ steps:
 - id: other-machines
   stage: App
   title: The other machines
-  body: '`bigpc` is a Compose-only desktop: llama.cpp on the RX 9070 (ROCm), the FL0W Wine game-save archive agent, and syncthing. It is not a Kubernetes node; `srv0` Traefik routes `models.<SERVICES_DOMAIN>` to its LAN address so the same hostname works publicly, on the VPN, and on the LAN. `rpi` is a Pi 400 that turns a webcam into an authenticated RTSP stream with go2rtc, consumed by Frigate on `srv0`.
+  body: '`bigpc` is a Compose-only desktop: llama.cpp on the RX 9070 (ROCm), the D4TA Wine game-save archive agent, and syncthing. It is not a Kubernetes node; `srv0` Traefik routes `models.<SERVICES_DOMAIN>` to its LAN address so the same hostname works publicly, on the VPN, and on the LAN. `rpi` is a Pi 400 that turns a webcam into an authenticated RTSP stream with go2rtc, consumed by Frigate on `srv0`.
 
 
     `pc` is Compose-only too: syncthing, ComfyUI, and a llama.cpp router on its Intel Arc iGPU. None of them is on the `srv0`/`vps0` request path.'
-  deepDive: 'The llama.cpp router keeps its GGUFs under `~/ai/llama`; download and delete through the built-in Models page. The FL0W agent state lives under `~/infra_state/compose_live_state/fl0w-agent/`, and FL0W reaches it at `http://<bigpc-ip>:8788` over the LAN. `rpi`''s go2rtc password is generated on first start under `~/infra_state/compose_live_state/go2rtc/`; the WebUI is loopback-only.
+  deepDive: 'The llama.cpp router keeps its GGUFs under `~/ai/llama`; download and delete through the built-in Models page. The D4TA agent state lives under `~/infra_state/compose_live_state/d4ta-agent/`, and FL0W reaches it at `http://<bigpc-ip>:8788` over the LAN. `rpi`''s go2rtc password is generated on first start under `~/infra_state/compose_live_state/go2rtc/`; the WebUI is loopback-only.
 
 
     Renovate owns the Compose images on `pc`, `bigpc`, `vps0`, and `rpi`.'
@@ -1091,7 +1091,7 @@ steps:
     label: RTSP
   code:
   - path: targets/bigpc/compose/compose.yaml
-    summary: 'bigpc Compose services: llama.cpp, the FL0W agent, and syncthing.'
+    summary: 'bigpc Compose services: llama.cpp, the D4TA agent, and syncthing.'
   - path: targets/rpi/compose/compose.yaml
     summary: go2rtc and the generated stream password.
   - path: targets/srv0/k3s-base/templates/generic-device-plugin.yaml
@@ -1200,7 +1200,7 @@ steps:
 
 
 
-    `COMPOSE_PROFILES=fl0w-agent` enables the optional vps0 archive agent. Generated files — `targets/<t>/compose/.env`, the public-exposure keys, `~/infra_state/`, and the rendered Authelia config — are not hand-edited.
+    `COMPOSE_PROFILES=d4ta-agent` enables the optional vps0 archive agent. Generated files — `targets/<t>/compose/.env`, the public-exposure keys, `~/infra_state/`, and the rendered Authelia config — are not hand-edited.
 
 
     `config/VARS.env` is for manual `scripts/renovate.sh`; the scheduled CronJob reads its chart Secret (`renovate-secrets`) and does not mount the repo.'
@@ -1237,8 +1237,8 @@ steps:
   body: 'The six-hourly Renovate CronJob (`0 */6 * * *`, America/Toronto) is a pure PR run with overlap forbidden. `scripts/renovate.sh infra` is the on-demand refresh; it runs the same pinned Renovate version as the CronJob.
 
 
-    The `vps0` image-prune timer runs monthly. The State Backups task defaults to Sundays 04:00. FL0W owns the backup schedule; the CronJob owns update discovery.'
-  deepDive: 'Renovate''s `startingDeadlineSeconds` and 7200s `activeDeadlineSeconds` keep a hung run from blocking the next six-hour slot. The `vps0` timer is a systemd oneshot service; the FL0W backup task is backup-only and restore is `scripts/state-restore.sh`.
+    The `vps0` image-prune timer runs monthly. The State Backups task defaults to Sundays 04:00. D4TA Jobs owns the backup schedule; the CronJob owns update discovery.'
+  deepDive: 'Renovate''s `startingDeadlineSeconds` and 7200s `activeDeadlineSeconds` keep a hung run from blocking the next six-hour slot. The `vps0` timer is a systemd oneshot service; the D4TA Jobs backup task is backup-only and restore is `scripts/state-restore.sh`.
 
 
     Host packages are separate. `vps0` runs `unattended-upgrades`. `srv0` and `bigpc` are Fedora: `dnf5-plugin-automatic` is not installed by default; enable security-only updates with `upgrade_type = security` and `reboot = never`, then check `dnf5 needs-restarting -r` and reboot in a maintenance window.'
@@ -1388,7 +1388,7 @@ steps:
 - id: boot-config
   stage: Bootstrap
   title: Configuration
-  body: 'Run `init-config.sh srv0 --detect` on srv0 and `init-config.sh vps0` on vps0. Fill `config/srv0/values.yaml`, `config/vps0/compose.env`, `config/VARS.env`, and the Authelia files. For bigpc''s Compose stack, run `init-config.sh bigpc`, then fill `config/bigpc/compose.env` and `config/bigpc/fl0w-agent/agent.json`.
+  body: 'Run `init-config.sh srv0 --detect` on srv0 and `init-config.sh vps0` on vps0. Fill `config/srv0/values.yaml`, `config/vps0/compose.env`, `config/VARS.env`, and the Authelia files. For bigpc''s Compose stack, run `init-config.sh bigpc`, then fill `config/bigpc/compose.env` and `config/bigpc/d4ta-agent/agent.json`.
 
 
     Set `BOOTSTRAP_PRIVATE_APPS: "true"` for the first boot so the six apps with their own authentication stay LAN/VPN-only until Authelia is Ready.
@@ -1506,7 +1506,7 @@ steps:
 - id: boot-srv
   stage: Bootstrap
   title: Bootstrap srv0
-  body: 'On srv0, run `scripts/preflight-task-runner.sh --fix` if using FL0W, then `k3s-server.sh`, unlock the kubeconfig in another terminal, bring up the Compose sidecar, then run `scripts/validate.sh srv0` and the two `helm upgrade --install` commands.
+  body: 'On srv0, run `scripts/preflight-d4ta.sh --fix` if using D4TA, then `k3s-server.sh`, unlock the kubeconfig in another terminal, bring up the Compose sidecar, then run `scripts/validate.sh srv0` and the two `helm upgrade --install` commands.
 
 
     Set `BOOTSTRAP_PRIVATE_APPS: "true"` for the first boot; set it back to `"false"` and redeploy once Authelia is Ready.
@@ -1759,7 +1759,7 @@ steps:
   body: 'The State Backups task is backup-only. `scripts/state-restore.sh list` lists snapshots; `restore [snapshot] [--live]` replaces app-data; `db <ns/pvc> [snapshot]` stages a DB dump; and `compose srv0|vps0 [snapshot] [--live]` handles Compose state.
 
 
-    The script works on a fresh cluster with the snapshot tree and the key. It does not depend on FL0W being deployed.
+    The script works on a fresh cluster with the snapshot tree and the key. It does not depend on D4TA Jobs being deployed.
 
     '
   deepDive: 'Snapshots live at `state_backups/snapshots` in the Syncthing-replicated Main/Infra tree. Only srv0 writes them; wait for Syncthing to settle before restoring from a peer.
@@ -1797,5 +1797,5 @@ steps:
   code:
   - path: scripts/state-restore.sh
     summary: Lists and restores app-data, DB, and Compose snapshots.
-  - path: targets/srv0/k3s-apps/templates/fl0w.yaml
-    summary: The FL0W backup instance.
+  - path: targets/srv0/k3s-apps/Chart.yaml
+    summary: The D4TA chart dependency (workloads, route, policies).

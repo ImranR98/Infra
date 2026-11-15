@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# DESC: Check (and optionally create) the host paths FL0W mounts.
+# DESC: Check (and optionally create) the host paths D4TA mounts.
 # Run this on the host that owns the Main tree before the first deploy.
 #
-#   bash scripts/preflight-task-runner.sh
-#   bash scripts/preflight-task-runner.sh --fix
+#   bash scripts/preflight-d4ta.sh
+#   bash scripts/preflight-d4ta.sh --fix
 #
 # The pod's prepare-runtime initContainer handles paths visible inside the
 # cluster. This script only covers what must exist before that pod can start:
@@ -19,7 +19,7 @@ set_my_uid
 
 FIX=0
 MAIN_PARENT_DIR="${MAIN_PARENT_DIR:-}"
-CONFIG_DIR="${FL0W_CONFIG_DIR:-}"
+CONFIG_DIR="${D4TA_CONFIG_DIR:-}"
 while [ $# -gt 0 ]; do
     case "$1" in
         --fix) FIX=1 ;;
@@ -46,9 +46,9 @@ if [ -z "$MAIN_PARENT_DIR" ] || [ "$MAIN_PARENT_DIR" = "null" ]; then
 fi
 
 MAIN_DIR="$MAIN_PARENT_DIR/Main"
-CONFIG_DIR="${CONFIG_DIR:-$(config_yaml srv0 .FL0W_CONFIG_PATH || true)}"
+CONFIG_DIR="${CONFIG_DIR:-$(config_yaml srv0 .D4TA_CONFIG_PATH || true)}"
 if [ -z "$CONFIG_DIR" ] || [ "$CONFIG_DIR" = "null" ]; then
-    CONFIG_DIR="$MAIN_DIR/Code/Apps/FL0W/config"
+    CONFIG_DIR="$MAIN_DIR/Code/Apps/D4TA/config"
 fi
 MEDIA_DIR="$(config_yaml srv0 .MEDIA_DIR_PATH || true)"
 if [ -z "$MEDIA_DIR" ] || [ "$MEDIA_DIR" = "null" ]; then
@@ -86,14 +86,14 @@ check_dir() {
     fi
 }
 
-echo "==> FL0W host paths (UID $MY_UID)"
+echo "==> D4TA host paths (UID $MY_UID)"
 for dir in "${REQUIRED[@]}"; do
     check_dir "$dir"
 done
 
 if [ ! -d "$CONFIG_DIR" ]; then
     echo "  [MISSING] $CONFIG_DIR" >&2
-    echo "Clone the private fl0w-config repo there as UID $MY_UID first." >&2
+    echo "Clone the private d4ta-config repo there as UID $MY_UID first." >&2
     exit 1
 fi
 owner="$(stat -c %u "$CONFIG_DIR")"
@@ -105,7 +105,7 @@ else
     echo "  [OK] $CONFIG_DIR (owner $owner)"
 fi
 
-for file in "$CONFIG_DIR/task-meta.json" "$CONFIG_DIR/tools/contacts/config.json"; do
+for file in "$CONFIG_DIR/apps/flow/jobs-meta.json" "$CONFIG_DIR/apps/flow/tools/contacts/config.json"; do
     [ -e "$file" ] || continue
     owner="$(stat -c %u "$file")"
     if [ "$owner" != "$MY_UID" ]; then
@@ -122,4 +122,4 @@ done
 if [ "$fail" -ne 0 ]; then
     exit 1
 fi
-echo "==> FL0W host paths are ready"
+echo "==> D4TA host paths are ready"

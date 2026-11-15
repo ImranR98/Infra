@@ -44,7 +44,8 @@ bash scripts/init-config.sh vps0
 bash scripts/validate.sh srv0
 bash scripts/validate.sh vps0
 
-# Deploy — validate.sh is read-only and must run before every deploy.
+# Deploy — validate.sh must run before every deploy (it vendors the D4TA chart
+# dependency into a gitignored charts/ directory on first run).
 # Copy-paste commands for Compose targets and srv0 are in "Deploy" below.
 
 # Run Renovate manually (the in-cluster jobs do this on a schedule) — machine-local

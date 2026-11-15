@@ -7,7 +7,7 @@ summary only shows the fields needed to scope an exception.
 
 Examples:
   ./falco-events.py --since 24h --priority Warning,Critical
-  ./falco-events.py --since 12h --app dscpln,task-runner
+  ./falco-events.py --since 12h --app d4ta,d4ta-flow
   ./falco-events.py --from 2026-10-25T00:00:00Z --to 2026-10-26T08:00:00Z
   ./falco-events.py --since 6h --format yaml
 """

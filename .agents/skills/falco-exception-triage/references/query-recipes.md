@@ -22,7 +22,7 @@ python3 .agents/skills/falco-exception-triage/scripts/falco-events.py \
 
 # focus on an app / pod / image substring
 python3 .agents/skills/falco-exception-triage/scripts/falco-events.py \
-  --since 12h --app dscpln,file-pipelines,task-runner
+  --since 12h --app d4ta,d4ta-flow
 
 # exact window; UTC is used in output
 python3 .agents/skills/falco-exception-triage/scripts/falco-events.py \

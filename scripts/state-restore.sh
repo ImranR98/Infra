@@ -1,5 +1,5 @@
 #!/bin/bash
-# state-restore.sh — manual restore for the FL0W state snapshots.
+# state-restore.sh — manual restore for the D4TA state snapshots.
 #
 # Snapshots live under state_backups/snapshots/<UTC timestamp>/ and contain
 # app-data, db-dumps, compose, and a manifest. Run this on srv0 with the

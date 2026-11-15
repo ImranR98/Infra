@@ -229,6 +229,28 @@ function trackedFiles() {
     });
 }
 
+// Vendored subchart sources are gitignored, so `git ls-files` does not see
+// them. Walk charts/ after extracting the tarballs so the explorer can show
+// the D4TA chart's templates and snippets.
+function vendoredChartFiles() {
+  const base = "targets/srv0/k3s-apps/charts";
+  const root = path.join(ROOT, base);
+  const out = [];
+  if (!fs.existsSync(root)) return out;
+  const walk = (rel) => {
+    for (const entry of fs.readdirSync(path.join(ROOT, rel), { withFileTypes: true })) {
+      const next = path.posix.join(rel, entry.name);
+      if (entry.isDirectory()) walk(next);
+      else {
+        const ext = path.extname(entry.name);
+        if (TEXT_EXT.has(ext) || entry.name === "Chart.yaml") out.push(next);
+      }
+    }
+  };
+  walk(base);
+  return out;
+}
+
 function indexSources(files) {
   // Overwrite in place. Removing and recreating the directory makes Vite's
   // public-dir cache serve the SPA fallback for snippets generated while the
@@ -469,7 +491,7 @@ function addTargets() {
     });
   }
 
-  for (const cat of ["media", "home", "arr", "productivity", "tools", "dscpln", "security"]) {
+  for (const cat of ["media", "home", "arr", "productivity", "tools", "d4ta", "security"]) {
     addNode({
       id: `srv0/apps/${cat}`,
       kind: "group",
@@ -628,7 +650,7 @@ function addTargets() {
   addEdge("srv0/ops/access", "srv0/config/values", "reads-config", "tunnel");
   addEdge("srv0/ops/ci", "config/VARS", "reads-config", "tokens");
   addEdge("srv0/ops/renovate", "config/VARS", "reads-config", "tokens");
-  for (const cat of ["media", "home", "arr", "productivity", "tools", "dscpln", "security"]) {
+  for (const cat of ["media", "home", "arr", "productivity", "tools", "d4ta", "security"]) {
     addEdge("srv0/apps", `srv0/apps/${cat}`, "groups", cat);
   }
   addEdge("srv0/apps", "srv0/base", "depends-on", "platform");
@@ -673,7 +695,13 @@ function parseRendered(text, chartDir) {
     const sourceMatch = raw.match(/^# Source:\s*(.+)$/m);
     if (!sourceMatch) continue;
     const source = sourceMatch[1].trim();
-    const rel = path.join(chartDir, source.replace(/^[^/]+\//, ""));
+    // Helm renders a subchart with a "<chart>/templates/..." source. The
+    // subchart lives under charts/<chart>/, not the parent's templates/ dir.
+    const [chartName, ...rest] = source.split("/");
+    const subchart = path.join(chartDir, "charts", chartName, ...rest);
+    const rel = fs.existsSync(subchart)
+      ? subchart
+      : path.join(chartDir, source.replace(/^[^/]+\//, ""));
     const body = raw.replace(/^# Source:\s*.+$/m, "").trim();
     if (!body || !/^\s*(apiVersion|kind):/m.test(body)) continue;
     let docs;
@@ -869,6 +897,23 @@ function addImagesFromText(node, text, rel) {
     });
     addFact(img, "Image", ref, true);
     addEdge(node.id, id, "uses-image", tag || "image");
+  }
+}
+
+// Helm vendor charts into charts/*.tgz. The explorer reads each subchart's
+// template source to build the component graph, so extract any tarball first.
+function extractVendoredCharts() {
+  const dir = path.join(ROOT, "targets/srv0/k3s-apps/charts");
+  if (!fs.existsSync(dir)) return;
+  for (const entry of fs.readdirSync(dir)) {
+    if (!entry.endsWith(".tgz")) continue;
+    const name = entry.replace(/-\d+\.\d+\.\d+.*\.tgz$/, "");
+    const dest = path.join(dir, name);
+    // Always refresh the extracted copy: Helm may have replaced the tarball
+    // (and removed the directory) since the last map run.
+    fs.rmSync(dest, { recursive: true, force: true });
+    fs.mkdirSync(dest, { recursive: true });
+    execFileSync("tar", ["-xzf", path.join(dir, entry), "-C", dest, "--strip-components=1"]);
   }
 }
 
@@ -2606,7 +2651,8 @@ function finishNodes() {
 /* ------------------------------------------------------------------ */
 
 function main() {
-  const files = trackedFiles();
+  extractVendoredCharts();
+  const files = [...new Set([...trackedFiles(), ...vendoredChartFiles()])];
   indexSources(files);
 
   addTargets();

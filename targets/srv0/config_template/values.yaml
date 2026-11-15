@@ -26,10 +26,7 @@ TZ: "America/Toronto"
 # Exact public/private SAN labels appended to SERVICES_DOMAIN. Keep this list
 # in sync with the HTTPRoutes; validate.sh checks route/SAN drift.
 PUBLIC_HOSTS:
-  - dscpln
-  - watxt
-  - flow
-  - dash
+  - data
   - fmd
   - rss
   - frigate
@@ -55,7 +52,6 @@ PUBLIC_HOSTS:
   - crowdsec
   - grafana
   - ntfy
-  - lifetagger
   - traefik
 PRIVATE_HOSTS:
   - files
@@ -87,8 +83,6 @@ MY_UID: 1000
 MEDIA_DIR_PATH: ""
 #   /var/log/journal
 JOURNAL_DIR: ""
-#   <MAIN_PARENT_DIR>/Main/Backups/WhatsApp TXT
-WA_TXT_PATH: ""
 #   <MAIN_PARENT_DIR>
 HOME_DIR: ""
 # LAN CIDR used by egress/NFS/readiness NetworkPolicies.
@@ -170,7 +164,7 @@ OPENWEBUI_ALLOWED_ROLES: "admins"
 OPENWEBUI_ADMIN_ROLES: "admins"
 # FileBrowser's OIDC admin group.
 FILEBROWSER_ADMIN_GROUP: "admins"
-# llama.cpp backend (Compose on bigpc) and the bigpc FL0W agent are reached
+# llama.cpp backend (Compose on bigpc) and the bigpc D4TA agent are reached
 # through a selectorless Service + EndpointSlice / egress /32. Keep it an IP.
 BIGPC_HOST: "<bigpc-ip>"
 
@@ -349,25 +343,16 @@ PLIK_ADMIN_PASSWORD: "change_me" # openssl rand -hex 16
 # method; the client secret is AUTHELIA_FILEBROWSER_CLIENT_SECRET_HASHABLE.
 FILEBROWSER_JWT_TOKEN_SECRET: "change_me" # openssl rand -base64 32
 
-# ====== D$CPLN / FL0W / W@TXT / DA5H ======
-# Directory of the git-tracked Excel ledger. Defaults to
+# ====== D4TA suite ======
+# Directory of the git-tracked Excel ledger (D$CPLN). Defaults to
 # <MAIN_PARENT_DIR>/Main/Documents/Balance.
-DSCPLN_LEDGER_PATH: ""
-# Private config checkouts. Each app keeps its config repo in a gitignored
-# config/ directory inside its own checkout. Defaults:
-#   <MAIN_PARENT_DIR>/Main/Code/Apps/<app>/config
-DSCPLN_CONFIG_PATH: ""
-WATXT_CONFIG_PATH: ""
-FL0W_CONFIG_PATH: ""
-DA5H_CONFIG_PATH: ""
-# D$CPLN config (workbook path, sheets, API state) lives in the private
-# dscpln-config repo; FL0W, W@TXT and DA5H have their own config repos.
-
-# ====== FL0W task git identity ======
-# Git identity for commits made by FL0W tasks (config.mjs `host:` fields pin
-# tasks per machine).
-BACKUPCTL_GIT_NAME: "change_me"
-BACKUPCTL_GIT_EMAIL: "change_me"
+D4TA_LEDGER_PATH: ""
+# The private d4ta-config checkout. Defaults to
+# <MAIN_PARENT_DIR>/Main/Code/Apps/D4TA/config.
+D4TA_CONFIG_PATH: ""
+# W@TXT conversation tree. Defaults to
+# <MAIN_PARENT_DIR>/Main/Backups/WhatsApp TXT.
+D4TA_WATXT_DATA_PATH: ""
 
 # ====== FMD ======
 FMD_REGISTRATIONTOKEN: "change_me" # openssl rand -base64 32
@@ -424,16 +409,98 @@ GRAFANA_ADMIN_PASSWORD: "change_me" # openssl rand -base64 32
 AUTHELIA_GRAFANA_CLIENT_SECRET_HASHABLE: "change_me" # docker run authelia/authelia:latest authelia crypto hash generate pbkdf2 --variant sha512 --random --random.length 72 --random.charset rfc3986
 AUTHELIA_GRAFANA_CLIENT_SECRET_HASHED: "change_me"
 
-# ====== LifeTagger ======
+# ====== TAG5 ======
 # Generate once with: npx web-push generate-vapid-keys
-LIFETAGGER_VAPID_PUBLIC_KEY: "change_me"
-LIFETAGGER_VAPID_PRIVATE_KEY: "change_me"
-LIFETAGGER_VAPID_SUBJECT: "mailto:you@example.com"
-# Optional extra formats for unusual libraries (comma-separated).
-LIFETAGGER_EXTRA_IMAGE_EXT: ""
-LIFETAGGER_EXTRA_VIDEO_EXT: ""
-# Optional: extensions omitted from indexing.
-LIFETAGGER_EXCLUDE_EXT: "txt,pp3,json,xmp,aae,db,ini,log"
+TAG5_VAPID_PUBLIC_KEY: "change_me"
+TAG5_VAPID_PRIVATE_KEY: "change_me"
+TAG5_VAPID_SUBJECT: "mailto:you@example.com"
+
+# ====== D4TA chart ======
+# Environment-specific values for the D4TA Helm chart dependency. Image
+# digests live in targets/srv0/k3s-apps/values.yaml (committed) so Renovate
+# tracks them; paths, claims and the ingress host are machine-specific.
+# `check_template_values` allowlists this key because the dependency consumes
+# it directly.
+d4ta:
+  config:
+    existingClaim: d4ta-config-pvc
+  ingress:
+    host: data.<services-domain>
+    namespace: base
+    gateway:
+      name: srv0
+      sectionName: websecure
+      proxySectionName: websecure-proxy
+  mounts:
+    ledger:
+      claim: d4ta-ledger-pvc
+      mountPath: <MAIN_PARENT_DIR>/Main/Documents/Balance
+    watxtData:
+      claim: hostpath-main-node-d4ta-watxt-pvc
+      mountPath: /data
+    flow:
+      main:
+        claim: hostpath-main-node-main-pvc
+        mountPath: <MAIN_PARENT_DIR>/Main
+      backups:
+        claim: hostpath-main-node-backups-pvc
+        mountPath: <MAIN_PARENT_DIR>/Main/Backups
+      media:
+        claim: hostpath-main-node-media-pvc
+        mountPath: <MAIN_PARENT_DIR>/Main/Media
+      documents:
+        claim: hostpath-main-node-documents-pvc
+        mountPath: <MAIN_PARENT_DIR>/Main/Documents
+      devicesync:
+        claim: hostpath-main-node-devicesync-pvc
+        mountPath: /source
+      filePipelines:
+        claim: hostpath-main-node-file-pipelines-pvc
+        mountPath: /appdata
+      destinationMedia:
+        claim: hostpath-main-node-media-pvc
+        mountPath: /destination/Media
+      destinationBackups:
+        claim: hostpath-main-node-backups-pvc
+        mountPath: /destination/Backups
+      destinationWhatsapp:
+        claim: hostpath-main-node-d4ta-watxt-pvc
+        mountPath: /destination/WhatsApp
+      infraState:
+        hostPath: <HOME_DIR>/infra_state
+        mountPath: <HOME_DIR>/infra_state
+      stateBackups:
+        hostPath: <INFRA_ROOT>/state_backups
+        mountPath: <INFRA_ROOT>/state_backups
+      backupData:
+        claim: task-runner-backup-pvc
+        mountPath: /backup-data
+      browserProfile:
+        claim: backupctl-browser-pvc
+        mountPath: /home/seluser/.config
+    tags:
+      data:
+        existingClaim: d4ta-tags-pvc
+        mountPath: /data
+      media:
+        claim: hostpath-main-node-media-pvc
+        mountPath: /media
+        subPath: Camera
+  blocker:
+    nodeSelector:
+      infra.local/external-exposed: "true"
+  flow:
+    gitName: "change_me"
+    gitEmail: "change_me"
+    egress:
+      agentTunnelCidr: 10.99.0.1/32
+      bigpcHost: "<bigpc-host>"
+      lanCidr: "<lan-cidr>"
+  vapid:
+    existingSecret: tag5-vapid
+  notify:
+    tokenSecretName: d4ta-ntfy-token
+    tokenKey: token
 
 # ====== Infra paths (k3s-chart-only, machine/env layout) ======
 # Repo path. Defaults to <MAIN_PARENT_DIR>/Main/Infra. Drives the infra
