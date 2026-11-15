@@ -96,6 +96,17 @@
       "groupName": "docker base images"
     },
     {
+      "description": "Digest and pinDigest updates resolve to a digest, not a release, so Renovate has no releaseTimestamp for them and minimumReleaseAgeBehaviour=timestamp-required holds the PR pending forever (renovate/stability-days never clears, automerge never fires). Apply the 3-day gate only when a timestamp exists; this mirrors the timestamp-less registry rule in the Infra repo. Version bumps keep the strict timestamp-required gate.",
+      "matchDatasources": [
+        "docker"
+      ],
+      "matchUpdateTypes": [
+        "digest",
+        "pinDigest"
+      ],
+      "minimumReleaseAgeBehaviour": "timestamp-optional"
+    },
+    {
       "description": "Group non-major GitHub Actions updates",
       "matchManagers": [
         "github-actions"
