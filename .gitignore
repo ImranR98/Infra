@@ -11,3 +11,5 @@ targets/*/compose/.env
 *.sync-conflict*
 
 /state_backups/
+
+targets/*/k3s-*/charts/

@@ -3,3 +3,7 @@ name: srv0-apps
 description: Apps-scope chart for the srv0 homelab server — the workload components + apps HelmChart CRs
 type: application
 version: 0.1.0
+dependencies:
+  - name: d4ta
+    version: 0.1.3
+    repository: oci://ghcr.io/imranr98/charts

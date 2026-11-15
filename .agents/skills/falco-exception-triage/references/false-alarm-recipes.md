@@ -46,7 +46,7 @@ Scope by pod prefix + process, and add `fd.name` when the rule is a file rule:
       fields: [k8s.ns.name, k8s.pod.name, proc.name, fd.name]
       comps: ["=", startswith, "=", "="]
       values:
-        - [apps, task-runner-, ssh, /home/imranr/.ssh/id_ed25519]
+        - [apps, d4ta-flow-, ssh, /home/imranr/.ssh/id_ed25519]
   override:
     exceptions: append
 ```

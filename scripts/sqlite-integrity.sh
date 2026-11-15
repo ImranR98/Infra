@@ -67,7 +67,7 @@ apps/frigate-config-pvc/frigate.db
 apps/homeassistant-config-pvc/home-assistant_v2.db
 apps/homeassistant-config-pvc/zigbee.db
 apps/jellyfin-config-pvc/data/jellyfin.db
-apps/lifetagger-data-pvc/lifetagger.db
+apps/d4ta-tags-pvc/tags.db
 apps/navidrome-data-pvc/navidrome.db
 apps/open-webui-data-pvc/webui.db
 apps/open-webui-data-pvc/vector_db/chroma.sqlite3

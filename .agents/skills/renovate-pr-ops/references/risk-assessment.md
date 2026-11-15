@@ -28,8 +28,8 @@ dozzle, metube, uptime-kuma, plausible, shlink, owncast, isbn-lookup, pixelntfy,
 logtfy, opodsync, syncthing, socket proxies, tech-sale/home-sale, strelaysrv.
 
 **App repos** — the first-party apps in `APP_REPOS` (PixelNtfy, ISBN-Lookup,
-our-times, order-manager, moving-sale-2027, Logtfy, opencode-sandbox, DSCPLN,
-dscpln-config). Treat user-facing apps with data/auth as elevated; small tools as
+our-times, order-manager, moving-sale-2027, Logtfy, opencode-sandbox, D4TA,
+d4ta-config). Treat user-facing apps with data/auth as elevated; small tools as
 standard. Their image publish is part of the change, so a green required check
 (usually `test`) plus a non-pending `renovate/stability-days` is the merge gate,
 and a successful `publish` is the pin/rollout gate.

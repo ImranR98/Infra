@@ -1061,14 +1061,14 @@ services:
         logging: *logging
         # If services are unreachable: ufw allow from 172.19.0.0/24 to any port 443 proto tcp
 
-    # FL0W archive agent: streams the vps0 Compose state to FL0W over the
+    # D4TA archive agent: streams the vps0 Compose state to D4TA over the
     # public-exposure tunnel. The same generic image as the bigpc Compose
-    # fl0w-agent; the job/config live in config/vps0/dscpln-agent/.
-    fl0w-agent:
+    # d4ta-agent; the job/config live in config/vps0/d4ta-agent/.
+    d4ta-agent:
         profiles:
-            - fl0w-agent
-        image: ghcr.io/imranr98/fl0w-agent:latest@sha256:1ac43219cae0f019a52c9418434aea35d462a0b02fea6423b5f6d56507f6bee0
-        container_name: fl0w-agent
+            - d4ta-agent
+        image: ghcr.io/imranr98/d4ta-agent:latest@sha256:55daedb22a474ce6ebaea2d3191d0004753ed7c8e579a96f7ef8ec4bbf13f678
+        container_name: d4ta-agent
         restart: unless-stopped
         network_mode: host
         depends_on:
@@ -1082,9 +1082,9 @@ services:
         security_opt:
             - no-new-privileges:true
         volumes:
-            - ../../../config/vps0/dscpln-agent/agent.json:/config/agent.json:ro
+            - ../../../config/vps0/d4ta-agent/agent.json:/config/agent.json:ro
             - ${COMPOSE_STATE_DIR}:/data/state:ro
-            - ${COMPOSE_STATE_DIR}/fl0w-agent:/state
+            - ${COMPOSE_STATE_DIR}/d4ta-agent:/state
         tmpfs:
             - /tmp
         healthcheck:

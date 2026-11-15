@@ -32,8 +32,52 @@ FRIGATE_MODEL_URL: "https://raw.githubusercontent.com/ImranR98/Infra/master/targ
 FRIGATE_MODEL_SHA256: "1faaa8baafd9b9075f700e589701ca004f2d9fb98b2138fb2d778607a7783fbb"
 
 # ====== bigpc (Compose host) ======
-# Bigpc's LAN address. llama.cpp and the FL0W agent run in Compose there, so
+# Bigpc's LAN address. llama.cpp and the D4TA agent run in Compose there, so
 # the apps chart keeps a selectorless llama-cpp Service + EndpointSlice at this
-# address (the Models route points at that Service) and its FL0W egress policy
+# address (the Models route points at that Service) and its D4TA flow egress policy
 # is a /32. Keep it an IP. Required in config/srv0/values.yaml.
 BIGPC_HOST: ""
+
+# ====== D4TA chart values ======
+# Committed, non-secret values for the D4TA chart dependency. Image digests
+# live here (not in config/srv0/values.yaml) so Renovate can keep updating
+# them; machine-specific paths, claims and the ingress host live in the
+# gitignored config file.
+d4ta:
+  images:
+    home:
+      repository: ghcr.io/imranr98/d4ta-home
+      tag: latest
+      digest: "sha256:3fb1992280f6a1aedf3cc792007872ae9e7fc47506e1bc0d24fc06c7ad6be52d"
+    dscpln:
+      repository: ghcr.io/imranr98/d4ta-dscpln
+      tag: latest
+      digest: "sha256:b42ee65c0c3a1f95ef4bc0b2ac29262fe1e32cc42762301f7e5e0b34080e3cd4"
+    watxt:
+      repository: ghcr.io/imranr98/d4ta-watxt
+      tag: latest
+      digest: "sha256:fca1c919b865450fc0d89c33dd22b68bbf46217b1da70179d73e48ef6e978849"
+    flow:
+      repository: ghcr.io/imranr98/d4ta-flow
+      tag: latest
+      digest: "sha256:f055bb17b5f3078c0fbd1ab25507e8543cbc7a87c10697a0e49dbed796480492"
+    tags:
+      repository: ghcr.io/imranr98/d4ta-tags
+      tag: latest
+      digest: "sha256:ef79763f70779b568b15c4a28006e0e3f420d978687f3bd487171b1c4bd40cae"
+  resources:
+    home:
+      tier: small
+    blocker:
+      tier: tiny
+    dscpln:
+      tier: medium
+    watxt:
+      tier: large
+    flow:
+      tier: xlarge
+    flowBrowser:
+      tier: xlarge
+    tags:
+      tier: 2xlarge
+      cpu: "1"

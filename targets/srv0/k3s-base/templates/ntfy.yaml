@@ -68,14 +68,14 @@ spec:
           podSelector:
             matchLabels:
               app: logtfy
-        # DA5H notification relay: the only publisher (apps post to DA5H,
+        # D4TA home notification relay: the only publisher (modules post to D4TA,
         # never to ntfy directly).
         - namespaceSelector:
             matchLabels:
               kubernetes.io/metadata.name: apps
           podSelector:
             matchLabels:
-              app: da5h
+              app: d4ta-home
         - namespaceSelector:
             matchLabels:
               kubernetes.io/metadata.name: apps

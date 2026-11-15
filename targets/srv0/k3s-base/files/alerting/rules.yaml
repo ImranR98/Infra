@@ -564,7 +564,7 @@ groups:
           severity: warning
 
       - uid: task-runner-metrics-missing
-        title: FL0W scheduled-task metrics are missing
+        title: D4TA Jobs scheduled-task metrics are missing
         condition: C
         data:
           - refId: A
@@ -572,7 +572,7 @@ groups:
             datasourceUid: prometheus
             model:
               editorMode: code
-              expr: task_runner_schedules_enabled
+              expr: d4ta_jobs_schedules_enabled
               instant: true
               intervalMs: 1000
               maxDataPoints: 43200
@@ -607,12 +607,12 @@ groups:
         execErrState: Alerting
         for: 10m
         annotations:
-          summary: FL0W is not exposing its scheduled-task metrics; it may be down or the metrics endpoint is unreachable.
+          summary: D4TA Jobs is not exposing its scheduled-task metrics; it may be down or the metrics endpoint is unreachable.
         labels:
           severity: critical
 
       - uid: task-runner-no-tasks
-        title: FL0W loaded no tasks
+        title: D4TA Jobs loaded no tasks
         condition: C
         data:
           - refId: A
@@ -620,7 +620,7 @@ groups:
             datasourceUid: prometheus
             model:
               editorMode: code
-              expr: 1 - task_runner_configured_tasks
+              expr: 1 - d4ta_jobs_configured_tasks
               instant: true
               intervalMs: 1000
               maxDataPoints: 43200
@@ -659,12 +659,12 @@ groups:
         execErrState: Alerting
         for: 15m
         annotations:
-          summary: FL0W has no configured tasks; check config.mjs and the config mount.
+          summary: D4TA Jobs has no configured tasks; check config.mjs and the config mount.
         labels:
           severity: critical
 
       - uid: task-runner-deployment-down
-        title: FL0W has no available replica
+        title: D4TA Jobs has no available replica
         condition: C
         data:
           - refId: A
@@ -672,7 +672,7 @@ groups:
             datasourceUid: prometheus
             model:
               editorMode: code
-              expr: kube_deployment_status_replicas_available{namespace="apps",deployment="fl0w"}
+              expr: kube_deployment_status_replicas_available{namespace="apps",deployment="d4ta-flow"}
               instant: true
               intervalMs: 1000
               maxDataPoints: 43200
@@ -707,7 +707,7 @@ groups:
         execErrState: Alerting
         for: 5m
         annotations:
-          summary: FL0W has no available replica, so no scheduled backup or export will run.
+          summary: D4TA Jobs has no available replica, so no scheduled backup or export will run.
         labels:
           severity: critical
 
@@ -720,7 +720,7 @@ groups:
             datasourceUid: prometheus
             model:
               editorMode: code
-              expr: time() - task_runner_task_last_run_timestamp_seconds{task="State Backups"}
+              expr: time() - d4ta_jobs_task_last_run_timestamp_seconds{task="State Backups"}
               instant: true
               intervalMs: 1000
               maxDataPoints: 43200
@@ -768,7 +768,7 @@ groups:
             datasourceUid: prometheus
             model:
               editorMode: code
-              expr: time() - task_runner_task_last_run_timestamp_seconds{task="Contacts + Calendar"}
+              expr: time() - d4ta_jobs_task_last_run_timestamp_seconds{task="Contacts + Calendar"}
               instant: true
               intervalMs: 1000
               maxDataPoints: 43200
@@ -816,7 +816,7 @@ groups:
             datasourceUid: prometheus
             model:
               editorMode: code
-              expr: time() - task_runner_task_last_run_timestamp_seconds{task="YTMusic Downloads"}
+              expr: time() - d4ta_jobs_task_last_run_timestamp_seconds{task="YTMusic Downloads"}
               instant: true
               intervalMs: 1000
               maxDataPoints: 43200
@@ -864,7 +864,7 @@ groups:
             datasourceUid: prometheus
             model:
               editorMode: code
-              expr: time() - task_runner_task_last_run_timestamp_seconds{task="Wine Game Saves"}
+              expr: time() - d4ta_jobs_task_last_run_timestamp_seconds{task="Wine Game Saves"}
               instant: true
               intervalMs: 1000
               maxDataPoints: 43200
@@ -904,7 +904,7 @@ groups:
           severity: warning
 
       - uid: task-runner-scheduled-run-failed
-        title: A scheduled FL0W task failed
+        title: A scheduled D4TA Jobs task failed
         condition: C
         data:
           - refId: A
@@ -912,7 +912,7 @@ groups:
             datasourceUid: prometheus
             model:
               editorMode: code
-              expr: 1 - task_runner_task_last_run_ok{task=~"State Backups|Contacts.*|YTMusic.*|Wine Game Saves"}
+              expr: 1 - d4ta_jobs_task_last_run_ok{task=~"State Backups|Contacts.*|YTMusic.*|Wine Game Saves"}
               instant: true
               intervalMs: 1000
               maxDataPoints: 43200
@@ -947,7 +947,7 @@ groups:
         execErrState: Alerting
         for: 10m
         annotations:
-          summary: A scheduled FL0W task reported a failed last run.
+          summary: A scheduled D4TA Jobs task reported a failed last run.
         labels:
           severity: critical
 
