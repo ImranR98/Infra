@@ -48,23 +48,23 @@ d4ta:
     home:
       repository: ghcr.io/imranr98/d4ta-home
       tag: latest
-      digest: "sha256:3fb1992280f6a1aedf3cc792007872ae9e7fc47506e1bc0d24fc06c7ad6be52d"
+      digest: "sha256:2a4f7adb64ee571ed05f9d91199f97da170fc77fb52d34c0039732ec4f67aece"
     dscpln:
       repository: ghcr.io/imranr98/d4ta-dscpln
       tag: latest
-      digest: "sha256:b42ee65c0c3a1f95ef4bc0b2ac29262fe1e32cc42762301f7e5e0b34080e3cd4"
+      digest: "sha256:4164693955771ee8c674581cab7313a4812b874384dead74fa13833584f429bc"
     watxt:
       repository: ghcr.io/imranr98/d4ta-watxt
       tag: latest
-      digest: "sha256:fca1c919b865450fc0d89c33dd22b68bbf46217b1da70179d73e48ef6e978849"
+      digest: "sha256:39cfe8140630855234ff037645b12416415b37be5a176c36455c59d93b48efb0"
     flow:
       repository: ghcr.io/imranr98/d4ta-flow
       tag: latest
-      digest: "sha256:f055bb17b5f3078c0fbd1ab25507e8543cbc7a87c10697a0e49dbed796480492"
+      digest: "sha256:6e345b5ccf1835bbf293bd715302af14bd4a423430c6a00726612bd9360842da"
     tags:
       repository: ghcr.io/imranr98/d4ta-tags
       tag: latest
-      digest: "sha256:ef79763f70779b568b15c4a28006e0e3f420d978687f3bd487171b1c4bd40cae"
+      digest: "sha256:324e0be7f4c56016a5cc7e002400c52ebee0d7a79eba6876c706880a4eccd1da"
   resources:
     home:
       tier: small
