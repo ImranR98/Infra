@@ -299,7 +299,7 @@ spec:
         fsGroupChangePolicy: OnRootMismatch
       containers:
         - name: postgresql
-          image: ghcr.io/immich-app/postgres:18-vectorchord1.1.1-pgvector0.8.5@sha256:cad0d3a7dc0d5321f42feeb3a0a1d6ec80551cd9be52a7ffb640494d74cb3926
+          image: ghcr.io/immich-app/postgres:18-vectorchord1.1.1-pgvector0.8.5@sha256:4c3a3696605d5e436ca35b703c4918c46fedf8ddd3597c5610ba91c1ee3b0dd1
           securityContext:
             allowPrivilegeEscalation: false
           readinessProbe:
