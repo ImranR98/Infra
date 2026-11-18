@@ -63,7 +63,7 @@ spec:
           level: s0
       containers:
         - name: crowdsec-web-ui
-          image: ghcr.io/theduffman85/crowdsec-web-ui:2026.11.11@sha256:b2c4e13d1a36ab306db090d58efb54ab347ea5616c81badcb5bd8055e5dc4c2c
+          image: ghcr.io/theduffman85/crowdsec-web-ui:2026.11.12@sha256:5bc8a0bdb6350101bce07f1db55df9784b27f6f2ff49cc1316bd67988628558e
           securityContext:
             runAsUser: {{ .Values.MY_UID }}
             runAsGroup: {{ .Values.MY_UID }}
