@@ -70,6 +70,13 @@ blocked, failed, or a major awaiting approval). Infra PRs are the human gate.
   restore it afterwards.
 - Deploy only where this checkout has access (srv0 locally, vps0 over SSH). For
   pc/bigpc/rpi, print the commands for the user to run instead.
+- **Compose deploys clean up their images.** After a compose `up -d` that
+  replaced an image, prune that host's unused images with
+  `sudo docker image prune -af --filter until=336h` — the same two-week floor as
+  the vps0 `docker-image-prune.timer`, so recent digests stay available for
+  rollback. Run it yourself when `sudo -n true` works on the target (vps0 is
+  normally root over SSH); otherwise include it in the pending commands.
+  Kubernetes deploys need no equivalent — kubelet does its own image GC.
 
 ## Autonomy contract
 
@@ -230,6 +237,12 @@ ask, then deploy in risk order using
    playbook.
 5. pc/bigpc/rpi: emit the `git pull` + compose commands; do not attempt them.
 
+After any compose step that replaced an image, also prune that host's unused
+images with `sudo docker image prune -af --filter until=336h`. Run it yourself
+when `sudo -n true` succeeds on the host (vps0 is normally root over SSH);
+otherwise print the command. Include it in the consolidated ask, in the printed
+blocks for pc/bigpc/rpi, and in the report. Kubernetes-only deploys skip this.
+
 ### Derived images (nfs-server)
 
 The nfs-server image source still lives in this repo:
@@ -258,9 +271,11 @@ Report format:
   merge SHA.
 - **Infra merged** — PR number, title, targets, old → new digest(s), and user
   approval.
-- **Deployed** — target, what changed, verification result.
+- **Deployed** — target, what changed, verification result, and the compose
+  image-prune result (reclaimed space, or "command printed").
 - **Held** — PR plus reason and evidence; what the next run should re-check.
-- **Pending commands** — for machines this agent cannot reach.
+- **Pending commands** — for machines this agent cannot reach, including the
+  post-deploy compose prune.
 - **Alerts** — failed default-branch CI runs, failed/pending PR checks, and open
   Dependabot/OSV alerts; say "none" if clean.
 

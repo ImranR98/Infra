@@ -32,6 +32,24 @@ The app image and its Infra pin are two automatic steps:
    3-day gate). Never edit the digest by hand.
 4. Validate the Infra PR, get approval, merge/push, then deploy.
 
+## Compose image cleanup (after `up -d`)
+
+Every compose deploy that replaces an image leaves the old one behind. After the
+changed services are verified, reclaim unused images on that host:
+
+```bash
+sudo docker image prune -af --filter until=336h
+```
+
+- The two-week floor matches `targets/vps0/docker-prune/docker-image-prune.service`
+  and keeps recent pinned digests available for quick rollbacks.
+- Run it yourself only when `sudo -n true` succeeds on the target (vps0 is
+  normally root over SSH, so it can run there directly). Otherwise print the
+  same command for the user.
+- Include it in the pending commands for pc/bigpc/rpi, where this agent does not
+  deploy.
+- Kubernetes deploys need no equivalent — kubelet garbage-collects images.
+
 ## srv0 (K3s) — apply base, then apps
 
 ```bash
@@ -75,6 +93,8 @@ second the generated machine facts (`MY_UID`, `DOCKER_GID`, state paths) and
 `COMPOSE_PROFILES`. Passing any `--env-file` disables `.env` auto-discovery.
 Docker requires `sudo` on these machines; if the current agent user cannot run
 it non-interactively, print the command for the user to run in their shell.
+After a deploy that replaced the image, finish with the host image prune from
+[Compose image cleanup](#compose-image-cleanup-after-up--d).
 
 ## vps0 (Compose over SSH)
 
@@ -100,7 +120,10 @@ sudo docker compose \
   up -d <services>
 ```
 
-Confirm health with the same flags plus `ps <services>`. `-A`
+Confirm health with the same flags plus `ps <services>`. When the deploy
+replaced an image, run the host image prune from
+[Compose image cleanup](#compose-image-cleanup-after-up--d) over the same SSH
+session (root can run it directly; otherwise check `sudo -n true`). `-A`
 (agent forwarding) is only needed so the remote `git pull` can authenticate to
 the git host; a deploy key there removes the need for it.
 
@@ -114,6 +137,7 @@ sudo docker compose \
   -f targets/<target>/compose/compose.yaml \
   --env-file targets/<target>/compose/.env \
   up -d <service>
+sudo docker image prune -af --filter until=336h
 ```
 
 `pc` and `rpi` have no `config_template`, so there is no
@@ -131,6 +155,7 @@ sudo docker compose \
   -f targets/bigpc/compose/compose.yaml \
   --env-file targets/bigpc/compose/.env \
   up -d <service>
+sudo docker image prune -af --filter until=336h
 ```
 
 `bigpc` has a `config_template` (`SERVICES_DOMAIN` and the D4TA agent file), so
@@ -154,6 +179,9 @@ not by the deploy command.
   `get deploy`.
 - Compose: `sudo docker compose ... ps` healthy for every changed service; check
   `docker logs --tail 20 <svc>` on auth/data services for startup errors.
+- Compose image cleanup: `sudo docker image prune -af --filter until=336h` ran
+  on every reachable compose target that replaced an image (or is recorded in
+  the pending commands), and the reclaimed space is noted.
 - Public edge: `curl -sS -o /dev/null -w '%{http_code}' https://<host>` for a
   representative app, and a control-plane request through the public-exposure
   tunnel.
