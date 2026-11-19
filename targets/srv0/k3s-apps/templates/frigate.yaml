@@ -138,9 +138,9 @@ spec:
       initContainers:
         - name: copyconfig
 {{- if eq $frigateDetector "rocm" }}
-          image: ghcr.io/blakeblackshear/frigate:0.18.2-rocm
+          image: ghcr.io/blakeblackshear/frigate:0.18.3-rocm
 {{- else }}
-          image: ghcr.io/blakeblackshear/frigate:0.18.2
+          image: ghcr.io/blakeblackshear/frigate:0.18.3
 {{- end }}
           imagePullPolicy: IfNotPresent
           volumeMounts:
@@ -205,9 +205,9 @@ spec:
       containers:
         - name: frigate
 {{- if eq $frigateDetector "rocm" }}
-          image: ghcr.io/blakeblackshear/frigate:0.18.2-rocm
+          image: ghcr.io/blakeblackshear/frigate:0.18.3-rocm
 {{- else }}
-          image: ghcr.io/blakeblackshear/frigate:0.18.2
+          image: ghcr.io/blakeblackshear/frigate:0.18.3
 {{- end }}
           imagePullPolicy: IfNotPresent
           securityContext:
