@@ -95,7 +95,7 @@ spec:
           level: s0
       initContainers:
         - name: keygen
-          image: amneziavpn/amneziawg-go:3.1.20260828@sha256:cbafc02b8373a83f428272db6d8001b37bc02e6211cbd8c0cb4e2e3759b12b72
+          image: amneziavpn/amneziawg-go:3.1.20261116@sha256:e6ac67745f024e3e41a4897b8e72f090cd15c375e42c7e3e6f9c981e057edafd
           command:
             - /bin/bash
             - /scripts/keygen.sh
@@ -118,7 +118,7 @@ spec:
               readOnly: true
       containers:
         - name: amneziawg
-          image: amneziavpn/amneziawg-go:3.1.20260828@sha256:cbafc02b8373a83f428272db6d8001b37bc02e6211cbd8c0cb4e2e3759b12b72
+          image: amneziavpn/amneziawg-go:3.1.20261116@sha256:e6ac67745f024e3e41a4897b8e72f090cd15c375e42c7e3e6f9c981e057edafd
           command:
             - /bin/bash
             - /scripts/start.sh
@@ -144,7 +144,7 @@ spec:
         # Watches handshakes over the shared userspace UAPI socket and alerts
         # ntfy when a peer comes online.
         - name: conn-notify
-          image: amneziavpn/amneziawg-go:3.1.20260828@sha256:cbafc02b8373a83f428272db6d8001b37bc02e6211cbd8c0cb4e2e3759b12b72
+          image: amneziavpn/amneziawg-go:3.1.20261116@sha256:e6ac67745f024e3e41a4897b8e72f090cd15c375e42c7e3e6f9c981e057edafd
           command:
             - /bin/bash
             - /scripts/notify.sh
