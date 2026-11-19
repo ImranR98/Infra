@@ -17,10 +17,10 @@ App repos extend the shared preset and keep only app-specific rules:
 ```
 
 The preset carries `config:recommended`, `docker:pinDigests`,
-`helpers:pinGitHubActionDigests`, `security:minimumReleaseAgeNpm`,
+`helpers:pinGitHubActionDigests`,
 `:configMigration`, OSV alerts, the dependency dashboard, `rangeStrategy:
-replace`, `minimumReleaseAge`, weekly lockfile maintenance, non-major grouping,
-and the automerge policy (non-majors after `test`, majors dashboard-gated).
+replace`, weekly lockfile maintenance, non-major grouping, and the automerge
+policy (non-majors after `test`, majors dashboard-gated).
 Do not duplicate those rules in the app repo. Add a local `packageRule` only for
 an app-specific exception (for example an intentionally unversioned tool or a
 major held behind a peer range). Do not add presets that require an ecosystem

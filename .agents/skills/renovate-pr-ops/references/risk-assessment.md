@@ -31,8 +31,8 @@ logtfy, opodsync, syncthing, socket proxies, tech-sale/home-sale, strelaysrv.
 our-times, order-manager, moving-sale-2027, Logtfy, opencode-sandbox, D4TA,
 d4ta-config). Treat user-facing apps with data/auth as elevated; small tools as
 standard. Their image publish is part of the change, so a green required check
-(usually `test`) plus a non-pending `renovate/stability-days` is the merge gate,
-and a successful `publish` is the pin/rollout gate.
+(usually `test`) is the merge gate, and a successful `publish` is the
+pin/rollout gate.
 
 ## Tier rules
 
@@ -74,15 +74,13 @@ and a successful `publish` is the pin/rollout gate.
 - App PRs merge with squash; the default-branch `publish` job then pushes and
   verifies `:sha-<commit>` and promotes `:latest`. A green `test` only built a
   local image.
-- The next scheduled Renovate run opens the first-party Infra digest PR
-  immediately (the `ghcr.io/imranr98/**` allowlist). Third-party images wait
-  3 days. Do not hand-edit a digest; if a first-party PR is missing after a
+- The next scheduled Renovate run opens the Infra digest PR (and any other
+  published update). Do not hand-edit a digest; if a PR is missing after a
   successful publish, run `bash scripts/renovate.sh infra` and recheck.
 - If the app merge only touched docs/workflow/Renovate config, the publish is
   skipped; no digest PR will appear.
-- `renovate/stability-days: pending` is the age gate. Leave the PR for
-  Renovate; first-party app pins should not be pending, so investigate one that
-  is.
+- `renovate/stability-days: pending` is legacy from the retired age gate; a new
+  PR should never show it. Let Renovate rebuild a stale branch.
 
 ### Digest refreshes under a floating tag
 
@@ -99,19 +97,17 @@ Verify the digest exists and identify the real version behind it:
 - A pinned digest may lag the current `latest` (the PR opened earlier) — still valid;
   Renovate refreshes later.
 
-### 3-day age gate and channel-only images
+### Channel-only images
 
-- `minimumReleaseAge` is 3 days for every update type. Renovate compares the
-  candidate's release timestamp; a mutable tag rebuilt more often than every
-  3 days is always "too new" and never becomes eligible.
-- The narrow `renovate.json` allowlist covers only first-party app images
-  (`ghcr.io/imranr98/**`), LinuxServer `latest`, ComfyUI `xpu-master`, llama.cpp
-  channel tags, and the temporary Bitnami DB/kubectl pins. Their digest PRs appear
-  immediately.
-- Everything else must use an immutable version tag (semver, CalVer/build,
-  exact patch + distro). If a non-allowlisted image has been pending for more
-  than 3 days, verify the registry tag timestamps: pin a more specific tag, or
-  add a justified allowlist entry. Never reintroduce a broad 0-day digest rule.
+- There is no release-age hold: `minimumReleaseAge` was removed, so an update
+  opens on the first run after its registry or chart publishes it.
+- Channel-only images (first-party `ghcr.io/imranr98/**` app images, LinuxServer
+  `latest`, ComfyUI `xpu-master`, llama.cpp channel tags, and the temporary
+  Bitnami DB/kubectl pins) publish no immutable version tag; they are
+  digest-pinned and reviewed at the manual rollout gate.
+- Everything else should still use an immutable version tag (semver,
+  CalVer/build, exact patch + distro). If an image only publishes a mutable tag,
+  pin a more specific tag where one exists, or add a justified allowlist entry.
 
 ### Helm charts
 
@@ -139,14 +135,13 @@ then run `validate.sh srv0` (renders both charts and rejects `<no value>`).
   Dependency Dashboard approvals. If a major is approved and merged, it still
   goes through the app's own tests and image publish.
 - App PR → image publish → Infra digest PR is a chain. Merge the app PR, let the
-  `publish` job promote `:latest`, and let the next Renovate run open the
-  first-party Infra digest PR; never pin an app whose publish failed. The Infra
-  PR is the rollout gate and needs approval. `minimumReleaseAgeBehaviour:
-  timestamp-required` plus `internalChecksFilter: strict` holds every
-  non-allowlisted update until it is 3 days old.
+  `publish` job promote `:latest`, and let the next Renovate run open the Infra
+  digest PR; never pin an app whose publish failed. The Infra PR is the rollout
+  gate and needs approval. Updates open as soon as they publish — there is no
+  release-age hold.
 - Compose syncthing/comfyui/llama are Renovate-managed; srv0's K3s syncthing is Renovate-managed too.
 - `scripts/check-images.sh` enforces exact tags + digests for raw image refs;
-  the narrow channel-only allowlist is shared with `renovate.json`. Keep them
+  the channel-only allowlist is shared with `renovate.json`. Keep them
   in sync.
 - Home Assistant's Frigate integration and Advanced Camera Card pins are
   `github-releases`-managed feature updates — check release notes for breaking config.

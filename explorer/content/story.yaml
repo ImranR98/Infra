@@ -477,7 +477,7 @@ steps:
   deepDive: 'The runner gets `RENOVATE_TOKEN`, the repo list, Docker Hub host rules, and the git author from the `renovate-secrets` Secret. It mounts no repo; a small ConfigMap provides the run wrapper and ntfy notifier, and it runs as the image''s non-root user.
 
 
-    After an app PR merges and its image `publish` job promotes `:latest`, the next scheduled Renovate run opens the first-party Infra digest PR immediately; third-party images and chart versions wait for the 3-day age gate. There is no manual pin step; `scripts/renovate.sh infra` runs the same Renovate version on demand, but it does not bypass the gate. The skill merges ready open app PRs (including ones Renovate left open, but not `renovate/stability-days` holds) and handles approved majors. `infra-digest-pin` marks Renovate image pins that need a deploy; merging is inert until the target is deployed (`validate.sh` then `helm upgrade` or `sudo docker compose up`).'
+    After an app PR merges and its image `publish` job promotes `:latest`, the next scheduled Renovate run opens the Infra digest PR. Third-party images and chart versions open on the first run after they publish: there is no release-age gate. There is no manual pin step; `scripts/renovate.sh infra` runs the same Renovate version on demand. The skill merges ready open app PRs (including ones Renovate left open) and handles approved majors. `infra-digest-pin` marks Renovate image pins that need a deploy; merging is inert until the target is deployed (`validate.sh` then `helm upgrade` or `sudo docker compose up`).'
   reveal:
   - srv0/base/renovate/cronjob/renovate-daily
   - concept/renovate-pr-ops
