@@ -1003,7 +1003,7 @@ services:
     # compose stack). Read-only: talks to the existing dockerproxy socket proxy
     # (GET rules only), so no write access to the docker socket is exposed.
     dozzle:
-        image: amir20/dozzle:v11.4.3@sha256:244f218c876d6ed766277e71a537f34bfb2c01829e1927737e3673a8327deeb8
+        image: amir20/dozzle:v11.5.0@sha256:74600d62dd73a72a5d36fbd0c98af649203df921d74310b7ed383ef63392358e
         container_name: dozzle
         restart: unless-stopped
         mem_limit: 128M
