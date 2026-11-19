@@ -487,7 +487,7 @@ services:
 
     # Plausible - Web Analytics
     plausible_db:
-        image: postgres:16.15-alpine@sha256:aa6cb33cf4c19c765cefcf48d96176258800870a9a1e930ad126200f9d825139
+        image: postgres:16.16-alpine@sha256:1d5b02d3a9941fbd52437db4107f8c52d6297dac553ca1e5c299ebb3756b4857
         container_name: plausible_db
         user: "$MY_UID:$MY_UID"
         restart: unless-stopped
