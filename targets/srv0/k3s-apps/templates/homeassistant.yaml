@@ -204,7 +204,7 @@ spec:
             # HACS is not used anymore - clean up any previous install
             rm -rf "$comp/hacs"
             # Pinned (Renovate-managed); the GitHub release API is not polled.
-            latest="v5.15.6"
+            latest="v5.15.7"
             if [ "$(cat "$comp/frigate/.installed-version" 2>/dev/null)" != "$latest" ]; then
               echo "installing frigate integration $latest"
               tmpdir=$(mktemp -d)
