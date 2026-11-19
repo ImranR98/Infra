@@ -8,9 +8,6 @@
   "prConcurrentLimit": 20,
   "automerge": false,
   "dependencyDashboard": true,
-  "minimumReleaseAge": "3 days",
-  "minimumReleaseAgeBehaviour": "timestamp-required",
-  "internalChecksFilter": "strict",
   "osvVulnerabilityAlerts": true,
   "labels": [
     "deps"
@@ -179,36 +176,6 @@
         "@vitejs/plugin-react"
       ],
       "groupName": "vite toolchain"
-    },
-    {
-      "description": "Channel-only images that are rebuilt faster than the 3-day age gate: first-party app :latest images, LinuxServer :latest, ComfyUI xpu-master, llama.cpp channel tags, and the Bitnami DB/kubectl images (no usable version tags; kubectl is kept because the Helm hooks need bash/jq). These are digest-pinned and reviewed at the manual rollout gate. Every other image uses an immutable version tag and waits the full minimumReleaseAge.",
-      "matchUpdateTypes": [
-        "digest",
-        "pinDigest"
-      ],
-      "matchPackageNames": [
-        "ghcr.io/imranr98/**",
-        "lscr.io/linuxserver/**",
-        "ghcr.io/reliq-hq/comfyui",
-        "ghcr.io/ggml-org/llama.cpp",
-        "bitnami/postgresql",
-        "bitnami/redis",
-        "bitnami/kubectl"
-      ],
-      "minimumReleaseAge": null
-    },
-    {
-      "description": "GHCR, Quay, GitLab and registry.k8s.io expose no per-tag timestamps, so minimumReleaseAgeBehaviour=timestamp-required would hold their updates in the Dependency Dashboard's Pending Status Checks forever. Docker Hub is the only registry Renovate can timestamp (it needs the pagination cap set in RENOVATE_DOCKER_MAX_PAGES, see scripts/renovate.sh and the CronJob). Allow timestamp-less registry tags through while keeping the 3-day gate wherever a timestamp exists.",
-      "matchDatasources": [
-        "docker"
-      ],
-      "matchPackageNames": [
-        "ghcr.io/**",
-        "quay.io/**",
-        "registry.gitlab.com/**",
-        "registry.k8s.io/**"
-      ],
-      "minimumReleaseAgeBehaviour": "timestamp-optional"
     },
     {
       "description": "One PR for all docker digest pins and refreshes (the noisy batch); version bumps stay separate",

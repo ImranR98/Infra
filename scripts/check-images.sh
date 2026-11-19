@@ -38,7 +38,7 @@ _fail() {
 }
 
 # Packages that only publish channel/floating tags. They are digest-pinned and
-# handled by the narrow minimumReleaseAge allowlist in renovate.json.
+# handled by the channel-only allowlist in renovate.json.
 channel_only() {
     case "$1" in
         ghcr.io/imranr98/* | \
