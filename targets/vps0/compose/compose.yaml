@@ -798,7 +798,7 @@ services:
     # remain valid; all three routers share the single sale-site service.
     sale-site:
         container_name: sale-site
-        image: ghcr.io/imranr98/moving-sale-2027:latest@sha256:5c54b090a1a3be0c2bc9d8da96a5845ae822aa33cd3d4da6f016d632dc0d9c24
+        image: ghcr.io/imranr98/moving-sale-2027:latest@sha256:9d93f804d9fbab2a98158944747e9cfbf7f5431c69c3d7d61e97e64d04b7b4e6
         depends_on:
             - traefik
         labels:
@@ -1067,7 +1067,7 @@ services:
     d4ta-agent:
         profiles:
             - d4ta-agent
-        image: ghcr.io/imranr98/d4ta-agent:latest@sha256:4b0447d1dee6141520e60b196253ff089d45d59e8bc8dd103e0b112f7ca55782
+        image: ghcr.io/imranr98/d4ta-agent:latest@sha256:36f6ff2b98682f9e1e2371f14cada0d1586dd9f8ca9068202ebf56ab2eaa58cb
         container_name: d4ta-agent
         restart: unless-stopped
         network_mode: host

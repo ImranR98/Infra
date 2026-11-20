@@ -122,7 +122,7 @@ services:
     # Main-local prefixes (grouped under heroic/ and main/) for the Wine Game
     # Saves task.
     d4ta-agent:
-        image: ghcr.io/imranr98/d4ta-agent:latest@sha256:4b0447d1dee6141520e60b196253ff089d45d59e8bc8dd103e0b112f7ca55782
+        image: ghcr.io/imranr98/d4ta-agent:latest@sha256:36f6ff2b98682f9e1e2371f14cada0d1586dd9f8ca9068202ebf56ab2eaa58cb
         container_name: d4ta-agent
         restart: unless-stopped
         network_mode: host
