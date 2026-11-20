@@ -87,7 +87,7 @@ spec:
   version: 18.4.0
   valuesContent: |-
     # Explicit image so Renovate tracks Open WebUI independently of the chart
-    # appVersion (the chart's stable release still pins 0.12.0).
+    # appVersion, which can lag the app release (chart 17.5.0 shipped 0.12.5).
     image:
       repository: ghcr.io/open-webui/open-webui
       tag: "v0.13.4"
