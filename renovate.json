@@ -7,7 +7,9 @@
   "prHourlyLimit": 20,
   "prConcurrentLimit": 20,
   "automerge": false,
-  "dependencyDashboard": true,
+  "dependencyDashboard": {
+    "enabled": true
+  },
   "osvVulnerabilityAlerts": true,
   "labels": [
     "deps"

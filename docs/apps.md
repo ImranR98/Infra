@@ -16,6 +16,8 @@ inventory.
 | Tracking | FMD (`fmd`), FMD Stats (`fmdstats`) | Public |
 | Support | Syncthing, ntfy, Headlamp, Grafana, CrowdSec UI, Logtfy, Renovate, observability | See the linked pages |
 
+### User-facing apps
+
 The six user-facing apps (Home Assistant, Immich, Jellyfin, Linkwarden, Navidrome,
 Opodsync) deliberately rely on their own auth. `BOOTSTRAP_PRIVATE_APPS` keeps them
 LAN/VPN-only during first boot.
@@ -57,10 +59,8 @@ do not reintroduce the old per-app hosts/deployment names.
 
 ## Backup labels
 
-PVCs labelled `auto-backup: "true"` are copied by the D4TA backup task. Use
-`backup.infra/exclude` for rebuildable caches (logs, thumbnails, model caches).
+The label/exclusion mechanics live in [Platform: storage](platform.md#storage).
 Frigate recordings and other replaceable bulk media are deliberately not labelled.
-See [Platform: storage](platform.md#storage).
 
 ## Adding an app
 

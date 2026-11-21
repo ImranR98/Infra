@@ -1,0 +1,5 @@
+apiVersion: v2
+name: k3s-common
+description: Shared Helm helpers for the srv0 base and apps charts
+type: library
+version: 0.1.0

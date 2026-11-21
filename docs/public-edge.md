@@ -56,9 +56,9 @@ certificate. `validate.sh` checks route/SAN drift and Gateway certificate refere
 - On `vps0`, structural bypasses live in the chart and deployment-specific rules live
   in `config/vps0/authelia/access_control.yml`, rendered by
   `scripts/render-vps0-authelia.sh`.
-- The six user-facing apps (Home Assistant, Immich, Jellyfin, Linkwarden, Navidrome,
-  Opodsync) deliberately have **no** Authelia forward-auth filter; they rely on their
-  own auth. `BOOTSTRAP_PRIVATE_APPS` keeps them LAN/VPN-only during first boot.
+- The [six user-facing apps](apps.md#user-facing-apps) deliberately have **no**
+  Authelia forward-auth filter; they rely on their own auth. `BOOTSTRAP_PRIVATE_APPS`
+  keeps them LAN/VPN-only during first boot.
 - **CrowdSec** runs on `vps0` and `srv0`; the srv0 chart includes the LAPI, agent,
   AppSec, and a cert-roll CronJob. Do not add personal group names to charts.
 - **Falco** and **OpenCanary** are separate detection systems, documented in

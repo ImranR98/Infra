@@ -1,8 +1,8 @@
 {{/*
 Derived host paths. MAIN_PARENT_DIR is the required root; runtime state lives
 outside the repo at INFRA_STATE_DIR (default <HOME_DIR>/infra_state). Set a
-value only when the tree differs. Kept in both charts because Helm helpers are
-chart-scoped.
+value only when the tree differs. Shared by k3s-base and k3s-apps through the
+k3s-common library chart.
 */}}
 {{- define "path.main" -}}
 {{- .Values.MAIN_PARENT_DIR -}}/Main

@@ -28,10 +28,12 @@ jobs:
           sudo apt-get install -y --no-install-recommends shellcheck
           python3 -m pip install --user "yamllint==1.38.0"
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
-          curl -fsSLO "https://get.helm.sh/helm-v3.22.1-linux-amd64.tar.gz"
-          curl -fsSLO "https://get.helm.sh/helm-v3.22.1-linux-amd64.tar.gz.sha256sum"
-          sha256sum -c "helm-v3.22.1-linux-amd64.tar.gz.sha256sum"
-          tar -xzf "helm-v3.22.1-linux-amd64.tar.gz"
+          helm_version=$(sed -n 's/^HELM_VERSION="\([^"]*\)"/\1/p' scripts/prereqs.sh)
+          : "${helm_version:?HELM_VERSION missing from scripts/prereqs.sh}"
+          curl -fsSLO "https://get.helm.sh/helm-v${helm_version}-linux-amd64.tar.gz"
+          curl -fsSLO "https://get.helm.sh/helm-v${helm_version}-linux-amd64.tar.gz.sha256sum"
+          sha256sum -c "helm-v${helm_version}-linux-amd64.tar.gz.sha256sum"
+          tar -xzf "helm-v${helm_version}-linux-amd64.tar.gz"
           sudo mv linux-amd64/helm /usr/local/bin/helm
           go install github.com/rhysd/actionlint/cmd/actionlint@v1.7.12
           echo "$HOME/go/bin" >> "$GITHUB_PATH"
@@ -50,10 +52,13 @@ jobs:
             targets/srv0/k3s-base/Chart.yaml \
             targets/srv0/k3s-base/files \
             targets/srv0/k3s-apps/values.yaml \
-            targets/srv0/k3s-apps/Chart.yaml
+            targets/srv0/k3s-apps/Chart.yaml \
+            targets/srv0/k3s-common/Chart.yaml
 
       - name: Helm dependencies
-        run: helm dependency build targets/srv0/k3s-apps
+        run: |
+          helm dependency build targets/srv0/k3s-base
+          helm dependency build targets/srv0/k3s-apps
 
       - name: Helm lint and render
         run: |
@@ -81,7 +86,12 @@ jobs:
         run: bash scripts/test-device-plugin.sh
 
       - name: Renovate config
-        run: npx --yes -p renovate@44.181.3 renovate-config-validator --strict renovate.json
+        run: |
+          set -euo pipefail
+          renovate_version=$(sed -n 's|.*image: renovate/renovate:\([0-9][0-9.]*\).*|\1|p' targets/srv0/k3s-base/templates/renovate.yaml | head -1)
+          : "${renovate_version:?renovate image version missing from renovate.yaml}"
+          npx --yes -p "renovate@${renovate_version}" \
+            renovate-config-validator --strict renovate.json renovate-preset.json
 
       - name: Actionlint
         run: actionlint

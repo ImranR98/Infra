@@ -54,7 +54,8 @@ sudo docker image prune -af --filter until=336h
 ```bash
 bash scripts/validate.sh srv0
 helm upgrade --install srv0-base targets/srv0/k3s-base -n base --create-namespace \
-  -f targets/srv0/k3s-base/values.yaml -f config/srv0/values.yaml
+  -f targets/srv0/k3s-base/values.yaml -f config/srv0/values.yaml \
+  --dependency-update
 helm upgrade --install srv0-apps targets/srv0/k3s-apps -n apps --create-namespace \
   -f targets/srv0/k3s-apps/values.yaml -f config/srv0/values.yaml --dependency-update
 ```

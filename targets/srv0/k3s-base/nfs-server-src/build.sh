@@ -49,4 +49,4 @@ sed -i -E \
     "$NFS_YAML"
 
 echo "Pushed $IMAGE@$digest and re-pinned nfs-server.yaml."
-echo "Next: bash scripts/validate.sh srv0 && helm upgrade --install srv0-base targets/srv0/k3s-base -n base --create-namespace -f targets/srv0/k3s-base/values.yaml -f config/srv0/values.yaml"
+echo "Next: bash scripts/validate.sh srv0 && helm upgrade --install srv0-base targets/srv0/k3s-base -n base --create-namespace -f targets/srv0/k3s-base/values.yaml -f config/srv0/values.yaml --dependency-update"

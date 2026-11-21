@@ -3,3 +3,7 @@ name: srv0-base
 description: Base-scope chart for the srv0 homelab server — namespaces, storage, security, traefik, monitoring + base HelmChart CRs
 type: application
 version: 0.1.0
+dependencies:
+  - name: k3s-common
+    version: 0.1.0
+    repository: file://../k3s-common

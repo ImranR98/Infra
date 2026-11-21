@@ -266,14 +266,14 @@ check_gateway_certrefs() {
 # explicitly allowlisted for manual/script-only values.
 check_template_values() {
     local template="$1" target_dir="$2" ok=1 key
-    local allowlist=(HA_MQTT_PASSWORD TARGET d4ta)
+    local allowlist=(HA_MQTT_PASSWORD d4ta)
     while IFS= read -r key; do
         [ -n "$key" ] || continue
         case " ${allowlist[*]} " in
             *" $key "*) continue ;;
         esac
         if ! grep -Rqs -- "\.Values\.$key\b" \
-            "$target_dir/k3s-base" "$target_dir/k3s-apps" \
+            "$target_dir/k3s-base" "$target_dir/k3s-apps" "$target_dir/k3s-common" \
             "$target_dir/compose" "$INFRA_ROOT/scripts" 2>/dev/null; then
             _err "ERROR: config template key '$key' is not referenced by .Values.$key (dead or script-only?)"
             ok=0
@@ -559,6 +559,9 @@ check_chart_repos() {
             chart_repo="${chart_repo#"${chart_repo%%[![:space:]]*}"}"
             chart_repo="${chart_repo#repository: }"
             chart_repo="${chart_repo%/}"
+            case "$chart_repo" in
+                file://*) continue ;; # local library chart dependency
+            esac
             found=0
             for a in "${allowed[@]}"; do
                 [ "$chart_repo" = "$a" ] && { found=1; break; }
@@ -578,8 +581,10 @@ check_chart_repos() {
 check_d4ta_images() {
     local values="$INFRA_ROOT/targets/srv0/k3s-apps/values.yaml"
     [ -f "$values" ] || return 0
-    local ok=1 module repo tag digest
-    for module in home dscpln watxt flow tags; do
+    local ok=1 module repo tag digest modules
+    modules=$(yq -r '.d4ta.images | keys[]' "$values" 2>/dev/null || true)
+    [ -n "$modules" ] || { _err "ERROR: d4ta.images is missing"; return 1; }
+    while IFS= read -r module; do
         repo=$(yq -r ".d4ta.images.$module.repository // \"\"" "$values" 2>/dev/null || true)
         [ -n "$repo" ] && [ "$repo" != "null" ] || continue
         tag=$(yq -r ".d4ta.images.$module.tag // \"\"" "$values" 2>/dev/null || true)
@@ -589,7 +594,7 @@ check_d4ta_images() {
             _err "ERROR: d4ta $module image digest is missing or invalid"
             ok=0
         fi
-    done
+    done <<< "$modules"
     [ "$ok" = 1 ]
 }
 

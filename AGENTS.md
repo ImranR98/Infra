@@ -5,9 +5,7 @@ target needs lives in `targets/<t>/`; shared logic sits in `scripts/`; secrets l
 the gitignored `config/`. There is no build step. `docs/` is the handbook; this file is
 the rulebook.
 
-Targets: `srv0` (K3s), `vps0` (Compose public edge), `bigpc` (llama.cpp ROCm, D4TA
-agent, Syncthing), `pc` (llama.cpp SYCL, Syncthing; optional ComfyUI commented out),
-`rpi` (go2rtc). See `docs/architecture.md`.
+Targets, request paths, and design goals: `docs/architecture.md`.
 
 ## Read first
 
@@ -57,22 +55,10 @@ agent, Syncthing), `pc` (llama.cpp SYCL, Syncthing; optional ComfyUI commented o
 
 ## Resource sizing
 
-Every container picks a tier from `infra.resources` (`_resources.tpl`, duplicated in
-both charts because Helm helpers are chart-scoped). Raw `memory:`/`cpu:` keys are
-rejected.
-
-| Tier | CPU request | Memory request | Memory limit |
-|---|---|---|---|
-| `tiny` | 10m | 32Mi | 128Mi |
-| `small` | 10m | 64Mi | 256Mi |
-| `medium` | 25m | 128Mi | 512Mi |
-| `large` | 50m | 256Mi | 1Gi |
-| `xlarge` | 50m | 512Mi | 2Gi |
-| `2xlarge` | 100m | 1Gi | 4Gi |
-| `3xlarge` | 250m | 2Gi | 8Gi |
-
-The derivation, the three narrow deviations (`memLimit`, `cpu`, `custom`), and the
-CPU-limit rules are in `docs/platform.md#resource-sizing`.
+Every container picks a tier from `infra.resources` (shared by both charts through
+the `k3s-common` library chart). Raw `memory:`/`cpu:` keys are rejected. The tier
+table, derivation, deviations (`memLimit`, `cpu`, `custom`), and CPU-limit rules are
+in `docs/platform.md#resource-sizing`.
 
 ## Common commands
 
@@ -80,22 +66,8 @@ CPU-limit rules are in `docs/platform.md#resource-sizing`.
 bash scripts/validate.sh <target>
 bash scripts/kubeconfig-unlock.sh
 bash scripts/renovate.sh [apps|infra|all|clear-cache] [--dry-run]
-bash scripts/state-restore.sh list
 ```
 
 Deploy commands: `docs/operations.md#deploy`. Backups/restore:
 `docs/operations.md#backups`. Script index: `docs/operations.md#scripts`.
-
-## Docs map
-
-| Doc | Use |
-|---|---|
-| `docs/architecture.md` | Targets, request paths, data/control flow |
-| `docs/public-edge.md` | TLS, Authelia, CrowdSec, geoblock, public hosts |
-| `docs/tunnels.md` | Public-exposure WireGuard, remote-access VPN, preboot |
-| `docs/platform.md` | K3s, multi-node, storage, hardware, resource tiers |
-| `docs/observability.md` | Metrics, logs, alerts, dashboards, Falco/OpenCanary |
-| `docs/apps.md` | App inventory, backup labels, optional ComfyUI |
-| `docs/configuration.md` | Config tree, secrets, host facts, validation |
-| `docs/operations.md` | First boot, deploy, updates, backups, maintenance |
-| `docs/decisions.md` | Invariants and tradeoffs |
+All docs: `docs/README.md`.

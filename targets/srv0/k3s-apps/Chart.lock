@@ -1,6 +1,9 @@
 dependencies:
+- name: k3s-common
+  repository: file://../k3s-common
+  version: 0.1.0
 - name: d4ta
   repository: oci://ghcr.io/imranr98/charts
   version: 0.1.3
-digest: sha256:3f36c8f11833a4be7f7858947380c4eebfb4373167ad50405b0de7ad25c47899
-generated: "2026-11-14T18:01:20.406197794-05:00"
+digest: sha256:1af2c5235b469d4b78699ab08f626dfdab7d964b466f051462cbd18bff1c9d6c
+generated: "2026-11-21T02:22:44.489698859-05:00"

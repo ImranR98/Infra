@@ -90,20 +90,6 @@ case "$selection" in
     all) repos="$APP_REPOS,$INFRA_REPO" ;;
 esac
 
-# Universal VARS (dotenv, config/VARS.env — gitignored; template:
-# config_template/VARS.env). Simple KEY="value" lines source fine in bash;
-# set -a exports them.
-UNIVERSAL_VARS_FILE=""
-if [ -f "$INFRA_ROOT/config/VARS.env" ]; then
-    UNIVERSAL_VARS_FILE="$INFRA_ROOT/config/VARS.env"
-fi
-if [ -n "$UNIVERSAL_VARS_FILE" ]; then
-    set -a
-    # shellcheck disable=SC1090
-    source "$UNIVERSAL_VARS_FILE"
-    set +a
-fi
-
 if [ -z "${RENOVATE_GITHUB_TOKEN:-}" ]; then
     echo "Error: RENOVATE_GITHUB_TOKEN is not set." >&2
     echo "Create $INFRA_ROOT/config/VARS.env from the template:" >&2

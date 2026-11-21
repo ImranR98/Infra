@@ -35,14 +35,16 @@ In another terminal:
 bash scripts/validate.sh srv0
 
 helm upgrade --install srv0-base targets/srv0/k3s-base -n base --create-namespace \
-  -f targets/srv0/k3s-base/values.yaml -f config/srv0/values.yaml
+  -f targets/srv0/k3s-base/values.yaml -f config/srv0/values.yaml \
+  --dependency-update
 
 helm upgrade --install srv0-apps targets/srv0/k3s-apps -n apps --create-namespace \
   -f targets/srv0/k3s-apps/values.yaml -f config/srv0/values.yaml --dependency-update
 ```
 
-Apply `base` before `apps`; delete in reverse order. The apps release fetches the
-pinned D4TA subchart into the gitignored `charts/` directory.
+Apply `base` before `apps`; delete in reverse order. Both releases build their chart
+dependencies into the gitignored `charts/` directory; `validate.sh` does this, and
+`--dependency-update` covers direct Helm runs.
 
 ### Compose targets
 
@@ -116,8 +118,9 @@ See the `renovate-pr-ops` skill for the full PR/deploy workflow.
 
 D4TA runs the scheduled backup task and keeps the newest two snapshots under
 `state_backups/snapshots/<UTC timestamp>/` (`latest` points at the newest). Snapshots
-contain `app-data`, `db-dumps`, `compose`, and a manifest. Only PVCs labelled
-`auto-backup: "true"` are copied; `backup.infra/exclude` skips rebuildable caches.
+contain `app-data`, `db-dumps`, `compose`, and a manifest. The `auto-backup`/
+`backup.infra/exclude` label mechanics are in
+[Platform: storage](platform.md#storage).
 
 ```bash
 bash scripts/state-restore.sh list

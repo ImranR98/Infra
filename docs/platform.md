@@ -37,9 +37,10 @@ specifically so a second node can be added. Before adding one, check:
 | `srv0-apps` | `apps` | app workloads + the D4TA chart dependency |
 
 Apply `base` first, then `apps`; delete in reverse order. Both use
-`targets/srv0/k3s-*/values.yaml` plus `config/srv0/values.yaml`. Upstream charts are
-installed as `helm.cattle.io/HelmChart` CRs, so the Helm release completing is not the
-end of the rollout.
+`targets/srv0/k3s-*/values.yaml` plus `config/srv0/values.yaml` and depend on the local
+`k3s-common` library chart for shared helpers. Upstream charts are installed as
+`helm.cattle.io/HelmChart` CRs, so the Helm release completing is not the end of the
+rollout.
 
 ## Edge and routing
 
@@ -68,9 +69,9 @@ updated explicitly.
 
 ## Resource sizing
 
-Every container picks a tier from `infra.resources` (`_resources.tpl`, duplicated in
-`k3s-base` and `k3s-apps` because Helm helpers are chart-scoped). Raw `memory:`/`cpu:`
-keys are rejected by `validate.sh`.
+Every container picks a tier from `infra.resources` (shared by `k3s-base` and
+`k3s-apps` through the local `k3s-common` library chart). Raw `memory:`/`cpu:` keys
+are rejected by `validate.sh`.
 
 | Tier | CPU request | Memory request | Memory limit |
 |---|---|---|---|

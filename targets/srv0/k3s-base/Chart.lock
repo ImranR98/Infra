@@ -1,0 +1,6 @@
+dependencies:
+- name: k3s-common
+  repository: file://../k3s-common
+  version: 0.1.0
+digest: sha256:d2878d537a63a73258711c72475028465406e9b789c6b3ff9db49f741b1251b2
+generated: "2026-11-21T02:22:36.242668945-05:00"

@@ -3,15 +3,7 @@
 The handbook for this homelab. `AGENTS.md` is the short rulebook for agents and
 contributors; these pages explain how the system works and how to operate it.
 
-## Targets
-
-| Target | Orchestrator | Role |
-|---|---|---|
-| `srv0` | K3s + public-exposure Compose sidecar | Main home server; most workloads |
-| `vps0` | Compose | Public VPS; Traefik edge, public-exposure hub, public apps |
-| `bigpc` | Compose | Desktop; llama.cpp ROCm, D4TA archive agent, Syncthing |
-| `pc` | Compose | Desktop; llama.cpp SYCL, Syncthing, optional commented ComfyUI |
-| `rpi` | Compose | Pi 400 webcam → go2rtc → Frigate on `srv0` |
+Target roles and request paths: [Architecture](architecture.md#targets).
 
 ## Reading order
 

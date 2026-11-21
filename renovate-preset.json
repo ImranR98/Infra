@@ -9,7 +9,9 @@
   ],
   "rangeStrategy": "replace",
   "osvVulnerabilityAlerts": true,
-  "dependencyDashboard": true,
+  "dependencyDashboard": {
+    "enabled": true
+  },
   "labels": [
     "deps"
   ],

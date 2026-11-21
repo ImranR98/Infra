@@ -20,7 +20,7 @@ limit is 4x the request, sized from 25 days of cadvisor history in Prometheus.
   # memRequest and memLimit are mandatory here
   {{- include "infra.resources" (dict "tier" "custom" "memRequest" "1Gi" "memLimit" "8Gi") | nindent 10 }}
 
-Kept in both k3s-apps and k3s-base because Helm helpers are chart-scoped.
+Shared by k3s-base and k3s-apps through the k3s-common library chart.
 */}}
 {{- define "infra.resources" -}}
 {{- $presets := dict
