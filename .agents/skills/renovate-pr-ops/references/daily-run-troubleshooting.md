@@ -137,7 +137,7 @@ Never:
 ## 7. Rerun recipes
 
 On-demand Infra-only run (same pinned Renovate version as the scheduled runner;
-uses config/VARS.env for the token):
+uses the token in `config/srv0/values.yaml`):
 
 ```bash
 bash scripts/renovate.sh infra

@@ -335,15 +335,7 @@ check_san_routes() {
 
 # check_global_config — cross-file/format checks that don't render a chart.
 check_global_config() {
-    local ok=1 vars_file key val
-    vars_file="$INFRA_ROOT/config/VARS.env"
-    if [ -f "$vars_file" ]; then
-        while IFS= read -r key; do
-            [ -n "$key" ] || continue
-            _err "WARNING: config/VARS.env has a placeholder value: $key (needed only for Renovate/CI)"
-        done < <(grep -E '^[A-Z][A-Z0-9_]*=.*(change_me|REPLACE_ME|<[A-Za-z])' "$vars_file" | cut -d= -f1 | grep -v '^DOCKERHUB_')
-    fi
-
+    local ok=1
     local srv_domain srv_email vps_base vps_cloud vps_email profiles
     srv_domain="$(config_yaml srv0 .SERVICES_DOMAIN || true)"
     srv_email="$(config_yaml srv0 .DOMAIN_OWNER_EMAIL || true)"

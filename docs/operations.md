@@ -73,9 +73,17 @@ sudo docker compose \
   up -d
 ```
 
-`srv0`'s public-exposure sidecar uses `config/srv0/compose.env` and
-`targets/srv0/compose/compose.yaml`. Repeat the same flags for `ps`, `logs -f`,
-`down`, and `up -d <service>`.
+`srv0`'s public-exposure sidecar:
+
+```bash
+sudo docker compose \
+  --env-file config/srv0/compose.env \
+  -f targets/srv0/compose/compose.yaml \
+  --env-file targets/srv0/compose/.env \
+  up -d
+```
+
+Repeat the same flags for `ps`, `logs -f`, `down`, and `up -d <service>`.
 
 ### Verify
 
@@ -101,7 +109,8 @@ Renovate runs as the six-hourly `renovate-daily` CronJob in `base`. App repos ex
 majors wait on the Dependency Dashboard. Infra PRs are never auto-merged; review,
 validate, merge, then deploy.
 
-- On-demand Infra run: `bash scripts/renovate.sh infra` (needs `config/VARS.env`).
+- On-demand Infra run: `bash scripts/renovate.sh infra` (uses the token in
+  `config/srv0/values.yaml`).
 - Image refs use immutable tags and digests; channel-only images are digest-pinned on
   the allowlist shared by `renovate.json`, `renovate-preset.json`, and
   `scripts/check-images.sh`. Never hand-pin an app digest.

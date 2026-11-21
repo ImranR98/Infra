@@ -60,14 +60,5 @@ the `k3s-common` library chart). Raw `memory:`/`cpu:` keys are rejected. The tie
 table, derivation, deviations (`memLimit`, `cpu`, `custom`), and CPU-limit rules are
 in `docs/platform.md#resource-sizing`.
 
-## Common commands
-
-```bash
-bash scripts/validate.sh <target>
-bash scripts/kubeconfig-unlock.sh
-bash scripts/renovate.sh [apps|infra|all|clear-cache] [--dry-run]
-```
-
-Deploy commands: `docs/operations.md#deploy`. Backups/restore:
-`docs/operations.md#backups`. Script index: `docs/operations.md#scripts`.
-All docs: `docs/README.md`.
+Commands: `docs/operations.md#first-boot`, `docs/operations.md#deploy`, and
+`docs/operations.md#scripts`. All docs: `docs/README.md`.

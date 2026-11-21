@@ -91,10 +91,8 @@ case "$selection" in
 esac
 
 if [ -z "${RENOVATE_GITHUB_TOKEN:-}" ]; then
-    echo "Error: RENOVATE_GITHUB_TOKEN is not set." >&2
-    echo "Create $INFRA_ROOT/config/VARS.env from the template:" >&2
-    echo "  cp $INFRA_ROOT/config_template/VARS.env $INFRA_ROOT/config/VARS.env" >&2
-    echo "then set RENOVATE_GITHUB_TOKEN=\"<github-pat-with-repo-scope>\"." >&2
+    echo "Error: RENOVATE_GITHUB_TOKEN is not set in config/srv0/values.yaml." >&2
+    echo "Fill it in config/srv0/values.yaml (template: targets/srv0/config_template/values.yaml)." >&2
     exit 1
 fi
 

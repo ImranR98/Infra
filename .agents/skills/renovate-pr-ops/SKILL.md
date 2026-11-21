@@ -169,7 +169,7 @@ phase exists only for the leftovers:
    ```bash
    # gh, when available:
    gh pr merge <n> --repo <repo> --squash --delete-branch
-   # otherwise the API (token from config/VARS.env, never printed):
+   # otherwise the API (token from config/srv0/values.yaml, never printed):
    curl -fsS -X PUT \
      -H "Authorization: Bearer $GITHUB_TOKEN" \
      -H 'Accept: application/vnd.github+json' \

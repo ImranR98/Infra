@@ -8,7 +8,6 @@ real value.
 ```text
 targets/<t>/config_template/     committed templates + comments
 config/<t>/                      gitignored, filled values
-config/VARS.env                  gitignored, local Renovate credentials
 targets/<t>/compose/.env         generated machine facts (gitignored)
 ```
 
@@ -27,7 +26,8 @@ hardware is fixed in the charts.
 
 `srv0`'s `values.yaml` is passed to both `srv0-base` and `srv0-apps`
 (`-f targets/.../values.yaml -f config/srv0/values.yaml`). `compose.env` is passed to
-the srv0 Compose sidecar with `--env-file`.
+the srv0 Compose sidecar with `--env-file`. The same `values.yaml` supplies the
+Renovate token and Docker Hub credentials for the CronJob and local `renovate.sh`.
 
 ## Machine facts
 
@@ -39,12 +39,6 @@ the srv0 Compose sidecar with `--env-file`.
 
 Compose always needs this file. Passing any `--env-file` disables Compose's automatic
 `.env` discovery, so pass it explicitly. `COMPOSE_PROFILES` also lives here.
-
-## VARS.env
-
-`config/VARS.env` is only for local Renovate runs (`scripts/renovate.sh`): GitHub
-token and Docker Hub credentials. The in-cluster CronJob uses the matching values in
-`config/srv0/values.yaml`. It is not used by deploy commands.
 
 ## Secret rules
 

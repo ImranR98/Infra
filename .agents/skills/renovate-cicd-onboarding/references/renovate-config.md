@@ -142,7 +142,7 @@ For any custom manager:
 ## Schedules and the runner
 
 - Match the app's Renovate schedule to the runner's actual run time. A
-  `before 6am` window is useless if the only self-hosted run is at 17:00.
+  `before 6am` window is useless if the only self-hosted run is six-hourly.
 - `lockFileMaintenance` defaults to a Monday early-morning window; if the runner
   does not run then, set `schedule: ["at any time"]`.
 - If the runner is the Mend app, its schedule may differ; use a schedule that

@@ -40,9 +40,6 @@ mkdir -p "$config_dir"
 if [ -d "$template" ]; then
     cp -an "$template/." "$config_dir/" 2>/dev/null || true
 fi
-if [ ! -f "$INFRA_ROOT/config/VARS.env" ]; then
-    cp "$INFRA_ROOT/config_template/VARS.env" "$INFRA_ROOT/config/VARS.env"
-fi
 
 if [ "$detect" = 1 ] && [ "$target" = "srv0" ]; then
     values="$config_dir/values.yaml"
@@ -56,7 +53,6 @@ fi
 echo "==> Config initialised at $config_dir"
 echo "Next:"
 echo "  - fill config/$target values/compose env"
-echo "  - fill config/VARS.env for Renovate/CI (GitHub token, repos, Docker Hub)"
 echo "  - vps0: fill authelia/users_database.yml and access_control.yml"
 echo "  - srv0: fill the public-exposure host/port, then run scripts/public-exposure-keygen.sh"
 echo "  - run: bash scripts/validate.sh $target"

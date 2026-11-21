@@ -51,20 +51,10 @@ sudo docker image prune -af --filter until=336h
 
 ## srv0 (K3s) — apply base, then apps
 
-```bash
-bash scripts/validate.sh srv0
-helm upgrade --install srv0-base targets/srv0/k3s-base -n base --create-namespace \
-  -f targets/srv0/k3s-base/values.yaml -f config/srv0/values.yaml \
-  --dependency-update
-helm upgrade --install srv0-apps targets/srv0/k3s-apps -n apps --create-namespace \
-  -f targets/srv0/k3s-apps/values.yaml -f config/srv0/values.yaml --dependency-update
-```
-
-`--dependency-update` pulls the pinned D4TA OCI subchart into the gitignored
-`charts/` when missing (Helm always reads subcharts from disk); it is a no-op
-once the tgz is there. `base` before `apps`; delete in reverse order if ever needed. HelmChart CRs
-reconcile asynchronously via helm-controller — check its jobs/pods before
-declaring success:
+Use the K3s deploy block in
+[Operations: deploy](../../../../docs/operations.md#deploy). Apply `base` before
+`apps`; delete in reverse order if ever needed. HelmChart CRs reconcile
+asynchronously via helm-controller — check its jobs/pods before declaring success:
 
 ```bash
 kubectl -n base get helmcharts
@@ -79,23 +69,12 @@ kubectl get --raw /readyz
 
 ## srv0 compose sidecars
 
-The public-exposure client is a host-network compose service, separate from K3s:
-
-```bash
-bash scripts/validate.sh srv0
-sudo docker compose \
-  --env-file config/srv0/compose.env \
-  -f targets/srv0/compose/compose.yaml \
-  --env-file targets/srv0/compose/.env \
-  up -d public-exposure-client-wg
-```
-
-Both `--env-file` flags are required: the first carries the target config, the
-second the generated machine facts (`MY_UID`, `DOCKER_GID`, state paths) and
-`COMPOSE_PROFILES`. Passing any `--env-file` disables `.env` auto-discovery.
-Docker requires `sudo` on these machines; if the current agent user cannot run
-it non-interactively, print the command for the user to run in their shell.
-After a deploy that replaced the image, finish with the host image prune from
+The public-exposure client is a host-network compose service, separate from K3s.
+Use the srv0 sidecar block in
+[Operations: deploy](../../../../docs/operations.md#compose-targets). Docker
+requires `sudo`; if the current agent user cannot run it non-interactively,
+print the command for the user to run in their shell. After a deploy that
+replaced the image, finish with the host image prune from
 [Compose image cleanup](#compose-image-cleanup-after-up--d).
 
 ## vps0 (Compose over SSH)
@@ -109,18 +88,10 @@ ssh -A <user@host> 'set -e; cd <repo path> && git pull --ff-only &&
   bash scripts/validate.sh vps0'
 ```
 
-Then run the Compose block on vps0 (`bash scripts/render-vps0-authelia.sh`
-first when the Authelia rules changed — `validate.sh` fails if the rendered
-config is stale):
-
-```bash
-sudo docker compose \
-  --env-file config/vps0/compose.env \
-  -f targets/vps0/compose/compose.yaml \
-  -f targets/vps0/compose/compose.private.yaml \
-  --env-file targets/vps0/compose/.env \
-  up -d <services>
-```
+Then run the vps0 Compose block in
+[Operations: deploy](../../../../docs/operations.md#compose-targets). Run
+`bash scripts/render-vps0-authelia.sh` first when the Authelia rules changed;
+`validate.sh` fails if the rendered config is stale.
 
 Confirm health with the same flags plus `ps <services>`. When the deploy
 replaced an image, run the host image prune from
@@ -131,38 +102,22 @@ the git host; a deploy key there removes the need for it.
 
 ## pc / rpi — print these, do not run
 
-```bash
-# on the machine, in its repo checkout:
-git pull
-bash scripts/validate.sh <target>
-sudo docker compose \
-  -f targets/<target>/compose/compose.yaml \
-  --env-file targets/<target>/compose/.env \
-  up -d <service>
-sudo docker image prune -af --filter until=336h
-```
-
-`pc` and `rpi` have no `config_template`, so there is no
-`config/<target>/compose.env`; the machine-fact `.env` (written by
-`prereqs.sh`) is the only env file.
+Use the pc/rpi block in
+[Operations: deploy](../../../../docs/operations.md#compose-targets). On the
+machine: `git pull`, run `validate.sh <target>`, then the Compose block, then
+`sudo docker image prune -af --filter until=336h`. `pc` and `rpi` have no
+`config_template`, so the machine-fact `.env` (written by `prereqs.sh`) is the
+only env file.
 
 ## bigpc — print these, do not run
 
-```bash
-# on the machine, in its repo checkout:
-git pull
-bash scripts/validate.sh bigpc
-sudo docker compose \
-  --env-file config/bigpc/compose.env \
-  -f targets/bigpc/compose/compose.yaml \
-  --env-file targets/bigpc/compose/.env \
-  up -d <service>
-sudo docker image prune -af --filter until=336h
-```
-
-`bigpc` has a `config_template` (`SERVICES_DOMAIN` and the D4TA agent file), so
-it keeps both env files; the machine-fact `.env` is written by `prereqs.sh`,
-not by the deploy command.
+Use the bigpc block in
+[Operations: deploy](../../../../docs/operations.md#compose-targets). On the
+machine: `git pull`, run `validate.sh bigpc`, then the Compose block, then
+`sudo docker image prune -af --filter until=336h`. `bigpc` has a
+`config_template` (`SERVICES_DOMAIN` and the D4TA agent file), so it keeps both
+env files; the machine-fact `.env` is written by `prereqs.sh`, not by the deploy
+command.
 
 ## Verification checklist
 

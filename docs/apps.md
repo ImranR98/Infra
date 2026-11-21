@@ -68,8 +68,8 @@ Frigate recordings and other replaceable bulk media are deliberately not labelle
    Compose service in the target's `compose.yaml`.
 2. Pick resources from the tier ladder and request hardware via
    `infra.local/*` if needed.
-3. Add ingress (`HTTPRoute` or Traefik labels), then add the host to
-   `PUBLIC_HOSTS`/`PRIVATE_HOSTS` if it needs an edge certificate.
+3. Add ingress and edge exposure per
+   [Public edge: adding a public app](public-edge.md#adding-a-public-app).
 4. Add NetworkPolicies for pod-to-pod access.
 5. Label persistent app state `auto-backup: "true"` and exclude rebuildable caches.
 6. Pin images by immutable tag/digest; let Renovate manage upgrades.

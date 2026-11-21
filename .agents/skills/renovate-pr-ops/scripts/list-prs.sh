@@ -31,8 +31,8 @@ esac
 script_dir="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
 repo_root="$(cd "$script_dir/../../../.." && pwd)"
 
-# Repository lists (and config/VARS.env) come from scripts/repos.sh, the same
-# source the scheduled runner uses.
+# Repository lists and credentials come from scripts/repos.sh, which reads
+# config/srv0/values.yaml — the same source the scheduled runner uses.
 # shellcheck disable=SC1091
 . "$repo_root/scripts/repos.sh"
 
@@ -52,7 +52,7 @@ if [ -z "${INFRA_REPO:-}" ] || [ -z "${APP_REPOS:-}" ]; then
     exit 1
 fi
 
-# Resolve the token without printing it. repos.sh already sourced VARS.env.
+# Resolve the token without printing it; repos.sh loaded it from values.
 if [ -z "${GITHUB_TOKEN:-}" ] && [ -n "${RENOVATE_GITHUB_TOKEN:-}" ]; then
     GITHUB_TOKEN="$RENOVATE_GITHUB_TOKEN"
 fi

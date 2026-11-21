@@ -9,22 +9,23 @@ deploy commands, and safety rules. Read `docs/architecture.md`,
 
 ## Runner
 
-The self-hosted Renovate runner lives in two places:
+The self-hosted Renovate runner has one repository-list source:
 
-- `targets/srv0/k3s-base/templates/renovate.yaml` — the CronJob (daily, 17:00
-  America/Toronto). It exports `RENOVATE_REPOSITORIES` and calls the PR notifier
-  with an explicit `--repo` list.
-- `scripts/renovate.sh` — the local/on-demand runner; it exports the same
-  repository list and notifier arguments.
+- `targets/srv0/k3s-base/templates/renovate.yaml` — the six-hourly CronJob. It
+  renders `RENOVATE_REPOSITORIES` from `INFRA_REPO`/`APP_REPOS`; the post-run
+  notifier reads the same environment variable.
+- `scripts/renovate.sh` — the local/on-demand runner. It sources
+  `scripts/repos.sh`, which reads the same values file.
 
-Add the app repo (`<owner>/<repo>`) to:
+Add the app repo (`<owner>/<repo>`) to `APP_REPOS` in
+`config/srv0/values.yaml` (template:
+`targets/srv0/config_template/values.yaml`). Do not edit `renovate.yaml` or
+`renovate.sh` per app.
 
-1. `RENOVATE_REPOSITORIES` in `targets/srv0/k3s-base/templates/renovate.yaml`.
-2. `RENOVATE_REPOSITORIES` in `scripts/renovate.sh`.
-3. The notifier `--repo` list in both files.
-
-The token is in `config/VARS.env` (gitignored), read by the runner as
-`RENOVATE_GITHUB_TOKEN` and exported as `RENOVATE_TOKEN`. Never print it.
+The token and Docker Hub credentials are in the same
+`config/srv0/values.yaml` (gitignored). `scripts/repos.sh` loads them as
+`RENOVATE_GITHUB_TOKEN`, `DOCKERHUB_USER`, and `DOCKERHUB_TOKEN`; the runner
+exports the GitHub token as `RENOVATE_TOKEN`. Never print them.
 
 Required token scopes:
 
@@ -35,8 +36,8 @@ Required token scopes:
   a public GHCR package needs no `read:packages` even when its source repo is
   private.
 
-If the runner's image or schedule changes, keep the repository list and notifier
-in sync in both files.
+If the runner's image or schedule changes, the repository list needs no sync: it
+lives only in `config/srv0/values.yaml`.
 
 ## Deployment digest rule
 
@@ -98,7 +99,7 @@ config file:
 - `delete_branch_on_merge` optional.
 - Choose whether to require branches to be up to date (strict):
   - strict is safer but multiple open Renovate PRs can wait for a rebase; the
-    daily runner will eventually rebase them;
+    scheduled runner will eventually rebase them;
   - non-strict lets independent PRs merge after their own test, with the
     post-merge CI on the default branch as the final gate.
 

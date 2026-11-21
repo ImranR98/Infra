@@ -69,8 +69,8 @@ ask which pod/namespace is the new one before applying.
 5. **Apply**
    - `python3 .../apply-exceptions.py --input /tmp/opencode/falco-proposals.yaml`
    - `bash scripts/validate.sh srv0`
-   - Deploy only with the user's go-ahead:
-     `helm upgrade --install srv0-base targets/srv0/k3s-base -n base --create-namespace -f targets/srv0/k3s-base/values.yaml -f config/srv0/values.yaml --dependency-update`
+   - Deploy only with the user's go-ahead, using the srv0 K3s block in
+     [Operations: deploy](../../../docs/operations.md#deploy).
 6. **Verify**
    - `kubectl -n base rollout status ds/falco`
    - Confirm `custom-rules.yaml | schema validation: ok` in the Falco log.
