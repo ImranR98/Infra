@@ -10,11 +10,12 @@ cert-manager, PVCs, and NetworkPolicies. The satellites are simple enough for Co
 The public-exposure client stays a Compose sidecar so it survives a K3s outage. See
 [Architecture](architecture.md).
 
-## Multi-node capable, one node today
+## Multi-node capable
 
-`srv0` is currently the only K3s node, but the cluster keeps embedded etcd,
-`wireguard-native` flannel, the join script, and the descheduler so a second node stays
-possible. The Main-data owner is a singleton. See
+The bootstrap currently creates one control-plane node, but the cluster keeps embedded
+etcd, `wireguard-native` flannel, the join script, and the descheduler so additional
+nodes can be added. Other Kubernetes nodes may exist but are not shown in the target
+table. The Main-data owner is a singleton. See
 [Platform: multi-node](platform.md#multi-node).
 
 ## Two security edges

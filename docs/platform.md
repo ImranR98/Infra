@@ -1,7 +1,8 @@
 # Platform
 
-`srv0` runs K3s; every other machine runs Docker Compose. The cluster is deliberately
-multi-node-capable even though it currently has one node.
+`srv0` runs K3s; the documented non-K3s targets run Docker Compose. The cluster is
+deliberately multi-node-capable: other Kubernetes nodes may exist but are not shown in
+the target table.
 
 ## K3s on srv0
 
@@ -14,15 +15,15 @@ multi-node-capable even though it currently has one node.
   (API, etcd, flannel, Traefik, kubelet, VPN subnets).
 - `scripts/k3s-join.sh` adds a server or agent. `--hostpath-main` moves the Main-data
   label to a replacement node; that label is a singleton.
-- `descheduler` is a no-op with one node but stays deployed so a second node gets
-  taint cleanup. `system-upgrade-controller` owns K3s upgrades through the Plans in
-  `system-upgrade.yaml`.
+- `descheduler` stays deployed for multi-node taint cleanup; with a single node it is
+  effectively a no-op. `system-upgrade-controller` owns K3s upgrades through the Plans
+  in `system-upgrade.yaml`.
 - The admin kubeconfig is root-only; use `scripts/kubeconfig-unlock.sh`.
 
 ### Multi-node
 
 The etcd backend, `wireguard-native` flannel, join script, and descheduler are kept
-specifically so a second node can be added. Before adding one, check:
+specifically so additional nodes can be added. Before adding one, check:
 
 - the new node reaches etcd ports `2379/2380` and flannel ports;
 - exactly one node carries `infra.local/hostpath-main=true`;

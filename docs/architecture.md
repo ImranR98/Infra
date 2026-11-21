@@ -1,8 +1,8 @@
 # Architecture
 
-Five machines, two orchestrators, one public edge. `srv0` runs the Kubernetes
-workloads; `vps0` is the public entry point; `bigpc`, `pc`, and `rpi` are Compose
-satellites.
+The documented targets run two orchestrators and one public edge. `srv0` runs the
+Kubernetes workloads; `vps0` is the public entry point; `bigpc`, `pc`, and `rpi` are
+Compose satellites.
 
 ## Targets
 
@@ -15,6 +15,9 @@ satellites.
 | `rpi` | USB webcam → authenticated RTSP via go2rtc, consumed by Frigate | Compose |
 
 ![Architecture overview](../architecture.svg)
+
+The table and diagram show the documented targets. Other Kubernetes nodes may exist
+but are not shown; see [Platform: multi-node](platform.md#multi-node).
 
 ## Request paths
 
