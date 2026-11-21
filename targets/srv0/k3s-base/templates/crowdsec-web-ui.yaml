@@ -133,7 +133,7 @@ spec:
             claimName: crowdsec-web-ui-pvc
         - name: crowdsec-web-ui-ca
           secret:
-            secretName: crowdsec-root-secret
+            secretName: crowdsec-root-ca
             defaultMode: 0440
             items:
               - key: ca.crt

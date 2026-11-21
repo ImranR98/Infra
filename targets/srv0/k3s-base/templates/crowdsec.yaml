@@ -20,6 +20,11 @@ spec:
       enabled: true
       # Annotations prevent null secretTemplate rendering (CrowdSec chart v0.24.0 bug).
       certManager:
+        # Use the long-lived CA from crowdsec-pki.yaml instead of the chart's
+        # 90-day CA, which renews at the same instant as every leaf.
+        issuerRef:
+          name: crowdsec-root-ca-issuer
+          kind: Issuer
         secretTemplate:
           annotations:
             crowdsec.io/component: "true"

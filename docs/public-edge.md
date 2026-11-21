@@ -60,7 +60,9 @@ certificate. `validate.sh` checks route/SAN drift and Gateway certificate refere
   Authelia forward-auth filter; they rely on their own auth. `BOOTSTRAP_PRIVATE_APPS`
   keeps them LAN/VPN-only during first boot.
 - **CrowdSec** runs on `vps0` and `srv0`; the srv0 chart includes the LAPI, agent,
-  AppSec, and a cert-roll CronJob. Do not add personal group names to charts.
+  AppSec, and a cert-roll CronJob. Its CA (`crowdsec-pki.yaml`) is a long-lived
+  trust anchor so only the 90-day leaves rotate. Do not add personal group names
+  to charts.
 - **Falco** and **OpenCanary** are separate detection systems, documented in
   [Observability](observability.md#falco-and-opencanary).
 

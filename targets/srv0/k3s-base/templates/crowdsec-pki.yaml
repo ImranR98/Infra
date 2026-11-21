@@ -1,0 +1,42 @@
+---
+# The CrowdSec chart's bundled CA defaults to 90 days with the same renewal
+# window as every leaf, so the CA and all leaves come due at the same instant.
+# cert-manager does not reissue leaves when a CA rotates, so a leaf that loses
+# that issuance race stays signed by the previous CA and strands the LAPI/agent
+# (see the 2026-11-21 outage). Own the CA here with a long lifetime instead and
+# point the chart at it via tls.certManager.issuerRef; leaves keep their normal
+# 90-day rotation beneath a stable trust anchor.
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: crowdsec-root-ca-selfsigned
+spec:
+  selfSigned: {}
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: crowdsec-root-ca
+  namespace: base
+spec:
+  isCA: true
+  commonName: crowdsec-ca
+  secretName: crowdsec-root-ca
+  duration: 87600h   # 10y — leaves rotate ~60d; the CA must outlive them
+  renewBefore: 8760h # 1y
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+  issuerRef:
+    name: crowdsec-root-ca-selfsigned
+    kind: ClusterIssuer
+    group: cert-manager.io
+---
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: crowdsec-root-ca-issuer
+  namespace: base
+spec:
+  ca:
+    secretName: crowdsec-root-ca

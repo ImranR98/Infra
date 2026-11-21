@@ -1,10 +1,10 @@
 ---
-# Cert-manager renews the CrowdSec PKI in place (~60 days), and every consumer
+# Cert-manager renews the CrowdSec leaf PKI in place (~60 days), and every consumer
 # reads the CA/certs once at startup, so the running pods keep the old PKI while
 # the Secrets hold the new one. This job hashes the mounted TLS Secrets and
 # stamps the hash onto each pod template: a rotation changes the annotation and
 # rolls the whole stack together (rolling LAPI alone strands agents/appsec on
-# the old CA).
+# the old CA). The root CA is long-lived (crowdsec-pki.yaml), so only leaves move.
 apiVersion: batch/v1
 kind: CronJob
 metadata:
@@ -33,7 +33,7 @@ spec:
                 - -c
                 - |
                   set -eu
-                  hash="$(for s in crowdsec-root-secret crowdsec-lapi-tls crowdsec-agent-tls \
+                  hash="$(for s in crowdsec-root-ca crowdsec-lapi-tls crowdsec-agent-tls \
                                crowdsec-appsec-client-tls crowdsec-appsec-server-tls; do
                     kubectl -n base get secret "$s" -o jsonpath='{.data.ca\.crt}{.data.tls\.crt}{.data.tls\.key}'
                   done | sha256sum | cut -d' ' -f1)"
@@ -57,7 +57,7 @@ rules:
   - apiGroups: [""]
     resources: ["secrets"]
     resourceNames:
-      - crowdsec-root-secret
+      - crowdsec-root-ca
       - crowdsec-lapi-tls
       - crowdsec-agent-tls
       - crowdsec-appsec-client-tls
