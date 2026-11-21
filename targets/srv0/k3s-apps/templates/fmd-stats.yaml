@@ -25,7 +25,7 @@ spec:
           level: s0
       containers:
         - name: fmd-stats
-          image: ghcr.io/imranr98/fmd-stats:latest@sha256:36700b6590ee62a09bf864931679e9afb7ae53995441997c00fc11cfd2d43f18
+          image: ghcr.io/imranr98/fmd-stats:latest@sha256:fedcaa2da7ebc1dd9be847b9deffe46b0198c138d92f66449560f77b753cfab2
           securityContext:
             runAsUser: {{ .Values.MY_UID }}
             runAsGroup: {{ .Values.MY_UID }}
