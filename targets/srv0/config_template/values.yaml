@@ -28,6 +28,7 @@ TZ: "America/Toronto"
 PUBLIC_HOSTS:
   - data
   - fmd
+  - fmdstats
   - rss
   - frigate
   - k8s
@@ -356,6 +357,9 @@ D4TA_WATXT_DATA_PATH: ""
 
 # ====== FMD ======
 FMD_REGISTRATIONTOKEN: "change_me" # openssl rand -base64 32
+
+# ====== FMD Stats ======
+FMD_STATS_ADMIN_TOKEN: "change_me" # openssl rand -hex 32
 
 # ====== OpenCanary ======
 OPENCANARY_NTFY_SECRET_TOPIC: "change_me" # openssl rand -base64 32
