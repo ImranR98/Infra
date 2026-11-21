@@ -17,7 +17,7 @@ spec:
       labels:
         app: fmd-stats
       annotations:
-        checksum/fmd-stats-secret: {{ printf "%s:%s" .Values.FMD_STATS_ADMIN_TOKEN .Values.NTFY_WRITE_ONLY_ACCOUNT_TOKEN | sha256sum }}
+        checksum/fmd-stats-secret: {{ .Values.FMD_STATS_ADMIN_TOKEN | sha256sum }}
     spec:
       securityContext:
         fsGroup: {{ .Values.MY_UID }}
@@ -25,7 +25,7 @@ spec:
           level: s0
       containers:
         - name: fmd-stats
-          image: ghcr.io/imranr98/fmd-stats:latest@sha256:4eafe3924bbbc008c679139f1d9b53062138a217898a315116a503be78b7e18c
+          image: ghcr.io/imranr98/fmd-stats:latest@sha256:29c4709291c99e57517d4e90be8ef4b3836025dc3ea0682ce47b889efbe5b416
           securityContext:
             runAsUser: {{ .Values.MY_UID }}
             runAsGroup: {{ .Values.MY_UID }}
@@ -56,10 +56,8 @@ spec:
               value: https://fmd.{{ .Values.SERVICES_DOMAIN }}
             - name: SYNC_INTERVAL_MINUTES
               value: "15"
-            - name: NTFY_URL
-              value: https://ntfy.{{ .Values.SERVICES_DOMAIN }}
-            - name: NTFY_TOPIC
-              value: "{{ .Values.TARGET }}_services_fmdstats"
+            - name: VAPID_SUBJECT
+              value: https://fmdstats.{{ .Values.SERVICES_DOMAIN }}
             - name: LOG_LEVEL
               value: info
             - name: ADMIN_TOKEN
@@ -67,11 +65,6 @@ spec:
                 secretKeyRef:
                   name: fmd-stats-secret
                   key: ADMIN_TOKEN
-            - name: NTFY_TOKEN
-              valueFrom:
-                secretKeyRef:
-                  name: fmd-stats-secret
-                  key: NTFY_TOKEN
           volumeMounts:
             - name: data
               mountPath: /data
@@ -155,4 +148,3 @@ metadata:
 type: Opaque
 stringData:
   ADMIN_TOKEN: "{{ .Values.FMD_STATS_ADMIN_TOKEN }}"
-  NTFY_TOKEN: "{{ .Values.NTFY_WRITE_ONLY_ACCOUNT_TOKEN }}"
