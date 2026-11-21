@@ -37,8 +37,8 @@ _fail() {
     err=1
 }
 
-# Packages that only publish channel/floating tags. They are digest-pinned and
-# handled by the channel-only allowlist in renovate.json.
+# Packages that only publish channel/floating tags. This list is the
+# channel-only allowlist; every ref must still be digest-pinned.
 channel_only() {
     case "$1" in
         ghcr.io/imranr98/* | \

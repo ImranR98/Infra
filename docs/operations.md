@@ -111,9 +111,9 @@ validate, merge, then deploy.
 
 - On-demand Infra run: `bash scripts/renovate.sh infra` (uses the token in
   `config/srv0/values.yaml`).
-- Image refs use immutable tags and digests; channel-only images are digest-pinned on
-  the allowlist shared by `renovate.json`, `renovate-preset.json`, and
-  `scripts/check-images.sh`. Never hand-pin an app digest.
+- Image refs use immutable tags and digests. Channel-only packages are listed in
+  `scripts/check-images.sh`; every ref must still carry a digest. Never hand-pin an
+  app digest.
 - After a Compose deploy that replaced an image, prune old images:
   `sudo docker image prune -af --filter until=336h`. The vps0
   `docker-image-prune.timer` does this monthly; Kubernetes uses kubelet GC.

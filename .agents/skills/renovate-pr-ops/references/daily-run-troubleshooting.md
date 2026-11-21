@@ -121,7 +121,7 @@ Ask first:
 - merge an Infra PR or deploy;
 - rotate/change the token, Docker Hub credentials, or any secret;
 - edit the shared preset, app CI, the runner chart, or the skill;
-- add a package to the channel-only allowlist;
+- add a package to the channel-only list in `scripts/check-images.sh`;
 - suspend/delete Jobs, raise limits, force-push branches, or change branch
   protection.
 

@@ -508,18 +508,21 @@ check_chart_repos() {
         "https://blog.pavelsklenar.com/home-assistant-helm-chart"
         "oci://ghcr.io/imranr98/charts"
     )
-    local ok=1 f repo chart a found
+    local ok=1 f repo chart
+    _allowed() {
+        local ref="$1" candidate
+        for candidate in "${allowed[@]}"; do
+            [ "$ref" = "$candidate" ] && return 0
+        done
+        return 1
+    }
     for f in "$target_dir"/k3s-base/templates/*.yaml "$target_dir"/k3s-apps/templates/*.yaml; do
         [ -f "$f" ] || continue
         while IFS= read -r repo; do
             repo="${repo#"${repo%%[![:space:]]*}"}"
             repo="${repo#repo: }"
             repo="${repo%/}"
-            found=0
-            for a in "${allowed[@]}"; do
-                [ "$repo" = "$a" ] && { found=1; break; }
-            done
-            if [ "$found" = 0 ]; then
+            if ! _allowed "$repo"; then
                 _err "ERROR: unapproved Helm chart repo in ${f#"$INFRA_ROOT"/}: $repo"
                 ok=0
             fi
@@ -531,11 +534,7 @@ check_chart_repos() {
                 oci://*) ;;
                 *) continue ;;
             esac
-            found=0
-            for a in "${allowed[@]}"; do
-                [ "$chart" = "$a" ] && { found=1; break; }
-            done
-            if [ "$found" = 0 ]; then
+            if ! _allowed "$chart"; then
                 _err "ERROR: unapproved Helm OCI chart in ${f#"$INFRA_ROOT"/}: $chart"
                 ok=0
             fi
@@ -554,11 +553,7 @@ check_chart_repos() {
             case "$chart_repo" in
                 file://*) continue ;; # local library chart dependency
             esac
-            found=0
-            for a in "${allowed[@]}"; do
-                [ "$chart_repo" = "$a" ] && { found=1; break; }
-            done
-            if [ "$found" = 0 ]; then
+            if ! _allowed "$chart_repo"; then
                 _err "ERROR: unapproved Helm chart dependency in ${chart_file#"$INFRA_ROOT"/}: $chart_repo"
                 ok=0
             fi

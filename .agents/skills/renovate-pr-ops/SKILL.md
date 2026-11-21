@@ -132,9 +132,8 @@ default-branch CI runs from the last 48h. Each PR line shows the check names
   next run),
 - **images whose PR never appears** — inspect the Dependency Dashboard and the
   registry's tag timestamps. Fix by pinning an immutable version tag; only for a
-  genuinely channel-only image add a justified entry to the channel-only
-  allowlist in `renovate.json` (and `scripts/check-images.sh`). Do not widen the
-  exception without evidence.
+  genuinely channel-only image add a justified entry to the channel-only list
+  in `scripts/check-images.sh`. Do not widen the exception without evidence.
 - open Infra PRs,
 - broken default-branch CI.
 

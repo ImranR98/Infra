@@ -141,8 +141,8 @@ then run `validate.sh srv0` (renders both charts and rejects `<no value>`).
   release-age hold.
 - Compose syncthing/llama are Renovate-managed; srv0's K3s syncthing is Renovate-managed too. ComfyUI is an optional commented service and its image is allowlisted.
 - `scripts/check-images.sh` enforces exact tags + digests for raw image refs;
-  the channel-only allowlist is shared with `renovate.json`. Keep them
-  in sync.
+  its channel-only list is the only package allowlist. Renovate still
+  digest-pins the refs.
 - Home Assistant's Frigate integration and Advanced Camera Card pins are
   `github-releases`-managed feature updates — check release notes for breaking config.
 - k3s plan bumps: after merging, deployment is not done until both Plans report

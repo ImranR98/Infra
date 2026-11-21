@@ -53,19 +53,8 @@ sudo docker image prune -af --filter until=336h
 
 Use the K3s deploy block in
 [Operations: deploy](../../../../docs/operations.md#deploy). Apply `base` before
-`apps`; delete in reverse order if ever needed. HelmChart CRs reconcile
-asynchronously via helm-controller — check its jobs/pods before declaring success:
-
-```bash
-kubectl -n base get helmcharts
-kubectl -n apps get helmcharts
-for ns in base apps; do
-  kubectl -n "$ns" get deploy,statefulset,daemonset -o name |
-    while read -r r; do kubectl -n "$ns" rollout status "$r" --timeout=120s || echo "FAILED: $r"; done
-done
-kubectl get pods -A --no-headers | grep -vE 'Running|Completed' || echo "pods OK"
-kubectl get --raw /readyz
-```
+`apps`; delete in reverse order if ever needed. Verify with
+[Operations: verify](../../../../docs/operations.md#verify).
 
 ## srv0 compose sidecars
 
