@@ -136,7 +136,7 @@ spec:
     volumeHandle: navidrome-music
     volumeAttributes:
       server: nfs-server.base.svc.cluster.local
-      share: /music
+      share: /media/Music
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim

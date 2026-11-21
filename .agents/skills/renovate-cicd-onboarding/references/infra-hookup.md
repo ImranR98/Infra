@@ -3,8 +3,9 @@
 Skip this phase for apps deployed elsewhere. The app-side pipeline is complete
 without it. This reference is the only environment-specific part of the skill.
 
-`AGENTS.md` is the source of truth for the Infra repo's layout, deploy commands,
-and safety rules. Read its targets, Renovate, and validation sections first.
+`docs/` and `AGENTS.md` are the source of truth for the Infra repo's layout,
+deploy commands, and safety rules. Read `docs/architecture.md`,
+`docs/operations.md`, and `AGENTS.md` first.
 
 ## Runner
 
@@ -140,7 +141,7 @@ After the app repo's CI and `renovate.json` are merged:
   Infra digest PR. Confirm the templates now pin the new digest.
 
 Do not deploy from this skill. Use the normal Infra review/deploy flow; for this
-repo that is the `renovate-pr-ops` skill and `AGENTS.md`/`validate.sh`.
+repo that is the `renovate-pr-ops` skill and `docs/operations.md`/`validate.sh`.
 
 ## Skip / ask cases
 

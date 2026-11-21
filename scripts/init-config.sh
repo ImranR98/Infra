@@ -1,10 +1,10 @@
 #!/bin/bash
 # DESC: Initialise a target's gitignored config tree from config_template and
-# optionally auto-detect the srv0 accelerator/HA hardware. Existing files are
-# never overwritten.
+# optionally detect the local UID. Existing files are never overwritten.
 #
 # Usage: init-config.sh <target> [--detect]
-#   Run --detect on srv0 to set MY_UID, GPU_PROFILE, HA_CONBEE, HA_BLUETOOTH.
+#   Run --detect on srv0 to set MY_UID. Accelerator/HA hardware is fixed in the
+#   charts; no profile values are written.
 set -euo pipefail
 
 if [ -z "${INFRA_ROOT:-}" ]; then
@@ -50,37 +50,7 @@ if [ "$detect" = 1 ] && [ "$target" = "srv0" ]; then
 
     my_uid="${MY_UID:-$(id -u)}"
     yq -i ".MY_UID = $my_uid" "$values"
-
-    has_intel=0
-    has_amd=0
-    for render in /sys/class/drm/renderD*; do
-        [ -e "$render/device/driver" ] || continue
-        driver="$(basename "$(readlink -f "$render/device/driver")")"
-        case "$driver" in
-            i915 | xe) has_intel=1 ;;
-            amdgpu) has_amd=1 ;;
-        esac
-    done
-    if [ "$has_intel" = 1 ]; then
-        gpu=intel
-    elif [ "$has_amd" = 1 ]; then
-        gpu=amd
-    else
-        gpu=none
-    fi
-    yq -i ".GPU_PROFILE = \"$gpu\"" "$values"
-
-    if compgen -G "/dev/serial/by-id/*ConBee*" >/dev/null; then
-        yq -i '.HA_CONBEE = true' "$values"
-    else
-        yq -i '.HA_CONBEE = false' "$values"
-    fi
-    if [ -e /sys/class/bluetooth/hci0 ]; then
-        yq -i '.HA_BLUETOOTH = true' "$values"
-    else
-        yq -i '.HA_BLUETOOTH = false' "$values"
-    fi
-    echo "==> Detected srv0 hardware: GPU_PROFILE=$gpu, MY_UID=$my_uid"
+    echo "==> Detected srv0 UID: $my_uid (accelerator/HA hardware is fixed in-chart)"
 fi
 
 echo "==> Config initialised at $config_dir"

@@ -80,9 +80,6 @@ jobs:
       - name: Device plugin fixtures
         run: bash scripts/test-device-plugin.sh
 
-      - name: GPU profile renders
-        run: bash scripts/test-gpu-profiles.sh
-
       - name: Renovate config
         run: npx --yes -p renovate@44.181.3 renovate-config-validator --strict renovate.json
 

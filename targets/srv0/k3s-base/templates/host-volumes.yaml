@@ -1,27 +1,42 @@
 # Host-level PersistentVolumes — shared resources tied to specific cluster nodes.
-# Each PV is paired with a PVC in the namespace of the app that consumes it.
-# All are RWX so multiple pods can share the same host directory if needed.
-
+# Each PV is paired with a PVC in the apps namespace. All are RWX so multiple
+# pods can share the same host directory if needed.
+{{- $volumes := list
+    (dict "name" "main" "path" (include "path.main" .) "size" "4096Gi" "affinity" "hostpath-main")
+    (dict "name" "devicesync" "path" (include "path.devicesync" .) "size" "4096Gi" "affinity" "hostpath-main")
+    (dict "name" "syslog" "path" (include "path.journal" .) "size" "5Gi" "affinity" "external-exposed")
+    (dict "name" "d4ta-watxt" "path" (include "path.d4taWatxtData" .) "size" "4096Gi" "affinity" "hostpath-main")
+    (dict "name" "file-pipelines" "path" (include "path.filePipelines" .) "size" "4096Gi" "affinity" "hostpath-main")
+    (dict "name" "backups" "path" (include "path.backups" .) "size" "4096Gi" "affinity" "hostpath-main")
+    (dict "name" "media" "path" (include "path.media" .) "size" "4096Gi" "affinity" "hostpath-main")
+    (dict "name" "documents" "path" (include "path.documents" .) "size" "4096Gi" "affinity" "hostpath-main")
+    (dict "name" "whatsapp" "path" (include "path.whatsapp" .) "size" "4096Gi" "affinity" "hostpath-main")
+-}}
+{{- $prefixes := dict "hostpath-main" "hostpath-main-node" "external-exposed" "external-exposed-node" }}
+{{- range $volumes }}
+{{- $prefix := index $prefixes .affinity }}
+{{- $pv := printf "%s-%s-pv" $prefix .name }}
+{{- $pvc := printf "%s-%s-pvc" $prefix .name }}
 ---
 apiVersion: v1
 kind: PersistentVolume
 metadata:
-  name: hostpath-main-node-main-pv
+  name: {{ $pv }}
 spec:
   capacity:
-    storage: 4096Gi
+    storage: {{ .size }}
   volumeMode: Filesystem
   accessModes:
     - ReadWriteMany
   persistentVolumeReclaimPolicy: Retain
   storageClassName: hostpath
   local:
-    path: {{ include "path.main" . }}
+    path: {{ .path }}
   nodeAffinity:
     required:
       nodeSelectorTerms:
         - matchExpressions:
-            - key: infra.local/hostpath-main
+            - key: infra.local/{{ .affinity }}
               operator: In
               values:
                 - "true"
@@ -29,7 +44,7 @@ spec:
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: hostpath-main-node-main-pvc
+  name: {{ $pvc }}
   namespace: apps
 spec:
   accessModes:
@@ -37,301 +52,6 @@ spec:
   storageClassName: hostpath
   resources:
     requests:
-      storage: 4096Gi
-  volumeName: hostpath-main-node-main-pv
----
-apiVersion: v1
-kind: PersistentVolume
-metadata:
-  name: hostpath-main-node-devicesync-pv
-spec:
-  capacity:
-    storage: 4096Gi
-  volumeMode: Filesystem
-  accessModes:
-    - ReadWriteMany
-  persistentVolumeReclaimPolicy: Retain
-  storageClassName: hostpath
-  local:
-    path: {{ include "path.devicesync" . }}
-  nodeAffinity:
-    required:
-      nodeSelectorTerms:
-        - matchExpressions:
-            - key: infra.local/hostpath-main
-              operator: In
-              values:
-                - "true"
----
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: hostpath-main-node-devicesync-pvc
-  namespace: apps
-spec:
-  accessModes:
-    - ReadWriteMany
-  storageClassName: hostpath
-  resources:
-    requests:
-      storage: 4096Gi
-  volumeName: hostpath-main-node-devicesync-pv
----
-apiVersion: v1
-kind: PersistentVolume
-metadata:
-  name: external-exposed-node-syslog-pv
-spec:
-  capacity:
-    storage: 5Gi
-  volumeMode: Filesystem
-  accessModes:
-    - ReadWriteMany
-  persistentVolumeReclaimPolicy: Retain
-  storageClassName: hostpath
-  local:
-    path: {{ include "path.journal" . }}
-  nodeAffinity:
-    required:
-      nodeSelectorTerms:
-        - matchExpressions:
-            - key: infra.local/external-exposed
-              operator: In
-              values:
-                - "true"
----
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: external-exposed-node-syslog-pvc
-  namespace: apps
-spec:
-  accessModes:
-    - ReadWriteMany
-  storageClassName: hostpath
-  resources:
-    requests:
-      storage: 5Gi
-  volumeName: external-exposed-node-syslog-pv
----
-apiVersion: v1
-kind: PersistentVolume
-metadata:
-  name: hostpath-main-node-d4ta-watxt-pv
-spec:
-  capacity:
-    storage: 4096Gi
-  volumeMode: Filesystem
-  accessModes:
-    - ReadWriteMany
-  persistentVolumeReclaimPolicy: Retain
-  storageClassName: hostpath
-  local:
-    path: {{ include "path.d4taWatxtData" . }}
-  nodeAffinity:
-    required:
-      nodeSelectorTerms:
-        - matchExpressions:
-            - key: infra.local/hostpath-main
-              operator: In
-              values:
-                - "true"
----
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: hostpath-main-node-d4ta-watxt-pvc
-  namespace: apps
-spec:
-  accessModes:
-    - ReadWriteMany
-  storageClassName: hostpath
-  resources:
-    requests:
-      storage: 4096Gi
-  volumeName: hostpath-main-node-d4ta-watxt-pv
----
-apiVersion: v1
-kind: PersistentVolume
-metadata:
-  name: hostpath-main-node-file-pipelines-pv
-spec:
-  capacity:
-    storage: 4096Gi
-  volumeMode: Filesystem
-  accessModes:
-    - ReadWriteMany
-  persistentVolumeReclaimPolicy: Retain
-  storageClassName: hostpath
-  local:
-    path: {{ include "path.filePipelines" . }}
-  nodeAffinity:
-    required:
-      nodeSelectorTerms:
-        - matchExpressions:
-            - key: infra.local/hostpath-main
-              operator: In
-              values:
-                - "true"
----
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: hostpath-main-node-file-pipelines-pvc
-  namespace: apps
-spec:
-  accessModes:
-    - ReadWriteMany
-  storageClassName: hostpath
-  resources:
-    requests:
-      storage: 4096Gi
-  volumeName: hostpath-main-node-file-pipelines-pv
----
-apiVersion: v1
-kind: PersistentVolume
-metadata:
-  name: hostpath-main-node-backups-pv
-spec:
-  capacity:
-    storage: 4096Gi
-  volumeMode: Filesystem
-  accessModes:
-    - ReadWriteMany
-  persistentVolumeReclaimPolicy: Retain
-  storageClassName: hostpath
-  local:
-    path: {{ include "path.backups" . }}
-  nodeAffinity:
-    required:
-      nodeSelectorTerms:
-        - matchExpressions:
-            - key: infra.local/hostpath-main
-              operator: In
-              values:
-                - "true"
----
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: hostpath-main-node-backups-pvc
-  namespace: apps
-spec:
-  accessModes:
-    - ReadWriteMany
-  storageClassName: hostpath
-  resources:
-    requests:
-      storage: 4096Gi
-  volumeName: hostpath-main-node-backups-pv
----
-apiVersion: v1
-kind: PersistentVolume
-metadata:
-  name: hostpath-main-node-media-pv
-spec:
-  capacity:
-    storage: 4096Gi
-  volumeMode: Filesystem
-  accessModes:
-    - ReadWriteMany
-  persistentVolumeReclaimPolicy: Retain
-  storageClassName: hostpath
-  local:
-    path: {{ include "path.media" . }}
-  nodeAffinity:
-    required:
-      nodeSelectorTerms:
-        - matchExpressions:
-            - key: infra.local/hostpath-main
-              operator: In
-              values:
-                - "true"
----
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: hostpath-main-node-media-pvc
-  namespace: apps
-spec:
-  accessModes:
-    - ReadWriteMany
-  storageClassName: hostpath
-  resources:
-    requests:
-      storage: 4096Gi
-  volumeName: hostpath-main-node-media-pv
----
-apiVersion: v1
-kind: PersistentVolume
-metadata:
-  name: hostpath-main-node-documents-pv
-spec:
-  capacity:
-    storage: 4096Gi
-  volumeMode: Filesystem
-  accessModes:
-    - ReadWriteMany
-  persistentVolumeReclaimPolicy: Retain
-  storageClassName: hostpath
-  local:
-    path: {{ include "path.documents" . }}
-  nodeAffinity:
-    required:
-      nodeSelectorTerms:
-        - matchExpressions:
-            - key: infra.local/hostpath-main
-              operator: In
-              values:
-                - "true"
----
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: hostpath-main-node-documents-pvc
-  namespace: apps
-spec:
-  accessModes:
-    - ReadWriteMany
-  storageClassName: hostpath
-  resources:
-    requests:
-      storage: 4096Gi
-  volumeName: hostpath-main-node-documents-pv
----
-apiVersion: v1
-kind: PersistentVolume
-metadata:
-  name: hostpath-main-node-whatsapp-pv
-spec:
-  capacity:
-    storage: 4096Gi
-  volumeMode: Filesystem
-  accessModes:
-    - ReadWriteMany
-  persistentVolumeReclaimPolicy: Retain
-  storageClassName: hostpath
-  local:
-    path: {{ include "path.whatsapp" . }}
-  nodeAffinity:
-    required:
-      nodeSelectorTerms:
-        - matchExpressions:
-            - key: infra.local/hostpath-main
-              operator: In
-              values:
-                - "true"
----
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: hostpath-main-node-whatsapp-pvc
-  namespace: apps
-spec:
-  accessModes:
-    - ReadWriteMany
-  storageClassName: hostpath
-  resources:
-    requests:
-      storage: 4096Gi
-  volumeName: hostpath-main-node-whatsapp-pv
+      storage: {{ .size }}
+  volumeName: {{ $pv }}
+{{- end }}

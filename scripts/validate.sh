@@ -379,34 +379,21 @@ check_global_config() {
     [ "$ok" = 1 ]
 }
 
-# check_cluster_hardware <config> — warn when the active profile expects a
-# device resource no Ready node advertises. Runs only where kubectl can reach
-# the cluster (srv0's kubeconfig is root-only).
+# check_cluster_hardware — warn when a device resource the fixed srv0 hardware
+# profile expects is not advertised by a Ready node. Runs only where kubectl can
+# reach the cluster (srv0's kubeconfig is root-only).
 check_cluster_hardware() {
-    local config_file="$1" profile conbee node res val check
+    local node res val check
     command -v kubectl >/dev/null 2>&1 || return 0
     kubectl get node srv0 >/dev/null 2>&1 || return 0
-    profile=$(yq -r '.GPU_PROFILE // "intel"' "$config_file" 2>/dev/null || echo intel)
-    conbee=$(yq -r '.HA_CONBEE // true' "$config_file" 2>/dev/null || echo true)
 
-    local checks=()
-    case "$profile" in
-        intel) checks=("srv0 intel-gpu" "srv0 vaapi") ;;
-        amd) checks=("srv0 amd-igpu" "srv0 vaapi") ;;
-        none) checks=() ;;
-        *)
-            _err "WARNING: unknown GPU_PROFILE '$profile'"
-            return 0
-            ;;
-    esac
-    [ "$conbee" = "false" ] || checks+=("srv0 conbee")
-
+    local checks=("srv0 amd-igpu" "srv0 vaapi" "srv0 conbee")
     for check in "${checks[@]}"; do
         node=${check%% *}
         res=${check#* }
         val=$(kubectl get node "$node" -o json 2>/dev/null | yq -r ".status.allocatable[\"infra.local/$res\"] // \"0\"" 2>/dev/null || echo 0)
         if [ -z "$val" ] || [ "$val" = "0" ] || [ "$val" = "null" ]; then
-            _err "WARNING: GPU_PROFILE=$profile expects infra.local/$res on $node, but it is not advertised"
+            _err "WARNING: expected infra.local/$res on $node, but it is not advertised"
         fi
     done
 }
@@ -424,7 +411,7 @@ check_released_pvs() {
 
 # check_resource_tiers <target_dir> — container resources come from the
 # infra.resources ladder, never from raw keys. The tiers (and the 4x memory
-# rule) are documented in AGENTS.md; the model/cache exception passes explicit
+# rule) are documented in AGENTS.md and docs/platform.md; the model/cache exception passes explicit
 # memRequest/memLimit arguments to the helper instead of YAML keys, so any
 # literal memory:/cpu: value in a template is drift.
 check_resource_tiers() {
@@ -434,7 +421,7 @@ check_resource_tiers() {
         "$target_dir"/k3s-base/templates/*.yaml \
         "$target_dir"/k3s-apps/templates/*.yaml 2>/dev/null || true)
     if [ -n "$hits" ]; then
-        _err "ERROR: raw memory/cpu values in templates — use include \"infra.resources\" (AGENTS.md: Resource sizing)"
+        _err "ERROR: raw memory/cpu values in templates — use include \"infra.resources\" (AGENTS.md / docs/platform.md: Resource sizing)"
         printf '%s\n' "$hits" >&2
         return 1
     fi
@@ -740,7 +727,7 @@ if command -v kubectl >/dev/null 2>&1 && kubectl get node "$TARGET" >/dev/null 2
     fi
 
     check_released_pvs
-    [ -f "$config_values" ] && check_cluster_hardware "$config_values"
+    check_cluster_hardware
 fi
 
 if [ "$ok" = 1 ]; then

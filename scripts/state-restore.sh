@@ -26,9 +26,9 @@ source "$INFRA_ROOT/scripts/common.sh"
 STATE_BACKUP_DIR="${STATE_BACKUP_DIR:-$INFRA_ROOT/state_backups}"
 SNAP_ROOT="$STATE_BACKUP_DIR/snapshots"
 LATEST="$STATE_BACKUP_DIR/latest"
-SSH_KEY_FILE="${SSH_KEY_FILE:-$INFRA_ROOT/config/state-backup-vps0/id_ed25519}"
+SSH_KEY_FILE="${SSH_KEY_FILE:-$HOME/.ssh/id_ed25519}"
 KNOWN_HOSTS="${KNOWN_HOSTS:-$HOME/.ssh/known_hosts}"
-VPS0_HOST="${VPS0_HOST:-vps0.example.org}"
+VPS0_HOST="${VPS0_HOST:-$(config_env srv0 PUBLIC_EXPOSURE_HOST 2>/dev/null || true)}"
 VPS0_USER="${VPS0_USER:-root}"
 VPS0_STATE_DIR="${VPS0_STATE_DIR:-/root/infra_state/compose_live_state}"
 
@@ -129,7 +129,14 @@ restore_compose() {
             echo "Restored srv0 compose state to $COMPOSE_STATE_DIR"
             ;;
         vps0)
-            [ -f "$SSH_KEY_FILE" ] || { echo "SSH key not found: $SSH_KEY_FILE" >&2; exit 1; }
+            [ -n "$VPS0_HOST" ] || {
+                echo "Set VPS0_HOST or PUBLIC_EXPOSURE_HOST in config/srv0/compose.env" >&2
+                exit 1
+            }
+            [ -f "$SSH_KEY_FILE" ] || {
+                echo "SSH key not found: $SSH_KEY_FILE (set SSH_KEY_FILE)" >&2
+                exit 1
+            }
             rsync -a --delete -e "ssh -i '$SSH_KEY_FILE' -o BatchMode=yes -o StrictHostKeyChecking=accept-new -o UserKnownHostsFile='$KNOWN_HOSTS'" \
                 "$stage/" "$VPS0_USER@$VPS0_HOST:$VPS0_STATE_DIR/"
             echo "Restored vps0 compose state to $VPS0_HOST:$VPS0_STATE_DIR"

@@ -31,7 +31,7 @@ esac
 command -v wg >/dev/null 2>&1 ||
     { echo "Error: wg not found — install wireguard-tools (dnf install wireguard-tools)" >&2; exit 1; }
 command -v yq >/dev/null 2>&1 ||
-    { echo "Error: yq not found (see Prerequisites in AGENTS.md)" >&2; exit 1; }
+    { echo "Error: yq not found (see docs/operations.md#first-boot)" >&2; exit 1; }
 
 srv0_env="$INFRA_ROOT/config/srv0/compose.env"
 srv0_vals="$INFRA_ROOT/config/srv0/values.yaml"
@@ -40,16 +40,6 @@ srv0_dir="$INFRA_ROOT/config/srv0/public-exposure"
 
 [ -f "$srv0_env" ] || { echo "Error: $srv0_env not found (copy config_template first)" >&2; exit 1; }
 [ -f "$srv0_vals" ] || { echo "Error: $srv0_vals not found (copy config_template first)" >&2; exit 1; }
-
-# Migrate the legacy tunnel keys in compose.env without touching their values.
-if grep -q '^PROXY_HOST=' "$srv0_env" && ! grep -q '^PUBLIC_EXPOSURE_HOST=' "$srv0_env"; then
-    sed -i 's/^PROXY_HOST=/PUBLIC_EXPOSURE_HOST=/' "$srv0_env"
-    echo "migrated config/srv0/compose.env: PROXY_HOST -> PUBLIC_EXPOSURE_HOST"
-fi
-if grep -q '^TLS_SERVER_NAME=' "$srv0_env"; then
-    sed -i 's/^TLS_SERVER_NAME=.*/PUBLIC_EXPOSURE_PORT=51822/' "$srv0_env"
-    echo "migrated config/srv0/compose.env: TLS_SERVER_NAME -> PUBLIC_EXPOSURE_PORT"
-fi
 
 host="$(config_env srv0 PUBLIC_EXPOSURE_HOST || true)"
 port="$(config_env srv0 PUBLIC_EXPOSURE_PORT || true)"

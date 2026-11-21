@@ -30,7 +30,9 @@ services:
         network_mode: host
         logging: *logging
 
-    # # ComfyUI on the Intel Arc iGPU (XPU). The image bundles ComfyUI,
+    # Optional ComfyUI on the Intel Arc iGPU (XPU). Not currently deployed:
+    # the service is kept commented out for opt-in use. See
+    # docs/apps.md#optional-comfyui-on-pc. The image bundles ComfyUI,
     # # ComfyUI-Manager and ComfyUI-GGUF; persistent state lives under the shared
     # # AI root at ~/ai/comfyui. The image runs as root (Manager installs node
     # # deps into /app/venv), but the process group is the host user's (MY_UID) and

@@ -21,9 +21,10 @@ blocked, failed, or a major awaiting approval). Infra PRs are the human gate.
   wait on the Dependency Dashboard until approved.
 - Infra image refs use immutable version tags and are digest-pinned; there is no
   release-age hold here either. First-party `ghcr.io/imranr98/**` app images
-  (`:latest@sha`) and the channel-only images (LinuxServer `latest`, ComfyUI
-  `xpu-master`, llama.cpp channel tags, the Bitnami DB/kubectl pins) are
-  digest-pinned and reviewed at the manual rollout gate.
+  (`:latest@sha`) and the channel-only images (LinuxServer `latest`, the
+  optional commented-out ComfyUI `xpu-master`, llama.cpp channel tags, the
+  Bitnami DB/kubectl pins) are digest-pinned and reviewed at the manual rollout
+  gate.
 - Merging an app PR triggers the app's `ci.yml`: `test`, then `publish` to GHCR
   (`:sha-<commit>` verified, `:latest` promoted). Workflow-only merges are
   path-ignored and publish nothing.

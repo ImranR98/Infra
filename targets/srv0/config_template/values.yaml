@@ -4,7 +4,7 @@
 #   - config/srv0/values.yaml — plain YAML consumed ONLY by the k3s charts
 #     (helm upgrade -f, both k3s-base and k3s-apps). Copy this template folder
 #     (targets/srv0/config_template/) to config/srv0/, replace placeholders,
-#     done — no encryption, config/ is gitignored (see AGENTS.md).
+#     done — no encryption, config/ is gitignored (see docs/configuration.md).
 #   - The compose sidecar (public-exposure client) has its own inputs in the
 #     same folder: compose.env (dotenv: PUBLIC_EXPOSURE_HOST/PORT) plus the
 #     WireGuard key/conf files that scripts/public-exposure-keygen.sh generates
@@ -89,28 +89,11 @@ HOME_DIR: ""
 # LAN CIDR used by egress/NFS/readiness NetworkPolicies.
 LAN_CIDR: "<lan-cidr>"
 
-# ====== Accelerators ======
-# Deployment-wide media/ML backend: intel | amd | none.
-#   intel: Frigate/Immich ML OpenVINO on an Intel iGPU; VAAPI for Jellyfin/Immich.
-#   amd:   Frigate ROCm on srv0's iGPU; Immich ML ROCm on srv0's iGPU;
-#          VAAPI for Jellyfin/Immich. llama.cpp runs in Compose on bigpc.
-#   none:  CPU/no-GPU fallbacks.
-# Per-app overrides below are optional; empty derives from GPU_PROFILE.
-GPU_PROFILE: "intel"
-FRIGATE_DETECTOR: ""         # openvino | rocm | cpu
-IMMICH_ML_BACKEND: ""        # openvino | rocm | cpu
-IMMICH_ML_GPU_RESOURCE: ""   # intel-gpu | amd-igpu | amd-dgpu
-# Optional ROCm selection when a node has more than one KFD-visible GPU.
-IMMICH_ML_ROCR_VISIBLE_DEVICES: ""
-# MIGraphX on Phoenix-class iGPUs needs the gfx1100 ISA target; without it the
-# CLIP text model segfaults the ML worker. Set to "11.0.0" on srv0.
-IMMICH_ML_HSA_OVERRIDE_GFX_VERSION: ""
-JELLYFIN_HWACCEL: ""         # vaapi | none
-IMMICH_SERVER_HWACCEL: ""    # vaapi | none
-# Hardware-specific Home Assistant integrations. Disable either when the
-# device/adapter is not present; the pod then drops the matching mount/grant.
-HA_CONBEE: true
-HA_BLUETOOTH: true
+# ====== Hardware (fixed in charts) ======
+# The srv0 hardware is fixed in the charts: Frigate and Immich ML use ROCm on
+# the AMD iGPU, Jellyfin/Immich server use VAAPI, and Home Assistant always has
+# the ConBee II and Bluetooth mounts. There are no per-deployment GPU/HA values.
+# See docs/platform.md#hardware.
 
 # ====== Authelia ======
 # Use `docker run -it authelia/authelia:latest authelia crypto hash generate argon2` to generate the password hash

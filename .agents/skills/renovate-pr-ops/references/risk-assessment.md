@@ -102,9 +102,9 @@ Verify the digest exists and identify the real version behind it:
 - There is no release-age hold: `minimumReleaseAge` was removed, so an update
   opens on the first run after its registry or chart publishes it.
 - Channel-only images (first-party `ghcr.io/imranr98/**` app images, LinuxServer
-  `latest`, ComfyUI `xpu-master`, llama.cpp channel tags, and the temporary
-  Bitnami DB/kubectl pins) publish no immutable version tag; they are
-  digest-pinned and reviewed at the manual rollout gate.
+  `latest`, the optional commented-out ComfyUI `xpu-master`, llama.cpp channel
+  tags, and the temporary Bitnami DB/kubectl pins) publish no immutable version
+  tag; they are digest-pinned and reviewed at the manual rollout gate.
 - Everything else should still use an immutable version tag (semver,
   CalVer/build, exact patch + distro). If an image only publishes a mutable tag,
   pin a more specific tag where one exists, or add a justified allowlist entry.
@@ -116,8 +116,8 @@ then run `validate.sh srv0` (renders both charts and rejects `<no value>`).
 
 ## Repo-specific couplings and gotchas
 
-- immich server and machine-learning must move together, both at `vX.Y.Z`; keep the
-  `-openvino` suffix on the ML image.
+- immich server and machine-learning must move together, both at `vX.Y.Z`; the
+  ML image is fixed to the `-rocm` variant.
 - Grouped digest PRs contain many images — verify each.
 - `renovate.json` blocks majors for postgres, clickhouse/clickhouse-server, fedora, and
   helm/helm; a PR that appears anyway is Tier C and needs investigation.
@@ -139,7 +139,7 @@ then run `validate.sh srv0` (renders both charts and rejects `<no value>`).
   digest PR; never pin an app whose publish failed. The Infra PR is the rollout
   gate and needs approval. Updates open as soon as they publish — there is no
   release-age hold.
-- Compose syncthing/comfyui/llama are Renovate-managed; srv0's K3s syncthing is Renovate-managed too.
+- Compose syncthing/llama are Renovate-managed; srv0's K3s syncthing is Renovate-managed too. ComfyUI is an optional commented service and its image is allowlisted.
 - `scripts/check-images.sh` enforces exact tags + digests for raw image refs;
   the channel-only allowlist is shared with `renovate.json`. Keep them
   in sync.

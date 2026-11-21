@@ -10,7 +10,9 @@ ROCm/ONNX detector.
   `[1, 84, 2100]` (`output0`), IR 10 / opset 18.
 - SHA-256: `1faaa8baafd9b9075f700e589701ca004f2d9fb98b2138fb2d778607a7783fbb`
 
-The file lives outside the Helm chart so the release Secret stays below the
-1 MiB limit. The `ensure-model` initContainer in
-`targets/srv0/k3s-apps/templates/frigate.yaml` fetches it into the
-frigate-config PVC and verifies the digest before Frigate starts. The explorer's Maintenance tour covers the srv0 motherboard swap and the model staging around this artifact.
+The file is not committed. It is published as a GitHub Release asset
+(`frigate-model-v1`) and fetched into the frigate-config PVC by the
+`ensure-model` initContainer in `targets/srv0/k3s-apps/templates/frigate.yaml`,
+which verifies the SHA-256 before Frigate starts. A local copy under
+`targets/srv0/assets/*.onnx` is gitignored. See
+[`docs/apps.md#frigate-model`](../../../docs/apps.md#frigate-model).

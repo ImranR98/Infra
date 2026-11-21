@@ -927,7 +927,7 @@ services:
             - "22070:22070"
         logging: *logging
 
-    # Shlink - URL Shortener (temporarily disabled)
+    # Shlink - URL shortener (server + Postgres + web client)
     shlink:
         image: shlinkio/shlink:5.1.8@sha256:68a722f7677008a50ccf3a9e570966bc37d7627fe6a870b86be28c5dcf9085ee
         container_name: shlink

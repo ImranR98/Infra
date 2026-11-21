@@ -1,5 +1,3 @@
-{{- $frigateDetector := include "gpu.frigateDetector" . | trim -}}
-{{- $frigateResource := include "gpu.frigateResource" . | trim -}}
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -18,29 +16,13 @@ data:
       user: frigate
       password: '{FRIGATE_MQTT_PASSWORD}'
     ffmpeg:
-      # VAAPI decode uses the selected GPU resource (intel-gpu/amd-igpu/
-      # amd-dgpu), whose device plugin mapping exposes renderD128. Explicit
-      # device because the auto-selector probes devices in arbitrary order.
-      # -hwaccel_output_format nv12: decode on the GPU but deliver CPU frames,
-      # so the detect/record filter chains (fps, scale) work.
-{{- if ne $frigateDetector "cpu" }}
+      # VAAPI decode uses the AMD iGPU, whose device-plugin mapping exposes
+      # renderD128. Explicit device because the auto-selector probes devices
+      # in arbitrary order. -hwaccel_output_format nv12 decodes on the GPU but
+      # delivers CPU frames, so the detect/record filter chains (fps, scale)
+      # work.
       hwaccel_args: -hwaccel_flags allow_profile_mismatch -hwaccel vaapi -hwaccel_device /dev/dri/renderD128 -hwaccel_output_format nv12
-{{- end }}
       retry_interval: 5
-{{- if eq $frigateDetector "openvino" }}
-    detectors:
-      openvino:
-        type: openvino
-        device: GPU
-    # Bundled OpenVINO default model (SSDLite MobileNet v2, FP16 IR).
-    model:
-      width: 300
-      height: 300
-      input_tensor: nhwc
-      input_pixel_format: bgr
-      path: /openvino-model/ssdlite_mobilenet_v2.xml
-      labelmap_path: /openvino-model/coco_91cl_bkgr.txt
-{{- else if eq $frigateDetector "rocm" }}
     detectors:
       onnx:
         type: onnx
@@ -56,11 +38,6 @@ data:
       path: /config/model_cache/yolov9-t-320.onnx
       labelmap_path: /labelmap/coco-80.txt
       model_type: yolo-generic
-{{- else }}
-    detectors:
-      cpu:
-        type: cpu
-{{- end }}
     # Deployment-specific config (go2rtc streams, cameras) comes from
     # FRIGATE_ADDITIONAL_CONFIG in targets/srv0/config_template/values.yaml
 {{ .Values.FRIGATE_ADDITIONAL_CONFIG | indent 4 }}
@@ -131,17 +108,13 @@ spec:
         app.kubernetes.io/instance: frigate
         app.kubernetes.io/version: "0.18.2"
       annotations:
-        checksum/config: {{ printf "%s-%s-%s" (.Values.FRIGATE_ADDITIONAL_CONFIG | sha256sum) $frigateDetector $frigateResource | sha256sum }}
+        checksum/config: {{ printf "%s-%s-%s" (.Values.FRIGATE_ADDITIONAL_CONFIG | sha256sum) .Values.FRIGATE_MODEL_URL .Values.FRIGATE_MODEL_SHA256 | sha256sum }}
     spec:
       # Frigate always runs on srv0's media GPU. It never tolerates the
       # srv0-only hardware, so it can never move off the host.
       initContainers:
         - name: copyconfig
-{{- if eq $frigateDetector "rocm" }}
           image: ghcr.io/blakeblackshear/frigate:0.18.3-rocm
-{{- else }}
-          image: ghcr.io/blakeblackshear/frigate:0.18.3
-{{- end }}
           imagePullPolicy: IfNotPresent
           volumeMounts:
             - mountPath: /config.yml
@@ -151,11 +124,10 @@ spec:
               name: config
           command: ["cp"]
           args: ["-v", "/config.yml", "/config/config.yml"]
-{{- if eq $frigateDetector "rocm" }}
-        # Seed the ROCm detector model into the config PVC. The artifact is
-        # committed at targets/srv0/assets/ and pinned by SHA-256; rebuilding
-        # it is documented in targets/srv0/assets/README.md. A missing or
-        # corrupt file is re-fetched on the next pod start.
+        # Seed the ROCm detector model into the config PVC. The artifact is a
+        # GitHub Release asset, pinned by SHA-256; rebuilding it is documented
+        # in targets/srv0/assets/README.md. A missing or corrupt file is
+        # re-fetched on the next pod start.
         - name: ensure-model
           image: curlimages/curl:8.23.0@sha256:3fb7e13e5d179a845c97d78204f3f1064d1907037f26a3ebf91710571151fd93
           imagePullPolicy: IfNotPresent
@@ -191,7 +163,6 @@ spec:
           volumeMounts:
             - mountPath: /config
               name: config
-{{- end }}
         # Frigate writes a preview restart cache on shutdown, then on the next
         # start tries to move it into the tmpfs preview dir and logs a
         # non-fatal error. Clear it before the app starts; previews simply
@@ -204,11 +175,7 @@ spec:
               mountPath: /media/frigate
       containers:
         - name: frigate
-{{- if eq $frigateDetector "rocm" }}
           image: ghcr.io/blakeblackshear/frigate:0.18.3-rocm
-{{- else }}
-          image: ghcr.io/blakeblackshear/frigate:0.18.3
-{{- end }}
           imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: false
@@ -279,7 +246,7 @@ spec:
               mountPath: /tmp
             - mountPath: /media/frigate
               name: frigate-media
-          {{- include "infra.resources" (dict "tier" "3xlarge" "device" $frigateResource) | nindent 10 }}
+          {{- include "infra.resources" (dict "tier" "3xlarge" "device" "amd-igpu") | nindent 10 }}
       volumes:
         - name: configmap
           configMap:

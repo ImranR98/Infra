@@ -1,24 +1,31 @@
 # D4TA private storage.
 #
 # The suite shares one config checkout (all module config under apps/<module>,
-# plus FL0W's writable .state). The Excel ledger keep its own small hostpath
+# plus FL0W's writable .state). The Excel ledger keeps its own small hostpath
 # claim so the git repository is independent of the config tree. Both are
 # pinned to the hostpath-main node by the PV affinity, not a pod nodeSelector.
+{{- $hostVolumes := list
+    (dict "name" "d4ta-config" "path" (include "path.d4taConfig" .) "size" "4Gi")
+    (dict "name" "d4ta-ledger" "path" (include "path.d4taLedger" .) "size" "100Mi")
+-}}
+{{- range $hostVolumes }}
+{{- $pv := printf "%s-pv" .name }}
+{{- $pvc := printf "%s-pvc" .name }}
 ---
 apiVersion: v1
 kind: PersistentVolume
 metadata:
-  name: d4ta-config-pv
+  name: {{ $pv }}
 spec:
   capacity:
-    storage: 4Gi
+    storage: {{ .size }}
   volumeMode: Filesystem
   accessModes:
     - ReadWriteMany
   persistentVolumeReclaimPolicy: Retain
   storageClassName: hostpath
   local:
-    path: {{ include "path.d4taConfig" . }}
+    path: {{ .path }}
   nodeAffinity:
     required:
       nodeSelectorTerms:
@@ -31,7 +38,7 @@ spec:
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: d4ta-config-pvc
+  name: {{ $pvc }}
   namespace: apps
 spec:
   accessModes:
@@ -39,45 +46,9 @@ spec:
   storageClassName: hostpath
   resources:
     requests:
-      storage: 4Gi
-  volumeName: d4ta-config-pv
----
-apiVersion: v1
-kind: PersistentVolume
-metadata:
-  name: d4ta-ledger-pv
-spec:
-  capacity:
-    storage: 100Mi
-  volumeMode: Filesystem
-  accessModes:
-    - ReadWriteMany
-  persistentVolumeReclaimPolicy: Retain
-  storageClassName: hostpath
-  local:
-    path: {{ include "path.d4taLedger" . }}
-  nodeAffinity:
-    required:
-      nodeSelectorTerms:
-        - matchExpressions:
-            - key: infra.local/hostpath-main
-              operator: In
-              values:
-                - "true"
----
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: d4ta-ledger-pvc
-  namespace: apps
-spec:
-  accessModes:
-    - ReadWriteMany
-  storageClassName: hostpath
-  resources:
-    requests:
-      storage: 100Mi
-  volumeName: d4ta-ledger-pv
+      storage: {{ .size }}
+  volumeName: {{ $pv }}
+{{- end }}
 ---
 # TAG5 media index and generated assets. SQLite needs a real local filesystem;
 # the chart mounts this claim at /data. The backup task copies the claim, with

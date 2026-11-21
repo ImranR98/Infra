@@ -1,102 +1,64 @@
 # AGENTS.md
 
-Infra is the infrastructure-as-code repo for a multi-machine homelab. Everything a target needs lives in `targets/<t>/`; shared logic sits in `scripts/`; secrets live in the gitignored `config/`. There is no build step in this repo. Target-selecting scripts (`validate`) take `<target>` as their first argument; machine-local scripts (`prereqs`, `renovate`, `preboot`, `wireguard`, `kubeconfig-unlock`, `k3s-server`, `k3s-join`, `state-restore`) act on the machine they run on.
+Infra is the infrastructure-as-code repo for a multi-machine homelab. Everything a
+target needs lives in `targets/<t>/`; shared logic sits in `scripts/`; secrets live in
+the gitignored `config/`. There is no build step. `docs/` is the handbook; this file is
+the rulebook.
 
-## Targets
+Targets: `srv0` (K3s), `vps0` (Compose public edge), `bigpc` (llama.cpp ROCm, D4TA
+agent, Syncthing), `pc` (llama.cpp SYCL, Syncthing; optional ComfyUI commented out),
+`rpi` (go2rtc). See `docs/architecture.md`.
 
-| Target | Orchestrator | Role |
-|---|---|---|
-| `srv0` | K3s control-plane + public-exposure client Compose sidecar | Main home server, LUKS-encrypted root; most workloads |
-| `vps0` | Compose | Public VPS: Traefik edge, public-exposure WireGuard hub, web apps |
-| `bigpc` | Compose | Desktop: llama.cpp on AMD RX 9070 (ROCm), D4TA Wine game-save archive agent; syncthing |
-| `pc` | Compose | Desktop: ComfyUI/llama.cpp on the Intel Arc iGPU; syncthing |
-| `rpi` | Compose | Pi 400 webcam → authenticated RTSP (go2rtc), consumed by Frigate on srv0 |
+## Read first
 
-## Commands
+- `docs/architecture.md` — targets and request paths
+- `docs/platform.md` — K3s, storage, hardware, multi-node
+- `docs/operations.md` — deploy, updates, backups, maintenance
+- `docs/configuration.md` — config, secrets, host facts
+- `docs/decisions.md` — invariants and tradeoffs
 
-Run `validate.sh` as the recommended deploy preflight. It is not a Helm prerequisite: the apps release fetches its D4TA subchart itself with `--dependency-update`.
+## Hard rules
 
-```bash
-# First time only — run scripts/prereqs.sh on each machine first (it installs
-# yq), then copy templates (never overwrites) and detect srv0 hardware:
-bash scripts/init-config.sh srv0 --detect
-bash scripts/init-config.sh vps0
-
-# Preflight — any machine (recommended; builds the D4TA chart dependency for lint):
-bash scripts/validate.sh srv0
-bash scripts/validate.sh vps0
-
-# K3s (srv0) — the kubeconfig is root-only. Unlock it in another terminal:
-bash scripts/kubeconfig-unlock.sh
-# validate.sh is recommended but not required: --dependency-update fetches the
-# pinned D4TA subchart into charts/ when missing (Helm reads subcharts from disk).
-bash scripts/validate.sh srv0
-helm upgrade --install srv0-base targets/srv0/k3s-base -n base --create-namespace \
-  -f targets/srv0/k3s-base/values.yaml -f config/srv0/values.yaml
-helm upgrade --install srv0-apps targets/srv0/k3s-apps -n apps --create-namespace \
-  -f targets/srv0/k3s-apps/values.yaml -f config/srv0/values.yaml --dependency-update
-helm uninstall srv0-apps -n apps     # delete apps first, then srv0-base
-
-# Compose — from the repo root, ON the target machine, with sudo. Always pass
-# --env-file targets/<t>/compose/.env (machine facts + COMPOSE_PROFILES); add
-# --env-file config/<t>/compose.env only where a config_template exists
-# (srv0, vps0, bigpc). pc and rpi have none.
-sudo docker compose \
-  --env-file config/vps0/compose.env \
-  -f targets/vps0/compose/compose.yaml \
-  -f targets/vps0/compose/compose.private.yaml \
-  --env-file targets/vps0/compose/.env \
-  up -d --remove-orphans
-# The same flags work for ps / logs -f <svc> / down <svc> / up -d <svc>.
-# First-time setup: bash scripts/init-config.sh <target> [--detect] — targets
-# with a config_template only (srv0, vps0, bigpc).
-
-# Backups (D4TA Jobs scheduled task; manual restore):
-# Daily snapshots keep the newest 2; `restore` replaces app-data, `db` stages
-# a DB dump, and `compose` handles the Compose state.
-bash scripts/state-restore.sh list
-bash scripts/state-restore.sh restore [snapshot] [--live]
-bash scripts/state-restore.sh db <ns/pvc> [snapshot]
-bash scripts/state-restore.sh compose srv0|vps0 [snapshot] [--live]
-sudo bash scripts/update-node-ip.sh [--ip X] [--force]
-
-# Machine-local (no target):
-bash scripts/prereqs.sh
-bash scripts/renovate.sh [apps|infra|all|clear-cache] [--dry-run]   # on-demand
-# The scheduled runner is the pure (six-hourly) renovate-daily CronJob:
-# app PRs auto-merge via Renovate after test; the following run opens the
-# Infra digest PR. Reviewing/merging Infra PRs and deploys are handled by the
-# renovate-pr-ops skill. `renovate.sh infra` is the on-demand refresh.
-bash scripts/preboot.sh public-exposure|crypt-ssh
-bash scripts/wireguard.sh <path/to/wg0.conf>
-bash scripts/k3s-server.sh
-bash scripts/k3s-join.sh <node_ip> <node_user> \
-  [--role agent|server] [--hostpath-main]
-
-# Dev-only lint:
-shellcheck $(find scripts targets -name '*.sh')
-yamllint -c .yamllint targets/*/config_template \
-  targets/srv0/k3s-base/values.yaml targets/srv0/k3s-base/Chart.yaml targets/srv0/k3s-base/files \
-  targets/srv0/k3s-apps/values.yaml targets/srv0/k3s-apps/Chart.yaml
-```
-
-Scripts warn when the hostname does not match the target; `validate.sh` runs its deploy preconditions (Compose machine-fact `.env`, srv0 state tree and cluster access) only on the target machine. Pass `-y` to PVC commands for non-interactive confirmations.
-
-## Documentation
-
-The guided explorer in `explorer/` is the documentation. Start it with:
-
-```bash
-cd explorer
-npm install   # first run only
-npm run dev
-```
-
-Open <http://localhost:4173/>. The tours cover the request path, public edge, WireGuard, apps/data, operations, configuration/decisions, first boot, and maintenance. `explorer/README.md` documents the app itself.
+- **Provision nodes only via `scripts/k3s-server.sh`/`k3s-join.sh`** — no raw
+  installers or ad-hoc joins. See `docs/platform.md`.
+- **Get kubeconfig access through `scripts/kubeconfig-unlock.sh`** — the admin
+  kubeconfig stays root-only (0600). Never restore group/world access or a permanent
+  `KUBECONFIG`.
+- **Leave `~/infra_state/` alone** — it holds `compose_live_state/` and
+  `k3s_live_state/`.
+- **Keep secrets out of git** — `config/`, `compose.private.yaml`, and
+  `targets/*/compose/.env` are ignored. See `docs/configuration.md`.
+- **New components need NetworkPolicies and `infra.resources` tiers** — raw
+  `memory:`/`cpu:` keys are rejected by `validate.sh`.
+- **Storage**: `nfs-apps` is the default RWX class, `local-apps` is the RWO local
+  twin, and the static `hostpath` PV/PVCs pin the Main tree. Don't add other dynamic
+  PVs or raw hostPath app data. See `docs/platform.md#storage`.
+- **Hardware**: use `infra.local/amd-igpu`, `infra.local/vaapi`, or
+  `infra.local/conbee`; workloads are fixed to the current AMD/VAAPI/ConBee board.
+  The generic device plugin also advertises Intel/dGPU resources, but no chart uses
+  them. See `docs/platform.md#hardware`.
+- **Renovate**: app repos extend `renovate-preset.json`; non-major app PRs auto-merge
+  after `test`, majors wait on the Dependency Dashboard. Infra PRs are never
+  auto-merged. Never hand-pin an app digest. See `docs/operations.md#updates`.
+- **Helm**: only project-maintained charts; Home Assistant is the single third-party
+  exception. Pin app-version-sensitive chart images so Renovate tracks the app. See
+  `docs/platform.md#helm`.
+- **D4TA is one suite, one host** — `data.<SERVICES_DOMAIN>` carries the dashboard and
+  modules. Don't reintroduce per-app hosts/deployment names. See `docs/apps.md#d4ta`.
+- **TLS** — `edge-public-tls` (SANs from `PUBLIC_HOSTS`) and `edge-private-tls`
+  (`PRIVATE_HOSTS`, websecure only). No per-app certs or wildcards. See
+  `docs/public-edge.md`.
+- **Authelia access control is dual-source** — structural bypasses/catch-all stay in
+  the charts; group/user rules live in `config/`. Don't add personal group names to
+  the chart. See `docs/public-edge.md#authentication-and-access-control`.
+- **Keep the public-exposure MTU watcher and VPN connection notifications** unless a
+  replacement is measured and documented. See `docs/tunnels.md`.
 
 ## Resource sizing
 
-Every container picks a tier from `infra.resources` (`_resources.tpl`, duplicated in `k3s-base` and `k3s-apps` because Helm helpers are chart-scoped). Raw `memory:`/`cpu:` keys in a container's `resources:` block are rejected by `validate.sh`.
+Every container picks a tier from `infra.resources` (`_resources.tpl`, duplicated in
+both charts because Helm helpers are chart-scoped). Raw `memory:`/`cpu:` keys are
+rejected.
 
 | Tier | CPU request | Memory request | Memory limit |
 |---|---|---|---|
@@ -108,33 +70,31 @@ Every container picks a tier from `infra.resources` (`_resources.tpl`, duplicate
 | `2xlarge` | 100m | 1Gi | 4Gi |
 | `3xlarge` | 250m | 2Gi | 8Gi |
 
-The tiers come from 25 days of cadvisor history (Prometheus in `base`) and are re-derived the same way: memory request = smallest tier at or above the container's 7-day p50, memory limit = 4x that request (bumped a tier if it would fall below the observed peak), CPU request = the tier's value. Totals matter: requests across both charts must stay inside the per-node allocatable (16 CPU / ~30GiB).
+The derivation, the three narrow deviations (`memLimit`, `cpu`, `custom`), and the
+CPU-limit rules are in `docs/platform.md#resource-sizing`.
 
-Three narrow deviations, each with an inline comment in the template:
+## Common commands
 
-- `memLimit` raises the ceiling for a workload whose burst is real but rare (`linkwarden` 16Gi for page-archiving Chromium, `opencode` 4Gi for build spikes). The request still comes from the tier.
-- `cpu` overrides the tier's CPU request when CPU and memory disagree (`d4ta-tags` 1, `syncthing` 500m, `logtfy` 50m).
-- `custom` is for memory that tracks a model or cache rather than steady state (`immich-machine-learning` 1Gi/8Gi). It requires explicit `memRequest` and `memLimit`; the helper fails the render without them.
+```bash
+bash scripts/validate.sh <target>
+bash scripts/kubeconfig-unlock.sh
+bash scripts/renovate.sh [apps|infra|all|clear-cache] [--dry-run]
+bash scripts/state-restore.sh list
+```
 
-CPU limits stay off unless a chart sets one or the workload takes untrusted input (`crowdsec` 500m, `falco` 1, `prometheus` 1, `logtfy` 1). Don't add one to a normal app: requests don't cap bursts, limits do.
+Deploy commands: `docs/operations.md#deploy`. Backups/restore:
+`docs/operations.md#backups`. Script index: `docs/operations.md#scripts`.
 
-## Rules
+## Docs map
 
-- **Provision nodes only via `k3s-server.sh`/`k3s-join.sh`** — no raw installers or ad-hoc joins; those scripts carry the installer and the secret handling. Dev-only lint (`yamllint`/`shellcheck`) changes nothing.
-- **Get kubeconfig access through the unlock** — the admin kubeconfig remains root-only (0600); open a dev session with `kubeconfig-unlock.sh` and never restore group/world access or a permanent `KUBECONFIG`.
-- Leave `~/infra_state/` alone (runtime state). It holds `compose_live_state/` and `k3s_live_state/`.
-- Keep secrets out of git (`config/`, `compose.private.yaml`, `targets/*/compose/.env` are ignored).
-- Give new components NetworkPolicies, and pick their requests/limits from the tier ladder above (never ad-hoc numbers).
-- **`nfs-apps` is the default StorageClass for shared/bulk data; `local-apps` is its local twin** — same `<namespace>/<pvc>` layout under `~/infra_state/k3s_live_state/app-data`, mounted from the host filesystem instead of NFS, `ReadWriteOnce`, provisioned by the dedicated `local-path-provisioner` instance on the `hostpath-main` node (pinned by `infra.local/hostpath-main`, never by hostname). Use `local-apps` for SQLite and any single-node app that needs a real filesystem; use `nfs-apps` for RWX bulk data. Postgres and the observability stores (Loki, Prometheus) remain on `nfs-apps` with the measured NFS cost accepted. Add no other dynamic PVs; the static `hostpath` claims remain the only exception.
-- The six user-facing apps (Home Assistant, Immich, Jellyfin, Linkwarden, Navidrome, Opodsync) have no Authelia forward-auth filter; use `BOOTSTRAP_PRIVATE_APPS` for first-boot LAN/VPN containment.
-- **srv0 is the only K3s node** — bigpc is Compose-only (llama.cpp, the D4TA Wine game-save archive agent, syncthing). There are no node-role labels. `k3s-server.sh` sets `infra.local/hostpath-main=true` and `infra.local/external-exposed=true` on srv0; `k3s-join.sh --hostpath-main` labels a replacement Main-data node.
-- **HostPath data is exposed through a local PV/PVC** — app data that lives on a host path must be mounted via a statically bound `hostpath` PV/PVC whose `nodeAffinity` names the node that owns the path (`infra.local/hostpath-main` for the Main tree) so the claim pins the pod. Never add a pod `nodeSelector` to compensate for a raw `hostPath`; device/system paths (`/dev`, `/run/dbus`, `/var/lib/kubelet`) are exempt. `hostpath-main` is a singleton: exactly one node owns the Main tree and `~/infra_state`; `k3s-join.sh --hostpath-main` replaces that owner. Bigpc's AI data is host-local Compose data under `~/ai`, not a cluster PV.
-- **Hardware is requested through the generic device plugin** — use `infra.local/intel-gpu`, `infra.local/amd-igpu`, `infra.local/amd-dgpu`, `infra.local/vaapi`, or `infra.local/conbee` rather than a node label as a hardware proxy. The plugin generates resources from sysfs and `/dev` at startup; device paths are normalized to `renderD128`/`ttyACM0`. The extended resource is the only hardware selector.
-- **Accelerator selection is config, not chart edits** — `GPU_PROFILE` (`intel|amd|none`) chooses the media/ML backends; per-app overrides (`FRIGATE_DETECTOR`, `IMMICH_ML_BACKEND`, `IMMICH_ML_GPU_RESOURCE`, `JELLYFIN_HWACCEL`, `IMMICH_SERVER_HWACCEL`) exist for mixed/fallback cases. On the current AMD board Frigate and Immich ML both use `infra.local/amd-igpu`; Phoenix-class iGPUs need `IMMICH_ML_HSA_OVERRIDE_GFX_VERSION=11.0.0` or the CLIP text model segfaults the ML worker. Frigate is srv0-only. `HA_CONBEE`/`HA_BLUETOOTH` gate the HA hardware mounts.
-- **LLM models are cache-managed** — llama.cpp runs in Compose on bigpc, with `LLAMA_CACHE` at `~/ai/llama`; download/delete through the built-in Models UI at `models.<SERVICES_DOMAIN>` (srv0 Traefik forwards to the host through a selectorless `llama-cpp` Service + EndpointSlice at `BIGPC_HOST`). The pc Compose stack uses the same shared layout under `~/ai` (`~/ai/comfyui`, `~/ai/llama`); its router scans `~/ai/llama` and writes UI downloads to `~/ai/llama/.cache` (loopback UI at `127.0.0.1:18080`). Do not add `--models-preset` or manual GGUF paths to either router: preset sections are listed as models even after their files are gone, and only cache models are deletable through the UI. New cache models inherit the global Q8 KV, Flash Attention, and CPU-projector settings and auto-fit their context with `--fit`.
-- Geoblock uses `get.geojs.io`.
-- **Renovate splits app and Infra** — app repos extend `renovate-preset.json`; Renovate auto-merges non-major app updates after the `test` check, while majors wait on the Dependency Dashboard. There is no release-age hold: an update opens as soon as its registry or chart publishes it. Infra image refs use immutable version tags and are digest-pinned; images that publish no immutable tag (first-party `ghcr.io/imranr98/**` app images (`:latest@sha`), `lscr.io/linuxserver/**`, `ghcr.io/reliq-hq/comfyui`, `ghcr.io/ggml-org/llama.cpp`, and the Bitnami DB/kubectl pins) are digest-pinned on the channel-only allowlist shared with `scripts/check-images.sh`. Infra Renovate PRs are never auto-merged; the `renovate-pr-ops` skill researches, validates, and presents them for approval. Never hand-pin an app digest. The repo list (Infra + apps) lives in `config/srv0/values.yaml` and feeds both the CronJob and local runs. No app checkout is assumed; use the GitHub API or a temporary clone.
-- **Helm charts** — only project-maintained charts; `validate.sh` enforces the allowlist. Home Assistant is the single approved third-party exception. Pin `image.repository`/`image.tag` on app-version-sensitive charts so Renovate tracks the app, not just the chart.
-- **D4TA is one suite, one host** — `data.<SERVICES_DOMAIN>` carries the home dashboard plus D$CPLN (`/dscpln`), W@TXT (`/watxt`), FL0W (`/flow`), TAG5 (`/tags`) and Lockdown (`/lockdown`). The app repo publishes the `d4ta-*` images and a standalone Helm chart; `srv0-apps` consumes it as an OCI dependency. The private config is one `d4ta-config` checkout at `D4TA_CONFIG_PATH`. The old per-app hosts, images, repos and config checkouts are gone; do not reintroduce `dscpln`/`watxt`/`fl0w`/`da5h`/`lifetagger` deployment names.
-- TLS is `edge-public-tls` (exact SANs from `PUBLIC_HOSTS`) plus `edge-private-tls` (`PRIVATE_HOSTS`, `websecure` only). Adding a public app means adding its label to `PUBLIC_HOSTS` and its route, then re-issuing; no per-app certs or wildcards.
-- **Authelia access control is dual-source** — structural bypasses and the final admin catch-all stay in the charts; group/user/deployment-specific rules live in `config/` (`AUTHELIA_ACCESS_CONTROL_RULES` on srv0; `config/vps0/authelia/access_control.yml` rendered by `scripts/render-vps0-authelia.sh` on vps0). Don't add personal group names to the chart.
+| Doc | Use |
+|---|---|
+| `docs/architecture.md` | Targets, request paths, data/control flow |
+| `docs/public-edge.md` | TLS, Authelia, CrowdSec, geoblock, public hosts |
+| `docs/tunnels.md` | Public-exposure WireGuard, remote-access VPN, preboot |
+| `docs/platform.md` | K3s, multi-node, storage, hardware, resource tiers |
+| `docs/observability.md` | Metrics, logs, alerts, dashboards, Falco/OpenCanary |
+| `docs/apps.md` | App inventory, D4TA, backup labels, optional ComfyUI |
+| `docs/configuration.md` | Config tree, secrets, host facts, validation |
+| `docs/operations.md` | First boot, deploy, updates, backups, maintenance |
+| `docs/decisions.md` | Invariants and tradeoffs |

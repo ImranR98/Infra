@@ -28,12 +28,12 @@
     },
     {
       "customType": "regex",
-      "description": "immich-machine-learning: GHCR publishes 200k+ tags (per-commit/PR/variant builds), so the docker datasource's fetch-all-pages enumeration intermittently fails and Renovate skips the update with no-result. Look the version up from the immich GitHub releases instead (tiny list, authenticated by the platform token). currentValue captures only the base version, so the default replacement preserves the backend suffix: v3.1.0-openvino -> v3.2.0-openvino, and likewise for -rocm/cuda/armnn/rknn.",
+      "description": "immich-machine-learning: GHCR publishes 200k+ tags (per-commit/PR/variant builds), so the docker datasource's fetch-all-pages enumeration intermittently fails and Renovate skips the update with no-result. Look the version up from the immich GitHub releases instead (tiny list, authenticated by the platform token). The template is fixed to the -rocm variant; currentValue captures only the base version.",
       "managerFilePatterns": [
         "/targets\\/srv0\\/k3s-apps\\/templates\\/immich.yaml/"
       ],
       "matchStrings": [
-        "repository:\\s*(?<depName>ghcr\\.io/immich-app/immich-machine-learning)\\s*\\n\\s*tag:\\s*\"?(?<currentValue>v\\d+\\.\\d+\\.\\d+)(?:-(?:openvino|rocm|cuda|armnn|rknn))?\"?"
+        "repository:\\s*(?<depName>ghcr\\.io/immich-app/immich-machine-learning)\\s*\\n\\s*tag:\\s*\"?(?<currentValue>v\\d+\\.\\d+\\.\\d+)-rocm\"?"
       ],
       "packageNameTemplate": "immich-app/immich",
       "datasourceTemplate": "github-releases",
@@ -169,14 +169,6 @@
     }
   ],
   "packageRules": [
-    {
-      "description": "vite and @vitejs/plugin-react are peer-coupled: plugin-react 6 needs vite 7/8 and vite 8 needs plugin-react 6, so a major of either alone cannot resolve a lockfile (renovate/artifacts fails). Group them so one branch carries both.",
-      "matchPackageNames": [
-        "vite",
-        "@vitejs/plugin-react"
-      ],
-      "groupName": "vite toolchain"
-    },
     {
       "description": "One PR for all docker digest pins and refreshes (the noisy batch); version bumps stay separate",
       "matchUpdateTypes": [

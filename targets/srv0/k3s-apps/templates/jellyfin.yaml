@@ -1,5 +1,4 @@
 {{- $lanCidr := required "LAN_CIDR must be set in config/srv0/values.yaml" .Values.LAN_CIDR -}}
-{{- $jellyfinVaapi := eq (include "gpu.jellyfinHwaccel" .) "vaapi" -}}
 ---
 apiVersion: v1
 kind: ServiceAccount
@@ -58,8 +57,8 @@ spec:
         app.kubernetes.io/version: "12.2"
     spec:
       serviceAccountName: jellyfin
-      # Jellyfin's libraries are NFS. Placement is the vaapi resource; it
-      # is srv0-only, so it stays on srv0.
+      # Jellyfin's libraries are NFS. The vaapi device resource is srv0-only,
+      # so placement stays on srv0.
       securityContext:
         runAsUser: {{ .Values.MY_UID }}
         runAsGroup: {{ .Values.MY_UID }}
@@ -130,7 +129,7 @@ spec:
             periodSeconds: 10
             timeoutSeconds: 3
             failureThreshold: 3
-          {{- include "infra.resources" (dict "tier" "xlarge" "device" (ternary "vaapi" "" $jellyfinVaapi)) | nindent 10 }}
+          {{- include "infra.resources" (dict "tier" "xlarge" "device" "vaapi") | nindent 10 }}
           volumeMounts:
             - mountPath: /config
               name: config
@@ -279,7 +278,7 @@ spec:
     volumeHandle: jellyfin-tv
     volumeAttributes:
       server: nfs-server.base.svc.cluster.local
-      share: /jellyfin-tv
+      share: /media/TV
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -311,7 +310,7 @@ spec:
     volumeHandle: jellyfin-youtube
     volumeAttributes:
       server: nfs-server.base.svc.cluster.local
-      share: /jellyfin-youtube
+      share: /media/YouTube
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim

@@ -89,7 +89,7 @@ is_floating() {
     [[ "$tag" =~ ^v?[0-9]+-(alpine|slim|trixie|bookworm|bullseye|debian|stable|rootless|nightly|rc[0-9]*)$ ]] && return 0
     # Minor only (`3.24`, `12.4`, `24.12`).
     [[ "$tag" =~ ^v?[0-9]+\.[0-9]+$ ]] && return 0
-    # Channel names used by ComfyUI/llama.cpp.
+    # Channel names used by the optional ComfyUI and llama.cpp images.
     [[ "$tag" =~ ^(xpu-master|server|server-(rocm|intel|cuda|vulkan|musa))$ ]] && return 0
     return 1
 }

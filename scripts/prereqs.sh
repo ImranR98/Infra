@@ -29,10 +29,10 @@ usage() {
 
 [ $# -ge 1 ] && { [ "$1" = "-h" ] || [ "$1" = "--help" ]; } && usage
 
-# Node only backs the manual Renovate run (scripts/renovate.sh) and the
-# explorer dev server, so prefer whatever is already there: installing the
-# distro packages on top of a version manager (or an existing Node) shadows it
-# and breaks the manager's per-shell versions.
+# Node only backs the manual Renovate run (scripts/renovate.sh), so prefer
+# whatever is already there: installing the distro packages on top of a version
+# manager (or an existing Node) shadows it and breaks the manager's per-shell
+# versions.
 install_node=true
 node_manager=""
 if command -v node >/dev/null 2>&1 && command -v npm >/dev/null 2>&1; then

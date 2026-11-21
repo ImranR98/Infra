@@ -12,4 +12,7 @@ targets/*/compose/.env
 
 /state_backups/
 
+# Frigate detector model is downloaded at pod start, not committed.
+targets/srv0/assets/*.onnx
+
 targets/*/k3s-*/charts/
