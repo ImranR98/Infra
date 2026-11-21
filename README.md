@@ -44,8 +44,9 @@ bash scripts/init-config.sh vps0
 bash scripts/validate.sh srv0
 bash scripts/validate.sh vps0
 
-# Deploy — validate.sh must run before every deploy (it vendors the D4TA chart
-# dependency into a gitignored charts/ directory on first run).
+# Deploy — validate.sh is the recommended preflight (config, image pins, cert
+# wiring, renders), not a Helm prerequisite: the apps release fetches its D4TA
+# subchart with --dependency-update into the gitignored charts/ when missing.
 # Copy-paste commands for Compose targets and srv0 are in "Deploy" below.
 
 # Run Renovate manually (the in-cluster jobs do this on a schedule) — machine-local
@@ -137,11 +138,14 @@ Keep the flags explicit: `sudo` strips exported variables, so shortcuts like
 bash scripts/kubeconfig-unlock.sh
 
 # Terminal 2:
+# Recommended preflight. Helm itself only needs --dependency-update (below):
+# it fetches the pinned D4TA subchart into the gitignored charts/ on a fresh
+# checkout (Helm always reads subcharts from disk) and is a no-op afterwards.
 bash scripts/validate.sh srv0
 helm upgrade --install srv0-base targets/srv0/k3s-base -n base --create-namespace \
   -f targets/srv0/k3s-base/values.yaml -f config/srv0/values.yaml
 helm upgrade --install srv0-apps targets/srv0/k3s-apps -n apps --create-namespace \
-  -f targets/srv0/k3s-apps/values.yaml -f config/srv0/values.yaml
+  -f targets/srv0/k3s-apps/values.yaml -f config/srv0/values.yaml --dependency-update
 ```
 
 Apply `base` before `apps`; delete in reverse order. `helm` returning success is

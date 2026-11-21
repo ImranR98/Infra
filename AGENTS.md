@@ -14,7 +14,7 @@ Infra is the infrastructure-as-code repo for a multi-machine homelab. Everything
 
 ## Commands
 
-Run `validate.sh` before every `helm upgrade --install`.
+Run `validate.sh` as the recommended deploy preflight. It is not a Helm prerequisite: the apps release fetches its D4TA subchart itself with `--dependency-update`.
 
 ```bash
 # First time only — run scripts/prereqs.sh on each machine first (it installs
@@ -22,18 +22,19 @@ Run `validate.sh` before every `helm upgrade --install`.
 bash scripts/init-config.sh srv0 --detect
 bash scripts/init-config.sh vps0
 
-# Preflight — any machine (vendors the D4TA chart dependency on first run):
+# Preflight — any machine (recommended; builds the D4TA chart dependency for lint):
 bash scripts/validate.sh srv0
 bash scripts/validate.sh vps0
 
 # K3s (srv0) — the kubeconfig is root-only. Unlock it in another terminal:
 bash scripts/kubeconfig-unlock.sh
-# First run / after a chart bump: validate.sh vendors the D4TA chart dependency.
-bash scripts/validate.sh srv0         # gate before every deploy
+# validate.sh is recommended but not required: --dependency-update fetches the
+# pinned D4TA subchart into charts/ when missing (Helm reads subcharts from disk).
+bash scripts/validate.sh srv0
 helm upgrade --install srv0-base targets/srv0/k3s-base -n base --create-namespace \
   -f targets/srv0/k3s-base/values.yaml -f config/srv0/values.yaml
 helm upgrade --install srv0-apps targets/srv0/k3s-apps -n apps --create-namespace \
-  -f targets/srv0/k3s-apps/values.yaml -f config/srv0/values.yaml
+  -f targets/srv0/k3s-apps/values.yaml -f config/srv0/values.yaml --dependency-update
 helm uninstall srv0-apps -n apps     # delete apps first, then srv0-base
 
 # Compose — from the repo root, ON the target machine, with sudo. Always pass
