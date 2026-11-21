@@ -975,7 +975,7 @@ services:
             - traefik
         logging: *logging
     shlink_web_client:
-        image: shlinkio/shlink-web-client:4.9.0@sha256:9ea53f612d361de240555036065e2b8ea0cd0411b0125afaf2f7d39f2a928f18
+        image: shlinkio/shlink-web-client:4.9.1@sha256:732c291bcc099d6ff51038bcfba374be87494fa2916683a44d3135ea57cbe935
         container_name: shlink_web_client
         environment:
             - SHLINK_SERVER_URL=https://ln.$BASE_SERVICES_DOMAIN
