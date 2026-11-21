@@ -28,7 +28,7 @@ updates/backups. The details live in `docs/`.
 | [`docs/tunnels.md`](docs/tunnels.md) | Public-exposure WireGuard, remote-access VPN, preboot |
 | [`docs/platform.md`](docs/platform.md) | K3s, multi-node, storage, hardware, resource tiers |
 | [`docs/observability.md`](docs/observability.md) | Metrics, logs, alerts, dashboards, Falco/OpenCanary |
-| [`docs/apps.md`](docs/apps.md) | App inventory, D4TA, backup labels, optional ComfyUI |
+| [`docs/apps.md`](docs/apps.md) | App inventory, backup labels, optional ComfyUI |
 | [`docs/configuration.md`](docs/configuration.md) | Config tree, secrets, host facts, validation |
 | [`docs/operations.md`](docs/operations.md) | First boot, deploy, updates, backups, maintenance |
 | [`docs/decisions.md`](docs/decisions.md) | Invariants and tradeoffs |

@@ -20,7 +20,7 @@ contributors; these pages explain how the system works and how to operate it.
 3. [Tunnels](tunnels.md) — public-exposure WireGuard and remote-access VPN
 4. [Platform](platform.md) — K3s, multi-node, storage, hardware, resource tiers
 5. [Observability](observability.md) — metrics, logs, alerts, dashboards
-6. [Apps](apps.md) — inventory, D4TA, backup labels, onboarding
+6. [Apps](apps.md) — inventory, backup labels, onboarding
 7. [Configuration](configuration.md) — config tree, secrets, host facts
 8. [Operations](operations.md) — first boot, deploy, updates, backups, maintenance
 9. [Decisions](decisions.md) — invariants and tradeoffs

@@ -63,10 +63,11 @@ App repos auto-merge non-major updates after `test`; Infra image/chart PRs are n
 auto-merged because they change the running system. The digest allowlist is shared
 between Renovate and `scripts/check-images.sh`.
 
-## D4TA is one suite
+## Multi-module apps ship as one suite
 
-`data.<SERVICES_DOMAIN>` serves the dashboard and all D4TA modules from one chart and
-one config checkout. Do not reintroduce per-app hosts, images, or deployment names.
+D4TA is the current example: `data.<SERVICES_DOMAIN>` serves the dashboard and all
+modules from one chart and one config checkout. Do not reintroduce per-app hosts,
+images, or deployment names.
 
 ## MTU and VPN notifications are deliberate
 

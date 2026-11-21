@@ -44,7 +44,8 @@ agent, Syncthing), `pc` (llama.cpp SYCL, Syncthing; optional ComfyUI commented o
   exception. Pin app-version-sensitive chart images so Renovate tracks the app. See
   `docs/platform.md#helm`.
 - **D4TA is one suite, one host** — `data.<SERVICES_DOMAIN>` carries the dashboard and
-  modules. Don't reintroduce per-app hosts/deployment names. See `docs/apps.md#d4ta`.
+  modules. Don't reintroduce per-app hosts/deployment names. See
+  `docs/apps.md#d4ta-multi-module-suite`.
 - **TLS** — `edge-public-tls` (SANs from `PUBLIC_HOSTS`) and `edge-private-tls`
   (`PRIVATE_HOSTS`, websecure only). No per-app certs or wildcards. See
   `docs/public-edge.md`.
@@ -94,7 +95,7 @@ Deploy commands: `docs/operations.md#deploy`. Backups/restore:
 | `docs/tunnels.md` | Public-exposure WireGuard, remote-access VPN, preboot |
 | `docs/platform.md` | K3s, multi-node, storage, hardware, resource tiers |
 | `docs/observability.md` | Metrics, logs, alerts, dashboards, Falco/OpenCanary |
-| `docs/apps.md` | App inventory, D4TA, backup labels, optional ComfyUI |
+| `docs/apps.md` | App inventory, backup labels, optional ComfyUI |
 | `docs/configuration.md` | Config tree, secrets, host facts, validation |
 | `docs/operations.md` | First boot, deploy, updates, backups, maintenance |
 | `docs/decisions.md` | Invariants and tradeoffs |

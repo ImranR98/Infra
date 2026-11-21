@@ -20,9 +20,10 @@ The six user-facing apps (Home Assistant, Immich, Jellyfin, Linkwarden, Navidrom
 Opodsync) deliberately rely on their own auth. `BOOTSTRAP_PRIVATE_APPS` keeps them
 LAN/VPN-only during first boot.
 
-### D4TA
+### D4TA (multi-module suite)
 
-One suite, one host: `data.<SERVICES_DOMAIN>` serves the dashboard and all modules
+D4TA is the current multi-module suite: one host, one config checkout.
+`data.<SERVICES_DOMAIN>` serves the dashboard and all modules
 (`/dscpln`, `/watxt`, `/flow`, `/tags`, `/lockdown`). The app repo publishes the
 `d4ta-*` images and a standalone Helm chart; `srv0-apps` consumes it as an OCI
 dependency. The private config is one `d4ta-config` checkout at `D4TA_CONFIG_PATH`;
