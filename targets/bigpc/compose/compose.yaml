@@ -35,7 +35,7 @@ services:
     # models.<SERVICES_DOMAIN> behind Authelia; the port is LAN-wide on purpose.
     # Renovate digest-pins server-rocm.
     llama-cpp:
-        image: ghcr.io/ggml-org/llama.cpp:server-rocm@sha256:7726b8bc0040cd04891e4e0748165e5a90cc61250af5b7734196aa4272456168
+        image: ghcr.io/ggml-org/llama.cpp:server-rocm@sha256:b3da255f8f22ed512645a60ced279e1c274c4561cbec8faf6d11668de679a745
         container_name: llama-cpp
         restart: unless-stopped
         # Model memory, not steady state: one resident model plus --fit headroom
