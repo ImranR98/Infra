@@ -487,7 +487,7 @@ services:
 
     # Plausible - Web Analytics
     plausible_db:
-        image: postgres:16.16-alpine@sha256:1d5b02d3a9941fbd52437db4107f8c52d6297dac553ca1e5c299ebb3756b4857
+        image: postgres:16.16-alpine@sha256:f2f98726820d0342055351c6e9d36e705f5bfffb3dd53ff556325114b08afb6d
         container_name: plausible_db
         user: "$MY_UID:$MY_UID"
         restart: unless-stopped
@@ -666,7 +666,7 @@ services:
     # Obtainium Apps
     obtainium_apps:
         container_name: obtainium_apps
-        image: ghcr.io/imranr98/apps.obtainium.imranr.dev:latest@sha256:d4b3d6f571b311ff04cfadd3bf0d50934a9e257025c52c6feb6fe332f5540acd
+        image: ghcr.io/imranr98/apps.obtainium.imranr.dev:latest@sha256:02a2b540ec043fa1c3b3ec71f1b418f95dc8496e8ed397bc334c26fba454edfc
         depends_on:
             - traefik
         # Fetch Plausible stats over the local edge, not Cloudflare (Bot Fight Mode
