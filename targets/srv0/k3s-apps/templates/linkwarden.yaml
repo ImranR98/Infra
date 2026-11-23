@@ -60,7 +60,7 @@ spec:
       # from racing the database during startup after a node reboot.
       initContainers:
         - name: wait-for-db
-          image: postgres:16.16-alpine@sha256:1d5b02d3a9941fbd52437db4107f8c52d6297dac553ca1e5c299ebb3756b4857
+          image: postgres:16.16-alpine@sha256:f2f98726820d0342055351c6e9d36e705f5bfffb3dd53ff556325114b08afb6d
           command:
             - sh
             - -c
@@ -181,7 +181,7 @@ spec:
         fsGroup: 999
       initContainers:
         - name: volume-permissions
-          image: postgres:16.16-alpine@sha256:1d5b02d3a9941fbd52437db4107f8c52d6297dac553ca1e5c299ebb3756b4857
+          image: postgres:16.16-alpine@sha256:f2f98726820d0342055351c6e9d36e705f5bfffb3dd53ff556325114b08afb6d
           command:
             - sh
             - -c
@@ -196,7 +196,7 @@ spec:
               mountPath: /var/lib/postgresql/data
       containers:
         - name: postgresql
-          image: postgres:16.16-alpine@sha256:1d5b02d3a9941fbd52437db4107f8c52d6297dac553ca1e5c299ebb3756b4857
+          image: postgres:16.16-alpine@sha256:f2f98726820d0342055351c6e9d36e705f5bfffb3dd53ff556325114b08afb6d
           securityContext:
             runAsUser: 999
             runAsGroup: 999
