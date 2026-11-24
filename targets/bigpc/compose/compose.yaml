@@ -35,7 +35,7 @@ services:
     # models.<SERVICES_DOMAIN> behind Authelia; the port is LAN-wide on purpose.
     # Renovate digest-pins server-rocm.
     llama-cpp:
-        image: ghcr.io/ggml-org/llama.cpp:server-rocm@sha256:b3da255f8f22ed512645a60ced279e1c274c4561cbec8faf6d11668de679a745
+        image: ghcr.io/ggml-org/llama.cpp:server-rocm@sha256:58df62f1474c2ac9fa4854cc6f7856dc827608d2ccc2e555aeadbd98612c7504
         container_name: llama-cpp
         restart: unless-stopped
         # Model memory, not steady state: one resident model plus --fit headroom
@@ -122,7 +122,7 @@ services:
     # Main-local prefixes (grouped under heroic/ and main/) for the Wine Game
     # Saves task.
     d4ta-agent:
-        image: ghcr.io/imranr98/d4ta-agent:latest@sha256:36f6ff2b98682f9e1e2371f14cada0d1586dd9f8ca9068202ebf56ab2eaa58cb
+        image: ghcr.io/imranr98/d4ta-agent:latest@sha256:6e5d07372d5240c69f16411fdc0540236ebf966d691c85419f8ca9c18842fa6f
         container_name: d4ta-agent
         restart: unless-stopped
         network_mode: host
