@@ -311,7 +311,7 @@ services:
         logging: *logging
 
     authelia-db:
-        image: redis:8.12.0-alpine@sha256:ff55e25203f915f2fe9cc1428e6da969fec257dd6e6feb71a34fd0cf3a86b289
+        image: redis:8.12.0-alpine@sha256:5af80107c1eeecb484a2269b80a26d12bfa6521787da4663bd9f19f60a163483
         container_name: authelia-db
         user: "$MY_UID:$MY_UID"
         environment:
@@ -333,7 +333,7 @@ services:
 
     # Traefik - Reverse Proxy
     traefik:
-        image: traefik:v3.8.0@sha256:cd3078e07dfe0c551b1df6fca2697c52f35da0a18c7bd81da4d3b1f012405098
+        image: traefik:v3.8.0@sha256:00c9734983e74ae35a1fc18eaee9e9da13f3dde95c4e45b3b8c3b60e0dbd2d17
         container_name: traefik
         depends_on:
             dockerproxy:
@@ -619,7 +619,7 @@ services:
     # ISBN Lookup
     isbn-lookup:
         container_name: isbn-lookup
-        image: ghcr.io/imranr98/isbn-lookup:latest@sha256:4e47d254f2e0fbda57b56461aaf05f4dca77ee6d35a8d6a70888ebb8d1bbc72e
+        image: ghcr.io/imranr98/isbn-lookup:latest@sha256:b41a010965f8d68d423e085ea121ff8a2145466881e48f095958daff69e38cfb
         restart: unless-stopped
         mem_limit: 128M
         cpus: 0.25
@@ -746,7 +746,7 @@ services:
     # Our Times - long-term countdown timers (Authelia headers carry the identity)
     our-times:
         container_name: our-times
-        image: ghcr.io/imranr98/our-times:latest@sha256:16a5465ed2f0a107765a13dd6ea8f9ebebc7bdf6e751517c8f5d3944d51336bd
+        image: ghcr.io/imranr98/our-times:latest@sha256:60ab87e2c4a46d7f450cf03ae65dc5e318ad7804f052d055c69d74f86c69fabd
         user: "$MY_UID:$MY_UID"
         depends_on:
             - traefik
@@ -798,7 +798,7 @@ services:
     # remain valid; all three routers share the single sale-site service.
     sale-site:
         container_name: sale-site
-        image: ghcr.io/imranr98/moving-sale-2027:latest@sha256:9d93f804d9fbab2a98158944747e9cfbf7f5431c69c3d7d61e97e64d04b7b4e6
+        image: ghcr.io/imranr98/moving-sale-2027:latest@sha256:dcc61ec70fa7b9a753ab355a3143e9c7f59aa0853169039f05764112c1fbc8b1
         depends_on:
             - traefik
         labels:
@@ -891,7 +891,7 @@ services:
 
     # Logtfy - Log Monitoring and ntfy Alerting
     logtfy:
-        image: ghcr.io/imranr98/logtfy:latest@sha256:03792f60e2c81c38fab872f479e066e8ef847893f6b0795ca68e0f3159a01294
+        image: ghcr.io/imranr98/logtfy:latest@sha256:ea77e7f23f8efbdced1d5cc5281956306c21b4440a1d941295d1d62cd10a122a
         container_name: logtfy
         hostname: $TARGET
         restart: unless-stopped
@@ -1067,7 +1067,7 @@ services:
     d4ta-agent:
         profiles:
             - d4ta-agent
-        image: ghcr.io/imranr98/d4ta-agent:latest@sha256:36f6ff2b98682f9e1e2371f14cada0d1586dd9f8ca9068202ebf56ab2eaa58cb
+        image: ghcr.io/imranr98/d4ta-agent:latest@sha256:6e5d07372d5240c69f16411fdc0540236ebf966d691c85419f8ca9c18842fa6f
         container_name: d4ta-agent
         restart: unless-stopped
         network_mode: host
