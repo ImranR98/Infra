@@ -84,7 +84,7 @@ spec:
   targetNamespace: apps
   createNamespace: false
   failurePolicy: abort
-  version: 18.4.0
+  version: 18.5.0
   valuesContent: |-
     # Explicit image so Renovate tracks Open WebUI independently of the chart
     # appVersion, which can lag the app release (chart 17.5.0 shipped 0.12.5).
