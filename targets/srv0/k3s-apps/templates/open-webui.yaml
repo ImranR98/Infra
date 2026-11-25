@@ -90,7 +90,7 @@ spec:
     # appVersion, which can lag the app release (chart 17.5.0 shipped 0.12.5).
     image:
       repository: ghcr.io/open-webui/open-webui
-      tag: "v0.13.4"
+      tag: "v0.13.5"
     # OIDC client secret is an env secretKeyRef inside the chart values.
     podAnnotations:
       checksum/openwebui-oidc: {{ .Values.AUTHELIA_OPENWEBUI_CLIENT_SECRET_HASHABLE | sha256sum }}
