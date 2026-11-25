@@ -158,3 +158,103 @@
         - [base, infra-health-exporter-, httpd]
   override:
     exceptions: append
+
+# Added by falco-exception-triage (2026-11-25)
+- rule: Read sensitive file untrusted
+  exceptions:
+  - name: immich_postgres_pg_dump_wrapper
+    fields:
+    - k8s.ns.name
+    - k8s.pod.name
+    - proc.name
+    - fd.name
+    comps:
+    - '='
+    - startswith
+    - '='
+    - '='
+    values:
+    - - apps
+      - immich-postgresql-
+      - pg_dump
+      - /etc/shadow
+  - name: immich_postgres_pg_restore_wrapper
+    fields:
+    - k8s.ns.name
+    - k8s.pod.name
+    - proc.name
+    - fd.name
+    comps:
+    - '='
+    - startswith
+    - '='
+    - '='
+    values:
+    - - apps
+      - immich-postgresql-
+      - pg_restore
+      - /etc/shadow
+  override:
+    exceptions: append
+- rule: Read sensitive file untrusted
+  exceptions:
+  - name: host_gdm_session_pam
+    fields:
+    - container.name
+    - proc.name
+    - fd.name
+    comps:
+    - '='
+    - '='
+    - startswith
+    values:
+    - - host
+      - gdm-session-wor
+      - /etc/pam.d/
+  - name: host_dnf5daemon_pam
+    fields:
+    - container.name
+    - proc.name
+    - fd.name
+    comps:
+    - '='
+    - '='
+    - startswith
+    values:
+    - - host
+      - dnf5daemon-serv
+      - /etc/pam.d/
+  - name: host_pkexec_pam
+    fields:
+    - container.name
+    - proc.name
+    - fd.name
+    comps:
+    - '='
+    - '='
+    - startswith
+    values:
+    - - host
+      - pkexec
+      - /etc/pam.d/
+  override:
+    exceptions: append
+
+# Added by falco-exception-triage (2026-11-25)
+- rule: Clear Log Activities
+  exceptions:
+  - name: host_dnf_log_rotation
+    fields:
+    - container.name
+    - proc.name
+    - fd.name
+    comps:
+    - '='
+    - '='
+    - startswith
+    values:
+    - - host
+      - dnf
+      - /var/log/dnf5.log
+  override:
+    exceptions: append
