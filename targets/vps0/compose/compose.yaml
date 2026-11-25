@@ -891,7 +891,7 @@ services:
 
     # Logtfy - Log Monitoring and ntfy Alerting
     logtfy:
-        image: ghcr.io/imranr98/logtfy:latest@sha256:ea77e7f23f8efbdced1d5cc5281956306c21b4440a1d941295d1d62cd10a122a
+        image: ghcr.io/imranr98/logtfy:latest@sha256:0b80ed90d4120e275e9d27656b829c95972c80c53fa347579f5f52eabcb02f58
         container_name: logtfy
         hostname: $TARGET
         restart: unless-stopped
@@ -1067,7 +1067,7 @@ services:
     d4ta-agent:
         profiles:
             - d4ta-agent
-        image: ghcr.io/imranr98/d4ta-agent:latest@sha256:6e5d07372d5240c69f16411fdc0540236ebf966d691c85419f8ca9c18842fa6f
+        image: ghcr.io/imranr98/d4ta-agent:latest@sha256:c79d48b08056c6183c202dffbe761f8acfb1da8b913c3d6a2f88200a5ce5f46f
         container_name: d4ta-agent
         restart: unless-stopped
         network_mode: host

@@ -123,7 +123,7 @@ spec:
         fsGroup: {{ .Values.MY_UID }}
       containers:
         - name: logtfy
-          image: ghcr.io/imranr98/logtfy:latest@sha256:ea77e7f23f8efbdced1d5cc5281956306c21b4440a1d941295d1d62cd10a122a
+          image: ghcr.io/imranr98/logtfy:latest@sha256:0b80ed90d4120e275e9d27656b829c95972c80c53fa347579f5f52eabcb02f58
           volumeMounts:
             - name: journal
               mountPath: /var/log/journal
