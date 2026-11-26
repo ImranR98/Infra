@@ -475,9 +475,13 @@ spec:
   version: 21.6.0
   valuesContent: |-
     deploymentMode: SingleBinary
+    sidecar:
+      resources:
+        {{- $sidecarResources := include "infra.resources" (dict "tier" "small") | fromYaml }}
+        {{- toYaml $sidecarResources.resources | nindent 8 }}
     singleBinary:
       replicas: 1
-      {{- include "infra.resources" (dict "tier" "medium") | nindent 6 }}
+      {{- include "infra.resources" (dict "tier" "large") | nindent 6 }}
       podSecurityContext:
         # Shared with the migration/backup pods: pod-level s0 (container-level
         # is ignored) keeps the filesystem-storage files readable across pods.
@@ -540,12 +544,18 @@ spec:
         # 180 days of logs, matching Prometheus; the compactor enforces this
         # against the object store. The 10Gi volume holds ~4GiB at this rate.
         retention_period: 4320h
-        # Query across the full retention window; the frontend default is 30d.
-        max_query_length: 4320h
-        # 180-day queries are split by 15m and need more than the 300s default.
-        query_timeout: 600s
+        # Bound query work: a 180-day, 600s query can read the whole chunk
+        # store and saturate the shared disk. 24h is enough for triage; the
+        # 120s timeout is enforced server-side even if the client disconnects.
+        max_query_length: 24h
+        query_timeout: 120s
+        # One subquery at a time per query; this is the burst control.
+        max_query_parallelism: 1
         # Keep reject_old_samples at its default (true): disabling it lets
         # old docker logs flood the log store and saturate node storage.
+      querier:
+        # Two concurrent queries at most; Grafana + the triage script queue.
+        max_concurrent: 2
     chunksCache:
       enabled: false
     resultsCache:

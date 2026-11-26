@@ -29,6 +29,57 @@ groups:
     folder: Falco
     interval: 1m
     rules:
+      # Only this rule pages on a Prometheus query failure. Everything else
+      # uses execErrState: Error so a datasource outage does not masquerade as
+      # an NFS/disk/Falco detection (2026-11-26 incident).
+      - uid: prometheus-unreachable
+        title: Prometheus unreachable
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange: {from: 600, to: 0}
+            datasourceUid: prometheus
+            model:
+              editorMode: code
+              expr: vector(1)
+              instant: true
+              intervalMs: 1000
+              maxDataPoints: 43200
+              range: false
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              datasource: {type: __expr__, uid: __expr__}
+              expression: A
+              intervalMs: 1000
+              maxDataPoints: 43200
+              reducer: last
+              refId: B
+              type: reduce
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator: {params: [1], type: lt}
+                  operator: {type: and}
+                  query: {params: [C]}
+                  reducer: {type: last}
+                  type: query
+              datasource: {type: __expr__, uid: __expr__}
+              expression: B
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: C
+              type: threshold
+        noDataState: Alerting
+        execErrState: Alerting
+        for: 2m
+        annotations:
+          summary: Prometheus is not answering; monitoring is degraded and other rules are suppressed from paging.
+        labels:
+          severity: critical
+
       - uid: io-pressure-srv0
         title: srv0 I/O pressure (PSI)
         condition: C
@@ -70,7 +121,7 @@ groups:
               refId: C
               type: threshold
         noDataState: OK
-        execErrState: Alerting
+        execErrState: Error
         for: 10m
         annotations:
           summary: srv0 is waiting on I/O more than 20% of the time
@@ -118,7 +169,7 @@ groups:
               refId: C
               type: threshold
         noDataState: OK
-        execErrState: Alerting
+        execErrState: Error
         for: 10m
         annotations:
           summary: srv0 root disk (dm-0) is over 80% utilized
@@ -169,7 +220,7 @@ groups:
               refId: C
               type: threshold
         noDataState: OK
-        execErrState: Alerting
+        execErrState: Error
         for: 5m
         annotations:
           summary: etcd request p99 is over 5s — lease renewals fail next, taking controllers down with them
@@ -217,7 +268,7 @@ groups:
               refId: C
               type: threshold
         noDataState: OK
-        execErrState: Alerting
+        execErrState: Error
         for: 5m
         annotations:
           summary: API server p99 is over 5s — the cluster is in an I/O stall and controllers may restart
@@ -265,7 +316,7 @@ groups:
               refId: C
               type: threshold
         noDataState: OK
-        execErrState: Alerting
+        execErrState: Error
         for: 15m
         annotations:
           summary: srv0 filesystem is under 15% free
@@ -313,7 +364,7 @@ groups:
               refId: C
               type: threshold
         noDataState: OK
-        execErrState: Alerting
+        execErrState: Error
         for: 5m
         annotations:
           summary: A Kubernetes node has been NotReady for 5 minutes
@@ -361,7 +412,7 @@ groups:
               refId: C
               type: threshold
         noDataState: OK
-        execErrState: Alerting
+        execErrState: Error
         for: 10m
         annotations:
           summary: A container restarted more than 3 times in 15 minutes
@@ -409,7 +460,7 @@ groups:
               refId: C
               type: threshold
         noDataState: OK
-        execErrState: Alerting
+        execErrState: Error
         for: 5m
         annotations:
           summary: A container was OOM-killed
@@ -457,7 +508,7 @@ groups:
               refId: C
               type: threshold
         noDataState: OK
-        execErrState: Alerting
+        execErrState: Error
         for: 5m
         annotations:
           summary: A PersistentVolumeClaim is in the Lost phase
@@ -505,7 +556,7 @@ groups:
               refId: C
               type: threshold
         noDataState: OK
-        execErrState: Alerting
+        execErrState: Error
         for: 10m
         annotations:
           summary: The Renovate daily job (apps, Infra, and digest pins) has not completed successfully in 26 hours
@@ -556,7 +607,7 @@ groups:
               refId: C
               type: threshold
         noDataState: OK
-        execErrState: Alerting
+        execErrState: Error
         for: 5m
         annotations:
           summary: The scheduled Renovate daily job failed; check the job logs and the ntfy failure digest.
@@ -604,7 +655,7 @@ groups:
               refId: C
               type: threshold
         noDataState: Alerting
-        execErrState: Alerting
+        execErrState: Error
         for: 10m
         annotations:
           summary: D4TA Jobs is not exposing its scheduled-task metrics; it may be down or the metrics endpoint is unreachable.
@@ -656,7 +707,7 @@ groups:
         # rule for a present-but-zero task count only, so a single 10s scrape
         # timeout does not churn the alert activity feed.
         noDataState: OK
-        execErrState: Alerting
+        execErrState: Error
         for: 15m
         annotations:
           summary: D4TA Jobs has no configured tasks; check config.mjs and the config mount.
@@ -704,7 +755,7 @@ groups:
               refId: C
               type: threshold
         noDataState: Alerting
-        execErrState: Alerting
+        execErrState: Error
         for: 5m
         annotations:
           summary: D4TA Jobs has no available replica, so no scheduled backup or export will run.
@@ -752,7 +803,7 @@ groups:
               refId: C
               type: threshold
         noDataState: OK
-        execErrState: Alerting
+        execErrState: Error
         for: 15m
         annotations:
           summary: The nightly State Backups task has not completed successfully in over 2 days.
@@ -800,7 +851,7 @@ groups:
               refId: C
               type: threshold
         noDataState: OK
-        execErrState: Alerting
+        execErrState: Error
         for: 15m
         annotations:
           summary: The weekly Contacts + Calendar export has not completed in over 8 days.
@@ -848,7 +899,7 @@ groups:
               refId: C
               type: threshold
         noDataState: OK
-        execErrState: Alerting
+        execErrState: Error
         for: 15m
         annotations:
           summary: The daily YTMusic Downloads task has not completed in over 2 days.
@@ -896,7 +947,7 @@ groups:
               refId: C
               type: threshold
         noDataState: OK
-        execErrState: Alerting
+        execErrState: Error
         for: 15m
         annotations:
           summary: The weekly Wine Game Saves task has not completed in over 8 days.
@@ -944,7 +995,7 @@ groups:
               refId: C
               type: threshold
         noDataState: OK
-        execErrState: Alerting
+        execErrState: Error
         for: 10m
         annotations:
           summary: A scheduled D4TA Jobs task reported a failed last run.
@@ -992,7 +1043,7 @@ groups:
               refId: C
               type: threshold
         noDataState: Alerting
-        execErrState: Alerting
+        execErrState: Error
         for: 1h
         annotations:
           summary: A cert-manager certificate expires in less than 21 days.
@@ -1040,7 +1091,7 @@ groups:
               refId: C
               type: threshold
         noDataState: Alerting
-        execErrState: Alerting
+        execErrState: Error
         for: 15m
         annotations:
           summary: A cert-manager certificate is not Ready.
@@ -1088,7 +1139,7 @@ groups:
               refId: C
               type: threshold
         noDataState: Alerting
-        execErrState: Alerting
+        execErrState: Error
         for: 2m
         annotations:
           summary: The NFS server has no available replicas; nfs-apps PVCs will fail.
@@ -1139,7 +1190,7 @@ groups:
               refId: C
               type: threshold
         noDataState: OK
-        execErrState: Alerting
+        execErrState: Error
         for: 15m
         annotations:
           summary: Falco is not ready on a Ready node.
@@ -1195,7 +1246,7 @@ groups:
               refId: C
               type: threshold
         noDataState: OK
-        execErrState: Alerting
+        execErrState: Error
         for: 0m
         annotations:
           summary: Falco detected a critical/error runtime event on srv0.
@@ -1251,7 +1302,7 @@ groups:
               refId: C
               type: threshold
         noDataState: OK
-        execErrState: Alerting
+        execErrState: Error
         for: 30m
         annotations:
           summary: Falco warning events have recurred for 30 minutes.
@@ -1299,7 +1350,7 @@ groups:
               refId: C
               type: threshold
         noDataState: OK
-        execErrState: Alerting
+        execErrState: Error
         for: 15m
         annotations:
           summary: Falco is dropping syscall events; detections may be incomplete.
@@ -1349,7 +1400,7 @@ groups:
               refId: C
               type: threshold
         noDataState: OK
-        execErrState: Alerting
+        execErrState: Error
         for: 10m
         annotations:
           summary: Prometheus cannot scrape the Falco metrics endpoint.
@@ -1397,7 +1448,7 @@ groups:
               refId: C
               type: threshold
         noDataState: Alerting
-        execErrState: Alerting
+        execErrState: Error
         for: 2m
         annotations:
           summary: More than 80% of nfsd kernel threads are busy (R/D) for 2 minutes
@@ -1445,7 +1496,7 @@ groups:
               refId: C
               type: threshold
         noDataState: OK
-        execErrState: Alerting
+        execErrState: Error
         for: 3m
         annotations:
           summary: Jellyfin /health TTFB above 2s for 3 minutes

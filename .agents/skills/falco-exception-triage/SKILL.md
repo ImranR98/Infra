@@ -34,7 +34,8 @@ and `AGENTS.md` cover the layout and deploy rules.
 ## Inputs
 
 Ask for, or infer:
-- time range: `--since 24h`, or `--from`/`--to` (ISO 8601)
+- time range: `--since 6h` (default), or `--from`/`--to` (ISO 8601). Loki
+  rejects query ranges over 24h.
 - app/pod/namespace substring: `--app d4ta,d4ta-flow`
 - optional: `--priority` (default `Emergency,Alert,Critical,Error,Warning`),
   `--rule`, `--namespace`
@@ -52,7 +53,7 @@ ask which pod/namespace is the new one before applying.
    - `kubectl -n base get ds falco`
 2. **Collect**
    - Summary:
-     `python3 .agents/skills/falco-exception-triage/scripts/falco-events.py --since 24h --priority Warning,Critical --format summary`
+     `python3 .agents/skills/falco-exception-triage/scripts/falco-events.py --since 6h --priority Warning,Critical --format summary`
    - Proposals:
      `... --format yaml > /tmp/opencode/falco-proposals.yaml`
    - The script groups by priority/rule/host/namespace/pod prefix/process/file,

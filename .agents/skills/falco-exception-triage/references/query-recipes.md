@@ -16,9 +16,9 @@ redacted source for exception proposals.
 ## Script
 
 ```bash
-# last 24h, warning+critical, summary
+# last 6h, warning+critical, summary
 python3 .agents/skills/falco-exception-triage/scripts/falco-events.py \
-  --since 24h --priority Warning,Critical --format summary
+  --since 6h --priority Warning,Critical --format summary
 
 # focus on an app / pod / image substring
 python3 .agents/skills/falco-exception-triage/scripts/falco-events.py \
@@ -30,7 +30,7 @@ python3 .agents/skills/falco-exception-triage/scripts/falco-events.py \
 
 # proposals for apply-exceptions.py
 python3 .agents/skills/falco-exception-triage/scripts/falco-events.py \
-  --since 24h --priority Warning,Critical --format yaml \
+  --since 6h --priority Warning,Critical --format yaml \
   > /tmp/opencode/falco-proposals.yaml
 
 # include notices and test events

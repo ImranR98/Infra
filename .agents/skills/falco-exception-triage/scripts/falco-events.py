@@ -6,10 +6,10 @@ Falco JSON: command lines are redacted before they reach stdout, and the
 summary only shows the fields needed to scope an exception.
 
 Examples:
-  ./falco-events.py --since 24h --priority Warning,Critical
+  ./falco-events.py --since 6h --priority Warning,Critical
   ./falco-events.py --since 12h --app d4ta,d4ta-flow
   ./falco-events.py --from 2026-10-25T00:00:00Z --to 2026-10-26T08:00:00Z
-  ./falco-events.py --since 6h --format yaml
+  ./falco-events.py --since 2h --format yaml
 """
 
 import argparse
@@ -26,7 +26,8 @@ import urllib.request
 
 LOKI_NAMESPACE = "base"
 LOKI_SERVICE = "loki"
-FALCO_QUERY = '{namespace="base", app="falco", container="falco"} | json | __error__=""'
+BASE_QUERY = '{namespace="base", app="falco", container="falco"}'
+FALCO_QUERY = f'{BASE_QUERY} | json | __error__=""'
 
 # These are test/one-off namespaces and pods; they should not produce
 # production exceptions unless the operator explicitly asks (--include-test).
@@ -167,7 +168,9 @@ class Loki:
         )
         url = f"{self.url}/loki/api/v1/query_range?{params}"
         try:
-            with urllib.request.urlopen(url, timeout=60) as response:
+            # Loki's limits_config.query_timeout is 120s; allow the server to
+            # return its own timeout error instead of the client giving up first.
+            with urllib.request.urlopen(url, timeout=130) as response:
                 return json.load(response)
         except urllib.error.HTTPError as exc:
             body = exc.read().decode(errors="replace")[:500]
@@ -278,7 +281,7 @@ def propose_blocks(groups):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--since", help="relative window, e.g. 12h, 90m, 7d (default 24h)")
+    parser.add_argument("--since", help="relative window, e.g. 90m, 6h, 12h (default 6h; Loki caps queries at 24h)")
     parser.add_argument("--from", dest="from_time", help="absolute start (ISO 8601 or epoch)")
     parser.add_argument("--to", dest="to_time", help="absolute end (ISO 8601 or epoch)")
     parser.add_argument("--app", help="comma-separated substrings matched against namespace, pod, image, process, output")
@@ -296,7 +299,7 @@ def main():
     now = time.time()
     if args.since and args.from_time:
         parser.error("--since and --from are mutually exclusive")
-    start = parse_time(args.from_time, now - 24 * 3600)
+    start = parse_time(args.from_time, now - 6 * 3600)
     if args.since:
         start = parse_time(args.since, now)
     end = parse_time(args.to_time, now)
@@ -310,9 +313,18 @@ def main():
     app_filters = [a.strip().lower() for a in (args.app or "").split(",") if a.strip()]
     rule_re = re.compile(args.rule, re.I) if args.rule else None
 
+    # Push the priority filter into LogQL before | json. The line filter is
+    # cheap; parsing every Notice/Debug line as JSON is not. --priority all
+    # keeps the unfiltered query.
+    query = FALCO_QUERY
+    if priorities != {p.lower() for p in PRIORITIES}:
+        selected = [p for p in PRIORITIES if p.lower() in priorities]
+        prio_re = "|".join(selected)
+        query = f'{BASE_QUERY} |~ "\\"priority\\":\\"({prio_re})\\"" | json | __error__=""'
+
     loki = Loki(args.loki_url)
     try:
-        payload = loki.query_range(FALCO_QUERY, start, end, args.limit)
+        payload = loki.query_range(query, start, end, args.limit)
     finally:
         loki.close()
 
