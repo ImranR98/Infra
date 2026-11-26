@@ -11,7 +11,7 @@ services:
     # by scripts/public-exposure-keygen.sh. Host effects are lifecycle-bound:
     # stopping the container also removes the interface and its firewall rules.
     public-exposure-client-wg:
-        image: lscr.io/linuxserver/wireguard:latest@sha256:10db56ad834f94541307d5dfdbe87370e26d155bb341a5bf65789f970f24ab5c
+        image: lscr.io/linuxserver/wireguard:latest@sha256:30fcd4e2d5793935e3e3d913e3e874ecee27bc2bf01b2cb824a5cb01e02a1043
         container_name: public-exposure-client-wg
         restart: always
         network_mode: host
