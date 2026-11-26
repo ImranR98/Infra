@@ -472,7 +472,7 @@ spec:
   failurePolicy: abort
   targetNamespace: base
   createNamespace: false
-  version: 21.6.0
+  version: 21.6.2
   valuesContent: |-
     deploymentMode: SingleBinary
     sidecar:
