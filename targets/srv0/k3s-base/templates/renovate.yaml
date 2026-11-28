@@ -71,7 +71,7 @@ spec:
             runAsNonRoot: true
           containers:
             - name: renovate
-              image: renovate/renovate:45.3.1@sha256:6c4e2ba3afd8493894f7ef73aad1d009492e70fe2bccd9be507c1f82e020dcdc
+              image: renovate/renovate:45.3.2@sha256:d0358088501c7665688673c8932474b02517941703a16e970e8b4fcf235299cb
               imagePullPolicy: IfNotPresent
               securityContext:
                 allowPrivilegeEscalation: false
